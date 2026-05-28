@@ -1,6 +1,14 @@
 import * as React from "react";
 
 import { DottedMap, Marker } from "@/components/ui/dotted-map";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useUsersByTimezones } from "@/hooks/use-users-by-timezones";
 import { DAUByTimezone } from "@/hooks/use-dau-by-timezone";
 import {
   getCountryCodeFromTimezone,
@@ -21,6 +29,7 @@ type DAUMarker = Marker & {
 
 export function DAUGeoMap({ data }: DAUGeoMapProps) {
   const id = React.useId();
+  const [selectedTimezone, setSelectedTimezone] = React.useState<string | null>(null);
 
   // Build markers with lat/lng for DottedMap
   const markers = React.useMemo(() => {
@@ -67,6 +76,27 @@ export function DAUGeoMap({ data }: DAUGeoMapProps) {
   const coveragePercent =
     totalDAU > 0 ? Math.round((mappedDAU / totalDAU) * 100) : 0;
 
+  const selectedMarker = React.useMemo(() => {
+    if (!selectedTimezone) return null;
+    return markers.find((m) => m.overlay.timezone === selectedTimezone) ?? null;
+  }, [markers, selectedTimezone]);
+
+  const { users: timezoneUsers, isLoading: isTimezoneUsersLoading } = useUsersByTimezones(
+    selectedTimezone ? [selectedTimezone] : [],
+    false,
+    Boolean(selectedTimezone),
+  );
+
+  const countryName = React.useMemo(() => {
+    if (!selectedMarker?.overlay.countryCode) return null;
+    try {
+      const formatter = new Intl.DisplayNames(["en"], { type: "region" });
+      return formatter.of(selectedMarker.overlay.countryCode) ?? selectedMarker.overlay.countryCode;
+    } catch {
+      return selectedMarker.overlay.countryCode;
+    }
+  }, [selectedMarker?.overlay.countryCode]);
+
   return (
     <div className="relative w-full">
       <div
@@ -84,6 +114,9 @@ export function DAUGeoMap({ data }: DAUGeoMapProps) {
           dotRadius={0.35}
           stagger
           pulse
+          onMarkerClick={({ marker }) => {
+            setSelectedTimezone(marker.overlay.timezone);
+          }}
           renderMarkerOverlay={({ marker, x, y, r, index }) => {
             const { countryCode, activeUsers } = marker.overlay;
             const clipId = `${id}-flag-clip-${index}`.replace(/:/g, "-");
@@ -159,6 +192,71 @@ export function DAUGeoMap({ data }: DAUGeoMapProps) {
           </span>
         </div>
       </div>
+
+      <Dialog
+        open={Boolean(selectedMarker)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTimezone(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-2xl border-white/10 bg-slate-900 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {selectedMarker?.overlay.timezone.replace(/_/g, " ") ?? "Timezone"}
+            </DialogTitle>
+            <DialogDescription className="text-white/60">
+              {countryName ? `${countryName} • ` : ""}
+              {selectedMarker?.overlay.activeUsers.toLocaleString() ?? 0} active users today
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 bg-slate-950/70 p-3 text-sm">
+            <div>
+              <p className="text-xs text-white/50">Active Users</p>
+              <p className="mt-1 text-base font-semibold text-blue-400">
+                {selectedMarker?.overlay.activeUsers.toLocaleString() ?? 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-white/50">Users in Timezone</p>
+              <p className="mt-1 text-base font-semibold text-white">
+                {timezoneUsers.length.toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
+            {isTimezoneUsersLoading ? (
+              <div className="rounded-lg border border-white/10 bg-slate-950/60 p-3 text-sm text-white/70">
+                Loading users...
+              </div>
+            ) : timezoneUsers.length === 0 ? (
+              <div className="rounded-lg border border-white/10 bg-slate-950/60 p-3 text-sm text-white/70">
+                No users found for this timezone.
+              </div>
+            ) : (
+              timezoneUsers.map((user) => (
+                <div
+                  key={user.userId}
+                  className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2"
+                >
+                  <p className="text-sm font-medium text-white">
+                    {user.fullName || user.email || user.userId}
+                  </p>
+                  <p className="text-xs text-white/60">{user.email || "No email"}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/50">
+                    <span>{user.preferredTimezone}</span>
+                    <span>•</span>
+                    <span>{new Date(user.createdAt).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

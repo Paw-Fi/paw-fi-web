@@ -27,6 +27,13 @@ export interface SubscriptionAnalytics {
   trialToActive: SubscriptionMetric;
 }
 
+interface DailyTrendRow {
+  date: string;
+  metric: string;
+  provider: string;
+  count: number;
+}
+
 export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics {
   const [data, setData] = useState<SubscriptionAnalytics>({
     monthlyActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
@@ -39,7 +46,6 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
   useEffect(() => {
     const fetchData = async () => {
       const now = new Date().toISOString();
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
       try {
@@ -50,7 +56,6 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
 
         const rows = analyticsData || [];
 
-        // Calculate counts based on the aggregated data
         let monthlyActiveCount = 0;
         let yearlyActiveCount = 0;
         let lifetimeActiveCount = 0;
@@ -106,39 +111,97 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
           }
         }
 
-        // Generate trend data
-        const trend = generateTrend(thirtyDaysAgo, now, monthlyActiveCount);
-        const prevTrend = generateTrend(sixtyDaysAgo, thirtyDaysAgo, Math.max(0, monthlyActiveCount - 5));
+        const { data: dailyData, error: dailyError } = await supabase
+          .rpc('get_creator_subscription_daily_trends', {
+            p_start_date: sixtyDaysAgo.split('T')[0],
+            p_end_date: now.split('T')[0],
+          });
+
+        if (dailyError) {
+          setData({
+            monthlyActive: {
+              currentValue: monthlyActiveCount,
+              trend: [],
+              changePercent: 0,
+              providers: monthlyProviders,
+            },
+            yearlyActive: {
+              currentValue: yearlyActiveCount,
+              trend: [],
+              changePercent: 0,
+              providers: yearlyProviders,
+            },
+            lifetimeActive: {
+              currentValue: lifetimeActiveCount,
+              trend: [],
+              changePercent: 0,
+              providers: lifetimeProviders,
+            },
+            totalCancelled: {
+              currentValue: cancelledCount,
+              trend: [],
+              changePercent: 0,
+              providers: cancelledProviders,
+            },
+            trialToActive: {
+              currentValue: trialToActiveCount,
+              trend: [],
+              changePercent: 0,
+              providers: trialToActiveProviders,
+            },
+          });
+          return;
+        }
+
+        const dailyMap = new Map<string, Map<string, number>>();
+        for (const row of (dailyData || []) as unknown as DailyTrendRow[]) {
+          if (!dailyMap.has(row.metric)) {
+            dailyMap.set(row.metric, new Map());
+          }
+          const metricMap = dailyMap.get(row.metric)!;
+          metricMap.set(row.date, (metricMap.get(row.date) || 0) + row.count);
+        }
+
+        const monthlyTrend = buildTrend(dailyMap, 'monthly_active', 29, 0);
+        const monthlyPrevTrend = buildTrend(dailyMap, 'monthly_active', 59, 30);
+        const yearlyTrend = buildTrend(dailyMap, 'yearly_active', 29, 0);
+        const yearlyPrevTrend = buildTrend(dailyMap, 'yearly_active', 59, 30);
+        const lifetimeTrend = buildTrend(dailyMap, 'lifetime_active', 29, 0);
+        const lifetimePrevTrend = buildTrend(dailyMap, 'lifetime_active', 59, 30);
+        const cancelledTrend = buildTrend(dailyMap, 'cancelled', 29, 0);
+        const cancelledPrevTrend = buildTrend(dailyMap, 'cancelled', 59, 30);
+        const trialToActiveTrend = buildTrend(dailyMap, 'trial_to_active', 29, 0);
+        const trialToActivePrevTrend = buildTrend(dailyMap, 'trial_to_active', 59, 30);
 
         setData({
           monthlyActive: {
             currentValue: monthlyActiveCount,
-            trend,
-            changePercent: calculateChangePercent(trend, prevTrend),
+            trend: monthlyTrend,
+            changePercent: calculateChangePercent(monthlyTrend, monthlyPrevTrend),
             providers: monthlyProviders,
           },
           yearlyActive: {
             currentValue: yearlyActiveCount,
-            trend: generateTrend(thirtyDaysAgo, now, yearlyActiveCount),
-            changePercent: 0,
+            trend: yearlyTrend,
+            changePercent: calculateChangePercent(yearlyTrend, yearlyPrevTrend),
             providers: yearlyProviders,
           },
           lifetimeActive: {
             currentValue: lifetimeActiveCount,
-            trend: generateTrend(thirtyDaysAgo, now, lifetimeActiveCount),
-            changePercent: 0,
+            trend: lifetimeTrend,
+            changePercent: calculateChangePercent(lifetimeTrend, lifetimePrevTrend),
             providers: lifetimeProviders,
           },
           totalCancelled: {
             currentValue: cancelledCount,
-            trend: generateTrend(thirtyDaysAgo, now, cancelledCount),
-            changePercent: 0,
+            trend: cancelledTrend,
+            changePercent: calculateChangePercent(cancelledTrend, cancelledPrevTrend),
             providers: cancelledProviders,
           },
           trialToActive: {
             currentValue: trialToActiveCount,
-            trend: generateTrend(thirtyDaysAgo, now, trialToActiveCount),
-            changePercent: 0,
+            trend: trialToActiveTrend,
+            changePercent: calculateChangePercent(trialToActiveTrend, trialToActivePrevTrend),
             providers: trialToActiveProviders,
           },
         });
@@ -153,44 +216,26 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
   return data;
 }
 
-function generateTrend(startDate: string, endDate: string, endValue: number): TrendPoint[] {
-  const points: TrendPoint[] = [];
-  const start = new Date(startDate).getTime();
-  const end = new Date(endDate).getTime();
-  const days = Math.floor((end - start) / (24 * 60 * 60 * 1000));
-
-  for (let i = 0; i <= Math.min(days, 30); i++) {
-    const date = new Date(start + i * 24 * 60 * 60 * 1000);
-    const progress = i / Math.min(days, 30);
-    const baseValue = endValue * progress;
-    points.push({
-      date: date.toISOString().split("T")[0],
-      value: Math.max(0, Math.round(baseValue)),
-    });
+function buildTrend(
+  dailyMap: Map<string, Map<string, number>>,
+  metric: string,
+  startOffset: number,
+  endOffset: number
+): TrendPoint[] {
+  const trend: TrendPoint[] = [];
+  for (let i = startOffset; i >= endOffset; i--) {
+    const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const metricMap = dailyMap.get(metric);
+    const value = metricMap?.get(date) || 0;
+    trend.push({ date, value });
   }
-
-  return points;
+  return trend;
 }
 
 function calculateChangePercent(currentTrend: TrendPoint[], previousTrend: TrendPoint[]): number {
   if (previousTrend.length === 0 || currentTrend.length === 0) return 0;
-  const current = currentTrend[currentTrend.length - 1]?.value ?? 0;
-  const previous = previousTrend[previousTrend.length - 1]?.value ?? 1;
-  return Math.round(((current - previous) / previous) * 100);
-}
-
-function countProviders(data: { provider?: string }[] | null): ProviderBreakdown {
-  if (!data) return { stripe: 0, apple: 0 };
-
-  return data.reduce(
-    (acc, item) => {
-      if (item.provider === "stripe") {
-        acc.stripe++;
-      } else if (item.provider === "app_store") {
-        acc.apple++;
-      }
-      return acc;
-    },
-    { stripe: 0, apple: 0 }
-  );
+  const currentTotal = currentTrend.reduce((sum, p) => sum + p.value, 0);
+  const previousTotal = previousTrend.reduce((sum, p) => sum + p.value, 0);
+  if (previousTotal === 0) return 0;
+  return Math.round(((currentTotal - previousTotal) / previousTotal) * 100);
 }

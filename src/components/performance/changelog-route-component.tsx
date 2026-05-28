@@ -12,8 +12,6 @@ import {
   Coins, 
   Landmark, 
   Layers, 
-  Rocket, 
-  ArrowRight,
   Loader2
 } from "lucide-react";
 
@@ -39,13 +37,6 @@ const inProgressItems: InProgressItem[] = [
     icon: Landmark,
     status: "Beta Testing",
     color: "from-blue-500/20 to-indigo-500/20"
-  },
-  {
-    title: "Advanced Category Engine",
-    description: "Deep customization with sub-categories, custom rules, and smart auto-categorization for better spending insights.",
-    icon: Layers,
-    status: "In Design",
-    color: "from-emerald-500/20 to-teal-500/20"
   }
 ];
 
@@ -60,21 +51,32 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   // {
-  //   title: "Multi-Currency View & Smarter AI Bot",
-  //   date: "2026-05-21",
-  //   version: "2.1.0",
-  //   tags: ["Feature", "Currency", "AI", "Automation"],
+  //   title: "Multi-Currency View",
+  //   date: "2026-06-15",
+  //   version: "2.2.0",
+  //   tags: ["Feature", "Currency", "Automation"],
   //   description:
-  //     "View and manage multiple currencies at once with live rate conversion, command your AI bot on WhatsApp and Telegram to create spaces, invite members, and split expenses, and start fresh with a one-click data reset.",
+  //     "Select and display multiple currencies simultaneously with automatic conversion to your primary currency using live exchange rates.",
   //   items: [
   //     "Select and display multiple currencies simultaneously with automatic conversion to your primary currency using live exchange rates",
-  //     "Enhanced AI bot for WhatsApp and Telegram with powerful new commands",
-  //     "Ask the bot to create new shared spaces directly from chat",
-  //     "Invite household members through the AI bot with simple commands",
-  //     "Split expenses instantly by telling the bot who paid and how to divide",
-  //     "One-click data reset feature to start fresh while preserving your account",
   //   ],
   // },
+  {
+    title: "Smarter AI Bot & New Currency",
+    date: "2026-05-28",
+    version: "2.1.0",
+    tags: ["Feature", "Currency", "AI", "Automation"],
+    description:
+      "Command your AI bot on WhatsApp and Telegram to create spaces, invite members, and split expenses, and start fresh with a one-click data reset.",
+    items: [
+      "Enhanced AI bot for WhatsApp and Telegram with powerful new commands",
+      "Ask the bot to create new shared spaces directly from chat",
+      "Invite household members through the AI bot with simple commands",
+      "Split expenses instantly by telling the bot who paid and how to divide",
+      "One-click data reset feature to start fresh while preserving your account",
+      "Added Macau Pataca (MOP) to supported currencies",
+    ],
+  },
   {
     title: "A New Era — Faster, Smarter, Works Offline",
     date: "2026-05-15",
