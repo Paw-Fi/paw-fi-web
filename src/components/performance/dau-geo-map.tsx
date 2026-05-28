@@ -81,8 +81,13 @@ export function DAUGeoMap({ data }: DAUGeoMapProps) {
     return markers.find((m) => m.overlay.timezone === selectedTimezone) ?? null;
   }, [markers, selectedTimezone]);
 
+  const selectedTimezones = React.useMemo(
+    () => (selectedTimezone ? [selectedTimezone] : []),
+    [selectedTimezone]
+  );
+
   const { users: timezoneUsers, isLoading: isTimezoneUsersLoading } = useUsersByTimezones(
-    selectedTimezone ? [selectedTimezone] : [],
+    selectedTimezones,
     false,
     Boolean(selectedTimezone),
   );

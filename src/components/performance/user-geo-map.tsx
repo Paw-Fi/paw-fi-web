@@ -82,8 +82,13 @@ export function UserGeoMap({ data, dailyOnly = false }: UserGeoMapProps) {
     return markers.find((m) => m.overlay.timezone === selectedTimezone) ?? null;
   }, [markers, selectedTimezone]);
 
+  const selectedTimezones = React.useMemo(
+    () => (selectedTimezone ? [selectedTimezone] : []),
+    [selectedTimezone]
+  );
+
   const { users: timezoneUsers, isLoading: isTimezoneUsersLoading } = useUsersByTimezones(
-    selectedTimezone ? [selectedTimezone] : [],
+    selectedTimezones,
     dailyOnly,
     Boolean(selectedTimezone),
   );

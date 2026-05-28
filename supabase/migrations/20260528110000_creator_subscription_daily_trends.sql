@@ -2,6 +2,8 @@
 -- Returns daily counts for each metric so charts show actual daily amounts
 -- instead of synthetic cumulative interpolation.
 
+DROP FUNCTION IF EXISTS public.get_creator_subscription_daily_trends(TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION public.get_creator_subscription_daily_trends(
     p_start_date TEXT,
     p_end_date TEXT
@@ -32,7 +34,7 @@ BEGIN
         -- Status changes to cancelled states
         SELECT
             DATE(se.created_at)::TEXT AS c_date,
-            s.provider::TEXT AS provider,
+            s.provider::TEXT AS c_provider,
             se.subscription_id AS sub_id
         FROM subscription_events se
         JOIN subscriptions s ON se.subscription_id = s.id
@@ -45,7 +47,7 @@ BEGIN
         -- Direct cancellations via canceled_at (deduplicated by UNION with event rows)
         SELECT
             DATE(s.canceled_at)::TEXT AS c_date,
-            s.provider::TEXT AS provider,
+            s.provider::TEXT AS c_provider,
             s.id AS sub_id
         FROM subscriptions s
         WHERE s.canceled_at IS NOT NULL
@@ -104,10 +106,10 @@ BEGIN
     SELECT
         c_date AS metric_date,
         'cancelled'::TEXT AS metric,
-        provider,
+        c_provider AS provider,
         COUNT(*)::BIGINT AS count
     FROM cancelled_combined
-    GROUP BY c_date, provider
+    GROUP BY c_date, c_provider
 
     UNION ALL
 
