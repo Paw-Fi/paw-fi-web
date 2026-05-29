@@ -8,12 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HomeHeader } from "@/components/index/header";
 import { Timeline } from "@/components/ui/timeline";
-import { 
-  Coins, 
-  Landmark, 
-  Layers, 
-  Loader2
-} from "lucide-react";
+import { Coins, Landmark, Layers, Loader2 } from "lucide-react";
 
 interface InProgressItem {
   title: string;
@@ -26,18 +21,20 @@ interface InProgressItem {
 const inProgressItems: InProgressItem[] = [
   {
     title: "Multi-Currency Intelligence",
-    description: "Convert and view transactions in multiple currencies at once. Perfect for frequent travelers and global accounts.",
+    description:
+      "Convert and view transactions in multiple currencies at once. Perfect for frequent travelers and global accounts.",
     icon: Coins,
     status: "In Development",
-    color: "from-amber-500/20 to-orange-500/20"
+    color: "from-amber-500/20 to-orange-500/20",
   },
   {
     title: "North America Bank Sync",
-    description: "Secure, automatic transaction syncing for US and Canadian banks via Plaid. Real-time updates without the manual effort.",
+    description:
+      "Secure, automatic transaction syncing for US and Canadian banks via Plaid. Real-time updates without the manual effort.",
     icon: Landmark,
     status: "Beta Testing",
-    color: "from-blue-500/20 to-indigo-500/20"
-  }
+    color: "from-blue-500/20 to-indigo-500/20",
+  },
 ];
 
 interface ChangelogEntry {
@@ -61,6 +58,20 @@ const changelogs: ChangelogEntry[] = [
   //     "Select and display multiple currencies simultaneously with automatic conversion to your primary currency using live exchange rates",
   //   ],
   // },
+  {
+    title: "Smoother Scrolling & Smarter AI Input",
+    date: "2026-05-29",
+    version: "2.1.1",
+    tags: ["Performance", "AI", "Fix"],
+    description:
+      "This release fixes transaction scrolling issues, boosts home page performance, and lets you pick a space and wallet before sending transactions to your AI bot.",
+    items: [
+      "Fixed transaction page scrolling bug for smoother navigation",
+      "Fixed home page data loading issue",
+      "AI input now lets you choose a space and wallet before saving",
+      "Camera capture page redesigned for a cleaner experience",
+    ],
+  },
   {
     title: "Smarter AI Bot & New Currency",
     date: "2026-05-28",
@@ -708,43 +719,50 @@ export function ChangelogRouteComponent() {
           >
             <div className="flex items-center justify-between px-5 sm:px-8 lg:px-10">
               <div className="flex items-center gap-3">
-                
                 <div>
-                  <h2 className="text-foreground text-xl font-semibold tracking-tight">In the Works</h2>
-                  <p className="text-muted-foreground text-sm">What we're building right now</p>
+                  <h2 className="text-foreground text-xl font-semibold tracking-tight">
+                    In the Works
+                  </h2>
+                  <p className="text-muted-foreground text-sm">
+                    What we're building right now
+                  </p>
                 </div>
               </div>
-             
             </div>
 
-            <div className="no-scrollbar flex w-full gap-5 overflow-x-auto snap-x snap-mandatory px-5 sm:px-8 lg:px-10">
+            <div className="no-scrollbar flex w-full snap-x snap-mandatory gap-5 overflow-x-auto px-5 sm:px-8 lg:px-10">
               {inProgressItems.map((item, index) => (
                 <motion.div
                   key={item.title}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className="min-w-[280px] sm:min-w-[340px] snap-start"
+                  className="min-w-[280px] snap-start sm:min-w-[340px]"
                 >
-                  <Card className="group border-border/40 bg-card/40 relative h-full overflow-hidden p-6 shadow-sm backdrop-blur-xl transition-all duration-300 hover:border-primary/30 hover:shadow-md">
-                    <div className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${item.color} blur-2xl transition-opacity group-hover:opacity-100`} />
-                    
+                  <Card className="group border-border/40 bg-card/40 hover:border-primary/30 relative h-full overflow-hidden p-6 shadow-sm backdrop-blur-xl transition-all duration-300 hover:shadow-md">
+                    <div
+                      className={`absolute -top-8 -right-8 h-24 w-24 rounded-full bg-gradient-to-br ${item.color} blur-2xl transition-opacity group-hover:opacity-100`}
+                    />
+
                     <div className="relative z-10 space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className="bg-background/80 flex h-12 w-12 items-center justify-center rounded-2xl border border-border/50 shadow-sm transition-transform group-hover:scale-110">
+                        <div className="bg-background/80 border-border/50 flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm transition-transform group-hover:scale-110">
                           <item.icon className="text-foreground h-6 w-6" />
                         </div>
-                        <Badge variant="outline" className="border-border/60 bg-background/50 text-[10px] font-medium uppercase tracking-wider backdrop-blur-md">
-                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin text-primary" />
+                        <Badge
+                          variant="outline"
+                          className="border-border/60 bg-background/50 text-[10px] font-medium tracking-wider uppercase backdrop-blur-md"
+                        >
+                          <Loader2 className="text-primary mr-1.5 h-3 w-3 animate-spin" />
                           {item.status}
                         </Badge>
                       </div>
 
                       <div className="space-y-2">
-                        <h3 className="text-foreground/70 font-semibold tracking-tight sm:text-lg transition-colors group-hover:text-foreground">
+                        <h3 className="text-foreground/70 group-hover:text-foreground font-semibold tracking-tight transition-colors sm:text-lg">
                           {item.title}
                         </h3>
-                        <p className="text-muted-foreground/70 text-sm leading-relaxed sm:text-[15px] transition-colors group-hover:text-muted-foreground">
+                        <p className="text-muted-foreground/70 group-hover:text-muted-foreground text-sm leading-relaxed transition-colors sm:text-[15px]">
                           {item.description}
                         </p>
                       </div>
@@ -752,7 +770,7 @@ export function ChangelogRouteComponent() {
                   </Card>
                 </motion.div>
               ))}
-              
+
               {/* Spacer for horizontal scroll padding on mobile */}
               <div className="min-w-[20px] sm:hidden" />
             </div>
