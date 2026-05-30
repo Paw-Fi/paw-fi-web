@@ -1,6 +1,34 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle, Activity, UserPlus, BadgeCheck } from "lucide-react";
+import {
+  RefreshCw,
+  Users,
+  MapPin,
+  Calendar,
+  CalendarDays,
+  Infinity,
+  Ban,
+  MessageCircle,
+  AlertCircle,
+  Activity,
+  UserPlus,
+  BadgeCheck,
+} from "lucide-react";
+import { eachDayOfInterval, format, parseISO, subDays } from "date-fns";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { useUserCount } from "@/hooks/use-user-count";
 import { useUsersByTimezone } from "@/hooks/use-users-by-timezone";
@@ -24,6 +52,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CreatorHeader } from "@/components/creator/creator-header";
 
 export const Route = createFileRoute("/creator/performance")({
@@ -56,6 +92,12 @@ function formatTrialExpiryDistance(expiryAt: number): string {
 
 function PerformancePage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [rangePreset, setRangePreset] = useState("last_28_days");
+  const [startDate, setStartDate] = useState(() =>
+    dateToIso(subDays(new Date(), 27)),
+  );
+  const [endDate, setEndDate] = useState(() => dateToIso(new Date()));
+  const [compareEnabled, setCompareEnabled] = useState(true);
   const totalUsers = useUserCount(refreshKey);
   const usersByTimezone = useUsersByTimezone(refreshKey);
   const subscriptionAnalytics = useSubscriptionAnalytics(refreshKey);
@@ -65,20 +107,257 @@ function PerformancePage() {
   const dailySignupsByTimezone = useDailySignupsByTimezone(refreshKey);
   const dauByTimezone = useDAUByTimezone(refreshKey);
   const totalDAU = useTotalDAU(refreshKey);
-  const trialingUsersByClosestExpiry = useMemo(
-    () => {
-      const now = Date.now();
+  const trialingUsersByClosestExpiry = useMemo(() => {
+    const now = Date.now();
 
-      return trialingUsers
-        .map((user) => ({
-          ...user,
-          expiryAt: user.trialEnd ? new Date(user.trialEnd).getTime() : Number.NaN,
-        }))
-        .filter((user) => Number.isFinite(user.expiryAt) && user.expiryAt >= now)
-        .sort((a, b) => a.expiryAt - b.expiryAt);
-    },
-    [trialingUsers],
+    return trialingUsers
+      .map((user) => ({
+        ...user,
+        expiryAt: user.trialEnd
+          ? new Date(user.trialEnd).getTime()
+          : Number.NaN,
+      }))
+      .filter((user) => Number.isFinite(user.expiryAt) && user.expiryAt >= now)
+      .sort((a, b) => a.expiryAt - b.expiryAt);
+  }, [trialingUsers]);
+
+  const normalizedRange = useMemo(() => {
+    const safeStart = isValidIsoDate(startDate)
+      ? startDate
+      : dateToIso(subDays(new Date(), 27));
+    const safeEnd = isValidIsoDate(endDate) ? endDate : dateToIso(new Date());
+    return safeStart <= safeEnd
+      ? { start: safeStart, end: safeEnd }
+      : { start: safeEnd, end: safeStart };
+  }, [startDate, endDate]);
+
+  const compareRange = useMemo(() => {
+    const days = getInclusiveDayCount(
+      normalizedRange.start,
+      normalizedRange.end,
+    );
+    const currentStart = parseISO(normalizedRange.start);
+    const compareEnd = subDays(currentStart, 1);
+    const compareStart = subDays(compareEnd, days - 1);
+
+    return {
+      start: dateToIso(compareStart),
+      end: dateToIso(compareEnd),
+    };
+  }, [normalizedRange.end, normalizedRange.start]);
+
+  const isRangeCoveredByLocalData = useMemo(() => {
+    const earliestAvailable = dateToIso(subDays(new Date(), 59));
+    return normalizedRange.start >= earliestAvailable;
+  }, [normalizedRange.start]);
+
+  const signupsCurrent = useMemo(
+    () =>
+      buildRangeSeries(
+        dailySignups.dailyData,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+    [dailySignups.dailyData, normalizedRange.end, normalizedRange.start],
   );
+  const signupsCompare = useMemo(
+    () =>
+      buildRangeSeries(
+        dailySignups.dailyData,
+        compareRange.start,
+        compareRange.end,
+      ),
+    [compareRange.end, compareRange.start, dailySignups.dailyData],
+  );
+
+  const messageCurrent = useMemo(
+    () =>
+      buildMessageRangeSeries(
+        messageAnalytics.dailyData,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+    [messageAnalytics.dailyData, normalizedRange.end, normalizedRange.start],
+  );
+  const messageCompare = useMemo(
+    () =>
+      buildMessageRangeSeries(
+        messageAnalytics.dailyData,
+        compareRange.start,
+        compareRange.end,
+      ),
+    [compareRange.end, compareRange.start, messageAnalytics.dailyData],
+  );
+
+  const subscriptionTotals = useMemo(() => {
+    return {
+      monthlyCurrent: sumTrendByDateRange(
+        subscriptionAnalytics.monthlyActive.trend,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+      monthlyCompare: sumTrendByDateRange(
+        subscriptionAnalytics.monthlyActive.trend,
+        compareRange.start,
+        compareRange.end,
+      ),
+      yearlyCurrent: sumTrendByDateRange(
+        subscriptionAnalytics.yearlyActive.trend,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+      yearlyCompare: sumTrendByDateRange(
+        subscriptionAnalytics.yearlyActive.trend,
+        compareRange.start,
+        compareRange.end,
+      ),
+      lifetimeCurrent: sumTrendByDateRange(
+        subscriptionAnalytics.lifetimeActive.trend,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+      lifetimeCompare: sumTrendByDateRange(
+        subscriptionAnalytics.lifetimeActive.trend,
+        compareRange.start,
+        compareRange.end,
+      ),
+      cancelledCurrent: sumTrendByDateRange(
+        subscriptionAnalytics.totalCancelled.trend,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+      cancelledCompare: sumTrendByDateRange(
+        subscriptionAnalytics.totalCancelled.trend,
+        compareRange.start,
+        compareRange.end,
+      ),
+      trialToActiveCurrent: sumTrendByDateRange(
+        subscriptionAnalytics.trialToActive.trend,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+      trialToActiveCompare: sumTrendByDateRange(
+        subscriptionAnalytics.trialToActive.trend,
+        compareRange.start,
+        compareRange.end,
+      ),
+    };
+  }, [
+    compareRange.end,
+    compareRange.start,
+    normalizedRange.end,
+    normalizedRange.start,
+    subscriptionAnalytics,
+  ]);
+
+  const signupsSummary = useMemo(() => {
+    const current = sumNumericField(signupsCurrent, "count");
+    const previous = sumNumericField(signupsCompare, "count");
+    const days = getInclusiveDayCount(
+      normalizedRange.start,
+      normalizedRange.end,
+    );
+    return {
+      current,
+      previous,
+      averagePerDay: days > 0 ? Math.round(current / days) : 0,
+      changePercent: calculateChangePercent(current, previous),
+    };
+  }, [
+    normalizedRange.end,
+    normalizedRange.start,
+    signupsCompare,
+    signupsCurrent,
+  ]);
+
+  const messagesSummary = useMemo(() => {
+    const currentWhatsapp = sumNumericField(messageCurrent, "whatsapp");
+    const currentTelegram = sumNumericField(messageCurrent, "telegram");
+    const previousWhatsapp = sumNumericField(messageCompare, "whatsapp");
+    const previousTelegram = sumNumericField(messageCompare, "telegram");
+
+    return {
+      currentWhatsapp,
+      currentTelegram,
+      whatsappChangePercent: calculateChangePercent(
+        currentWhatsapp,
+        previousWhatsapp,
+      ),
+      telegramChangePercent: calculateChangePercent(
+        currentTelegram,
+        previousTelegram,
+      ),
+    };
+  }, [messageCompare, messageCurrent]);
+
+  const dailyComparisonChartData = useMemo(
+    () => buildDailyComparisonChartData(signupsCurrent, signupsCompare),
+    [signupsCompare, signupsCurrent],
+  );
+
+  const messageChartData = useMemo(
+    () => messageCurrent.map((row) => ({ ...row, label: shortDate(row.date) })),
+    [messageCurrent],
+  );
+
+  const subscriptionChartData = useMemo(
+    () => [
+      {
+        metric: "Monthly",
+        current: subscriptionTotals.monthlyCurrent,
+        compare: subscriptionTotals.monthlyCompare,
+      },
+      {
+        metric: "Yearly",
+        current: subscriptionTotals.yearlyCurrent,
+        compare: subscriptionTotals.yearlyCompare,
+      },
+      {
+        metric: "Lifetime",
+        current: subscriptionTotals.lifetimeCurrent,
+        compare: subscriptionTotals.lifetimeCompare,
+      },
+      {
+        metric: "Cancelled",
+        current: subscriptionTotals.cancelledCurrent,
+        compare: subscriptionTotals.cancelledCompare,
+      },
+      {
+        metric: "Trial->Paid",
+        current: subscriptionTotals.trialToActiveCurrent,
+        compare: subscriptionTotals.trialToActiveCompare,
+      },
+    ],
+    [subscriptionTotals],
+  );
+
+  const rangeLabel = `${format(parseISO(normalizedRange.start), "MMM d, yyyy")} - ${format(parseISO(normalizedRange.end), "MMM d, yyyy")}`;
+  const compareLabel = `${format(parseISO(compareRange.start), "MMM d, yyyy")} - ${format(parseISO(compareRange.end), "MMM d, yyyy")}`;
+
+  const applyPreset = (preset: string) => {
+    setRangePreset(preset);
+
+    const today = new Date();
+    if (preset === "last_7_days") {
+      setStartDate(dateToIso(subDays(today, 6)));
+      setEndDate(dateToIso(today));
+      return;
+    }
+    if (preset === "last_14_days") {
+      setStartDate(dateToIso(subDays(today, 13)));
+      setEndDate(dateToIso(today));
+      return;
+    }
+    if (preset === "last_28_days") {
+      setStartDate(dateToIso(subDays(today, 27)));
+      setEndDate(dateToIso(today));
+      return;
+    }
+    if (preset === "last_30_days") {
+      setStartDate(dateToIso(subDays(today, 29)));
+      setEndDate(dateToIso(today));
+    }
+  };
 
   return (
     <>
@@ -102,6 +381,196 @@ function PerformancePage() {
             </Button>
           </header>
 
+          <Card className="border-white/10 bg-slate-900/50">
+            <CardHeader>
+              <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                Date Filter
+              </CardDescription>
+              <CardTitle className="mt-1 text-xl text-white">
+                Range & Comparison
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-4">
+                <Select value={rangePreset} onValueChange={applyPreset}>
+                  <SelectTrigger className="border-white/10 bg-black/20 text-white">
+                    <SelectValue placeholder="Preset" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-slate-900 text-white">
+                    <SelectItem value="last_7_days">Last 7 days</SelectItem>
+                    <SelectItem value="last_14_days">Last 14 days</SelectItem>
+                    <SelectItem value="last_28_days">Last 28 days</SelectItem>
+                    <SelectItem value="last_30_days">Last 30 days</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => {
+                    setRangePreset("custom");
+                    setStartDate(event.target.value);
+                  }}
+                  className="border-white/10 bg-black/20 text-white"
+                />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => {
+                    setRangePreset("custom");
+                    setEndDate(event.target.value);
+                  }}
+                  className="border-white/10 bg-black/20 text-white"
+                />
+                <Button
+                  variant={compareEnabled ? "default" : "outline"}
+                  className="justify-start"
+                  onClick={() => setCompareEnabled((prev) => !prev)}
+                >
+                  Compare previous period
+                </Button>
+              </div>
+              <div className="text-xs text-white/60">
+                <span className="text-white/80">Current:</span> {rangeLabel}
+                {compareEnabled ? (
+                  <span>
+                    {" "}
+                    <span className="text-white/80">Compare:</span>{" "}
+                    {compareLabel}
+                  </span>
+                ) : null}
+              </div>
+              {!isRangeCoveredByLocalData && (
+                <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                  Some cards are powered by 60-day trend snapshots right now.
+                  Pick a range inside the last 60 days for fully comparable
+                  trend metrics.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-white">Trend Visuals</h2>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <Card className="border-white/10 bg-slate-900/50">
+                <CardHeader>
+                  <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                    Acquisition
+                  </CardDescription>
+                  <CardTitle className="mt-1 text-xl text-white">
+                    Signups: Current vs Compare
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailyComparisonChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="label" stroke="#94A3B8" />
+                      <YAxis stroke="#94A3B8" allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="current"
+                        name="Current"
+                        stroke="#10B981"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      {compareEnabled && (
+                        <Line
+                          type="monotone"
+                          dataKey="compare"
+                          name="Compare"
+                          stroke="#94A3B8"
+                          strokeWidth={2}
+                          dot={false}
+                          strokeDasharray="4 4"
+                        />
+                      )}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/10 bg-slate-900/50">
+                <CardHeader>
+                  <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                    Engagement
+                  </CardDescription>
+                  <CardTitle className="mt-1 text-xl text-white">
+                    Messages by Channel
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={messageChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis dataKey="label" stroke="#94A3B8" />
+                      <YAxis stroke="#94A3B8" allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Area
+                        type="monotone"
+                        dataKey="whatsapp"
+                        name="WhatsApp"
+                        stackId="messages"
+                        stroke="#22C55E"
+                        fill="#22C55E"
+                        fillOpacity={0.28}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="telegram"
+                        name="Telegram"
+                        stackId="messages"
+                        stroke="#3B82F6"
+                        fill="#3B82F6"
+                        fillOpacity={0.28}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="border-white/10 bg-slate-900/50">
+              <CardHeader>
+                <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                  Monetization
+                </CardDescription>
+                <CardTitle className="mt-1 text-xl text-white">
+                  Subscription Mix Comparison
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={subscriptionChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis dataKey="metric" stroke="#94A3B8" />
+                    <YAxis stroke="#94A3B8" allowDecimals={false} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar
+                      dataKey="current"
+                      name="Current"
+                      fill="#8B5CF6"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    {compareEnabled && (
+                      <Bar
+                        dataKey="compare"
+                        name="Compare"
+                        fill="#64748B"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </section>
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-white">Total Users</h2>
@@ -145,7 +614,9 @@ function PerformancePage() {
                           <p className="truncate text-sm text-white/85">
                             {user.fullName || user.email || user.userId}
                           </p>
-                          <p className="text-xs text-white/50">Status: trialing</p>
+                          <p className="text-xs text-white/50">
+                            Status: trialing
+                          </p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs font-medium text-amber-300">
@@ -169,31 +640,54 @@ function PerformancePage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-white">Active Subscriptions</h2>
+            <h2 className="text-lg font-semibold text-white">
+              Active Subscriptions
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SubscriptionMetricCard
                 title="Monthly Active"
-                value={subscriptionAnalytics.monthlyActive.currentValue}
-                trend={subscriptionAnalytics.monthlyActive.trend}
-                changePercent={subscriptionAnalytics.monthlyActive.changePercent}
+                value={subscriptionTotals.monthlyCurrent}
+                trend={filterTrendByDateRange(
+                  subscriptionAnalytics.monthlyActive.trend,
+                  normalizedRange.start,
+                  normalizedRange.end,
+                )}
+                changePercent={calculateChangePercent(
+                  subscriptionTotals.monthlyCurrent,
+                  subscriptionTotals.monthlyCompare,
+                )}
                 providers={subscriptionAnalytics.monthlyActive.providers}
                 color="#3B82F6"
                 icon={<Calendar className="h-4 w-4" />}
               />
               <SubscriptionMetricCard
                 title="Yearly Active"
-                value={subscriptionAnalytics.yearlyActive.currentValue}
-                trend={subscriptionAnalytics.yearlyActive.trend}
-                changePercent={subscriptionAnalytics.yearlyActive.changePercent}
+                value={subscriptionTotals.yearlyCurrent}
+                trend={filterTrendByDateRange(
+                  subscriptionAnalytics.yearlyActive.trend,
+                  normalizedRange.start,
+                  normalizedRange.end,
+                )}
+                changePercent={calculateChangePercent(
+                  subscriptionTotals.yearlyCurrent,
+                  subscriptionTotals.yearlyCompare,
+                )}
                 providers={subscriptionAnalytics.yearlyActive.providers}
                 color="#8B5CF6"
                 icon={<CalendarDays className="h-4 w-4" />}
               />
               <SubscriptionMetricCard
                 title="Lifetime Active"
-                value={subscriptionAnalytics.lifetimeActive.currentValue}
-                trend={subscriptionAnalytics.lifetimeActive.trend}
-                changePercent={subscriptionAnalytics.lifetimeActive.changePercent}
+                value={subscriptionTotals.lifetimeCurrent}
+                trend={filterTrendByDateRange(
+                  subscriptionAnalytics.lifetimeActive.trend,
+                  normalizedRange.start,
+                  normalizedRange.end,
+                )}
+                changePercent={calculateChangePercent(
+                  subscriptionTotals.lifetimeCurrent,
+                  subscriptionTotals.lifetimeCompare,
+                )}
                 providers={subscriptionAnalytics.lifetimeActive.providers}
                 color="#F59E0B"
                 icon={<Infinity className="h-4 w-4" />}
@@ -206,18 +700,32 @@ function PerformancePage() {
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SubscriptionMetricCard
                 title="Cancelled"
-                value={subscriptionAnalytics.totalCancelled.currentValue}
-                trend={subscriptionAnalytics.totalCancelled.trend}
-                changePercent={subscriptionAnalytics.totalCancelled.changePercent}
+                value={subscriptionTotals.cancelledCurrent}
+                trend={filterTrendByDateRange(
+                  subscriptionAnalytics.totalCancelled.trend,
+                  normalizedRange.start,
+                  normalizedRange.end,
+                )}
+                changePercent={calculateChangePercent(
+                  subscriptionTotals.cancelledCurrent,
+                  subscriptionTotals.cancelledCompare,
+                )}
                 providers={subscriptionAnalytics.totalCancelled.providers}
                 color="#EF4444"
                 icon={<Ban className="h-4 w-4" />}
               />
               <SubscriptionMetricCard
                 title="Paying After Trial"
-                value={subscriptionAnalytics.trialToActive.currentValue}
-                trend={subscriptionAnalytics.trialToActive.trend}
-                changePercent={subscriptionAnalytics.trialToActive.changePercent}
+                value={subscriptionTotals.trialToActiveCurrent}
+                trend={filterTrendByDateRange(
+                  subscriptionAnalytics.trialToActive.trend,
+                  normalizedRange.start,
+                  normalizedRange.end,
+                )}
+                changePercent={calculateChangePercent(
+                  subscriptionTotals.trialToActiveCurrent,
+                  subscriptionTotals.trialToActiveCompare,
+                )}
                 providers={subscriptionAnalytics.trialToActive.providers}
                 color="#22C55E"
                 icon={<BadgeCheck className="h-4 w-4" />}
@@ -227,21 +735,23 @@ function PerformancePage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-white">Message Analytics</h2>
+            <h2 className="text-lg font-semibold text-white">
+              Message Analytics
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MessageAnalyticsCard
-                title="Today's WhatsApp"
-                totalValue={messageAnalytics.todayWhatsApp}
-                dailyData={messageAnalytics.dailyData}
-                changePercent={messageAnalytics.whatsAppChangePercent}
+                title="WhatsApp Messages"
+                totalValue={messagesSummary.currentWhatsapp}
+                dailyData={messageCurrent}
+                changePercent={messagesSummary.whatsappChangePercent}
                 channel="whatsapp"
                 icon={<MessageCircle className="h-4 w-4" />}
               />
               <MessageAnalyticsCard
-                title="Today's Telegram"
-                totalValue={messageAnalytics.todayTelegram}
-                dailyData={messageAnalytics.dailyData}
-                changePercent={messageAnalytics.telegramChangePercent}
+                title="Telegram Messages"
+                totalValue={messagesSummary.currentTelegram}
+                dailyData={messageCurrent}
+                changePercent={messagesSummary.telegramChangePercent}
                 channel="telegram"
                 icon={<MessageCircle className="h-4 w-4" />}
               />
@@ -262,10 +772,15 @@ function PerformancePage() {
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="text-2xl font-bold text-white">
-                      {dailySignups.todayCount.toLocaleString()}
+                      {signupsSummary.current.toLocaleString()}
                     </div>
                     <div className="text-xs text-white/50">
-                      {dailySignups.averagePerDay} avg/day (30d)
+                      {signupsSummary.averagePerDay} avg/day (
+                      {getInclusiveDayCount(
+                        normalizedRange.start,
+                        normalizedRange.end,
+                      )}
+                      d)
                     </div>
                   </div>
                   <div
@@ -326,7 +841,9 @@ function PerformancePage() {
                       </div>
                     ))}
                     {usersByTimezone.length === 0 && (
-                      <p className="text-sm text-white/50">No timezone data available</p>
+                      <p className="text-sm text-white/50">
+                        No timezone data available
+                      </p>
                     )}
                   </div>
                 </CardContent>
@@ -357,7 +874,9 @@ function PerformancePage() {
                       </div>
                     ))}
                     {dauByTimezone.length === 0 && (
-                      <p className="text-sm text-white/50">No DAU data available</p>
+                      <p className="text-sm text-white/50">
+                        No DAU data available
+                      </p>
                     )}
                   </div>
                 </CardContent>
@@ -387,4 +906,111 @@ function PerformancePage() {
       </div>
     </>
   );
+}
+
+function dateToIso(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
+
+function isValidIsoDate(value: string): boolean {
+  if (!value) return false;
+  const parsed = parseISO(value);
+  return !Number.isNaN(parsed.getTime());
+}
+
+function getInclusiveDayCount(startIso: string, endIso: string): number {
+  const days = eachDayOfInterval({
+    start: parseISO(startIso),
+    end: parseISO(endIso),
+  });
+  return days.length;
+}
+
+function filterTrendByDateRange(
+  trend: { date: string; value: number }[],
+  startIso: string,
+  endIso: string,
+): { date: string; value: number }[] {
+  return trend.filter(
+    (point) => point.date >= startIso && point.date <= endIso,
+  );
+}
+
+function sumTrendByDateRange(
+  trend: { date: string; value: number }[],
+  startIso: string,
+  endIso: string,
+): number {
+  return filterTrendByDateRange(trend, startIso, endIso).reduce(
+    (sum, point) => sum + point.value,
+    0,
+  );
+}
+
+function buildRangeSeries(
+  rows: { date: string; count: number }[],
+  startIso: string,
+  endIso: string,
+): { date: string; count: number }[] {
+  const rowsMap = new Map(rows.map((row) => [row.date, row]));
+  return eachDayOfInterval({
+    start: parseISO(startIso),
+    end: parseISO(endIso),
+  }).map((date) => {
+    const iso = dateToIso(date);
+    return {
+      date: iso,
+      count: rowsMap.get(iso)?.count ?? 0,
+    };
+  });
+}
+
+function buildMessageRangeSeries(
+  rows: { date: string; whatsapp: number; telegram: number }[],
+  startIso: string,
+  endIso: string,
+): { date: string; whatsapp: number; telegram: number }[] {
+  const rowsMap = new Map(rows.map((row) => [row.date, row]));
+  return eachDayOfInterval({
+    start: parseISO(startIso),
+    end: parseISO(endIso),
+  }).map((date) => {
+    const iso = dateToIso(date);
+    const row = rowsMap.get(iso);
+    return {
+      date: iso,
+      whatsapp: row?.whatsapp ?? 0,
+      telegram: row?.telegram ?? 0,
+    };
+  });
+}
+
+function sumNumericField<T extends Record<string, unknown>>(
+  rows: T[],
+  key: keyof T,
+): number {
+  return rows.reduce((sum, row) => sum + Number(row[key] ?? 0), 0);
+}
+
+function calculateChangePercent(current: number, previous: number): number {
+  if (previous <= 0) return 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+function buildDailyComparisonChartData(
+  current: { date: string; count: number }[],
+  compare: { date: string; count: number }[],
+): { label: string; current: number; compare: number; date: string }[] {
+  return current.map((row, index) => {
+    return {
+      label: shortDate(row.date),
+      date: row.date,
+      current: row.count,
+      compare: compare[index]?.count ?? 0,
+    };
+  });
+}
+
+function shortDate(value: string): string {
+  return format(parseISO(value), "MMM d");
 }
