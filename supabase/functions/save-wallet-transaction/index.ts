@@ -109,6 +109,9 @@ interface TransactionPayload {
   externalSourceId?: string | null;
   packageName?: string | null;
   sourcePackage?: string | null;
+  notificationKey?: string | null;
+  notificationPostTime?: string | null;
+  sourceAppLabel?: string | null;
 }
 
 interface RequestBody {
@@ -132,6 +135,12 @@ interface WalletCaptureClaimResult {
   status: "claimed" | "cached" | "processing";
   claimId?: string;
   cachedResponse?: Record<string, unknown>;
+}
+
+interface AndroidWalletCaptureClaimResult {
+  status: "claimed" | "duplicate" | "processing";
+  claimId?: string;
+  duplicateResponse?: Record<string, unknown>;
 }
 
 type WalletBudgetScope = "personal" | "portfolio" | "household";
@@ -216,6 +225,12 @@ function buildWalletCaptureRequestLogContext(
             160,
           ),
           externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
+          notificationKey: truncateForLog(tx.notificationKey ?? null, 160),
+          notificationPostTime: truncateForLog(
+            tx.notificationPostTime ?? null,
+            80,
+          ),
+          sourceAppLabel: truncateForLog(tx.sourceAppLabel ?? null, 120),
         }
       : null,
   };
@@ -1220,6 +1235,243 @@ async function claimWalletCaptureIdempotencyKey(
   return { status: "processing" };
 }
 
+function normalizeAndroidCaptureMerchantKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/\b(?:usd|eur|gbp|aud|cad|inr|rs)\b/g, " ")
+    .replace(/\b\d{1,4}(?:[.,]\d{2})?\b/g, " ")
+    .replace(
+      /\b(?:google|wallet|pay|card|visa|mastercard|debit|credit|purchase|payment|spent|paid|approved|transaction|notification|with|using|ending|account|bank)\b/g,
+      " ",
+    )
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .split(" ")
+    .filter((part) => part.length > 1)
+    .slice(0, 6)
+    .join(" ");
+}
+
+function buildWalletCaptureScopeKey(
+  householdId: string | null,
+  isPortfolio: boolean,
+): string {
+  return householdId
+    ? `${householdId}:${isPortfolio ? "portfolio" : "household"}`
+    : "personal";
+}
+
+function parseOptionalDate(value: string | null | undefined): Date | null {
+  if (typeof value !== "string" || value.trim().length === 0) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function resolveAndroidNotificationPostedAt(
+  tx: TransactionPayload,
+  clientCreatedAt: string | null | undefined,
+): Date {
+  return (
+    parseOptionalDate(tx.notificationPostTime) ??
+    parseOptionalDate(clientCreatedAt) ??
+    new Date()
+  );
+}
+
+function buildAndroidLogicalFingerprint(params: {
+  userId: string;
+  scopeKey: string;
+  accountId: string | null;
+  transactionType: "expense" | "income";
+  amountCents: number;
+  currency: string;
+  date: string;
+  merchantKey: string;
+}): string {
+  return [
+    "android_wallet_capture",
+    params.userId,
+    params.scopeKey,
+    params.accountId ?? "no-account",
+    params.transactionType,
+    String(params.amountCents),
+    params.currency,
+    params.date,
+    params.merchantKey,
+  ].join("|");
+}
+
+function buildServerScopedAndroidIdempotencyKey(params: {
+  explicitKey?: string | null;
+  userId: string;
+}): string | null {
+  const explicitKey = (params.explicitKey ?? "").trim();
+  if (!explicitKey) return null;
+  return ["wallet_capture", "android", params.userId, explicitKey].join("|");
+}
+
+function buildAndroidLogicalDuplicateResponse(
+  row: Record<string, unknown>,
+  captureSource: string,
+): Record<string, unknown> | null {
+  const expenseId = typeof row.expenseId === "string" ? row.expenseId : null;
+  if (!expenseId) return null;
+
+  const amountCents = Number(row.amountCents);
+  const currency = typeof row.currency === "string" ? row.currency : null;
+  const category = typeof row.category === "string" ? row.category : "other";
+  const reason =
+    typeof row.reason === "string" ? row.reason : "android_logical_duplicate";
+
+  return {
+    success: true,
+    duplicate: true,
+    data: {
+      id: expenseId,
+      category,
+      amount_cents: Number.isFinite(amountCents) ? amountCents : null,
+      currency,
+    },
+    meta: {
+      captureSource,
+      resolvedCategory: category,
+      deduplicatedAt: new Date().toISOString(),
+      deduplicationReason: reason,
+    },
+  };
+}
+
+async function claimAndroidWalletCaptureEvent(params: {
+  supabase: any;
+  userId: string;
+  householdId: string | null;
+  isPortfolio: boolean;
+  accountId: string | null;
+  captureSource: string;
+  sourcePackage: string | null;
+  sourceAppLabel: string | null;
+  exactEventKey: string;
+  transactionType: "expense" | "income";
+  merchantDisplay: string;
+  amountCents: number;
+  currency: string;
+  date: string;
+  notificationPostedAt: Date;
+}): Promise<AndroidWalletCaptureClaimResult> {
+  const scopeKey = buildWalletCaptureScopeKey(
+    params.householdId,
+    params.isPortfolio,
+  );
+  const merchantKey = normalizeAndroidCaptureMerchantKey(
+    params.merchantDisplay,
+  );
+  const logicalFingerprint = buildAndroidLogicalFingerprint({
+    userId: params.userId,
+    scopeKey,
+    accountId: params.accountId,
+    transactionType: params.transactionType,
+    amountCents: params.amountCents,
+    currency: params.currency,
+    date: params.date,
+    merchantKey,
+  });
+
+  const { data, error } = await params.supabase.rpc(
+    "claim_android_wallet_capture_event",
+    {
+      p_user_id: params.userId,
+      p_scope_key: scopeKey,
+      p_household_id: params.householdId,
+      p_is_portfolio: params.isPortfolio,
+      p_account_id: params.accountId,
+      p_capture_source: params.captureSource,
+      p_source_package: params.sourcePackage,
+      p_source_app_label: params.sourceAppLabel,
+      p_exact_event_key: params.exactEventKey,
+      p_logical_fingerprint: logicalFingerprint,
+      p_merchant_key: merchantKey || null,
+      p_transaction_type: params.transactionType,
+      p_amount_cents: params.amountCents,
+      p_currency: params.currency,
+      p_transaction_date: params.date,
+      p_notification_posted_at: params.notificationPostedAt.toISOString(),
+    },
+  );
+
+  if (error) {
+    throw new Error(`ANDROID_CAPTURE_DEDUP_FAILED:${error.message}`);
+  }
+
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const status = typeof result.status === "string" ? result.status : null;
+  const claimId =
+    typeof result.claimId === "string" ? result.claimId : undefined;
+
+  if (status === "duplicate") {
+    return {
+      status: "duplicate",
+      claimId,
+      duplicateResponse:
+        buildAndroidLogicalDuplicateResponse(result, params.captureSource) ??
+        undefined,
+    };
+  }
+
+  if (status === "processing") {
+    return { status: "processing", claimId };
+  }
+
+  if (status === "claimed" && claimId) {
+    return { status: "claimed", claimId };
+  }
+
+  throw new Error("ANDROID_CAPTURE_DEDUP_INVALID_RESPONSE");
+}
+
+async function finalizeAndroidWalletCaptureEvent(
+  supabase: any,
+  claimId: string | null,
+  expenseId: string,
+  result: Record<string, unknown>,
+): Promise<void> {
+  if (!claimId) return;
+  const { error } = await supabase.rpc(
+    "finalize_android_wallet_capture_event",
+    {
+      p_claim_id: claimId,
+      p_expense_id: expenseId,
+      p_result: result,
+    },
+  );
+  if (error) {
+    console.error(
+      "[save-wallet-transaction] Failed to finalize Android capture event:",
+      error,
+    );
+  }
+}
+
+async function releaseAndroidWalletCaptureEvent(
+  supabase: any,
+  claimId: string | null,
+  errorText: string,
+): Promise<void> {
+  if (!claimId) return;
+  const { error } = await supabase.rpc("release_android_wallet_capture_event", {
+    p_claim_id: claimId,
+    p_error: errorText,
+  });
+  if (error) {
+    console.error(
+      "[save-wallet-transaction] Failed to release Android capture event:",
+      error,
+    );
+  }
+}
+
 async function cleanupExpenseInsert(
   supabase: any,
   expenseId: string,
@@ -1465,6 +1717,7 @@ Deno.serve(async (req: Request) => {
   }
 
   let idempotencyClaimId: string | null = null;
+  let androidCaptureClaimId: string | null = null;
   let requestDebugContext: Record<string, unknown> | null = null;
 
   try {
@@ -1893,7 +2146,13 @@ Deno.serve(async (req: Request) => {
     });
 
     const requestIdempotencyKey = buildWalletCaptureIdempotencyKey({
-      explicitKey: body.idempotencyKey,
+      explicitKey:
+        captureSource === "android_notification_listener"
+          ? buildServerScopedAndroidIdempotencyKey({
+              explicitKey: body.idempotencyKey,
+              userId,
+            })
+          : body.idempotencyKey,
       captureSource,
       userId,
       householdId,
@@ -1924,6 +2183,74 @@ Deno.serve(async (req: Request) => {
       );
     }
     idempotencyClaimId = claimResult.claimId ?? null;
+
+    if (captureSource === "android_notification_listener") {
+      try {
+        const androidClaim = await claimAndroidWalletCaptureEvent({
+          supabase,
+          userId,
+          householdId,
+          isPortfolio,
+          accountId,
+          captureSource,
+          sourcePackage: resolveWalletTransactionPackageName(tx),
+          sourceAppLabel: tx.sourceAppLabel ?? null,
+          exactEventKey: requestIdempotencyKey,
+          transactionType,
+          merchantDisplay,
+          amountCents,
+          currency,
+          date: normalizedDate,
+          notificationPostedAt: resolveAndroidNotificationPostedAt(
+            tx,
+            body.clientCreatedAt,
+          ),
+        });
+
+        if (androidClaim.status === "duplicate") {
+          const duplicateResponse = androidClaim.duplicateResponse;
+          if (!duplicateResponse) {
+            throw new Error("ANDROID_CAPTURE_DUPLICATE_MISSING_RESPONSE");
+          }
+          return successResponse(
+            await storeWalletCaptureIdempotencyResult(
+              supabase,
+              requireWalletCaptureClaimId(idempotencyClaimId),
+              requestIdempotencyKey,
+              duplicateResponse,
+            ),
+          );
+        }
+
+        if (androidClaim.status === "processing") {
+          await releaseWalletCaptureIdempotencyClaim(
+            supabase,
+            idempotencyClaimId,
+          );
+          return errorResponse(
+            "An identical wallet capture is already being processed",
+            409,
+            "REQUEST_IN_PROGRESS",
+          );
+        }
+
+        androidCaptureClaimId = androidClaim.claimId ?? null;
+      } catch (dedupError) {
+        console.error(
+          "[save-wallet-transaction] Android logical deduplication failed:",
+          dedupError,
+        );
+        await releaseWalletCaptureIdempotencyClaim(
+          supabase,
+          idempotencyClaimId,
+        );
+        return errorResponse(
+          "Failed to deduplicate wallet capture",
+          500,
+          "SERVER_ERROR",
+        );
+      }
+    }
 
     // ── Category resolution ───────────────────────────────────────────
     // Step 1: Load user category context (custom categories, preferences, remaps)
@@ -2023,6 +2350,13 @@ Deno.serve(async (req: Request) => {
             },
           };
 
+          await finalizeAndroidWalletCaptureEvent(
+            supabase,
+            androidCaptureClaimId,
+            existingExpense.id,
+            duplicateResponse,
+          );
+
           return successResponse(
             await storeWalletCaptureIdempotencyResult(
               supabase,
@@ -2037,6 +2371,11 @@ Deno.serve(async (req: Request) => {
       console.error(
         "[save-wallet-transaction] Error saving expense:",
         expenseError,
+      );
+      await releaseAndroidWalletCaptureEvent(
+        supabase,
+        androidCaptureClaimId,
+        "expense_insert_failed",
       );
       await releaseWalletCaptureIdempotencyClaim(supabase, idempotencyClaimId);
       return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
@@ -2071,18 +2410,6 @@ Deno.serve(async (req: Request) => {
 
     if (householdId && isPortfolio) {
       // Portfolio: save with household_id but no split
-      await sendWalletPocketNotificationBestEffort({
-        supabase,
-        userId,
-        householdId,
-        isPortfolio,
-        amountCents,
-        currency,
-        category: resolvedCategory,
-        dateYmd: normalizedDate,
-        expenseId: expense.id,
-      });
-
       const responseBody = {
         success: true,
         duplicate: false,
@@ -2097,14 +2424,30 @@ Deno.serve(async (req: Request) => {
           resolvedCategory,
         },
       };
-      return successResponse(
-        await storeWalletCaptureIdempotencyResult(
-          supabase,
-          requireWalletCaptureClaimId(idempotencyClaimId),
-          requestIdempotencyKey,
-          responseBody,
-        ),
+      const storedResponse = await storeWalletCaptureIdempotencyResult(
+        supabase,
+        requireWalletCaptureClaimId(idempotencyClaimId),
+        requestIdempotencyKey,
+        responseBody,
       );
+      await finalizeAndroidWalletCaptureEvent(
+        supabase,
+        androidCaptureClaimId,
+        expense.id,
+        storedResponse,
+      );
+      await sendWalletPocketNotificationBestEffort({
+        supabase,
+        userId,
+        householdId,
+        isPortfolio,
+        amountCents,
+        currency,
+        category: resolvedCategory,
+        dateYmd: normalizedDate,
+        expenseId: expense.id,
+      });
+      return successResponse(storedResponse);
     }
 
     if (
@@ -2143,6 +2486,11 @@ Deno.serve(async (req: Request) => {
           expense.id,
         );
         if (didCleanupExpense) {
+          await releaseAndroidWalletCaptureEvent(
+            supabase,
+            androidCaptureClaimId,
+            "split_group_insert_failed",
+          );
           await releaseWalletCaptureIdempotencyClaim(
             supabase,
             idempotencyClaimId,
@@ -2183,6 +2531,11 @@ Deno.serve(async (req: Request) => {
           expense.id,
         );
         if (didCleanupExpense) {
+          await releaseAndroidWalletCaptureEvent(
+            supabase,
+            androidCaptureClaimId,
+            "split_lines_insert_failed",
+          );
           await releaseWalletCaptureIdempotencyClaim(
             supabase,
             idempotencyClaimId,
@@ -2220,6 +2573,11 @@ Deno.serve(async (req: Request) => {
           expense.id,
         );
         if (didCleanupExpense) {
+          await releaseAndroidWalletCaptureEvent(
+            supabase,
+            androidCaptureClaimId,
+            "split_expense_update_failed",
+          );
           await releaseWalletCaptureIdempotencyClaim(
             supabase,
             idempotencyClaimId,
@@ -2289,18 +2647,6 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Success response ──────────────────────────────────────────────
-    await sendWalletPocketNotificationBestEffort({
-      supabase,
-      userId,
-      householdId,
-      isPortfolio,
-      amountCents,
-      currency,
-      category: resolvedCategory,
-      dateYmd: normalizedDate,
-      expenseId: responseExpense.id,
-    });
-
     const responseBody = {
       success: true,
       duplicate: false,
@@ -2315,14 +2661,32 @@ Deno.serve(async (req: Request) => {
         resolvedCategory,
       },
     };
-    return successResponse(
-      await storeWalletCaptureIdempotencyResult(
-        supabase,
-        requireWalletCaptureClaimId(idempotencyClaimId),
-        requestIdempotencyKey,
-        responseBody,
-      ),
+    const storedResponse = await storeWalletCaptureIdempotencyResult(
+      supabase,
+      requireWalletCaptureClaimId(idempotencyClaimId),
+      requestIdempotencyKey,
+      responseBody,
     );
+    await finalizeAndroidWalletCaptureEvent(
+      supabase,
+      androidCaptureClaimId,
+      responseExpense.id,
+      storedResponse,
+    );
+
+    await sendWalletPocketNotificationBestEffort({
+      supabase,
+      userId,
+      householdId,
+      isPortfolio,
+      amountCents,
+      currency,
+      category: resolvedCategory,
+      dateYmd: normalizedDate,
+      expenseId: responseExpense.id,
+    });
+
+    return successResponse(storedResponse);
   } catch (error) {
     console.error("[save-wallet-transaction] Unhandled error:", {
       error,
@@ -2344,6 +2708,11 @@ Deno.serve(async (req: Request) => {
               detectSessionInUrl: false,
             },
           },
+        );
+        await releaseAndroidWalletCaptureEvent(
+          cleanupClient,
+          androidCaptureClaimId,
+          "unhandled_error",
         );
         await releaseWalletCaptureIdempotencyClaim(
           cleanupClient,
