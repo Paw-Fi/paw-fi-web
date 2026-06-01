@@ -62,6 +62,32 @@ export function usePremiumExportJobs() {
   };
 }
 
+export interface PremiumExportAttachment {
+  id: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export function usePremiumExportAttachments(filters: { startDate?: string; endDate?: string }) {
+  const { user } = useAuth();
+  
+  return useQuery<PremiumExportAttachment[]>({
+    queryKey: ["premium-export-attachments", user?.id, filters],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("premium-export-center", {
+        body: { action: "list_attachments", filters },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Failed to list attachments");
+      return data.data as PremiumExportAttachment[];
+    },
+    enabled: Boolean(user?.id),
+    staleTime: 60_000,
+  });
+}
+
 export function usePremiumExportJobStatus(jobId?: string) {
   const { user } = useAuth();
 

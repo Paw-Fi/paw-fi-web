@@ -4,14 +4,11 @@ import { ExportType } from "../types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 
 export function ExportCenter() {
-  const { jobs, createJob, downloadJob, isLoading } = usePremiumExportJobs();
-
-  const handleCreateExport = (exportType: ExportType) => {
-    createJob.mutate({ exportType });
-  };
+  const { jobs, downloadJob } = usePremiumExportJobs();
 
   return (
     <Card className="col-span-1 border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl">
@@ -25,35 +22,15 @@ export function ExportCenter() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex flex-col gap-2">
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="w-full justify-start text-left h-10 border-slate-200/60 dark:border-slate-800/60 font-medium"
-            onClick={() => handleCreateExport("transactions_csv")}
-            disabled={createJob.isPending}
-          >
-            Transactions CSV
-          </Button>
-
-          <Button 
-            size="sm" 
-            variant="outline"
-            className="w-full justify-start text-left h-10 border-slate-200/60 dark:border-slate-800/60 font-medium"
-            onClick={() => handleCreateExport("tax_package_zip")}
-            disabled={createJob.isPending}
-          >
-            Tax Package ZIP
-          </Button>
-
-          <Button 
-            size="sm" 
-            variant="default"
-            className="w-full justify-start text-left h-10 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-medium"
-            onClick={() => handleCreateExport("everything_zip")}
-            disabled={createJob.isPending}
-          >
-            Full Backup (Including Receipts)
-          </Button>
+          <Link to="/dashboard/export">
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="w-full justify-start text-left h-10 border-slate-200/60 dark:border-slate-800/60 font-medium"
+            >
+              Open Export Manager &rarr;
+            </Button>
+          </Link>
         </div>
 
         {jobs.length > 0 && (
