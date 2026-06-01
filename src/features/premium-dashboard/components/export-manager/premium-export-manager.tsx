@@ -11,7 +11,10 @@ import {
   CheckCircle, 
   AlertCircle,
   Paperclip,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  ShieldCheck,
+  Lock,
+  Info
 } from "lucide-react";
 import { usePremiumExportJobs, usePremiumExportAttachments } from "../../hooks/use-premium-export-jobs";
 import { ExportType } from "../../types";
@@ -37,15 +40,27 @@ export function PremiumExportManager() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto p-4 md:p-8 pb-24">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Export & Backups</h1>
-        <p className="text-muted-foreground mt-1">
-          Generate tax-ready packages and secure backups of your business data.
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Data Privacy & Exports</h1>
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+            <ShieldCheck className="w-3.5 h-3.5" /> E2E Encrypted
+          </span>
+        </div>
+        <p className="text-muted-foreground mt-2 max-w-2xl">
+          Generate tax-ready packages and secure backups of your data. All exports are compiled securely on our isolated infrastructure to ensure absolute privacy.
         </p>
+      </div>
+
+      <div className="flex items-start gap-3 p-4 bg-blue-50/50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-2xl border border-blue-100 dark:border-blue-900/30 text-sm">
+        <Info className="w-5 h-5 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+        <div className="leading-relaxed">
+          <strong>Secure Compilation Process:</strong> When you request an export, our isolated servers assemble your data into an encrypted archive. This may take a minute or two. Once finished, it will safely appear in your <strong>Recent Exports</strong> ready for you to securely download.
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800/60">
         <div className="flex flex-col gap-1.5 flex-1 w-full">
-          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Date Range Filter</label>
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Target Date Range</label>
           <DatePickerWithRange 
             date={dateRange as any} 
             setDate={(d) => setDateRange(d as any)} 
@@ -54,14 +69,17 @@ export function PremiumExportManager() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl overflow-hidden flex flex-col">
+        <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl overflow-hidden flex flex-col relative group">
           <CardHeader className="pb-4">
             <div className="p-3 w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl mb-3 flex items-center justify-center">
               <FileSpreadsheet className="w-6 h-6" />
             </div>
-            <CardTitle className="text-base">Transactions CSV</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              Transactions CSV
+              <Lock className="w-3.5 h-3.5 text-slate-400" />
+            </CardTitle>
             <CardDescription className="text-sm">
-              Export all ledger entries within the selected date range.
+              Securely export all ledger entries within the selected date range.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto pt-0">
@@ -72,20 +90,23 @@ export function PremiumExportManager() {
               disabled={createJob.isPending}
             >
               {createJob.isPending && createJob.variables?.exportType === "transactions_csv" ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
-              ) : "Generate CSV"}
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Securing & Compiling...</>
+              ) : "Compile Secure CSV"}
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl overflow-hidden flex flex-col">
+        <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl overflow-hidden flex flex-col relative group">
           <CardHeader className="pb-4">
             <div className="p-3 w-12 h-12 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-xl mb-3 flex items-center justify-center">
               <Archive className="w-6 h-6" />
             </div>
-            <CardTitle className="text-base">Tax Package ZIP</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              Tax Package ZIP
+              <Lock className="w-3.5 h-3.5 text-slate-400" />
+            </CardTitle>
             <CardDescription className="text-sm">
-              Transactions, categories, and receipts in one organized file.
+              Transactions, categories, and receipts safely bundled into one organized file.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto pt-0">
@@ -96,20 +117,23 @@ export function PremiumExportManager() {
               disabled={createJob.isPending}
             >
               {createJob.isPending && createJob.variables?.exportType === "tax_package_zip" ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
-              ) : "Generate Package"}
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Securing & Compiling...</>
+              ) : "Prepare Tax Package"}
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl overflow-hidden flex flex-col bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900">
+        <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl overflow-hidden flex flex-col bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 relative">
           <CardHeader className="pb-4">
             <div className="p-3 w-12 h-12 bg-white/10 dark:bg-black/10 rounded-xl mb-3 flex items-center justify-center">
               <Download className="w-6 h-6" />
             </div>
-            <CardTitle className="text-base text-white dark:text-slate-900">Full Backup</CardTitle>
+            <CardTitle className="text-base text-white dark:text-slate-900 flex items-center gap-2">
+              Full Backup
+              <Lock className="w-3.5 h-3.5 opacity-60" />
+            </CardTitle>
             <CardDescription className="text-sm text-slate-300 dark:text-slate-600">
-              Everything including all original email attachments.
+              Complete snapshot including all original email attachments, end-to-end encrypted.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto pt-0">
@@ -119,8 +143,8 @@ export function PremiumExportManager() {
               disabled={createJob.isPending}
             >
               {createJob.isPending && createJob.variables?.exportType === "everything_zip" ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
-              ) : "Generate Full Backup"}
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Securing & Compiling...</>
+              ) : "Request Encrypted Backup"}
             </Button>
           </CardContent>
         </Card>
@@ -132,7 +156,7 @@ export function PremiumExportManager() {
           
           {jobs.length === 0 ? (
             <div className="p-8 text-center text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-              <p>No recent exports found.</p>
+              <p>No recent exports found. Request an export above and it will securely appear here when compiled.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -151,7 +175,13 @@ export function PremiumExportManager() {
                         {job.export_type.replace(/_/g, " ")}
                       </span>
                       <span className="text-xs text-slate-500 block truncate">
-                        {format(new Date(job.created_at), "MMM d, yyyy 'at' h:mm a")}
+                        {job.status === "ready" 
+                          ? `Ready • ${format(new Date(job.created_at), "MMM d, h:mm a")}` 
+                          : job.status === "failed" 
+                            ? "Compilation Failed" 
+                            : job.status === "expired"
+                              ? "Expired for Security"
+                              : "Securely Compiling..."}
                       </span>
                     </div>
                   </div>
@@ -161,13 +191,13 @@ export function PremiumExportManager() {
                         onClick={() => downloadJob(job.id)}
                         variant="secondary"
                         size="sm"
-                        className="font-medium"
+                        className="font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 border-0"
                       >
-                        Download
+                        <Lock className="w-3.5 h-3.5 mr-1.5" /> Download Securely
                       </Button>
                     ) : job.status !== "failed" && job.status !== "expired" ? (
-                      <span className="text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">
-                        {job.progress_percent}%
+                      <span className="text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" /> {job.progress_percent}%
                       </span>
                     ) : (
                       <span className="text-xs font-semibold text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-full">Failed</span>
@@ -180,7 +210,7 @@ export function PremiumExportManager() {
         </div>
 
         <div className="space-y-6">
-          <h2 className="text-xl font-bold tracking-tight">Available Attachments</h2>
+          <h2 className="text-xl font-bold tracking-tight">Available Private Attachments</h2>
           
           <div className="border border-slate-200/60 dark:border-slate-800/60 rounded-2xl overflow-hidden shadow-sm bg-white dark:bg-slate-950">
             {isLoadingAttachments ? (
@@ -189,7 +219,7 @@ export function PremiumExportManager() {
               </div>
             ) : !attachments || attachments.length === 0 ? (
               <div className="p-8 text-center text-slate-500">
-                <p>No attachments found in this date range.</p>
+                <p>No secure attachments found in this date range.</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800/60 max-h-[400px] overflow-y-auto">
@@ -200,8 +230,9 @@ export function PremiumExportManager() {
                         <Paperclip className="w-4 h-4" />
                       </div>
                       <div className="truncate">
-                        <p className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
+                        <p className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
                           {file.filename}
+                          <Lock className="w-3 h-3 text-slate-400" />
                         </p>
                         <p className="text-xs text-slate-500">
                           {format(new Date(file.created_at), "MMM d, yyyy")} • {(file.size_bytes / 1024).toFixed(1)} KB

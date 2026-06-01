@@ -55,10 +55,10 @@ export function usePremiumExportJobs() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["premium-export-jobs", user?.id] });
-      toast.success("Export job started successfully!");
+      toast.success("Secure compilation started! It will appear below when ready.");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to start export. Please try again.");
+      toast.error(error.message || "Failed to start secure export. Please try again.");
     },
   });
 
@@ -70,12 +70,13 @@ export function usePremiumExportJobs() {
       if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to download export job"));
       if (!data?.success) throw new Error(data?.error || data?.message || "Failed to download export job");
       if (data?.data?.signedUrl) {
+        toast.success("Secure download starting...");
         window.open(data.data.signedUrl, "_blank");
       } else {
-        throw new Error("No download link received");
+        throw new Error("No secure download link received");
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to download file. Please try again.");
+      toast.error(error.message || "Failed to securely download file. Please try again.");
     }
   };
 
