@@ -8,6 +8,8 @@ Moneko is a financial technology platform designed to make financial education a
 
 The project is a monorepo containing the frontend web application, backend serverless functions, and the database schema.
 
+For a visual system architecture diagram, see the [architecture diagram](architecture-diagram.md).
+
 ## 2. Technology Stack
 
 - **Frontend:**
