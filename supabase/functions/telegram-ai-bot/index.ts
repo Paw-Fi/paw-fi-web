@@ -186,6 +186,10 @@ import {
   type SessionState,
   setLastListedTransactions,
 } from "../shared/bot/session-state.ts";
+import {
+  loadLatestUserPreferredCurrency,
+  normalizePreferredCurrency,
+} from "../shared/user-preferred-currency.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite";
 const FALLBACK_MODEL_NAME = "gemini-2.5-flash";
@@ -1005,13 +1009,25 @@ Deno.serve(async (req: Request) => {
         }
 
         const userId = contact.user_id as string;
-        const userCurrency = contact.preferred_currency || "USD";
+        let userCurrency = normalizePreferredCurrency(
+          contact.preferred_currency,
+        );
         const userLang = resolvePreferredReplyLanguage(
           contact.preferred_language,
           contact.preferred_currency,
         );
         const userLangLabel = getReplyLanguagePromptLabel(userLang);
         const userTimezone = contact.preferred_timezone || "UTC";
+
+        userCurrency = await loadLatestUserPreferredCurrency({
+          supabase,
+          userId,
+          fallbackCurrency: userCurrency,
+          onError: (error) =>
+            debugNotes.push(
+              `preferred currency refresh error: ${formatInvokeError(error)}`,
+            ),
+        });
 
         const [
           customCategories,
@@ -1820,6 +1836,7 @@ Deno.serve(async (req: Request) => {
                   {
                     date: call.args.date || formatDateInTimeZone(userTimezone),
                     currency: userCurrency,
+                    currencyEvidenceText: userMessageContent,
                   },
                 );
                 if (!transactionResult.ok) {
@@ -1974,6 +1991,7 @@ Deno.serve(async (req: Request) => {
                   const transactionResult = normalizeTransactionToolArgs(row, {
                     date: row.date || formatDateInTimeZone(userTimezone),
                     currency: userCurrency,
+                    currencyEvidenceText: userMessageContent,
                   });
                   if (!transactionResult.ok) {
                     batchBuildError = `Transaction ${
@@ -2380,13 +2398,18 @@ Deno.serve(async (req: Request) => {
                 const currency = (call.args.currency || "")
                   .toString()
                   .toUpperCase();
-                toolResult = (
-                  await setBotPreferredCurrency({
-                    supabase,
-                    contactId: contact.id,
-                    currency,
-                  })
-                ).result;
+                const preferenceResult = await setBotPreferredCurrency({
+                  supabase,
+                  contactId: contact.id,
+                  currency,
+                });
+                toolResult = preferenceResult.result;
+                if ((toolResult as any)?.success) {
+                  userCurrency = normalizePreferredCurrency(
+                    (toolResult as any).currency || currency || userCurrency,
+                    userCurrency,
+                  );
+                }
               } else if (call.name === "set_language") {
                 const language = (call.args.language || "").toString().trim();
                 const preferenceResult = await setBotPreferredLanguage({
@@ -3444,7 +3467,11 @@ Deno.serve(async (req: Request) => {
                   };
                   const transactionResult = normalizeTransactionToolArgs(
                     call.args,
-                    { date: dateValue, currency: userCurrency },
+                    {
+                      date: dateValue,
+                      currency: userCurrency,
+                      currencyEvidenceText: userMessageContent,
+                    },
                   );
                   if (!transactionResult.ok) {
                     toolResult = { error: transactionResult.error };

@@ -185,6 +185,10 @@ import {
   type SessionState,
   setLastListedTransactions,
 } from "../shared/bot/session-state.ts";
+import {
+  loadLatestUserPreferredCurrency,
+  normalizePreferredCurrency,
+} from "../shared/user-preferred-currency.ts";
 
 // --- Constants & Types ---
 
@@ -976,7 +980,9 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
     const contactId = contactRow?.id || userId;
-    const userCurrency = contactRow?.preferred_currency || "USD";
+    const userCurrency = normalizePreferredCurrency(
+      contactRow?.preferred_currency,
+    );
     const userLang = resolvePreferredReplyLanguage(
       contactRow?.preferred_language,
       contactRow?.preferred_currency,
@@ -1787,6 +1793,7 @@ Deno.serve(async (req: Request) => {
             const transactionResult = normalizeTransactionToolArgs(call.args, {
               date: call.args.date || formatDateInTimeZone(userTimezone),
               currency: userCurrency,
+              currencyEvidenceText: userMessageContent,
             });
             if (!transactionResult.ok) {
               toolResult = { error: transactionResult.error };
@@ -1913,6 +1920,7 @@ Deno.serve(async (req: Request) => {
                 const transactionResult = normalizeTransactionToolArgs(tx, {
                   date: tx.date || defaultDate,
                   currency: userCurrency,
+                  currencyEvidenceText: userMessageContent,
                 });
                 if (!transactionResult.ok) {
                   toolResult = {
@@ -2515,7 +2523,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const userId = contact.user_id;
-  const userCurrency = contact.preferred_currency || "USD";
+  let userCurrency = normalizePreferredCurrency(contact.preferred_currency);
   const userLang = resolvePreferredReplyLanguage(
     contact.preferred_language,
     contact.preferred_currency,
@@ -2523,6 +2531,14 @@ Deno.serve(async (req: Request) => {
   const userLangLabel = getReplyLanguagePromptLabel(userLang);
   const userTimezone = contact.preferred_timezone || "UTC";
   const contactId = contact.id;
+
+  userCurrency = await loadLatestUserPreferredCurrency({
+    supabase,
+    userId,
+    fallbackCurrency: userCurrency,
+    onError: (error) =>
+      debugLog(WHATSAPP_DEBUG, "preferred currency refresh failed", { error }),
+  });
 
   const [
     customCategories,
@@ -3397,7 +3413,11 @@ Deno.serve(async (req: Request) => {
             );
             const normalizedTransaction = normalizeTransactionToolArgs(
               call.args,
-              { date: dateStr, currency: userCurrency },
+              {
+                date: dateStr,
+                currency: userCurrency,
+                currencyEvidenceText: userMessageContent,
+              },
             );
             if (!normalizedTransaction.ok) {
               toolResult = { error: normalizedTransaction.error };
@@ -3529,6 +3549,7 @@ Deno.serve(async (req: Request) => {
               const transactionResult = normalizeTransactionToolArgs(tx, {
                 date: tx.date || defaultDate,
                 currency: userCurrency,
+                currencyEvidenceText: userMessageContent,
               });
               if (!transactionResult.ok) {
                 toolResult = {
@@ -4372,6 +4393,12 @@ Deno.serve(async (req: Request) => {
               currency,
             });
             toolResult = preferenceResult.result;
+            if ((toolResult as any)?.success) {
+              userCurrency = normalizePreferredCurrency(
+                (toolResult as any).currency || currency || userCurrency,
+                userCurrency,
+              );
+            }
             if (preferenceResult.failure) {
               if (WHATSAPP_DEBUG) {
                 debugNotes.push(
@@ -4650,6 +4677,7 @@ Deno.serve(async (req: Request) => {
                 {
                   date: dateStr,
                   currency: userCurrency,
+                  currencyEvidenceText: userMessageContent,
                 },
               );
               if (!transactionResult.ok) {

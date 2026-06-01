@@ -51,6 +51,7 @@ import {
   createVertexGenerativeAI,
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
+import { normalizePreferredCurrency } from "../shared/user-preferred-currency.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -2031,7 +2032,7 @@ Deno.serve(async (req: Request) => {
         contactId = contact.id;
         preferredCurrency =
           typeof contact.preferred_currency === "string"
-            ? contact.preferred_currency.trim().toUpperCase() || null
+            ? normalizePreferredCurrency(contact.preferred_currency)
             : null;
         preferredTimezone =
           typeof contact.preferred_timezone === "string"

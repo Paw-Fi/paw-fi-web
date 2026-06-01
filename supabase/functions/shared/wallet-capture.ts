@@ -74,9 +74,17 @@ export function resolveWalletCaptureCurrency(params: {
     .map((value) => value.trim())
     .filter((value) => value.length > 0)
     .join("\n");
+  const normalizedPayloadCurrency = (payloadCurrency || "").trim();
+  const detectedCurrencyCode = /^[A-Za-z]{3}$/.test(normalizedPayloadCurrency)
+    ? normalizedPayloadCurrency.toUpperCase()
+    : null;
+  const detectedCurrencySymbol = detectedCurrencyCode
+    ? null
+    : normalizedPayloadCurrency || null;
 
   return resolveCurrencyFromOCR({
-    detectedCurrencyCode: payloadCurrency,
+    detectedCurrencyCode,
+    detectedCurrencySymbol,
     rawOcrText,
     userPreferredCurrency: preferredCurrency || payloadCurrency || "USD",
   }).finalCurrencyCode;

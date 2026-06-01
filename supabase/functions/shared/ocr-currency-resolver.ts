@@ -34,6 +34,9 @@ const LOCALIZED_SYMBOL_TO_CURRENCY: Record<string, string> = {
   A$: "AUD",
   AU$: "AUD",
   AUD$: "AUD",
+  N$: "NAD",
+  NA$: "NAD",
+  NAD$: "NAD",
   S$: "SGD",
   SG$: "SGD",
   SGD$: "SGD",
@@ -48,59 +51,189 @@ const LOCALIZED_SYMBOL_TO_CURRENCY: Record<string, string> = {
   NT$: "TWD",
   R$: "BRL",
   BZ$: "BZD",
+  BZD$: "BZD",
+  BDS$: "BBD",
+  BBD$: "BBD",
+  CI$: "KYD",
+  KY$: "KYD",
+  KYD$: "KYD",
+  EC$: "XCD",
+  XCD$: "XCD",
+  G$: "GYD",
+  GY$: "GYD",
+  GYD$: "GYD",
+  L$: "LRD",
+  LR$: "LRD",
+  LRD$: "LRD",
+  TT$: "TTD",
+  TTD$: "TTD",
+  FJ$: "FJD",
+  FJD$: "FJD",
   J$: "JMD",
   RD$: "DOP",
+  "E£": "EGP",
+  "£S": "SYP",
+  "S£": "SYP",
 };
 
-const AMBIGUOUS_SYMBOLS = new Set(["$", "£", "¥", "￥", "₨", "KR", "FR"]);
+const AMBIGUOUS_SYMBOLS = new Set([
+  "$",
+  "＄",
+  "£",
+  "￡",
+  "¥",
+  "￥",
+  "₩",
+  "￦",
+  "KR",
+  "KR.",
+  "₨",
+  "RS",
+  "RS.",
+  "FR",
+  "FR.",
+  "₣",
+  "₤",
+  "₱",
+]);
+
+const AMBIGUOUS_TEXT_TOKEN_REGEX =
+  /[$＄£￡¥￥₩￦₨₣₤₱]|(^|[^A-Za-z])(?:kr|fr|rs)\.?(?=[^A-Za-z]|$)/i;
+
+const UNIQUE_SYMBOL_TO_CURRENCY: Record<string, string> = {
+  "€": "EUR",
+  "₹": "INR",
+  "₪": "ILS",
+  "₽": "RUB",
+  "₺": "TRY",
+  "₴": "UAH",
+  "₫": "VND",
+  "₦": "NGN",
+  "₵": "GHS",
+  "₡": "CRC",
+  "₲": "PYG",
+  "฿": "THB",
+  "৳": "BDT",
+  "KČ": "CZK",
+  "ZŁ": "PLN",
+  "S/": "PEN",
+  "د.إ": "AED",
+  "ر.س": "SAR",
+  "د.ج": "DZD",
+  "د.أ": "JOD",
+};
+
+const EXPLICIT_CURRENCY_NAME_TO_CODE: Record<string, string> = {
+  "UAE DIRHAM": "AED",
+  "ARGENTINE PESO": "ARS",
+  "AUSTRALIAN DOLLAR": "AUD",
+  "BAHAMIAN DOLLAR": "BSD",
+  "BANGLADESHI TAKA": "BDT",
+  "BARBADIAN DOLLAR": "BBD",
+  "BELIZE DOLLAR": "BZD",
+  "BRUNEI DOLLAR": "BND",
+  "BRAZILIAN REAL": "BRL",
+  "BURUNDIAN FRANC": "BIF",
+  "CANADIAN DOLLAR": "CAD",
+  "CAYMAN ISLANDS DOLLAR": "KYD",
+  "CFP FRANC": "XPF",
+  "SWISS FRANC": "CHF",
+  "CHILEAN PESO": "CLP",
+  "CHINESE YUAN": "CNY",
+  "CHINESE RENMINBI": "CNY",
+  "COLOMBIAN PESO": "COP",
+  "CONGOLESE FRANC": "CDF",
+  "CZECH KORUNA": "CZK",
+  "DANISH KRONE": "DKK",
+  "DJIBOUTIAN FRANC": "DJF",
+  "DOMINICAN PESO": "DOP",
+  "EAST CARIBBEAN DOLLAR": "XCD",
+  "EGYPTIAN POUND": "EGP",
+  "ETHIOPIAN BIRR": "ETB",
+  "EURO": "EUR",
+  "FALKLAND ISLANDS POUND": "FKP",
+  "FIJIAN DOLLAR": "FJD",
+  "BRITISH POUND": "GBP",
+  "POUND STERLING": "GBP",
+  "GIBRALTAR POUND": "GIP",
+  "GHANAIAN CEDI": "GHS",
+  "GUATEMALAN QUETZAL": "GTQ",
+  "GUINEAN FRANC": "GNF",
+  "GUYANESE DOLLAR": "GYD",
+  "HONG KONG DOLLAR": "HKD",
+  "ICELANDIC KRONA": "ISK",
+  "JAMAICAN DOLLAR": "JMD",
+  "INDONESIAN RUPIAH": "IDR",
+  "ISRAELI SHEKEL": "ILS",
+  "INDIAN RUPEE": "INR",
+  "JAPANESE YEN": "JPY",
+  "KENYAN SHILLING": "KES",
+  "SOUTH KOREAN WON": "KRW",
+  "KOREAN WON": "KRW",
+  "NORTH KOREAN WON": "KPW",
+  "LEBANESE POUND": "LBP",
+  "LIBERIAN DOLLAR": "LRD",
+  "SRI LANKAN RUPEE": "LKR",
+  "MACANESE PATACA": "MOP",
+  "MACAU PATACA": "MOP",
+  "MEXICAN PESO": "MXN",
+  "MALAYSIAN RINGGIT": "MYR",
+  "MALAWIAN KWACHA": "MWK",
+  "MAURITIAN RUPEE": "MUR",
+  "NAMIBIAN DOLLAR": "NAD",
+  "NIGERIAN NAIRA": "NGN",
+  "NORWEGIAN KRONE": "NOK",
+  "NEPALESE RUPEE": "NPR",
+  "NEW ZEALAND DOLLAR": "NZD",
+  "PHILIPPINE PESO": "PHP",
+  "PERUVIAN SOL": "PEN",
+  "POLISH ZLOTY": "PLN",
+  "PAKISTANI RUPEE": "PKR",
+  "PARAGUAYAN GUARANI": "PYG",
+  "SERBIAN DINAR": "RSD",
+  "ROMANIAN LEU": "RON",
+  "RUSSIAN RUBLE": "RUB",
+  "RWANDAN FRANC": "RWF",
+  "SAUDI RIYAL": "SAR",
+  "SEYCHELLOIS RUPEE": "SCR",
+  "SAINT HELENA POUND": "SHP",
+  "SUDANESE POUND": "SDG",
+  "SWEDISH KRONA": "SEK",
+  "SINGAPORE DOLLAR": "SGD",
+  "SOUTH SUDANESE POUND": "SSP",
+  "SURINAMESE DOLLAR": "SRD",
+  "SYRIAN POUND": "SYP",
+  "THAI BAHT": "THB",
+  "TRINIDAD AND TOBAGO DOLLAR": "TTD",
+  "NEW TAIWAN DOLLAR": "TWD",
+  "TAIWAN DOLLAR": "TWD",
+  "TURKISH LIRA": "TRY",
+  "UKRAINIAN HRYVNIA": "UAH",
+  "US DOLLAR": "USD",
+  "U.S. DOLLAR": "USD",
+  "UNITED STATES DOLLAR": "USD",
+  "AMERICAN DOLLAR": "USD",
+  "VIETNAMESE DONG": "VND",
+  "SOUTH AFRICAN RAND": "ZAR",
+  "HUNGARIAN FORINT": "HUF",
+  "ZAMBIAN KWACHA": "ZMW",
+  "WEST AFRICAN CFA FRANC": "XOF",
+  "COSTA RICAN COLON": "CRC",
+  "CENTRAL AFRICAN CFA FRANC": "XAF",
+};
 
 const UNAMBIGUOUS_SYMBOL_TO_CURRENCY = (() => {
-  const symbolCounts = new Map<string, number>();
-  for (const rawSymbol of Object.values(CURRENCY_SYMBOLS)) {
-    const symbol = normalizeSymbol(rawSymbol);
-    if (!symbol || AMBIGUOUS_SYMBOLS.has(symbol)) continue;
-    if (!/[^\p{L}]/u.test(symbol)) continue;
-    symbolCounts.set(symbol, (symbolCounts.get(symbol) || 0) + 1);
-  }
-
   const map = new Map<string, string>();
-  for (const [code, rawSymbol] of Object.entries(CURRENCY_SYMBOLS)) {
+  for (const [rawSymbol, rawCode] of Object.entries(UNIQUE_SYMBOL_TO_CURRENCY)) {
     const symbol = normalizeSymbol(rawSymbol);
-    const normalizedCode = normalizeCurrencyCode(code);
-    if (!symbol || !normalizedCode) continue;
-    if (symbolCounts.get(symbol) !== 1) continue;
+    const normalizedCode = normalizeCurrencyCode(rawCode);
+    if (!symbol || !normalizedCode || !SUPPORTED_CURRENCY_CODES.has(normalizedCode)) {
+      continue;
+    }
     map.set(symbol, normalizedCode);
   }
   return map;
 })();
-
-const MERCHANT_COUNTRY_TO_CURRENCY: Record<string, string> = {
-  US: "USD",
-  USA: "USD",
-  UNITEDSTATES: "USD",
-  CA: "CAD",
-  CANADA: "CAD",
-  AU: "AUD",
-  AUSTRALIA: "AUD",
-  SG: "SGD",
-  SINGAPORE: "SGD",
-  NZ: "NZD",
-  NEWZEALAND: "NZD",
-  HK: "HKD",
-  HONGKONG: "HKD",
-  MO: "MOP",
-  MACAU: "MOP",
-  MACAO: "MOP",
-  MX: "MXN",
-  MEXICO: "MXN",
-  JP: "JPY",
-  JAPAN: "JPY",
-  CN: "CNY",
-  CHINA: "CNY",
-  GB: "GBP",
-  UK: "GBP",
-  UNITEDKINGDOM: "GBP",
-};
 
 function normalizePreferredCurrency(value?: string | null): string {
   const normalized = normalizeCurrencyCode(value);
@@ -124,10 +257,6 @@ function hasExplicitCurrencyCode(text: string, code: string): boolean {
   return new RegExp(`(^|[^A-Z])${escapedCode}([^A-Z]|$)`).test(upperText);
 }
 
-function findExplicitCurrencyCode(text: string): string | null {
-  return findExplicitCurrencyCodes(text).values().next().value ?? null;
-}
-
 function findExplicitCurrencyCodes(text: string): Set<string> {
   const matches = new Set<string>();
   const upperText = text.toUpperCase();
@@ -137,66 +266,115 @@ function findExplicitCurrencyCodes(text: string): Set<string> {
   return matches;
 }
 
-function findLocalizedSymbol(
-  text: string,
-  symbol?: string | null,
-): string | null {
-  return (
-    findLocalizedSymbolCurrencies(text, symbol).values().next().value ?? null
-  );
+function hasExplicitCurrencyName(text: string, name: string): boolean {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\s+/g, "\\s+");
+  return new RegExp(`(^|[^A-Z])${escapedName}S?([^A-Z]|$)`, "i").test(text);
 }
 
-function findLocalizedSymbolCurrencies(
+function findExplicitCurrencyNameCodes(text: string): Set<string> {
+  const matches = new Set<string>();
+  const upperText = text.toUpperCase();
+  for (
+    const [name, code] of Object.entries(EXPLICIT_CURRENCY_NAME_TO_CODE)
+  ) {
+    if (!SUPPORTED_CURRENCY_CODES.has(code)) continue;
+    if (hasExplicitCurrencyName(upperText, name)) matches.add(code);
+  }
+  return matches;
+}
+
+function isAsciiLetter(value: string | undefined): boolean {
+  return !!value && /[A-Z]/.test(value);
+}
+
+function includesStandaloneToken(text: string, token: string): boolean {
+  if (!text || !token) return false;
+  const normalizedText = text.toUpperCase();
+  const normalizedToken = token.toUpperCase();
+  let index = normalizedText.indexOf(normalizedToken);
+  while (index >= 0) {
+    const before = normalizedText[index - 1];
+    const after = normalizedText[index + normalizedToken.length];
+    const startsWithLetter = isAsciiLetter(normalizedToken[0]);
+    const endsWithLetter = isAsciiLetter(
+      normalizedToken[normalizedToken.length - 1],
+    );
+    if (
+      (!startsWithLetter || !isAsciiLetter(before)) &&
+      (!endsWithLetter || !isAsciiLetter(after))
+    ) {
+      return true;
+    }
+    index = normalizedText.indexOf(normalizedToken, index + 1);
+  }
+  return false;
+}
+
+function findLocalizedSymbolCurrenciesInText(
   text: string,
-  symbol?: string | null,
 ): Set<string> {
   const matches = new Set<string>();
-  const candidates = [symbol, text]
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.toUpperCase());
+  const rawText = text.toUpperCase();
 
   const sortedSymbols = Object.keys(LOCALIZED_SYMBOL_TO_CURRENCY).sort(
     (left, right) => right.length - left.length,
   );
-  for (const rawText of candidates) {
-    for (const localizedSymbol of sortedSymbols) {
-      if (rawText.includes(localizedSymbol)) {
-        matches.add(LOCALIZED_SYMBOL_TO_CURRENCY[localizedSymbol]);
+  for (const localizedSymbol of sortedSymbols) {
+    if (includesStandaloneToken(rawText, localizedSymbol)) {
+      const currency = LOCALIZED_SYMBOL_TO_CURRENCY[localizedSymbol];
+      if (SUPPORTED_CURRENCY_CODES.has(currency)) {
+        matches.add(currency);
       }
     }
   }
   return matches;
 }
 
-function findUnambiguousSymbol(symbol?: string | null): string | null {
-  const normalizedSymbol = normalizeSymbol(symbol);
-  if (!normalizedSymbol || AMBIGUOUS_SYMBOLS.has(normalizedSymbol)) return null;
-
-  const mapped =
-    UNAMBIGUOUS_SYMBOL_TO_CURRENCY.get(normalizedSymbol) ||
-    normalizeCurrencyCode(normalizedSymbol);
-  return mapped && SUPPORTED_CURRENCY_CODES.has(mapped) ? mapped : null;
-}
-
-function findUnambiguousSymbolInText(text: string): string | null {
-  return (
-    findUnambiguousSymbolCurrenciesInText(text).values().next().value ?? null
-  );
-}
-
 function findUnambiguousSymbolCurrenciesInText(text: string): Set<string> {
   const matches = new Set<string>();
-  const normalizedText = normalizeSymbol(text);
+  const normalizedText = text.toUpperCase();
   const symbols = Array.from(UNAMBIGUOUS_SYMBOL_TO_CURRENCY.keys()).sort(
     (left, right) => right.length - left.length,
   );
   for (const symbol of symbols) {
-    if (normalizedText.includes(symbol)) {
+    if (includesStandaloneToken(normalizedText, symbol)) {
       const currency = UNAMBIGUOUS_SYMBOL_TO_CURRENCY.get(symbol);
       if (currency) matches.add(currency);
     }
   }
   return matches;
+}
+
+function collectStrongTextCurrencyEvidence(text: string): {
+  codes: Set<string>;
+  explicitCodes: Set<string>;
+  explicitNames: Set<string>;
+  localizedSymbols: Set<string>;
+  unambiguousSymbols: Set<string>;
+} {
+  const explicitCodes = findExplicitCurrencyCodes(text);
+  const explicitNames = findExplicitCurrencyNameCodes(text);
+  const localizedSymbols = findLocalizedSymbolCurrenciesInText(text);
+  const unambiguousSymbols = findUnambiguousSymbolCurrenciesInText(text);
+  const codes = new Set<string>();
+  for (
+    const source of [
+      explicitCodes,
+      explicitNames,
+      localizedSymbols,
+      unambiguousSymbols,
+    ]
+  ) {
+    for (const code of source) codes.add(code);
+  }
+  return {
+    codes,
+    explicitCodes,
+    explicitNames,
+    localizedSymbols,
+    unambiguousSymbols,
+  };
 }
 
 export function resolveSingleStrongCurrencyEvidenceFromOCRText(
@@ -205,20 +383,9 @@ export function resolveSingleStrongCurrencyEvidenceFromOCRText(
   const rawText = normalizeEvidenceText(text);
   if (!rawText) return null;
 
-  const codes = new Set<string>();
-  for (const code of findExplicitCurrencyCodes(rawText)) codes.add(code);
-  for (const code of findLocalizedSymbolCurrencies(rawText)) codes.add(code);
-  for (const code of findUnambiguousSymbolCurrenciesInText(rawText)) {
-    codes.add(code);
-  }
+  const { codes } = collectStrongTextCurrencyEvidence(rawText);
 
   return codes.size === 1 ? (codes.values().next().value ?? null) : null;
-}
-
-function findMerchantCountryCurrency(country?: string | null): string | null {
-  const key = (country || "").toUpperCase().replace(/[^A-Z]/g, "");
-  const currency = MERCHANT_COUNTRY_TO_CURRENCY[key];
-  return currency && SUPPORTED_CURRENCY_CODES.has(currency) ? currency : null;
 }
 
 function hasAmbiguousCurrencySymbol(
@@ -227,7 +394,7 @@ function hasAmbiguousCurrencySymbol(
 ): boolean {
   const normalizedSymbol = normalizeSymbol(symbol);
   if (normalizedSymbol && AMBIGUOUS_SYMBOLS.has(normalizedSymbol)) return true;
-  return /[$£¥￥₨]|\b(?:kr|fr)\b/i.test(text);
+  return AMBIGUOUS_TEXT_TOKEN_REGEX.test(text);
 }
 
 export function resolveCurrencyFromOCR(
@@ -237,57 +404,22 @@ export function resolveCurrencyFromOCR(
     input.userPreferredCurrency,
   );
   const rawText = normalizeEvidenceText(input.rawOcrText);
-  const localizedSymbolCurrency = findLocalizedSymbol(
-    rawText,
-    input.detectedCurrencySymbol,
-  );
-  if (localizedSymbolCurrency) {
-    return {
-      finalCurrencyCode: localizedSymbolCurrency,
-      confidence: "high",
-      reason: "explicit_localized_symbol_found",
-    };
-  }
-
   const detectedCode = normalizeCurrencyCode(input.detectedCurrencyCode);
-  if (detectedCode && hasExplicitCurrencyCode(rawText, detectedCode)) {
-    return {
-      finalCurrencyCode: detectedCode,
-      confidence: "high",
-      reason: "explicit_currency_code_found",
-    };
-  }
-
-  const rawTextCode = findExplicitCurrencyCode(rawText);
-  if (rawTextCode) {
-    return {
-      finalCurrencyCode: rawTextCode,
-      confidence: "high",
-      reason: "explicit_currency_code_found",
-    };
-  }
-
-  const rawTextUnambiguousSymbolCurrency = findUnambiguousSymbolInText(rawText);
-  if (rawTextUnambiguousSymbolCurrency) {
-    return {
-      finalCurrencyCode: rawTextUnambiguousSymbolCurrency,
-      confidence: "high",
-      reason: "explicit_localized_symbol_found",
-    };
-  }
-
-  const merchantCountryCurrency = findMerchantCountryCurrency(
-    input.merchantCountry,
-  );
-  if (
-    merchantCountryCurrency &&
-    merchantCountryCurrency !== preferredCurrency
-  ) {
-    return {
-      finalCurrencyCode: merchantCountryCurrency,
-      confidence: "medium",
-      reason: "merchant_country_override",
-    };
+  const textEvidence = collectStrongTextCurrencyEvidence(rawText);
+  if (textEvidence.codes.size === 1) {
+    const resolved = textEvidence.codes.values().next().value ?? null;
+    if (resolved) {
+      const reason =
+        textEvidence.explicitCodes.has(resolved) ||
+          textEvidence.explicitNames.has(resolved)
+          ? "explicit_currency_code_found"
+          : "explicit_localized_symbol_found";
+      return {
+        finalCurrencyCode: resolved,
+        confidence: "high",
+        reason,
+      };
+    }
   }
 
   if (hasAmbiguousCurrencySymbol(rawText, input.detectedCurrencySymbol)) {
@@ -295,17 +427,6 @@ export function resolveCurrencyFromOCR(
       finalCurrencyCode: preferredCurrency,
       confidence: "medium",
       reason: "ambiguous_symbol_used_user_preference",
-    };
-  }
-
-  const unambiguousSymbolCurrency = findUnambiguousSymbol(
-    input.detectedCurrencySymbol,
-  );
-  if (unambiguousSymbolCurrency) {
-    return {
-      finalCurrencyCode: unambiguousSymbolCurrency,
-      confidence: "high",
-      reason: "explicit_localized_symbol_found",
     };
   }
 

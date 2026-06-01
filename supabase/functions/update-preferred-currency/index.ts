@@ -206,9 +206,10 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const updatedAt = new Date().toISOString();
   const { error: updateErr } = await supabase
     .from("user_contacts")
-    .update({ preferred_currency: providedCurrency })
+    .update({ preferred_currency: providedCurrency, updated_at: updatedAt })
     .eq("id", contactId);
 
   if (updateErr) {
@@ -224,6 +225,28 @@ Deno.serve(async (req: Request) => {
     });
     return errorResponse("Failed to update contact", 500);
   }
+
+  const syncUserId = userId || contact?.user_id || null;
+  if (syncUserId) {
+    const { error: syncErr } = await supabase
+      .from("user_contacts")
+      .update({ preferred_currency: providedCurrency, updated_at: updatedAt })
+      .eq("user_id", syncUserId);
+
+    if (syncErr) {
+      console.error("contact currency sync error", syncErr);
+      await reportEdgeFunctionError({
+        functionName: "update-preferred-currency",
+        error: syncErr,
+        context: {
+          operation: "user_contacts.sync_preferred_currency_by_user",
+          userId: syncUserId,
+        },
+      });
+      return errorResponse("Failed to sync contact currency", 500);
+    }
+  }
+
   const results = {
     contactId,
     preferredCurrency: providedCurrency,

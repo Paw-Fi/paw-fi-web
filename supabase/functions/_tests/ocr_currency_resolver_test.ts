@@ -169,7 +169,7 @@ Deno.test(
 );
 
 Deno.test(
-  "ocr currency resolver: merchant country can override when no ambiguous symbol exists",
+  "ocr currency resolver: merchant country alone does not override preference",
   () => {
     const result = resolveCurrencyFromOCR({
       rawOcrText: "total 12.50",
@@ -177,23 +177,22 @@ Deno.test(
       merchantCountry: "US",
     });
 
-    assertEquals(result.finalCurrencyCode, "USD");
-    assertEquals(result.reason, "merchant_country_override");
+    assertEquals(result.finalCurrencyCode, "CAD");
+    assertEquals(result.reason, "fallback_user_preference");
   },
 );
 
 Deno.test(
-  "ocr currency resolver: merchant country is strong evidence for bare dollar",
+  "ocr currency resolver: source country bundle alone does not override preference",
   () => {
     const result = resolveCurrencyFromOCR({
       detectedCurrencySymbol: "$",
-      rawOcrText: "$12.50 total",
+      rawOcrText: "Coffee Shop\nSeattle WA 98101\nTotal $12.50",
       userPreferredCurrency: "CAD",
-      merchantCountry: "US",
     });
 
-    assertEquals(result.finalCurrencyCode, "USD");
-    assertEquals(result.reason, "merchant_country_override");
+    assertEquals(result.finalCurrencyCode, "CAD");
+    assertEquals(result.reason, "ambiguous_symbol_used_user_preference");
   },
 );
 

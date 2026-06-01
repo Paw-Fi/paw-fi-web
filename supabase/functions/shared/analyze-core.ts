@@ -162,7 +162,7 @@ const DEBUG_LOGS = (() => {
   try {
     return Deno.env.get("ANALYZE_EXPENSE_DEBUG") === "true";
   } catch {
-   gemini-3.1-flash-lite
+    return false;
   }
 })();
 const GEMINI_FALLBACK_MODEL_NAMES = [
@@ -1950,7 +1950,8 @@ function buildTransactionSystemInstruction(
 
     "### 3. CURRENCY & DATE",
     "- Use Caller Currency for ambiguous symbols such as $, £, ¥/￥, ₨, kr, or Fr unless the text includes strong evidence for another currency.",
-    "- Strong currency evidence means an explicit ISO code (USD, CAD, AUD, SGD, NZD, HKD, MXN, EUR, GBP, JPY, CNY), a localized symbol (US$, C$, CA$, A$, AU$, S$, SG$, HK$, NZ$), or wording like 'Amount in USD' / 'Total CAD'.",
+    "- Strong currency evidence means an explicit ISO code or currency name (USD, Canadian dollar, Australian dollar), an exact localized symbol visibly present in the source (US$, C$, CA$, A$, AU$, S$, SG$, HK$, NZ$, NT$, BZ$, R$), or wording like 'Amount in USD' / 'Total CAD'.",
+    "- Never infer NT$, BZ$, R$, C$, or another localized symbol from a bare '$'. A bare '$' alone must stay as Caller Currency.",
     "- If you use a currency different from Caller Currency, include the exact text/symbol evidence in currencyEvidence.",
     "- Set merchantCountry only when the source text visibly includes a merchant country/location; do not infer it from merchant name alone.",
     "- Date parsing: Look for ANY date reference (absolute or relative like 'yesterday').",
@@ -4899,12 +4900,12 @@ export async function runAnalyzeExpense(
                       currencySymbol: {
                         type: "string",
                         description:
-                          "Exact currency symbol as seen, e.g. $, C$, US$, A$, AU$, €, £, ¥. Omit when unavailable.",
+                          "Exact currency symbol as seen, e.g. $, C$, US$, A$, AU$, NT$, BZ$, R$, €, £, ¥. Omit when unavailable. Do not convert a bare $ into a localized symbol.",
                       },
                       currencyEvidence: {
                         type: "string",
                         description:
-                          "Exact receipt text that proves a non-caller currency, e.g. USD, US$, Total CAD, Amount in AUD. Omit for ambiguous symbols alone.",
+                          "Exact receipt text that proves a non-caller currency, e.g. USD, US$, Total CAD, Amount in AUD, NT$150. Omit for ambiguous symbols alone.",
                       },
                       merchantCountry: {
                         type: "string",
@@ -5552,7 +5553,8 @@ export async function runAnalyzeExpense(
         "- Clean up raw text (e.g., 'Uber *Trip 4920' -> 'Uber') and do not put card numbers, reference IDs, dates, or amounts in merchant.",
         "- **Date**: Parse absolute dates or relative ('Yesterday'). Default to Caller Date if not found.",
         "- **Currency**: Caller Currency is the default. Treat ambiguous symbols such as $, £, ¥/￥, ₨, kr, or Fr as non-final signals and keep Caller Currency unless there is strong evidence for another currency.",
-        "- **Strong currency evidence**: explicit ISO code (USD, CAD, AUD, SGD, NZD, HKD, MXN, EUR, GBP, JPY, CNY), localized symbol (US$, C$, CA$, A$, AU$, S$, SG$, HK$, NZ$), or wording like 'Amount in USD' / 'Total CAD'. If present, set currency and copy the exact evidence into currencyEvidence.",
+        "- **Strong currency evidence**: explicit ISO code or currency name (USD, Canadian dollar, Australian dollar), exact localized symbol visibly present in the source (US$, C$, CA$, A$, AU$, S$, SG$, HK$, NZ$, NT$, BZ$, R$), or wording like 'Amount in USD' / 'Total CAD'. If present, set currency and copy the exact evidence into currencyEvidence.",
+        "- **Bare dollar safety**: Never infer NT$, BZ$, R$, C$, or another localized symbol from a bare '$'. A bare '$' alone must stay as Caller Currency.",
         "- **Merchant location evidence**: set merchantCountry only when a country/location is visibly printed on the receipt (for example US, CA, AU, SG). Do not infer country from merchant name alone.",
         "- **Noise**: Ignore loyalty points, barcodes, IDs, tax numbers unless needed for context.",
 

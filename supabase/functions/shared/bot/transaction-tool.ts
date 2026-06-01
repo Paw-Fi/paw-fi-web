@@ -1,5 +1,6 @@
 import { buildInternalInvokeHeaders } from "../auth.ts";
 import { normalizeCalendarDateString } from "../date-normalization.ts";
+import { resolveCurrencyFromOCR } from "../ocr-currency-resolver.ts";
 import {
   normalizeAiToolMoneyCents,
   normalizeAiToolTransactionType,
@@ -50,11 +51,59 @@ export type TransactionSaveParams = {
   accountId?: string;
 };
 
+type TransactionToolFallback = {
+  date?: string;
+  currency?: string;
+  currencyEvidenceText?: string | null;
+};
+
 function normalizeDateInput(value: unknown, fallback: string): string {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   if (!trimmed) return fallback;
   return trimmed.length >= 10 ? trimmed.slice(0, 10) : trimmed;
+}
+
+function normalizeOptionalString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function collectCurrencyEvidenceText(
+  input: Record<string, any>,
+  fallback: TransactionToolFallback,
+): string {
+  return [
+    fallback.currencyEvidenceText,
+    input.currency_evidence,
+    input.currencyEvidence,
+    input.raw_text,
+    input.rawText,
+    input.source_text,
+    input.sourceText,
+  ]
+    .map(normalizeOptionalString)
+    .filter(Boolean)
+    .join("\n");
+}
+
+function resolveTransactionToolCurrency(
+  input: Record<string, any>,
+  fallback: TransactionToolFallback,
+): string | undefined {
+  const fallbackCurrency = normalizeOptionalString(fallback.currency);
+  const rawCurrency = normalizeOptionalString(input.currency);
+
+  if (!fallbackCurrency) return rawCurrency || undefined;
+
+  return resolveCurrencyFromOCR({
+    detectedCurrencyCode: rawCurrency || null,
+    detectedCurrencySymbol:
+      normalizeOptionalString(input.currency_symbol) ||
+      normalizeOptionalString(input.currencySymbol) ||
+      null,
+    rawOcrText: collectCurrencyEvidenceText(input, fallback),
+    userPreferredCurrency: fallbackCurrency,
+  }).finalCurrencyCode;
 }
 
 export function normalizeSignedTransactionAmount(
@@ -81,7 +130,7 @@ export function normalizeSignedTransactionAmount(
 
 export function normalizeTransactionToolArgs(
   args: Record<string, any> | null | undefined,
-  fallback: { date?: string; currency?: string } = {},
+  fallback: TransactionToolFallback = {},
 ):
   | { ok: true; transaction: NormalizedTransactionToolArgs }
   | {
@@ -139,9 +188,7 @@ export function normalizeTransactionToolArgs(
     merchant = trimmedMerchant || undefined;
   }
 
-  const rawCurrency =
-    typeof input.currency === "string" ? input.currency.trim() : "";
-  const currency = rawCurrency || fallback.currency;
+  const currency = resolveTransactionToolCurrency(input, fallback);
 
   return {
     ok: true,

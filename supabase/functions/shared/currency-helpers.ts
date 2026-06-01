@@ -11,14 +11,15 @@ export async function updatePreferredCurrency(
   contactId: string,
   currency: string,
 ) {
+  const updatedAt = new Date().toISOString();
   const result = await supabase
     .from("user_contacts")
     .update({
       preferred_currency: currency,
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     })
     .eq("id", contactId)
-    .select("preferred_currency")
+    .select("id, user_id, preferred_currency")
     .single();
 
   if (result.error) {
@@ -31,6 +32,27 @@ export async function updatePreferredCurrency(
         currency,
       },
     });
+  } else if (result.data?.user_id) {
+    const { error: syncError } = await supabase
+      .from("user_contacts")
+      .update({
+        preferred_currency: result.data.preferred_currency || currency,
+        updated_at: updatedAt,
+      })
+      .eq("user_id", result.data.user_id);
+
+    if (syncError) {
+      await reportEdgeFunctionError({
+        functionName: "shared/currency-helpers",
+        error: syncError,
+        context: {
+          operation: "user_contacts.sync_preferred_currency_by_user",
+          contactId,
+          userId: result.data.user_id,
+          currency,
+        },
+      });
+    }
   }
 
   return result;
