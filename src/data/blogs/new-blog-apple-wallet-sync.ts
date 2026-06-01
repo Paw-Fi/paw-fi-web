@@ -61,9 +61,23 @@ Moneko takes a fundamentally different approach from every other app on this lis
 Here is what that looks like in practice:
 You tap to pay with Apple Pay. Your iPhone shows the confirmation notification — "USD 12.40 at Sweetgreen." You forward that notification to Moneko in WhatsApp. Moneko reads it, logs the amount and merchant, and deducts it from the right pocket automatically. Total time: four seconds. No app to open. No bank connection required.
 The key advantage: Moneko gives you envelope pocket budgeting on top of Apple Wallet spending without requiring any account connection. Your Apple Card data never passes through a third-party server. Your bank credentials are never shared. You retain complete privacy and control.
+**Setting up the Moneko Apple Wallet Shortcut**
+
+Moneko also offers an iOS Shortcut that lets you capture Apple Pay transactions automatically without opening the app. Here is how to set it up:
+
+1. Open the **Settings** page inside the Moneko app
+2. Tap **Apple Wallet Capture** under Integrations
+3. Tap **Set Up Shortcut** — this opens the Shortcuts app
+4. Tap **Create New Shortcut** first
+5. Then choose **Capture Wallet Transactions** from the list
+
+<img src="https://www.moneko.io/blogs/create-new-shortcut.jpeg" alt="Create New Shortcut screen in iOS Shortcuts app showing the step to tap Create New Shortcut before selecting Capture Wallet Transactions" class="w-full rounded-lg border border-border shadow-sm" />
+
+Once configured, every time you pay with Apple Pay, the shortcut can log the transaction directly into Moneko — merchant, amount, and date — without you having to type anything.
+
 **What Moneko does with Apple Wallet spending:**
 
-- Log Apple Pay transactions instantly via notification forwarding or text
+- Log Apple Pay transactions instantly via notification forwarding, iOS Shortcuts, or text
 - Allocate spending to the right monthly pocket automatically
 - Tell you what is left in each pocket at any moment
 - Send budget alerts when a pocket is running low
@@ -168,8 +182,14 @@ For iPhone users who have tried YNAB and found it too complex, or who pay with m
 
 If you want a shorter product-focused comparison after reading this guide, see Moneko's [Apple Wallet budgeting app page](/apple-wallet-budgeting-app) and [YNAB alternative page](/ynab-alternative).
 
+## FAQs
+
+### Why is the shortcut not asking me to map fields when I choose "Capture Wallet Transactions"?
+
+You need to tap **Create New Shortcut** first, then select **Capture Wallet Transactions** from the list. If you skip the "Create New Shortcut" step and try to add the action directly, the Shortcuts app may not prompt you to configure the required fields (merchant, amount, and date). Starting with "Create New Shortcut" ensures the workflow is initialized correctly and the mapping step appears as expected.
+
 **Try Moneko free — Apple Pay budgeting with envelope pockets, no bank login required.**
-  
+
   `,
   author: authorsData.find((author) => author.id === "alex-rivera")!,
   tags: [
