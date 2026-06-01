@@ -25,6 +25,7 @@ import {
   faTrophy,
   faLightbulb,
   faHammer,
+  faDownload,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -420,36 +421,12 @@ export function Dashboard() {
       label: "Home",
       icon: faHouseChimney,
       path: "/dashboard",
-      comingSoon: true,
     },
     {
-      id: "tracker",
-      label: "Goal Guide",
-      icon: faTrophy,
-      path: "/dashboard/tracker",
-      comingSoon: true,
-    },
-    {
-      id: "portfolio",
-      label: "Portfolio",
-      icon: faHandHoldingDollar,
-      path: "/dashboard/portfolio",
-      comingSoon: true,
-    },
-    {
-      id: "income-builder",
-      label: "Income Builder",
-      icon: faHammer,
-      path: "/dashboard/income-builder",
-      comingSoon: true,
-    },
-
-    {
-      id: "learning",
-      label: "Learning",
-      icon: faChessKnight,
-      path: "/dashboard/learning",
-      comingSoon: true,
+      id: "export",
+      label: "Export",
+      icon: faDownload,
+      path: "/dashboard/export",
     },
   ];
 
@@ -732,35 +709,6 @@ export function Dashboard() {
                             </motion.div>
                           </Link>
 
-                          {/* Profile Option */}
-                          <Link
-                            to="/dashboard/user-settings/profile"
-                            className="block"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setUserMenuOpen(false);
-                              setMobileMenuOpen(false);
-                              toast.info(
-                                "Coming soon! This feature is under development.",
-                              );
-                            }}
-                          >
-                            <motion.div
-                              className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
-                              whileHover={{ x: 1 }}
-                            >
-                              <div className="bg-muted dark:bg-muted flex h-9 w-9 items-center justify-center rounded-lg">
-                                <FontAwesomeIcon
-                                  className="text-muted-foreground dark:text-muted-foreground h-4 w-4"
-                                  icon={faUser}
-                                />
-                              </div>
-                              <span className="text-popover-foreground dark:text-popover-foreground text-sm font-medium">
-                                Profile
-                              </span>
-                            </motion.div>
-                          </Link>
-
                           {/* Membership Option */}
                           <Link
                             to="/dashboard/user-settings/membership"
@@ -785,34 +733,6 @@ export function Dashboard() {
                               </span>
                             </motion.div>
                           </Link>
-                          <a
-                            href="mailto:hello@moneko.io"
-                            className="block"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setUserMenuOpen(false);
-                              setMobileMenuOpen(false);
-                              toast.info(
-                                "Coming soon! This feature is under development.",
-                              );
-                            }}
-                          >
-                            <motion.div
-                              className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
-                              whileHover={{ x: 1 }}
-                            >
-                              <div className="bg-muted dark:bg-muted flex h-9 w-9 items-center justify-center rounded-lg">
-                                <FontAwesomeIcon
-                                  className="text-muted-foreground dark:text-muted-foreground h-4 w-4"
-                                  icon={faHeadphones}
-                                />
-                              </div>
-                              <span className="text-popover-foreground dark:text-popover-foreground text-sm font-medium">
-                                Support
-                              </span>
-                            </motion.div>
-                          </a>
-
                           {/* Divider */}
                           <div className="border-border dark:border-border border-t" />
 
