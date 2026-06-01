@@ -2,9 +2,18 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
-import { SUBSCRIPTION_PRICES } from "../shared/stripe-subscription-prices.ts";
+import { getPriceId } from "../shared/stripe-subscription-prices.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { canGrantPaywallReturnTrial } from "../shared/paywall-return-trial-eligibility.ts";
+import {
+  canGrantPaywallReturnTrial,
+  hasRecentPaywallReturnExit,
+} from "../shared/paywall-return-trial-eligibility.ts";
+import {
+  BillingInterval,
+  isValidInterval,
+  isValidPlan,
+  PlanType,
+} from "../shared/subscription-constants.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -15,6 +24,10 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
+const appUrl = (Deno.env.get("APP_URL") || "https://moneko.io").replace(
+  /\/+$/,
+  "",
+);
 
 serve(async (req) => {
   try {
@@ -50,12 +63,12 @@ serve(async (req) => {
     >;
     const action = typeof body.action === "string" ? body.action : null;
     const plan = typeof body.plan === "string" ? body.plan : null;
-    const billingInterval =
-      typeof body.billingInterval === "string" ? body.billingInterval : null;
-    const prorationDate =
-      typeof body.prorationDate === "number" ? body.prorationDate : null;
-    const exitAtIso =
-      typeof body.exitAtIso === "string" ? body.exitAtIso : null;
+    const billingInterval = typeof body.billingInterval === "string"
+      ? body.billingInterval
+      : null;
+    const exitAtIso = typeof body.exitAtIso === "string"
+      ? body.exitAtIso
+      : null;
 
     const returnTrialDurationMinutesRaw = Number(
       Deno.env.get("PAYWALL_RETURN_TRIAL_DURATION_MINUTES") ??
@@ -63,7 +76,7 @@ serve(async (req) => {
     );
     const returnTrialDurationMinutes =
       Number.isFinite(returnTrialDurationMinutesRaw) &&
-      returnTrialDurationMinutesRaw > 0
+        returnTrialDurationMinutesRaw > 0
         ? Math.floor(returnTrialDurationMinutesRaw)
         : 7 * 24 * 60;
 
@@ -231,6 +244,16 @@ serve(async (req) => {
           );
         }
 
+        if (!isValidPlan(plan) || !isValidInterval(billingInterval)) {
+          return new Response(
+            JSON.stringify({ error: "Invalid plan or billing interval" }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
         // Get current plan for comparison
         const currentPlan = subscription?.plan || "free";
 
@@ -250,13 +273,13 @@ serve(async (req) => {
 
         // Cannot "upgrade" to Lifetime via plan change - must use checkout
         if (plan === "lifetime") {
-          const origin = req.headers.get("origin") || "https://moneko.io";
-          const checkoutUrl = `${origin}/checkout?plan=lifetime`;
+          const checkoutUrl = new URL("/checkout", appUrl);
+          checkoutUrl.searchParams.set("plan", "lifetime");
 
           return new Response(
             JSON.stringify({
               action: "redirect_to_checkout",
-              url: checkoutUrl,
+              url: checkoutUrl.toString(),
               message:
                 "Lifetime is a one-time purchase. Please complete checkout to upgrade.",
             }),
@@ -275,6 +298,8 @@ serve(async (req) => {
         };
         const isUpgrade =
           (PLAN_HIERARCHY[plan] ?? 0) > (PLAN_HIERARCHY[currentPlan] ?? 0);
+        const isIntervalChange = plan === currentPlan &&
+          billingInterval !== subscription?.billing_interval;
 
         // Special case: Downgrading to free plan (cancel subscription)
         if (plan === "free") {
@@ -332,13 +357,14 @@ serve(async (req) => {
           subscription.status !== "active" ||
           currentPlan === "free"
         ) {
-          const origin = req.headers.get("origin") || "https://moneko.io";
-          const checkoutUrl = `${origin}/checkout?plan=${plan}&billing=${billingInterval}`;
+          const checkoutUrl = new URL("/checkout", appUrl);
+          checkoutUrl.searchParams.set("plan", plan);
+          checkoutUrl.searchParams.set("billing", billingInterval);
 
           return new Response(
             JSON.stringify({
               action: "redirect_to_checkout",
-              url: checkoutUrl,
+              url: checkoutUrl.toString(),
               message: "Please complete checkout to subscribe to this plan",
             }),
             {
@@ -349,7 +375,15 @@ serve(async (req) => {
         }
 
         // For existing subscriptions, update the subscription in Stripe
-        const priceId = (SUBSCRIPTION_PRICES as any)?.[plan]?.[billingInterval];
+        let priceId: string;
+        try {
+          priceId = getPriceId(
+            plan as PlanType,
+            billingInterval as BillingInterval,
+          );
+        } catch (_error) {
+          priceId = "";
+        }
 
         if (!priceId) {
           return new Response(
@@ -380,8 +414,8 @@ serve(async (req) => {
 
         const subscriptionItemId = stripeSubscription.items.data[0].id;
 
-        // UPGRADES: Apply immediately with proration
-        if (isUpgrade) {
+        // Upgrades and same-plan interval changes apply immediately with proration.
+        if (isUpgrade || isIntervalChange) {
           const updateParams: any = {
             items: [
               {
@@ -396,11 +430,8 @@ serve(async (req) => {
             proration_behavior: "always_invoice", // Immediate charge with proration
             payment_behavior: "error_if_incomplete",
             cancel_at_period_end: false,
+            proration_date: Math.floor(Date.now() / 1000),
           };
-
-          if (prorationDate) {
-            updateParams.proration_date = prorationDate;
-          }
 
           const updatedSubscription = await stripe.subscriptions.update(
             subscription.stripe_subscription_id,
@@ -423,9 +454,11 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: `Subscription upgraded to ${plan} (${billingInterval})`,
+              message: isUpgrade
+                ? `Subscription upgraded to ${plan} (${billingInterval})`
+                : `Subscription billing interval changed to ${billingInterval}`,
               subscription: updatedSubscription,
-              isUpgrade: true,
+              isUpgrade,
             }),
             {
               status: 200,
@@ -489,7 +522,8 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: `Subscription will downgrade to ${plan} (${billingInterval}) at end of current period`,
+              message:
+                `Subscription will downgrade to ${plan} (${billingInterval}) at end of current period`,
               subscription: stripeSubscription,
               isUpgrade: false,
               pendingChange: {
@@ -508,7 +542,9 @@ serve(async (req) => {
         } catch (scheduleError: any) {
           console.error("Error creating subscription schedule:", scheduleError);
           throw new Error(
-            `Failed to schedule downgrade: ${scheduleError?.message ?? "unknown"}`,
+            `Failed to schedule downgrade: ${
+              scheduleError?.message ?? "unknown"
+            }`,
           );
         }
       }
@@ -743,6 +779,25 @@ serve(async (req) => {
             }),
             {
               status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (
+          !hasRecentPaywallReturnExit(
+            userEligibility.paywall_return_trial_exit_at,
+            now,
+            returnTrialDurationMinutes,
+          )
+        ) {
+          console.log(
+            `[PaywallReturnTrial] grant_blocked_missing_recent_exit user=${userId}`,
+          );
+          return new Response(
+            JSON.stringify({ error: "Return trial is not available" }),
+            {
+              status: 403,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );

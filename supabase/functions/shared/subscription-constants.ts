@@ -10,7 +10,7 @@
 export const PLAN_HIERARCHY = {
   free: 0,
   plus: 1,
-  premium: 2, // DISABLED - Not yet available, but keep for hierarchy
+  premium: 2,
   lifetime: 3, // Highest tier - One-time payment, permanent access
 } as const;
 
@@ -47,7 +47,6 @@ export const GOOD_STANDING_STATUSES: SubscriptionStatus[] = [
   "trialing",
   "past_due",
 ];
-
 
 // Payment retry settings (for past_due subscriptions)
 export const PAYMENT_RETRY_CONFIG = {

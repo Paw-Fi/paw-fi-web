@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { PlanOption, getPlanOptions } from "@/data/pricing-plans";
+import { AnimatePresence, motion } from "framer-motion";
+import { getPlanOptions, PlanOption } from "@/data/pricing-plans";
 import { toast } from "react-toastify";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  CheckCircle2,
-  Loader2,
   ArrowRight,
+  CheckCircle2,
+  Crown,
+  Loader2,
   Sparkles,
   Star,
-  Crown,
   Zap,
 } from "lucide-react";
 import { PlanChangeConfirmationDialog } from "./PlanChangeConfirmationDialog";
@@ -21,11 +21,7 @@ import { useNavigate } from "@tanstack/react-router";
 interface PlanSelectorProps {
   currentPlan: string;
   currentBillingInterval?: string; // Add current billing interval
-  onChangePlan: (
-    plan: string,
-    billingInterval: string,
-    prorationDate?: number,
-  ) => void;
+  onChangePlan: (plan: string, billingInterval: string) => void;
   onPreviewPlanChange: (plan: string, billingInterval: string) => void;
   isLoading: boolean;
   isPreviewLoading: boolean;
@@ -110,14 +106,6 @@ export function PlanSelector({
       return;
     }
 
-    // Premium is coming soon
-    if (planId === "premium") {
-      toast.info(
-        "Premium plan is coming soon. Email hello@moneko.io for updates.",
-      );
-      return;
-    }
-
     // Can't select free plan - must cancel subscription instead
     if (planId === "free") {
       if (currentPlan === "free") {
@@ -155,7 +143,8 @@ export function PlanSelector({
     const currentLevel = getPlanLevel(currentPlan);
     const newLevel = getPlanLevel(planId);
 
-    // UPGRADE: Redirect to checkout page (same flow as pricing page)
+    // UPGRADE: Existing recurring subscribers stay in the plan-change flow so
+    // Stripe updates the current subscription instead of creating a new one.
     if (newLevel > currentLevel) {
       // Lifetime: one-time payment, no billing interval
       if (planId === "lifetime") {
@@ -165,6 +154,11 @@ export function PlanSelector({
             plan: "lifetime", // No billing interval for Lifetime
           },
         });
+        return;
+      }
+
+      if (currentPlan !== "free") {
+        setSelectedPlan(planId);
         return;
       }
 
@@ -194,8 +188,7 @@ export function PlanSelector({
   const handleConfirmChange = () => {
     if (!selectedPlan || !previewData) return;
 
-    // Use the proration date from preview for consistent calculation
-    onChangePlan(selectedPlan, billingInterval, previewData.prorationDate);
+    onChangePlan(selectedPlan, billingInterval);
     setShowConfirmDialog(false);
     resetPreview();
     setSelectedPlan(null);
@@ -251,6 +244,10 @@ export function PlanSelector({
     return "bg-card border-border";
   };
 
+  const hasSelectedPlanChange = selectedPlan &&
+    (selectedPlan !== currentPlan ||
+      billingInterval !== currentBillingInterval);
+
   return (
     <div className="space-y-8">
       {/* Confirmation Dialog */}
@@ -301,7 +298,7 @@ export function PlanSelector({
       </motion.div>
 
       {/* Action Button - Moved to top for better UX */}
-      {selectedPlan && selectedPlan !== currentPlan && (
+      {hasSelectedPlanChange && (
         <motion.div
           className="flex justify-center"
           initial={{ opacity: 0, y: 20 }}
@@ -314,19 +311,24 @@ export function PlanSelector({
             size="lg"
             className="from-primary/90 to-primary hover:from-primary hover:to-primary/90 bg-gradient-to-r px-8 py-3 text-base font-semibold shadow-lg"
           >
-            {isLoading || isPreviewLoading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                {isPreviewLoading ? "Calculating..." : "Processing..."}
-              </>
-            ) : (
-              <>
-                {currentPlan === "free" || !currentPlan
-                  ? `Upgrade to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
-                  : "Review Change"}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </>
-            )}
+            {isLoading || isPreviewLoading
+              ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  {isPreviewLoading ? "Calculating..." : "Processing..."}
+                </>
+              )
+              : (
+                <>
+                  {currentPlan === "free" || !currentPlan
+                    ? `Upgrade to ${
+                      selectedPlan.charAt(0).toUpperCase() +
+                      selectedPlan.slice(1)
+                    }`
+                    : "Review Change"}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
           </Button>
         </motion.div>
       )}
@@ -342,16 +344,20 @@ export function PlanSelector({
           {plans.map((plan, index) => {
             const isCurrentPlan = currentPlan === plan.id;
             const isSelected = selectedPlan === plan.id;
+            const isBillingIntervalChange = isCurrentPlan &&
+              plan.id !== "free" &&
+              plan.id !== "lifetime" &&
+              billingInterval !== currentBillingInterval;
+            const canSelectPlan = !isCurrentPlan || isBillingIntervalChange;
 
             // Calculate price based on billing interval
             // Lifetime plan: always show one-time price (no interval)
             // Recurring plans: show monthly price or yearly price / 12
-            const price =
-              plan.id === "lifetime"
-                ? plan.monthlyPrice // One-time payment
-                : billingInterval === "monthly"
-                  ? plan.monthlyPrice
-                  : plan.yearlyPrice / 12; // Yearly divided by 12 for monthly rate
+            const price = plan.id === "lifetime"
+              ? plan.monthlyPrice // One-time payment
+              : billingInterval === "monthly"
+              ? plan.monthlyPrice
+              : plan.yearlyPrice / 12; // Yearly divided by 12 for monthly rate
 
             return (
               <motion.div
@@ -362,14 +368,14 @@ export function PlanSelector({
                 className="relative"
               >
                 <Card
-                  className={`relative cursor-pointer overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${getPlanGradient(
-                    plan.id,
-                    isSelected,
-                    plan.popular || false,
-                  )} ${
-                    isCurrentPlan ? "cursor-default" : ""
-                  } ${plan.id === "premium" ? "cursor-not-allowed opacity-60" : ""}`}
-                  onClick={() => !isCurrentPlan && handleSelectPlan(plan.id)}
+                  className={`relative cursor-pointer overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${
+                    getPlanGradient(
+                      plan.id,
+                      isSelected,
+                      plan.popular || false,
+                    )
+                  } ${canSelectPlan ? "" : "cursor-default"}`}
+                  onClick={() => canSelectPlan && handleSelectPlan(plan.id)}
                 >
                   {plan.popular && (
                     <div className="absolute -top-px left-1/2 -translate-x-1/2">
@@ -407,11 +413,11 @@ export function PlanSelector({
                       </div>
                       {billingInterval === "yearly" &&
                         plan.id !== "lifetime" && (
-                          <p className="text-muted-foreground mt-1 text-sm">
-                            Billed annually (${plan.yearlyPrice.toFixed(0)}
-                            /year)
-                          </p>
-                        )}
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          Billed annually (${plan.yearlyPrice.toFixed(0)}
+                          /year)
+                        </p>
+                      )}
                       {plan.id === "lifetime" && (
                         <p className="text-muted-foreground mt-1 text-sm">
                           One-time payment
@@ -443,43 +449,55 @@ export function PlanSelector({
 
                     {/* Action Button */}
                     <div className="pt-4">
-                      {isCurrentPlan ? (
-                        <div className="border-muted bg-muted/50 flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-3">
-                          <CheckCircle2 className="mr-2 h-4 w-4 text-green-500 dark:text-green-400" />
-                          <span className="text-muted-foreground text-sm font-medium">
-                            Current Plan
-                          </span>
-                        </div>
-                      ) : (
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectPlan(plan.id);
-                          }}
-                          disabled={plan.id === "premium"}
-                          variant={isSelected ? "default" : "secondary"}
-                          className="w-full"
-                        >
-                          {plan.id === "premium" ? (
-                            "Coming Soon"
-                          ) : isSelected ? (
-                            <>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Selected
-                            </>
-                          ) : getPlanLevel(plan.id) >
-                            getPlanLevel(currentPlan) ? (
-                            <>
-                              Upgrade to {plan.name}
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </>
-                          ) : plan.id === "free" ? (
-                            "Cancel Subscription"
-                          ) : (
-                            "Change Plan"
-                          )}
-                        </Button>
-                      )}
+                      {isCurrentPlan && !isBillingIntervalChange
+                        ? (
+                          <div className="border-muted bg-muted/50 flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-3">
+                            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500 dark:text-green-400" />
+                            <span className="text-muted-foreground text-sm font-medium">
+                              Current Plan
+                            </span>
+                          </div>
+                        )
+                        : (
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectPlan(plan.id);
+                            }}
+                            variant={isSelected ? "default" : "secondary"}
+                            className="w-full"
+                          >
+                            {isSelected
+                              ? (
+                                <>
+                                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                                  Selected
+                                </>
+                              )
+                              : isBillingIntervalChange
+                              ? (
+                                `Switch to ${
+                                  billingInterval.charAt(0).toUpperCase() +
+                                  billingInterval.slice(1)
+                                }`
+                              )
+                              : getPlanLevel(plan.id) >
+                                  getPlanLevel(currentPlan)
+                              ? (
+                                <>
+                                  Upgrade to {plan.name}
+                                  <ArrowRight className="ml-2 h-4 w-4" />
+                                </>
+                              )
+                              : plan.id === "free"
+                              ? (
+                                "Cancel Subscription"
+                              )
+                              : (
+                                "Change Plan"
+                              )}
+                          </Button>
+                        )}
                     </div>
                   </CardContent>
                 </Card>

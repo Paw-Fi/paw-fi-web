@@ -8,11 +8,11 @@
  * - STRIPE_MONTHLY_PLUS_PLAN_ID (or STRIPE_PLUS_MONTHLY_PRICE_ID)
  * - STRIPE_YEARLY_PLUS_PLAN_ID (or STRIPE_PLUS_YEARLY_PRICE_ID)
  * - STRIPE_LIFETIME_PRICE_ID (one-time payment, no recurring)
- * - STRIPE_MONTHLY_PREMIUM_PLAN_ID (optional - Premium not yet available)
- * - STRIPE_YEARLY_PREMIUM_PLAN_ID (optional - Premium not yet available)
+ * - STRIPE_MONTHLY_PREMIUM_PLAN_ID (required when PREMIUM_PLAN_ENABLED=true)
+ * - STRIPE_YEARLY_PREMIUM_PLAN_ID (required when PREMIUM_PLAN_ENABLED=true)
  */
 
-import { PlanType, BillingInterval } from "./subscription-constants.ts";
+import { BillingInterval, PlanType } from "./subscription-constants.ts";
 
 interface PriceConfig {
   monthly: string;
@@ -26,6 +26,11 @@ interface SubscriptionPrices {
   premium?: PriceConfig;
 }
 
+function isPremiumPlanEnabled(): boolean {
+  const raw = Deno.env.get("PREMIUM_PLAN_ENABLED") || "";
+  return ["1", "true", "yes", "on"].includes(raw.trim().toLowerCase());
+}
+
 /**
  * Get subscription prices from environment variables
  * This ensures type safety and validation
@@ -34,12 +39,10 @@ export function getSubscriptionPrices(): SubscriptionPrices {
   return {
     free: null,
     plus: {
-      monthly:
-        Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
+      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_MONTHLY_PRICE_ID") ||
         "",
-      yearly:
-        Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
+      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_YEARLY_PRICE_ID") ||
         "",
     },
@@ -68,6 +71,12 @@ export const SUBSCRIPTION_PRICES = getSubscriptionPrices();
 export function getPriceId(plan: PlanType, interval?: BillingInterval): string {
   if (plan === "free") {
     throw new Error("Free plan does not have a price ID");
+  }
+
+  if (plan === "premium" && !isPremiumPlanEnabled()) {
+    throw new Error(
+      "Premium plan is not enabled. Set PREMIUM_PLAN_ENABLED=true before accepting Premium purchases.",
+    );
   }
 
   const prices = getSubscriptionPrices();
@@ -99,8 +108,11 @@ export function getPriceId(plan: PlanType, interval?: BillingInterval): string {
     throw new Error(`Billing interval is required for plan "${plan}"`);
   }
 
-  const recurringPrices =
-    plan === "plus" ? prices.plus : plan === "premium" ? prices.premium : null;
+  const recurringPrices = plan === "plus"
+    ? prices.plus
+    : plan === "premium"
+    ? prices.premium
+    : null;
 
   const priceId = recurringPrices?.[interval] || "";
 
@@ -163,10 +175,20 @@ export function getAllPriceIds(): string[] {
  * Check if all required price IDs are configured
  */
 export function areAllPriceIdsConfigured(): boolean {
-  // Required: Plus (2 intervals) + Lifetime (1 one-time) = 3.
-  // Premium is optional until launched.
+  // Required by default: Plus (2 intervals) + Lifetime (1 one-time).
+  // Premium remains optional until explicitly launched.
   const prices = getSubscriptionPrices();
-  return Boolean(prices.plus.monthly && prices.plus.yearly && prices.lifetime);
+  const basePricesConfigured = Boolean(
+    prices.plus.monthly && prices.plus.yearly && prices.lifetime,
+  );
+
+  if (!basePricesConfigured) return false;
+  if (!isPremiumPlanEnabled()) return true;
+
+  return (
+    validatePriceId(prices.premium?.monthly ?? "") &&
+    validatePriceId(prices.premium?.yearly ?? "")
+  );
 }
 
 /**

@@ -2,8 +2,9 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
-import { SUBSCRIPTION_PRICES } from "../shared/stripe-subscription-prices.ts";
+import { getPriceId } from "../shared/stripe-subscription-prices.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { BillingInterval, PlanType } from "../shared/subscription-constants.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -55,10 +56,9 @@ serve(async (req) => {
       unknown
     >;
     const newPlan = typeof body.newPlan === "string" ? body.newPlan : null;
-    const newBillingIntervalRaw =
-      typeof body.newBillingInterval === "string"
-        ? body.newBillingInterval
-        : null;
+    const newBillingIntervalRaw = typeof body.newBillingInterval === "string"
+      ? body.newBillingInterval
+      : null;
     const newBillingInterval =
       newBillingIntervalRaw === "monthly" || newBillingIntervalRaw === "yearly"
         ? newBillingIntervalRaw
@@ -226,7 +226,8 @@ serve(async (req) => {
           totalProration: 0,
           currency: "usd",
           currentPeriodEnd: (subscription as any).current_period_end,
-          message: `Your subscription will be canceled and you'll return to the free plan on ${periodEnd}. You'll continue to have access to your current plan until then.`,
+          message:
+            `Your subscription will be canceled and you'll return to the free plan on ${periodEnd}. You'll continue to have access to your current plan until then.`,
           prorationDate: Math.floor(Date.now() / 1000),
         }),
         {
@@ -243,9 +244,15 @@ serve(async (req) => {
       currentPlan === "free"
     ) {
       // For new subscriptions, return basic pricing info without preview
-      const priceId = (SUBSCRIPTION_PRICES as any)?.[newPlan]?.[
-        billingInterval
-      ];
+      let priceId: string;
+      try {
+        priceId = getPriceId(
+          newPlan as PlanType,
+          billingInterval as BillingInterval,
+        );
+      } catch (_error) {
+        priceId = "";
+      }
 
       if (!priceId) {
         return new Response(
@@ -270,7 +277,11 @@ serve(async (req) => {
           newBillingInterval: billingInterval,
           immediateCharge: price.unit_amount || 0,
           currency: price.currency,
-          message: `You'll be charged ${((price.unit_amount || 0) / 100).toFixed(2)} ${price.currency.toUpperCase()} ${newBillingInterval === "monthly" ? "per month" : "per year"}`,
+          message: `You'll be charged ${
+            ((price.unit_amount || 0) / 100).toFixed(2)
+          } ${price.currency.toUpperCase()} ${
+            newBillingInterval === "monthly" ? "per month" : "per year"
+          }`,
           prorationDate: Math.floor(Date.now() / 1000),
         }),
         {
@@ -281,9 +292,15 @@ serve(async (req) => {
     }
 
     // For existing subscriptions, get the new price ID
-    const newPriceId = (SUBSCRIPTION_PRICES as any)?.[newPlan]?.[
-      billingInterval
-    ];
+    let newPriceId: string;
+    try {
+      newPriceId = getPriceId(
+        newPlan as PlanType,
+        billingInterval as BillingInterval,
+      );
+    } catch (_error) {
+      newPriceId = "";
+    }
 
     if (!newPriceId) {
       return new Response(
@@ -356,27 +373,56 @@ serve(async (req) => {
 
       if (isUpgrade) {
         // Upgrades: immediate charge with proration
-        message =
-          totalProration > 0
-            ? `You'll be charged ${(upcomingInvoice.amount_due / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} immediately (including prorated ${(totalProration / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} credit for unused time). Your subscription will renew at ${(newRecurringAmount / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} ${newBillingInterval === "monthly" ? "per month" : "per year"}.`
-            : `You'll be charged ${(upcomingInvoice.amount_due / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} immediately. Your subscription will renew at ${(newRecurringAmount / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} ${newBillingInterval === "monthly" ? "per month" : "per year"}.`;
+        message = totalProration > 0
+          ? `You'll be charged ${
+            (upcomingInvoice.amount_due / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} immediately (including prorated ${
+            (totalProration / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} credit for unused time). Your subscription will renew at ${
+            (newRecurringAmount / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} ${
+            newBillingInterval === "monthly" ? "per month" : "per year"
+          }.`
+          : `You'll be charged ${
+            (upcomingInvoice.amount_due / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} immediately. Your subscription will renew at ${
+            (newRecurringAmount / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} ${
+            newBillingInterval === "monthly" ? "per month" : "per year"
+          }.`;
       } else if (isDowngrade) {
         // Downgrades: apply at period end
         billingBehavior = "end_of_period";
         const periodEnd = new Date(
           stripeSubscription.current_period_end * 1000,
         ).toLocaleDateString();
-        message =
-          totalProration < 0
-            ? `Your plan will change to ${newPlan} on ${periodEnd}. You'll receive a credit of ${Math.abs(totalProration / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} applied to your next invoice. New rate: ${(newRecurringAmount / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} ${newBillingInterval === "monthly" ? "per month" : "per year"}.`
-            : `Your plan will change to ${newPlan} on ${periodEnd}. New rate: ${(newRecurringAmount / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} ${newBillingInterval === "monthly" ? "per month" : "per year"}.`;
+        message = totalProration < 0
+          ? `Your plan will change to ${newPlan} on ${periodEnd}. You'll receive a credit of ${
+            Math.abs(totalProration / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} applied to your next invoice. New rate: ${
+            (newRecurringAmount / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} ${
+            newBillingInterval === "monthly" ? "per month" : "per year"
+          }.`
+          : `Your plan will change to ${newPlan} on ${periodEnd}. New rate: ${
+            (newRecurringAmount / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} ${
+            newBillingInterval === "monthly" ? "per month" : "per year"
+          }.`;
       } else if (isSamePlan) {
         // Same plan, different billing interval
-        const currentInterval =
-          stripeSubscription.items.data[0].price.recurring?.interval;
+        const currentInterval = stripeSubscription.items.data[0].price.recurring
+          ?.interval;
         if (currentInterval !== newBillingInterval) {
           // Billing interval change: immediate charge
-          message = `Switching to ${newBillingInterval} billing. You'll be charged ${(upcomingInvoice.amount_due / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} immediately (including prorated credit for unused time). New rate: ${(newRecurringAmount / 100).toFixed(2)} ${upcomingInvoice.currency.toUpperCase()} ${newBillingInterval === "monthly" ? "per month" : "per year"}.`;
+          message =
+            `Switching to ${newBillingInterval} billing. You'll be charged ${
+              (upcomingInvoice.amount_due / 100).toFixed(2)
+            } ${upcomingInvoice.currency.toUpperCase()} immediately (including prorated credit for unused time). New rate: ${
+              (newRecurringAmount / 100).toFixed(2)
+            } ${upcomingInvoice.currency.toUpperCase()} ${
+              newBillingInterval === "monthly" ? "per month" : "per year"
+            }.`;
         } else {
           message =
             "No changes needed - you are already on this plan and billing interval.";
@@ -393,8 +439,9 @@ serve(async (req) => {
           newPlan,
           newBillingInterval,
           billingBehavior,
-          immediateCharge:
-            billingBehavior === "immediate" ? upcomingInvoice.amount_due : 0,
+          immediateCharge: billingBehavior === "immediate"
+            ? upcomingInvoice.amount_due
+            : 0,
           futureRecurringAmount: newRecurringAmount,
           totalProration,
           currency: upcomingInvoice.currency,
