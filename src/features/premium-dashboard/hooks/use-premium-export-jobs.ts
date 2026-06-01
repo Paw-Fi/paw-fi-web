@@ -1,8 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { PremiumExportJob, ExportType } from "../types";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "react-toastify";
+
+async function getFunctionErrorMessage(
+  error: any,
+  fallback: string
+): Promise<string> {
+  if (error instanceof FunctionsHttpError && error.context) {
+    try {
+      const body = await error.context.json();
+      return body.error || body.message || fallback;
+    } catch {
+      // ignore parse errors, fall through to generic message
+    }
+  }
+  return error?.message || fallback;
+}
 
 export function usePremiumExportJobs() {
   const { user } = useAuth();
@@ -14,8 +30,8 @@ export function usePremiumExportJobs() {
       const { data, error } = await supabase.functions.invoke("premium-export-center", {
         body: { action: "list" },
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Failed to list export jobs");
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to list export jobs"));
+      if (!data?.success) throw new Error(data?.error || data?.message || "Failed to list export jobs");
       return data.data as PremiumExportJob[];
     },
     enabled: Boolean(user?.id),
@@ -33,8 +49,8 @@ export function usePremiumExportJobs() {
       const { data, error } = await supabase.functions.invoke("premium-export-center", {
         body: { action: "create", exportType, filters },
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Failed to create export job");
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to create export job"));
+      if (!data?.success) throw new Error(data?.error || data?.message || "Failed to create export job");
       return data.data as PremiumExportJob;
     },
     onSuccess: () => {
@@ -51,8 +67,8 @@ export function usePremiumExportJobs() {
       const { data, error } = await supabase.functions.invoke("premium-export-center", {
         body: { action: "download", jobId },
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Failed to download export job");
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to download export job"));
+      if (!data?.success) throw new Error(data?.error || data?.message || "Failed to download export job");
       if (data?.data?.signedUrl) {
         window.open(data.data.signedUrl, "_blank");
       } else {
@@ -90,8 +106,8 @@ export function usePremiumExportAttachments(filters: { startDate?: string; endDa
       const { data, error } = await supabase.functions.invoke("premium-export-center", {
         body: { action: "list_attachments", filters },
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Failed to list attachments");
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to list attachments"));
+      if (!data?.success) throw new Error(data?.error || data?.message || "Failed to list attachments");
       return data.data as PremiumExportAttachment[];
     },
     enabled: Boolean(user?.id),
@@ -109,8 +125,8 @@ export function usePremiumExportJobStatus(jobId?: string) {
       const { data, error } = await supabase.functions.invoke("premium-export-center", {
         body: { action: "status", jobId },
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Failed to fetch export job status");
+      if (error) throw new Error(await getFunctionErrorMessage(error, "Failed to fetch export job status"));
+      if (!data?.success) throw new Error(data?.error || data?.message || "Failed to fetch export job status");
       return data.data as PremiumExportJob;
     },
     enabled: Boolean(user?.id && jobId),
