@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { PremiumExportJob, ExportType } from "../types";
 import { useAuth } from "@/contexts/auth-context";
+import { toast } from "react-toastify";
 
 export function usePremiumExportJobs() {
   const { user } = useAuth();
@@ -38,17 +39,27 @@ export function usePremiumExportJobs() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["premium-export-jobs", user?.id] });
+      toast.success("Export job started successfully!");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to start export. Please try again.");
     },
   });
 
   const downloadJob = async (jobId: string) => {
-    const { data, error } = await supabase.functions.invoke("premium-export-center", {
-      body: { action: "download", jobId },
-    });
-    if (error) throw new Error(error.message);
-    if (!data?.success) throw new Error(data?.error || "Failed to download export job");
-    if (data?.data?.signedUrl) {
-      window.open(data.data.signedUrl, "_blank");
+    try {
+      const { data, error } = await supabase.functions.invoke("premium-export-center", {
+        body: { action: "download", jobId },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Failed to download export job");
+      if (data?.data?.signedUrl) {
+        window.open(data.data.signedUrl, "_blank");
+      } else {
+        throw new Error("No download link received");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to download file. Please try again.");
     }
   };
 

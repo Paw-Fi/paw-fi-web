@@ -71,7 +71,9 @@ export function PremiumExportManager() {
               onClick={() => handleCreateExport("transactions_csv")}
               disabled={createJob.isPending}
             >
-              Generate CSV
+              {createJob.isPending && createJob.variables?.exportType === "transactions_csv" ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+              ) : "Generate CSV"}
             </Button>
           </CardContent>
         </Card>
@@ -93,7 +95,9 @@ export function PremiumExportManager() {
               onClick={() => handleCreateExport("tax_package_zip")}
               disabled={createJob.isPending}
             >
-              Generate Package
+              {createJob.isPending && createJob.variables?.exportType === "tax_package_zip" ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+              ) : "Generate Package"}
             </Button>
           </CardContent>
         </Card>
@@ -114,7 +118,9 @@ export function PremiumExportManager() {
               onClick={() => handleCreateExport("everything_zip")}
               disabled={createJob.isPending}
             >
-              Generate Full Backup
+              {createJob.isPending && createJob.variables?.exportType === "everything_zip" ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...</>
+              ) : "Generate Full Backup"}
             </Button>
           </CardContent>
         </Card>
