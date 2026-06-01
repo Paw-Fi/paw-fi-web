@@ -18,7 +18,9 @@ export function usePremiumDashboardSummary(filters?: Record<string, unknown>) {
       });
       
       if (error) throw new Error(error.message || "Failed to fetch dashboard summary");
-      return data as PremiumDashboardSummary;
+      if (!data?.success) throw new Error(data?.error || "Failed to fetch dashboard summary");
+      
+      return data.data as PremiumDashboardSummary;
     },
     enabled: Boolean(user?.id && hasPremiumAccess),
     staleTime: 60_000,

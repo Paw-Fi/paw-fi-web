@@ -48,59 +48,44 @@ export function PremiumDashboardHome() {
       </div>
 
       {/* Main content grid */}
-      <div className="grid grid-cols-1 gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <DashboardMetricCard
             title="Cash on Hand"
             value={formatCurrency(data.totals.cashOnHandCents, data.period.displayCurrency)}
-            icon={Wallet}
-            description="Total available balance across selected accounts"
           />
           <DashboardMetricCard
             title="Net Cashflow"
             value={formatCurrency(data.totals.netCashflowCents, data.period.displayCurrency)}
-            icon={Activity}
-            trend={{ value: 0, label: "this period" }} // Could compute real trend if returned
           />
           <DashboardMetricCard
             title="Total Income"
             value={formatCurrency(data.totals.incomeCents, data.period.displayCurrency)}
-            icon={ArrowUpRight}
-            className="border-emerald-200 dark:border-emerald-800/50"
           />
           <DashboardMetricCard
             title="Total Expenses"
             value={formatCurrency(data.totals.expenseCents, data.period.displayCurrency)}
-            icon={ArrowDownRight}
-            className="border-rose-200 dark:border-rose-800/50"
           />
         </div>
 
         <ActionItemsPanel items={data.actionItems} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <CashflowChart trends={data.trends} currency={data.period.displayCurrency} />
           <BudgetProgressPanel budgets={data.budgetProgress} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <TransactionsSearchPanel transactions={data.recentTransactions} />
-          <div className="col-span-1 space-y-6">
+          <div className="col-span-1 space-y-8">
             <DashboardMetricCard
               title="Receipt Coverage"
               value={`${data.totals.receiptCoveragePercent}%`}
-              icon={Receipt}
               description={`${data.exportReadiness.missingReceiptCount} transactions missing receipts`}
-              trend={{
-                value: data.totals.receiptCoveragePercent,
-                label: "coverage",
-                isPositiveGood: true
-              }}
             />
+            <ExportCenter />
           </div>
         </div>
-
-        <ExportCenter />
       </div>
     </div>
   );

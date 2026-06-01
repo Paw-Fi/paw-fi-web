@@ -1,7 +1,6 @@
 import React from "react";
 import { PremiumDashboardSummary } from "../types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { formatCompactCurrency } from "../lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -12,11 +11,11 @@ interface BudgetProgressPanelProps {
 export function BudgetProgressPanel({ budgets }: BudgetProgressPanelProps) {
   if (!budgets || budgets.length === 0) {
     return (
-      <Card className="col-span-1 h-full">
-        <CardHeader>
-          <CardTitle className="text-lg">Budgets & Pockets</CardTitle>
+      <Card className="col-span-1 h-full border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Budgets & Pockets</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
+        <CardContent className="flex flex-col items-center justify-center h-48 text-center text-slate-400">
           <p>No active budgets found.</p>
         </CardContent>
       </Card>
@@ -24,13 +23,13 @@ export function BudgetProgressPanel({ budgets }: BudgetProgressPanelProps) {
   }
 
   return (
-    <Card className="col-span-1 h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-lg flex justify-between items-center">
-          <span>Budgets & Pockets</span>
+    <Card className="col-span-1 h-full flex flex-col border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Budgets & Pockets
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 space-y-6 overflow-y-auto">
+      <CardContent className="flex-1 space-y-6 overflow-y-auto pr-2">
         {budgets.map((budget) => {
           const percent =
             budget.allocatedCents > 0
@@ -38,36 +37,30 @@ export function BudgetProgressPanel({ budgets }: BudgetProgressPanelProps) {
               : 0;
 
           const isOver = budget.spentCents > budget.allocatedCents;
-          const isWarning = percent > 85 && !isOver;
 
           return (
-            <div key={budget.id} className="space-y-2">
-              <div className="flex justify-between items-end text-sm">
-                <span className="font-medium text-slate-700 dark:text-slate-300 truncate pr-2">
+            <div key={budget.id} className="space-y-3">
+              <div className="flex justify-between items-end gap-2 text-sm">
+                <span className="font-medium text-slate-900 dark:text-slate-100 truncate">
                   {budget.name}
                 </span>
-                <span className="shrink-0">
-                  <span className={cn("font-semibold", isOver ? "text-rose-500" : "")}>
+                <span className="shrink-0 text-slate-600 dark:text-slate-400">
+                  <span className={cn(isOver ? "text-rose-600 dark:text-rose-400 font-medium" : "")}>
                     {formatCompactCurrency(budget.spentCents, budget.currency)}
                   </span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    / {formatCompactCurrency(budget.allocatedCents, budget.currency)}
+                  <span className="opacity-60">
+                    {" "}/ {formatCompactCurrency(budget.allocatedCents, budget.currency)}
                   </span>
                 </span>
               </div>
-              <Progress
-                value={percent}
-                className={cn("h-2", isOver ? "[&>div]:bg-rose-500" : isWarning ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary")}
-              />
-              <div className="text-xs text-right text-muted-foreground">
-                {isOver ? (
-                  <span className="text-rose-500 font-medium">
-                    {formatCompactCurrency(Math.abs(budget.remainingCents), budget.currency)} over
-                  </span>
-                ) : (
-                  <span>{formatCompactCurrency(budget.remainingCents, budget.currency)} left</span>
-                )}
+              <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full rounded-full transition-all", 
+                    isOver ? "bg-rose-500" : "bg-slate-800 dark:bg-slate-200"
+                  )} 
+                  style={{ width: `${percent}%` }}
+                />
               </div>
             </div>
           );

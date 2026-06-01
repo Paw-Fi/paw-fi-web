@@ -14,7 +14,8 @@ export function usePremiumExportJobs() {
         body: { action: "list" },
       });
       if (error) throw new Error(error.message);
-      return data;
+      if (!data?.success) throw new Error(data?.error || "Failed to list export jobs");
+      return data.data as PremiumExportJob[];
     },
     enabled: Boolean(user?.id),
     staleTime: 10_000,
@@ -32,7 +33,8 @@ export function usePremiumExportJobs() {
         body: { action: "create", exportType, filters },
       });
       if (error) throw new Error(error.message);
-      return data as PremiumExportJob;
+      if (!data?.success) throw new Error(data?.error || "Failed to create export job");
+      return data.data as PremiumExportJob;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["premium-export-jobs", user?.id] });
@@ -44,8 +46,9 @@ export function usePremiumExportJobs() {
       body: { action: "download", jobId },
     });
     if (error) throw new Error(error.message);
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, "_blank");
+    if (!data?.success) throw new Error(data?.error || "Failed to download export job");
+    if (data?.data?.signedUrl) {
+      window.open(data.data.signedUrl, "_blank");
     }
   };
 
@@ -70,7 +73,8 @@ export function usePremiumExportJobStatus(jobId?: string) {
         body: { action: "status", jobId },
       });
       if (error) throw new Error(error.message);
-      return data;
+      if (!data?.success) throw new Error(data?.error || "Failed to fetch export job status");
+      return data.data as PremiumExportJob;
     },
     enabled: Boolean(user?.id && jobId),
     refetchInterval: (query) => {

@@ -3,7 +3,7 @@ import { usePremiumExportJobs } from "../hooks/use-premium-export-jobs";
 import { ExportType } from "../types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Download, Archive, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 
 export function ExportCenter() {
@@ -14,100 +14,89 @@ export function ExportCenter() {
   };
 
   return (
-    <Card className="col-span-1 lg:col-span-3 border-primary/20 bg-primary/5">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Download className="w-5 h-5 text-primary" />
-          Premium Export Center
+    <Card className="col-span-1 border-slate-200/60 dark:border-slate-800/60 shadow-sm rounded-2xl">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Export Center
         </CardTitle>
-        <CardDescription>
-          Generate tax-ready packages and export your data securely.
+        <CardDescription className="text-xs mt-1 text-slate-500">
+          Generate tax-ready packages and secure backups.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-background rounded-xl p-4 border flex flex-col items-start gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-lg">
-              <FileSpreadsheet className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm">Transactions CSV</h4>
-              <p className="text-xs text-muted-foreground mt-1">Export all ledger entries for this period.</p>
-            </div>
-            <Button 
-              size="sm" 
-              className="w-full mt-auto" 
-              variant="secondary"
-              onClick={() => handleCreateExport("transactions_csv")}
-              disabled={createJob.isPending}
-            >
-              Generate CSV
-            </Button>
-          </div>
+      <CardContent className="space-y-6">
+        <div className="flex flex-col gap-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="w-full justify-start text-left h-10 border-slate-200/60 dark:border-slate-800/60 font-medium"
+            onClick={() => handleCreateExport("transactions_csv")}
+            disabled={createJob.isPending}
+          >
+            Transactions CSV
+          </Button>
 
-          <div className="bg-background rounded-xl p-4 border flex flex-col items-start gap-3">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-lg">
-              <Archive className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm">Tax Package ZIP</h4>
-              <p className="text-xs text-muted-foreground mt-1">Transactions, categories, and receipts in one file.</p>
-            </div>
-            <Button 
-              size="sm" 
-              className="w-full mt-auto" 
-              variant="secondary"
-              onClick={() => handleCreateExport("tax_package_zip")}
-              disabled={createJob.isPending}
-            >
-              Generate Package
-            </Button>
-          </div>
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="w-full justify-start text-left h-10 border-slate-200/60 dark:border-slate-800/60 font-medium"
+            onClick={() => handleCreateExport("tax_package_zip")}
+            disabled={createJob.isPending}
+          >
+            Tax Package ZIP
+          </Button>
 
-          <div className="bg-background rounded-xl p-4 border flex flex-col items-start gap-3">
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg">
-              <Download className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-sm">Full Backup</h4>
-              <p className="text-xs text-muted-foreground mt-1">Everything including original email attachments.</p>
-            </div>
-            <Button 
-              size="sm" 
-              className="w-full mt-auto"
-              onClick={() => handleCreateExport("everything_zip")}
-              disabled={createJob.isPending}
-            >
-              Generate Full Backup
-            </Button>
-          </div>
+          <Button 
+            size="sm" 
+            variant="default"
+            className="w-full justify-start text-left h-10 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-medium"
+            onClick={() => handleCreateExport("everything_zip")}
+            disabled={createJob.isPending}
+          >
+            Full Backup (Including Receipts)
+          </Button>
         </div>
 
         {jobs.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Recent Exports</h4>
-            <div className="space-y-2">
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60">
+            <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wider">
+              Recent Exports
+            </h4>
+            <div className="space-y-3">
               {jobs.slice(0, 3).map((job) => (
-                <div key={job.id} className="flex items-center justify-between p-3 bg-background rounded-lg border text-sm">
-                  <div className="flex items-center gap-3">
+                <div key={job.id} className="flex items-center justify-between text-sm group">
+                  <div className="flex items-center gap-2 overflow-hidden">
                     {job.status === "ready" ? (
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
+                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
                     ) : job.status === "failed" || job.status === "expired" ? (
-                      <AlertCircle className="w-4 h-4 text-rose-500" />
+                      <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
                     ) : (
-                      <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                      <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0" />
                     )}
-                    <span className="font-medium">{job.export_type.replace(/_/g, " ")}</span>
-                    <span className="text-muted-foreground">{format(new Date(job.created_at), "MMM d, h:mm a")}</span>
+                    <div className="truncate">
+                      <span className="font-medium text-slate-700 dark:text-slate-300 capitalize text-xs block truncate">
+                        {job.export_type.replace(/_/g, " ")}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block truncate">
+                        {format(new Date(job.created_at), "MMM d, h:mm a")}
+                      </span>
+                    </div>
                   </div>
-                  {job.status === "ready" && (
-                    <Button size="sm" variant="ghost" onClick={() => downloadJob(job.id)}>
-                      Download
-                    </Button>
-                  )}
-                  {job.status !== "ready" && job.status !== "failed" && job.status !== "expired" && (
-                    <span className="text-muted-foreground">{job.progress_percent}%</span>
-                  )}
+                  <div className="shrink-0 pl-2">
+                    {job.status === "ready" ? (
+                      <button 
+                        onClick={() => downloadJob(job.id)}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                      >
+                        Download &rarr;
+                      </button>
+                    ) : job.status !== "failed" && job.status !== "expired" ? (
+                      <span className="text-xs font-medium text-slate-400">
+                        {job.progress_percent}%
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium text-rose-500">Failed</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

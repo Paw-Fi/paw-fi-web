@@ -39,6 +39,12 @@ import {
 } from "../shared/email-import-event-state.ts";
 import { saveTransactionsBatchInternal } from "../save-transactions-batch/index.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { getUserPremiumAccessByUserId } from "../shared/premium-access.ts";
+import {
+  buildEmailImportAttachmentPath,
+  sanitizeStorageFilename,
+  sha256Hex,
+} from "../shared/premium-storage.ts";
 
 const APP_URL = Deno.env.get("APP_URL") || "https://moneko.io";
 const DEFAULT_IMPORT_INBOX_EMAIL = "files@inbound.moneko.io";
@@ -102,6 +108,13 @@ interface AttachmentProcessingResult {
   itemCount: number;
   error?: string;
   items?: Array<Record<string, unknown>>;
+  retainedAttachmentId?: string;
+}
+
+interface StoredEmailAttachment {
+  id: string;
+  storagePath: string;
+  sha256: string;
 }
 
 type InboundEventStatus =
@@ -767,6 +780,83 @@ async function resolveOwnerBySender(params: {
   };
 }
 
+async function isUserPremiumForRetention(
+  supabase: any,
+  userId: string,
+): Promise<boolean> {
+  const access = await getUserPremiumAccessByUserId(supabase, userId);
+  return access.hasPremiumAccess;
+}
+
+async function storePremiumEmailImportAttachment(params: {
+  supabase: any;
+  userId: string;
+  emailImportEventId: string;
+  providerEmailId: string;
+  attachmentIndex: number;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  bytes: Uint8Array;
+}): Promise<StoredEmailAttachment | null> {
+  const sha = await sha256Hex(params.bytes);
+  const storagePath = buildEmailImportAttachmentPath({
+    userId: params.userId,
+    emailId: params.providerEmailId,
+    attachmentIndex: params.attachmentIndex,
+    sha256: sha,
+    filename: params.filename,
+  });
+  const safeFilename = sanitizeStorageFilename(params.filename);
+
+  const { error: uploadError } = await params.supabase.storage
+    .from("email-import-attachments")
+    .upload(storagePath, params.bytes, {
+      contentType: params.contentType || "application/octet-stream",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(`EMAIL_ATTACHMENT_UPLOAD_FAILED:${uploadError.message}`);
+  }
+
+  const { data, error } = await params.supabase
+    .from("email_import_attachments")
+    .upsert(
+      {
+        user_id: params.userId,
+        email_import_event_id: params.emailImportEventId,
+        provider: "resend",
+        provider_email_id: params.providerEmailId,
+        storage_bucket: "email-import-attachments",
+        storage_path: storagePath,
+        filename: safeFilename,
+        content_type: params.contentType || null,
+        size_bytes: params.sizeBytes,
+        sha256: sha,
+        status: "stored",
+        metadata: {
+          sourceFilename: params.filename,
+          attachmentIndex: params.attachmentIndex,
+        },
+      },
+      { onConflict: "user_id,email_import_event_id,sha256" },
+    )
+    .select("id, storage_path, sha256")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`EMAIL_ATTACHMENT_METADATA_FAILED:${error.message}`);
+  }
+
+  if (!data?.id) return null;
+  return {
+    id: String(data.id),
+    storagePath: String(data.storage_path ?? storagePath),
+    sha256: String(data.sha256 ?? sha),
+  };
+}
+
 function hasVerifiedSender(headers?: Record<string, string>): boolean {
   if (!headers) return false;
 
@@ -860,6 +950,8 @@ function buildFollowupEmail(params: {
   failedCount: number;
   transactions: Array<Record<string, unknown>>;
   attachmentResults: AttachmentProcessingResult[];
+  retainedAttachmentCount: number;
+  retainedOriginals: boolean;
 }) {
   const {
     senderEmail,
@@ -869,6 +961,8 @@ function buildFollowupEmail(params: {
     failedCount,
     transactions,
     attachmentResults,
+    retainedAttachmentCount,
+    retainedOriginals,
   } = params;
 
   const transactionLines = transactions
@@ -934,6 +1028,11 @@ function buildFollowupEmail(params: {
   }</p>
     <p><strong>Duplicates skipped:</strong> ${duplicateCount}</p>
     <p><strong>Failed:</strong> ${failedCount}</p>
+    ${
+    retainedOriginals
+      ? `<p><strong>Secure originals saved:</strong> ${retainedAttachmentCount}</p>`
+      : ""
+  }
     <p><strong>Attachment summary</strong></p>
     <ul>${attachmentLines}</ul>
     ${
@@ -943,17 +1042,20 @@ function buildFollowupEmail(params: {
   }
   `;
 
+  const retentionFooter = retainedOriginals
+    ? "Your original forwarded files were saved securely and are available from your Premium Export Center. Replies are not monitored."
+    : "Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored.";
+
   return {
     subject: sanitizeSubject("Moneko import report"),
     html: baseTemplate(
       content,
       renderFooter({
-        customReason:
-          `Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored.`,
+        customReason: retentionFooter,
       }),
     ),
     text:
-      `Moneko processed files from ${senderEmail}. Import inbox: ${PRIMARY_IMPORT_INBOX_EMAIL}. Saved: ${savedCount}. Duplicates skipped: ${duplicateCount}. Failed: ${failedCount}. Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help.`,
+      `Moneko processed files from ${senderEmail}. Import inbox: ${PRIMARY_IMPORT_INBOX_EMAIL}. Saved: ${savedCount}. Duplicates skipped: ${duplicateCount}. Failed: ${failedCount}. ${retentionFooter}; contact ${SUPPORT_EMAIL} if you need help.`,
   };
 }
 
@@ -1317,22 +1419,25 @@ export async function handleResendInboundWebhook(
   if (event.type !== "email.received" || !event.data?.email_id) {
     return jsonResponse({ success: true, ignored: true });
   }
+  const emailData = event.data as NonNullable<ResendReceivedEvent["data"]> & {
+    email_id: string;
+  };
 
   console.log("[resend-inbound-webhook] received email", {
-    emailId: event.data.email_id,
-    createdAt: event.data.created_at ?? event.created_at ?? null,
-    from: event.data.from ?? null,
-    to: Array.isArray(event.data.to) ? event.data.to : [],
-    subject: event.data.subject ?? null,
-    attachmentCount: Array.isArray(event.data.attachments)
-      ? event.data.attachments.length
+    emailId: emailData.email_id,
+    createdAt: emailData.created_at ?? event.created_at ?? null,
+    from: emailData.from ?? null,
+    to: Array.isArray(emailData.to) ? emailData.to : [],
+    subject: emailData.subject ?? null,
+    attachmentCount: Array.isArray(emailData.attachments)
+      ? emailData.attachments.length
       : null,
   });
 
-  if (!shouldProcessInboundToConfiguredInboxes(event.data.to)) {
+  if (!shouldProcessInboundToConfiguredInboxes(emailData.to)) {
     console.log("[resend-inbound-webhook] ignored recipient mismatch", {
-      emailId: event.data.email_id,
-      to: Array.isArray(event.data.to) ? event.data.to : [],
+      emailId: emailData.email_id,
+      to: Array.isArray(emailData.to) ? emailData.to : [],
       expectedInboxes: IMPORT_INBOX_EMAILS,
     });
     return jsonResponse({
@@ -1342,7 +1447,7 @@ export async function handleResendInboundWebhook(
     });
   }
 
-  const senderEmail = normalizeEmailAddress(event.data.from);
+  const senderEmail = normalizeEmailAddress(emailData.from);
   if (!senderEmail) {
     return errorResponse("Invalid sender email", 400, "INVALID_EMAIL");
   }
@@ -1360,7 +1465,7 @@ export async function handleResendInboundWebhook(
 
   const claim = await claimInboundEvent({
     supabase,
-    emailId: event.data.email_id,
+    emailId: emailData.email_id,
     senderEmail,
     normalizedSenderEmail: senderEmail,
     svixId,
@@ -1391,7 +1496,7 @@ export async function handleResendInboundWebhook(
     ): void => {
       currentStage = stage;
       console.log("[resend-inbound-webhook] background stage", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         stage,
         elapsedMs: Date.now() - backgroundStartedAtMs,
         ...(detail ?? {}),
@@ -1399,7 +1504,7 @@ export async function handleResendInboundWebhook(
     };
     const heartbeat = setInterval(() => {
       console.log("[resend-inbound-webhook] background heartbeat", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         stage: currentStage,
         elapsedMs: Date.now() - backgroundStartedAtMs,
         attemptCount: leaseOwner.attemptCount,
@@ -1407,7 +1512,7 @@ export async function handleResendInboundWebhook(
     }, 30000);
 
     console.log("[resend-inbound-webhook] background processing started", {
-      emailId: event.data.email_id,
+      emailId: emailData.email_id,
       recovered: claim.recovered,
       attemptCount: leaseOwner.attemptCount,
     });
@@ -1425,7 +1530,7 @@ export async function handleResendInboundWebhook(
       });
 
       console.log("[resend-inbound-webhook] owner lookup", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         senderEmail,
         resolvedUserId: owner?.userId ?? null,
         enabled: owner?.enabled ?? null,
@@ -1492,6 +1597,15 @@ export async function handleResendInboundWebhook(
         return jsonResponse({ success: true, ignored: true });
       }
 
+      setStage("premium_retention_lookup_start");
+      const shouldRetainOriginalAttachments = await isUserPremiumForRetention(
+        supabase,
+        owner.userId,
+      );
+      setStage("premium_retention_lookup_complete", {
+        retainedOriginals: shouldRetainOriginalAttachments,
+      });
+
       setStage("initial_heartbeat_start");
       await heartbeatInboundEvent({
         supabase,
@@ -1504,8 +1618,8 @@ export async function handleResendInboundWebhook(
 
       setStage("resend_fetch_metadata_start");
       const [emailContentResult, attachmentListResponse] = await Promise.all([
-        fetchResendJson(`/emails/receiving/${event.data.email_id}`),
-        fetchResendJson(`/emails/receiving/${event.data.email_id}/attachments`)
+        fetchResendJson(`/emails/receiving/${emailData.email_id}`),
+        fetchResendJson(`/emails/receiving/${emailData.email_id}/attachments`)
           .then((value) => ({ data: value, error: null }))
           .catch((error) => ({ data: null, error })),
       ]);
@@ -1514,7 +1628,7 @@ export async function handleResendInboundWebhook(
       });
 
       console.log("[resend-inbound-webhook] fetched email metadata", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         hasText:
           typeof (emailContentResult as { text?: string | null })?.text ===
             "string",
@@ -1568,7 +1682,7 @@ export async function handleResendInboundWebhook(
       ).slice(0, MAX_SUPPORTED_ATTACHMENTS);
 
       console.log("[resend-inbound-webhook] supported attachments", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         attachmentCount: supportedAttachments.length,
         attachments: supportedAttachments.map((attachment) => ({
           filename: attachment.filename,
@@ -1620,6 +1734,8 @@ export async function handleResendInboundWebhook(
 
       const attachmentResults: AttachmentProcessingResult[] = [];
       const analyzedItems: Array<Record<string, unknown>> = [];
+      let retainedAttachmentCount = 0;
+      const retentionErrors: Array<Record<string, unknown>> = [];
 
       for (
         let attachmentIndex = 0;
@@ -1649,7 +1765,7 @@ export async function handleResendInboundWebhook(
             filename: attachment.filename,
           });
           console.log("[resend-inbound-webhook] processing attachment", {
-            emailId: event.data.email_id,
+            emailId: emailData.email_id,
             filename: attachment.filename,
             contentType: attachment.contentType,
             sizeBytes: attachment.sizeBytes,
@@ -1720,10 +1836,45 @@ export async function handleResendInboundWebhook(
             });
             continue;
           }
+          let storedAttachment: StoredEmailAttachment | null = null;
+          if (shouldRetainOriginalAttachments) {
+            try {
+              storedAttachment = await storePremiumEmailImportAttachment({
+                supabase,
+                userId: owner.userId,
+                emailImportEventId: leaseOwner.rowId,
+                providerEmailId: emailData.email_id,
+                attachmentIndex,
+                filename: attachment.filename,
+                contentType: attachment.contentType,
+                sizeBytes: bytes.length,
+                bytes,
+              });
+              if (storedAttachment) {
+                retainedAttachmentCount += 1;
+              }
+            } catch (retentionError) {
+              const message = retentionError instanceof Error
+                ? retentionError.message
+                : String(retentionError);
+              retentionErrors.push({
+                filename: attachment.filename,
+                error: message,
+              });
+              console.error(
+                "[resend-inbound-webhook] premium attachment retention failed",
+                {
+                  emailId: emailData.email_id,
+                  filename: attachment.filename,
+                  error: message,
+                },
+              );
+            }
+          }
           const analyzeBody: AnalyzeRequestBody = {
             userId: owner.userId,
             date: (
-              event.data.created_at ||
+              emailData.created_at ||
               event.created_at ||
               new Date().toISOString()
             ).slice(0, 10),
@@ -1749,7 +1900,7 @@ export async function handleResendInboundWebhook(
             requiredGeminiApiKey,
             (progress) => {
               console.log("[resend-inbound-webhook] analyze progress", {
-                emailId: event.data.email_id,
+                emailId: emailData.email_id,
                 filename: attachment.filename,
                 elapsedMs: Date.now() - backgroundStartedAtMs,
                 type: progress.type,
@@ -1780,7 +1931,7 @@ export async function handleResendInboundWebhook(
             )
             : [];
           console.log("[resend-inbound-webhook] analyze result", {
-            emailId: event.data.email_id,
+            emailId: emailData.email_id,
             filename: attachment.filename,
             success: result.success,
             itemCount: Array.isArray(result.items) ? result.items.length : 0,
@@ -1839,6 +1990,9 @@ export async function handleResendInboundWebhook(
             success: true,
             itemCount: mappedItems.length,
             items: mappedItems,
+            ...(storedAttachment
+              ? { retainedAttachmentId: storedAttachment.id }
+              : {}),
           });
           setStage("attachment_complete", {
             filename: attachment.filename,
@@ -1857,7 +2011,7 @@ export async function handleResendInboundWebhook(
           console.error(
             "[resend-inbound-webhook] attachment processing failed",
             {
-              emailId: event.data.email_id,
+              emailId: emailData.email_id,
               filename: attachment.filename,
               error: error instanceof Error ? error.message : String(error),
             },
@@ -1874,9 +2028,11 @@ export async function handleResendInboundWebhook(
       setStage("aggregate_analyze_complete", {
         analyzedItemCount: analyzedItems.length,
         attachmentResultCount: attachmentResults.length,
+        retainedAttachmentCount,
+        retentionErrorCount: retentionErrors.length,
       });
       console.log("[resend-inbound-webhook] aggregate analyze summary", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         analyzedItemCount: analyzedItems.length,
         analyzedCurrencies: Array.from(
           new Set(
@@ -1894,18 +2050,23 @@ export async function handleResendInboundWebhook(
           success: item.success,
           itemCount: item.itemCount,
           error: item.error ?? null,
+          retainedAttachmentId: item.retainedAttachmentId ?? null,
         })),
+        retainedAttachmentCount,
+        retentionErrorCount: retentionErrors.length,
       });
 
       if (analyzedItems.length === 0) {
         const followup = buildFollowupEmail({
           senderEmail,
-          subjectLine: event.data.subject || "",
+          subjectLine: emailData.subject || "",
           savedCount: 0,
           duplicateCount: 0,
           failedCount: attachmentResults.length,
           transactions: [],
           attachmentResults,
+          retainedAttachmentCount,
+          retainedOriginals: shouldRetainOriginalAttachments,
         });
         await updateInboundEvent({
           supabase,
@@ -1915,6 +2076,9 @@ export async function handleResendInboundWebhook(
           errorText: summarizeAttachmentFailures(attachmentResults),
           result: {
             attachmentResults,
+            retainedAttachmentCount,
+            retainedOriginals: shouldRetainOriginalAttachments,
+            retentionErrors,
           },
         });
         try {
@@ -1956,7 +2120,7 @@ export async function handleResendInboundWebhook(
       const saveResult = await saveTransactionsBatchInternal(
         buildSyntheticRequest(),
         {
-          debugTraceId: buildEmailImportDebugTraceId(event.data.email_id),
+          debugTraceId: buildEmailImportDebugTraceId(emailData.email_id),
           userId: owner.userId,
           manualImportMode: true,
           skipSemanticDuplicates: true,
@@ -1972,7 +2136,7 @@ export async function handleResendInboundWebhook(
       });
 
       console.log("[resend-inbound-webhook] batch save result", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         resultCount: saveResult.results.length,
         succeeded: saveResult.summary.succeeded,
         failed: saveResult.summary.failed,
@@ -1993,12 +2157,14 @@ export async function handleResendInboundWebhook(
 
       const followup = buildFollowupEmail({
         senderEmail,
-        subjectLine: event.data.subject || "",
+        subjectLine: emailData.subject || "",
         savedCount,
         duplicateCount,
         failedCount,
         transactions: sortedAnalyzedItems,
         attachmentResults,
+        retainedAttachmentCount,
+        retainedOriginals: shouldRetainOriginalAttachments,
       });
       setStage("finalize_processed_start", {
         savedCount,
@@ -2015,6 +2181,9 @@ export async function handleResendInboundWebhook(
           duplicateCount,
           failedCount,
           attachmentResults,
+          retainedAttachmentCount,
+          retainedOriginals: shouldRetainOriginalAttachments,
+          retentionErrors,
         },
       });
       setStage("finalize_processed_complete", {
@@ -2101,7 +2270,7 @@ export async function handleResendInboundWebhook(
     } finally {
       clearInterval(heartbeat);
       console.log("[resend-inbound-webhook] background processing finished", {
-        emailId: event.data.email_id,
+        emailId: emailData.email_id,
         finalStage: currentStage,
         elapsedMs: Date.now() - backgroundStartedAtMs,
         attemptCount: leaseOwner.attemptCount,
@@ -2111,11 +2280,11 @@ export async function handleResendInboundWebhook(
 
   scheduleBackgroundTask(
     processingPromise,
-    `email-import:${event.data.email_id}`,
+    `email-import:${emailData.email_id}`,
   );
 
   console.log("[resend-inbound-webhook] acknowledged webhook", {
-    emailId: event.data.email_id,
+    emailId: emailData.email_id,
     rowId: leaseOwner.rowId,
     attemptCount: leaseOwner.attemptCount,
     recovered: claim.recovered,
