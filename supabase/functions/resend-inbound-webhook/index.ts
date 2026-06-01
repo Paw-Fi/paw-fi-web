@@ -793,6 +793,10 @@ async function storePremiumEmailImportAttachment(params: {
   userId: string;
   emailImportEventId: string;
   providerEmailId: string;
+  senderEmail: string;
+  subjectLine: string;
+  recipients: string[];
+  receivedAt: string | null;
   attachmentIndex: number;
   filename: string;
   contentType: string;
@@ -838,6 +842,11 @@ async function storePremiumEmailImportAttachment(params: {
         metadata: {
           sourceFilename: params.filename,
           attachmentIndex: params.attachmentIndex,
+          senderEmail: params.senderEmail,
+          subjectLine: params.subjectLine,
+          recipients: params.recipients,
+          receivedAt: params.receivedAt,
+          providerEmailId: params.providerEmailId,
         },
       },
       { onConflict: "user_id,email_import_event_id,sha256" },
@@ -1844,6 +1853,10 @@ export async function handleResendInboundWebhook(
                 userId: owner.userId,
                 emailImportEventId: leaseOwner.rowId,
                 providerEmailId: emailData.email_id,
+                senderEmail,
+                subjectLine: emailData.subject || "",
+                recipients: Array.isArray(emailData.to) ? emailData.to : [],
+                receivedAt: emailData.created_at || event.created_at || null,
                 attachmentIndex,
                 filename: attachment.filename,
                 contentType: attachment.contentType,
@@ -2075,6 +2088,13 @@ export async function handleResendInboundWebhook(
           status: "failed",
           errorText: summarizeAttachmentFailures(attachmentResults),
           result: {
+            emailSummary: {
+              providerEmailId: emailData.email_id,
+              senderEmail,
+              subjectLine: emailData.subject || "",
+              recipients: Array.isArray(emailData.to) ? emailData.to : [],
+              receivedAt: emailData.created_at || event.created_at || null,
+            },
             attachmentResults,
             retainedAttachmentCount,
             retainedOriginals: shouldRetainOriginalAttachments,
@@ -2177,6 +2197,13 @@ export async function handleResendInboundWebhook(
         userId: owner.userId,
         status: "processed",
         result: {
+          emailSummary: {
+            providerEmailId: emailData.email_id,
+            senderEmail,
+            subjectLine: emailData.subject || "",
+            recipients: Array.isArray(emailData.to) ? emailData.to : [],
+            receivedAt: emailData.created_at || event.created_at || null,
+          },
           savedCount,
           duplicateCount,
           failedCount,
