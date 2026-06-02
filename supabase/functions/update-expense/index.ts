@@ -24,6 +24,15 @@ import {
   assertAccountInScope,
   resolveDefaultAccountId,
 } from "../shared/accounts.ts";
+import {
+  buildHouseholdSplitRecords,
+  fetchHouseholdAutoSplitSettings,
+  resolveEffectiveSplit,
+} from "../shared/household-auto-split.ts";
+import {
+  normalizeIsoTimestampWithZone,
+  normalizeReceiptImageUrl,
+} from "../shared/transaction-request-validation.ts";
 
 interface MemberSplitPayload {
   userId: string;
@@ -45,7 +54,9 @@ interface UpdateExpenseRequest {
     raw_text?: string;
     merchant?: string | null;
     date?: string;
+    created_at?: string;
     currency?: string;
+    receipt_image_url?: string | null;
     is_recurring?: boolean;
     recurrence_rule?: {
       frequency: string;
@@ -60,6 +71,8 @@ interface UpdateExpenseRequest {
     };
     source?: string;
     split_group_id?: string;
+    household_id?: string | null;
+    householdId?: string | null;
     account_id?: string | null;
     accountId?: string | null;
     payer_user_id?: string;
@@ -465,7 +478,9 @@ Deno.serve(async (req: Request) => {
       "raw_text",
       "merchant",
       "date",
+      "created_at",
       "currency",
+      "receipt_image_url",
       "payer_user_id",
       "payerUserId",
       "is_recurring",
@@ -533,10 +548,13 @@ Deno.serve(async (req: Request) => {
           "VALIDATION_ERROR",
         );
       }
+      if (updates.raw_text === null) {
+        updates.raw_text = "";
+      }
       if (typeof updates.raw_text === "string") {
         const trimmedRawText = updates.raw_text.trim();
         if (trimmedRawText.length === 0) {
-          updates.raw_text = null;
+          updates.raw_text = "";
         } else {
           if (trimmedRawText.length > 1000) {
             return errorResponse(
@@ -586,6 +604,39 @@ Deno.serve(async (req: Request) => {
       }
 
       updates.date = normalizedDate;
+    }
+
+    if ((updates as any).created_at !== undefined) {
+      const normalizedCreatedAt = normalizeIsoTimestampWithZone(
+        (updates as any).created_at,
+      );
+      if (typeof (updates as any).created_at !== "string") {
+        return errorResponse("created_at must be a string", "VALIDATION_ERROR");
+      }
+
+      if (!normalizedCreatedAt) {
+        return errorResponse(
+          "created_at must be an ISO timestamp with timezone",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      (updates as any).created_at = normalizedCreatedAt;
+    }
+
+    if ((updates as any).receipt_image_url !== undefined) {
+      const receiptImageUrlResult = normalizeReceiptImageUrl(
+        (updates as any).receipt_image_url,
+        SUPABASE_URL,
+        "receipt_image_url",
+      );
+      if (!receiptImageUrlResult.ok) {
+        return errorResponse(
+          receiptImageUrlResult.error ?? "Invalid receipt_image_url",
+          "VALIDATION_ERROR",
+        );
+      }
+      (updates as any).receipt_image_url = receiptImageUrlResult.value;
     }
 
     if (updates.currency !== undefined) {
@@ -1402,212 +1453,84 @@ Deno.serve(async (req: Request) => {
       !!targetHouseholdId &&
       !targetIsPortfolioHousehold &&
       (!existingSplitGroupId || !sameHouseholdScope) &&
-      !!bodyHouseholdId &&
-      bodyHouseholdId === targetHouseholdId &&
-      !!customSplits &&
-      !!customSplits.memberSplits &&
-      customSplits.memberSplits.length > 0;
+      (bodyHouseholdId === targetHouseholdId || updatesHasHouseholdId);
 
     let createdSplitGroupId: string | null = null;
 
     if (shouldCreateSplitGroup) {
-      const splitType = customSplits!.splitType || "equal";
-
       const { data: members } = await supabase
         .from("household_members")
         .select("user_id")
         .eq("household_id", targetHouseholdId);
 
-      if (members && members.length > 0) {
-        const effectiveAmountCents =
-          typeof updates.amount_cents === "number"
-            ? updates.amount_cents
-            : (((expense as any)?.amount_cents as number | null) ?? 0);
+      if (!members || members.length === 0) {
+        return errorResponse(
+          "Cannot create splits: no active household members",
+          "SERVER_ERROR",
+          500,
+        );
+      }
 
-        const customUserIds = customSplits!.memberSplits
-          .map((s) => s.userId)
-          .sort();
-        const allUserIds = members.map((m: any) => m.user_id as string).sort();
+      const effectiveAmountCents =
+        typeof updates.amount_cents === "number"
+          ? updates.amount_cents
+          : (((expense as any)?.amount_cents as number | null) ?? 0);
+      const autoSplitSettings = await fetchHouseholdAutoSplitSettings(
+        supabase,
+        targetHouseholdId,
+      );
+      const effectiveSplit = resolveEffectiveSplit(
+        customSplits,
+        autoSplitSettings,
+      );
 
-        if (JSON.stringify(customUserIds) === JSON.stringify(allUserIds)) {
-          if (splitType === "amount") {
-            const totalSplit = customSplits!.memberSplits.reduce(
-              (sum, s) => sum + (s.amount || 0),
-              0,
-            );
-            const totalSplitCents = Math.round(totalSplit * 100);
-            if (Math.abs(totalSplitCents - effectiveAmountCents) > 1) {
-              return errorResponse(
-                "Custom amount splits must equal total expense amount",
-                "VALIDATION_ERROR",
-              );
-            }
-          } else if (splitType === "percentage") {
-            const totalPercent = customSplits!.memberSplits.reduce(
-              (sum, s) => sum + (s.percentage || 0),
-              0,
-            );
-            if (Math.abs(totalPercent - 100) > 0.01) {
-              return errorResponse(
-                "Custom percentage splits must total 100%",
-                "VALIDATION_ERROR",
-              );
-            }
-          } else if (splitType === "shares") {
-            const totalShares = customSplits!.memberSplits.reduce(
-              (sum, s) => sum + (s.shares || 0),
-              0,
-            );
-            if (totalShares <= 0) {
-              return errorResponse(
-                "At least one member must have a share greater than 0",
-                "VALIDATION_ERROR",
-              );
-            }
-          }
+      if (effectiveSplit.kind !== "skip") {
+        const payerUserId = sanitizeUuid(payerUserIdRaw ?? null) || userId;
+        const buildResult = buildHouseholdSplitRecords({
+          householdId: targetHouseholdId,
+          transactionId: normalizedExpenseId,
+          payerUserId,
+          amountCents: effectiveAmountCents,
+          currency: targetCurrency,
+          description: (updates.raw_text ??
+            (expense as any)?.raw_text ??
+            null) as string | null,
+          members,
+          customSplits: effectiveSplit.customSplits,
+        });
 
-          let payerUserId = payerUserIdRaw
-            ? sanitizeUuid(payerUserIdRaw)
-            : null;
-          if (!payerUserId) {
-            payerUserId = userId;
-          }
-
-          if (payerUserId) {
-            const { data: validPayer } = await supabase
-              .from("household_members")
-              .select("user_id")
-              .eq("household_id", targetHouseholdId)
-              .eq("user_id", payerUserId)
-              .maybeSingle();
-            if (!validPayer) {
-              payerUserId = userId;
-            }
-          }
-
-          const newCurrency =
-            updates.currency ||
-            ((expense as any)?.currency as string | null) ||
-            null;
-
-          const { data: splitGroup, error: splitGroupError } = await supabase
-            .from("expense_split_groups")
-            .insert({
-              household_id: targetHouseholdId,
-              expense_id: expense.id,
-              payer_user_id: payerUserId,
-              split_type: splitType,
-              currency: newCurrency,
-              total_amount_cents: effectiveAmountCents,
-              description:
-                updates.raw_text ?? (expense as any)?.raw_text ?? null,
-              created_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (!splitGroupError && splitGroup) {
-            createdSplitGroupId = (splitGroup as any).id as string;
-
-            let splitLines: any[] = [];
-
-            if (splitType === "equal") {
-              const amountPerMember =
-                members.length > 0
-                  ? Math.floor(effectiveAmountCents / members.length)
-                  : 0;
-              const remainder =
-                members.length > 0
-                  ? effectiveAmountCents - amountPerMember * members.length
-                  : 0;
-              splitLines = members.map((member: any, index: number) => ({
-                split_group_id: createdSplitGroupId,
-                user_id: member.user_id,
-                amount_cents: amountPerMember + (index === 0 ? remainder : 0),
-                is_settled: false,
-                settled_at: null,
-                created_at: new Date().toISOString(),
-              }));
-            } else if (splitType === "amount") {
-              const cents = customSplits!.memberSplits.map((split) =>
-                Math.max(0, Math.round((split.amount || 0) * 100)),
-              );
-              const sumCents = cents.reduce((sum, v) => sum + v, 0);
-              const diff = effectiveAmountCents - sumCents;
-              if (diff !== 0 && cents.length > 0) {
-                cents[cents.length - 1] = Math.max(
-                  0,
-                  cents[cents.length - 1] + diff,
-                );
-              }
-              splitLines = customSplits!.memberSplits.map((split, index) => ({
-                split_group_id: createdSplitGroupId,
-                user_id: split.userId,
-                amount_cents: cents[index] ?? 0,
-                is_settled: false,
-                settled_at: null,
-                created_at: new Date().toISOString(),
-              }));
-            } else if (splitType === "percentage") {
-              const weights = customSplits!.memberSplits.map(
-                (split) => split.percentage || 0,
-              );
-              const allocatedCents = allocateCentsByWeights(
-                effectiveAmountCents,
-                weights,
-              );
-              splitLines = customSplits!.memberSplits.map((split, index) => ({
-                split_group_id: createdSplitGroupId,
-                user_id: split.userId,
-                amount_cents: allocatedCents[index] ?? 0,
-                percentage: split.percentage,
-                is_settled: false,
-                settled_at: null,
-                created_at: new Date().toISOString(),
-              }));
-            } else if (splitType === "shares") {
-              const weights = customSplits!.memberSplits.map((split) => {
-                const shares =
-                  typeof split.shares === "number"
-                    ? Math.trunc(split.shares)
-                    : 0;
-                return shares > 0 ? shares : 0;
-              });
-              const allocatedCents = allocateCentsByWeights(
-                effectiveAmountCents,
-                weights,
-              );
-              if (weights.reduce((sum, v) => sum + v, 0) > 0) {
-                splitLines = customSplits!.memberSplits.map((split, index) => {
-                  const shares =
-                    typeof split.shares === "number"
-                      ? Math.trunc(split.shares)
-                      : 0;
-                  return {
-                    split_group_id: createdSplitGroupId,
-                    user_id: split.userId,
-                    amount_cents: allocatedCents[index] ?? 0,
-                    // DB constraint: shares must be > 0 when present; treat <= 0 as excluded (null).
-                    shares: shares > 0 ? shares : null,
-                    is_settled: false,
-                    settled_at: null,
-                    created_at: new Date().toISOString(),
-                  };
-                });
-              }
-            }
-
-            if (splitLines.length > 0) {
-              const { error: splitLinesError } = await supabase
-                .from("expense_split_lines")
-                .insert(splitLines);
-
-              if (!splitLinesError) {
-                updates.split_group_id = createdSplitGroupId;
-              }
-            }
-          }
+        if (!buildResult.ok) {
+          return errorResponse(buildResult.error, "VALIDATION_ERROR");
         }
+
+        const { data: splitGroup, error: splitGroupError } = await supabase
+          .from("expense_split_groups")
+          .insert(buildResult.group)
+          .select()
+          .single();
+
+        if (splitGroupError || !splitGroup) {
+          console.error(
+            "[update-expense] Failed to create split group:",
+            splitGroupError,
+          );
+          return errorResponse("Failed to create splits", "SERVER_ERROR", 500);
+        }
+
+        const { error: splitLinesError } = await supabase
+          .from("expense_split_lines")
+          .insert(buildResult.lines);
+
+        if (splitLinesError) {
+          console.error(
+            "[update-expense] Failed to create split lines:",
+            splitLinesError,
+          );
+          return errorResponse("Failed to create splits", "SERVER_ERROR", 500);
+        }
+
+        createdSplitGroupId = (splitGroup as any).id as string;
+        updates.split_group_id = createdSplitGroupId;
       }
     }
 
@@ -1993,7 +1916,9 @@ Deno.serve(async (req: Request) => {
       "raw_text",
       "merchant",
       "date",
+      "created_at",
       "currency",
+      "receipt_image_url",
       "is_recurring",
       "recurrence_rule",
       "source",

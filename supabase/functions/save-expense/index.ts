@@ -29,6 +29,10 @@ import {
   fetchHouseholdAutoSplitSettings,
   resolveEffectiveSplit,
 } from "../shared/household-auto-split.ts";
+import {
+  normalizeClientCreatedAt,
+  normalizeReceiptImageUrl,
+} from "../shared/transaction-request-validation.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -218,6 +222,31 @@ Deno.serve(async (req: Request) => {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return errorResponse("Server configuration error", 500);
     }
+
+    const normalizedClientCreatedAt = normalizeClientCreatedAt(
+      body.clientCreatedAt,
+    );
+    if (!normalizedClientCreatedAt) {
+      return errorResponse(
+        "clientCreatedAt must be an ISO timestamp with timezone",
+        400,
+        "VALIDATION_ERROR",
+      );
+    }
+
+    const receiptImageUrlResult = normalizeReceiptImageUrl(
+      body.receiptImageUrl,
+      SUPABASE_URL,
+      "receiptImageUrl",
+    );
+    if (!receiptImageUrlResult.ok) {
+      return errorResponse(
+        receiptImageUrlResult.error ?? "Invalid receiptImageUrl",
+        400,
+        "VALIDATION_ERROR",
+      );
+    }
+    const normalizedReceiptImageUrl = receiptImageUrlResult.value;
 
     // Validate and normalize currency
     const currency = validateCurrency(body.currency || "USD");
@@ -541,8 +570,8 @@ Deno.serve(async (req: Request) => {
         merchant: normalizedMerchant,
         currency: currency,
         breakdown: body.breakdown ?? null,
-        receipt_image_url: body.receiptImageUrl || null,
-        created_at: body.clientCreatedAt || new Date().toISOString(),
+        receipt_image_url: normalizedReceiptImageUrl,
+        created_at: normalizedClientCreatedAt,
         is_recurring: body.isRecurring || false,
         recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
         household_id: insertScopeHouseholdId,
