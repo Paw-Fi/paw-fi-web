@@ -59,6 +59,21 @@ const changelogs: ChangelogEntry[] = [
   //   ],
   // },
   {
+    title: "Wallet Transfer Fix & Faster Charts",
+    date: "2026-06-02",
+    version: "2.1.3",
+    tags: ["Wallet", "Fix", "Performance", "UI"],
+    description:
+      "Wallet transfers now show up correctly in your transactions, and charts show a quick loading placeholder so the app never feels blank. We also stopped Android from saving the same payment notification twice.",
+    items: [
+      "Fixed an issue where wallet transfers weren't showing up correctly in your transactions",
+      "Charts now show a quick loading placeholder so the app never feels blank while your data loads",
+      "Smoother loading across your home dashboard, transactions, category details, daily financial details, and financial calendar",
+      "Stopped Android from saving the same transaction twice when you get a payment notification",
+      "General stability and performance improvements",
+    ],
+  },
+  {
     title: "Smoother Scrolling & Smarter AI Input",
     date: "2026-05-29",
     version: "2.1.1",
