@@ -1,9 +1,15 @@
 import { buildInternalInvokeHeaders } from "../auth.ts";
 import { formatInvokeError } from "../formatting-helpers.ts";
 import {
+  normalizeAiToolAmount,
   normalizeAiToolMoneyCents,
   normalizeRequiredAiToolString,
 } from "./ai-tool-validation.ts";
+import { normalizeDateInput } from "./date-utils.ts";
+import {
+  resolveWalletIdInScope,
+  resolveWalletTransferCurrency,
+} from "./wallet-scope.ts";
 
 type SupabaseFunctionInvoker = {
   functions: {
@@ -15,6 +21,10 @@ type SupabaseFunctionInvoker = {
       error?: any;
     }>;
   };
+};
+
+type SupabaseWalletClient = SupabaseFunctionInvoker & {
+  from: (table: string) => any;
 };
 
 export type BotWalletToolFailure = {
@@ -78,6 +88,13 @@ export async function createBotWallet(params: {
   goalAmountCents: number | undefined;
   isDefault: boolean;
 }): Promise<BotWalletToolResult> {
+  const hasCurrency =
+    typeof params.currency === "string" && params.currency.trim().length > 0;
+  const currency = normalizeOptionalBotCurrency(params.currency);
+  if (hasCurrency && !currency) {
+    return { result: { error: "Valid currency is required." } };
+  }
+
   const { data, error } = await params.supabase.functions.invoke(
     "save-wallet",
     {
@@ -87,7 +104,7 @@ export async function createBotWallet(params: {
         name: params.name,
         icon: params.icon,
         color: params.color,
-        currency: normalizeBotCurrency(params.currency),
+        currency,
         openingBalanceCents: params.openingBalanceCents,
         goalAmountCents: params.goalAmountCents,
         isDefault: params.isDefault,
@@ -211,10 +228,89 @@ export async function updateBotWallet(params: {
   };
 }
 
-function normalizeBotCurrency(value: unknown): string {
+export async function updateBotWalletFromToolCall(params: {
+  supabase: SupabaseWalletClient;
+  internalFunctionKey: string;
+  userId: string;
+  householdId: string | null;
+  args?: Record<string, unknown> | null;
+  logPrefix?: string;
+}): Promise<BotWalletToolResult> {
+  const args = params.args ?? {};
+  const requestedWallet = await resolveWalletIdInScope(
+    params.supabase,
+    params.userId,
+    params.householdId,
+    args.wallet_name,
+    params.logPrefix,
+  );
+  if (requestedWallet.error || !requestedWallet.accountId) {
+    return {
+      result: {
+        error:
+          requestedWallet.error ||
+          "Wallet was not found in the selected scope.",
+      },
+    };
+  }
+
+  const newNameResult =
+    args.new_name != null
+      ? normalizeRequiredAiToolString(args.new_name, "new_name")
+      : { ok: true as const, value: undefined };
+  const goalAmountResult = normalizeAiToolMoneyCents(
+    args.goal_amount,
+    "goal_amount",
+    { allowNegative: false },
+  );
+  const openingBalanceResult = normalizeAiToolMoneyCents(
+    args.opening_balance,
+    "opening_balance",
+    { allowNegative: true },
+  );
+
+  if (!newNameResult.ok) {
+    return { result: { error: newNameResult.error } };
+  }
+  if (!goalAmountResult.ok) {
+    return { result: { error: goalAmountResult.error } };
+  }
+  if (!openingBalanceResult.ok) {
+    return { result: { error: openingBalanceResult.error } };
+  }
+
+  const hasUpdate =
+    newNameResult.value !== undefined ||
+    typeof args.icon === "string" ||
+    typeof args.color === "string" ||
+    openingBalanceResult.cents !== undefined ||
+    goalAmountResult.cents !== undefined ||
+    typeof args.is_default === "boolean";
+  if (!hasUpdate) {
+    return { result: { error: "At least one wallet update is required." } };
+  }
+
+  return updateBotWallet({
+    supabase: params.supabase,
+    internalFunctionKey: params.internalFunctionKey,
+    userId: params.userId,
+    householdId: params.householdId,
+    accountId: requestedWallet.accountId,
+    walletName: args.wallet_name,
+    name: newNameResult.value,
+    icon: args.icon,
+    color: args.color,
+    openingBalanceCents: openingBalanceResult.cents,
+    goalAmountCents: goalAmountResult.cents,
+    isDefault:
+      typeof args.is_default === "boolean" ? args.is_default : undefined,
+  });
+}
+
+function normalizeOptionalBotCurrency(value: unknown): string | undefined {
   const normalized =
     typeof value === "string" ? value.trim().toUpperCase() : "";
-  return /^[A-Z]{3}$/.test(normalized) ? normalized : "USD";
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : undefined;
 }
 
 export async function createBotWalletTransfer(params: {
@@ -266,9 +362,87 @@ export async function createBotWalletTransfer(params: {
         fromWallet: params.fromWalletName,
         toWallet: params.toWalletName,
         amount: params.amount,
+        currency: params.currency,
       },
     },
   };
+}
+
+export async function createBotWalletTransferFromToolCall(params: {
+  supabase: SupabaseWalletClient;
+  internalFunctionKey: string;
+  userId: string;
+  householdId: string | null;
+  args?: Record<string, unknown> | null;
+  defaultDate: string;
+  logPrefix?: string;
+}): Promise<BotWalletToolResult> {
+  const args = params.args ?? {};
+  const amountResult = normalizeAiToolAmount(args.amount);
+  if (!amountResult.ok) {
+    return { result: { error: amountResult.error } };
+  }
+
+  const fromWallet = await resolveWalletIdInScope(
+    params.supabase,
+    params.userId,
+    params.householdId,
+    args.from_wallet_name,
+    params.logPrefix,
+  );
+  if (fromWallet.error || !fromWallet.accountId) {
+    return {
+      result: {
+        error:
+          fromWallet.error ||
+          "Source wallet was not found in the selected scope.",
+      },
+    };
+  }
+
+  const toWallet = await resolveWalletIdInScope(
+    params.supabase,
+    params.userId,
+    params.householdId,
+    args.to_wallet_name,
+    params.logPrefix,
+  );
+  if (toWallet.error || !toWallet.accountId) {
+    return {
+      result: {
+        error:
+          toWallet.error ||
+          "Destination wallet was not found in the selected scope.",
+      },
+    };
+  }
+
+  const currencyResult = resolveWalletTransferCurrency({
+    fromWallet,
+    toWallet,
+    fromWalletName: args.from_wallet_name,
+    toWalletName: args.to_wallet_name,
+    requestedCurrency: args.currency,
+  });
+  if (currencyResult.error || !currencyResult.currency) {
+    return { result: { error: currencyResult.error } };
+  }
+
+  return createBotWalletTransfer({
+    supabase: params.supabase,
+    internalFunctionKey: params.internalFunctionKey,
+    userId: params.userId,
+    householdId: params.householdId,
+    fromAccountId: fromWallet.accountId,
+    toAccountId: toWallet.accountId,
+    fromWalletName: args.from_wallet_name,
+    toWalletName: args.to_wallet_name,
+    amount: args.amount,
+    amountCents: Math.round(amountResult.amount * 100),
+    currency: currencyResult.currency,
+    date: normalizeDateInput(args.date, params.defaultDate),
+    note: args.note,
+  });
 }
 
 export function buildWalletMutationFailureText(
