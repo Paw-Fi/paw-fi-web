@@ -3,6 +3,9 @@
 import { Suspense, lazy, type ReactNode } from "react";
 import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
+import { useInView } from "react-intersection-observer";
+import { AnimatePresence, motion } from "framer-motion";
+import { CompareWithChatGptButton } from "@/components/homepage/compare-with-chatgpt-button";
 
 // V2 Components
 import { HeroV2 } from "@/components/homepage/v2/hero-v2";
@@ -73,6 +76,11 @@ export function HomePageRouteComponent({
   const deferredSectionFallback =
     "mx-auto my-6 w-full max-w-6xl rounded-[32px] border border-border/40 bg-background/60 p-10";
 
+  const { ref: heroRef, inView: heroInView } = useInView({
+    threshold: 0,
+    rootMargin: "-100px 0px 0px 0px", // Offset for header so it hides slightly after scrolling past
+  });
+
   return (
     <div className="bg-background selection:bg-primary/20 relative min-h-screen font-sans">
       <AmbientHalo />
@@ -81,7 +89,27 @@ export function HomePageRouteComponent({
 
       <main className="flex-1">
         {/* Hero Section */}
-        <HeroV2 />
+        <div ref={heroRef}>
+          <HeroV2 />
+        </div>
+
+        <AnimatePresence>
+          {!heroInView && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className="fixed bottom-6 left-0 right-0 z-50 mx-auto flex w-full max-w-[90%] justify-center sm:bottom-10 sm:max-w-max"
+            >
+              <CompareWithChatGptButton
+                source="compare-with-chatgpt-sticky"
+                labelClassName="truncate"
+                className="rounded-full border-primary/20 bg-background/80 hover:bg-background/95 backdrop-blur-md text-foreground group shadow-[0_8px_30px_rgba(var(--primary),0.2)] transition-all duration-300 w-full sm:w-auto"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <Suspense
           fallback={

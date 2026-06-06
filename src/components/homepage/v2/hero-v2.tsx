@@ -1,11 +1,7 @@
-import { Iphone } from "@/components/ui/iphone";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
-import { ChatScreen } from "./chat-screen";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { useReducedVisualEffects } from "@/hooks/use-reduced-visual-effects";
+import { CompareWithChatGptButton } from "@/components/homepage/compare-with-chatgpt-button";
 
 export function HeroV2() {
   const reducedVisualEffects = useReducedVisualEffects();
@@ -15,41 +11,49 @@ export function HeroV2() {
       <div className="relative z-10 container mx-auto px-4 md:px-6">
         <div className="flex flex-col items-center gap-12 text-center lg:gap-16">
           <div className="mx-auto flex max-w-4xl flex-col items-center space-y-8">
-             <div className="text-muted-foreground flex items-center justify-center gap-2 pt-4 text-sm">
-              <span>Join us on</span>
+            <div className="inline-flex items-center justify-center gap-2 rounded-full border bg-background/50 px-4 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-background/80">
+              <span>Join our community on</span>
               <a
                 href="https://discord.gg/M2Dgujvtze"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground hover:text-primary font-medium underline underline-offset-4"
+                className="text-foreground hover:text-primary font-medium transition-colors"
               >
                 Discord
               </a>
-              <span>and</span>
+              <span className="opacity-50">•</span>
               <a
                 href="https://www.reddit.com/r/monekobudget/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground hover:text-primary font-medium underline underline-offset-4"
+                className="text-foreground hover:text-primary font-medium transition-colors"
               >
                 Reddit
               </a>
             </div>
 
-            <h1 className="from-foreground to-foreground/70 bg-gradient-to-b bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl xl:text-7xl">
-              The AI budgeting app <br />
-              <span className="text-primary">built for everyday spending.</span>
+            <h1 className="from-foreground to-foreground/80 bg-linear-to-br bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-6xl xl:text-[4.5rem] xl:leading-[1.1]">
+              The AI budgeting app <br className="hidden sm:block" />
+              <span className="bg-linear-to-r from-primary to-primary/80 bg-clip-text text-transparent">built for everyday spending.</span>
             </h1>
 
-            <p className="text-muted-foreground mx-auto max-w-[42rem] text-lg leading-relaxed sm:text-xl">
+            <p className="text-muted-foreground mx-auto max-w-[42rem] text-lg leading-relaxed sm:text-xl sm:leading-8">
               Track expenses from WhatsApp, receipts, voice notes, and mobile
               alerts. Organize money into Pockets, split shared costs, and ask
               Moneko what changed before the month gets away from you.
             </p>
 
-            <div className="flex w-auto flex-col justify-center gap-4 sm:flex-row">
-              <AppleDownloadButton className="w-auto" />
-              <AndroidDownloadButton className="w-auto" />
+            <div className="flex w-full flex-col items-center justify-center gap-6">
+              <div className="flex w-auto flex-col justify-center gap-4 sm:flex-row">
+                <AppleDownloadButton className="w-auto" />
+                <AndroidDownloadButton className="w-auto" />
+              </div>
+              
+              <div className="flex items-center justify-center">
+                <CompareWithChatGptButton
+                  className="rounded-full border-primary/20 bg-primary/5 hover:bg-primary/10 text-foreground group shadow-[0_0_20px_rgba(var(--primary),0.1)] transition-all duration-300"
+                />
+              </div>
             </div>
 
             <div className="text-muted-foreground flex items-center justify-center gap-4 pt-4 text-sm">

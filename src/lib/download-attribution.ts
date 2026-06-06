@@ -22,6 +22,10 @@ interface IdleCallbackDeadline {
   timeRemaining: () => number;
 }
 
+interface TrackAttributionPageViewOptions {
+  immediate?: boolean;
+}
+
 type WindowWithIdleCallback = Omit<Window, "requestIdleCallback"> & {
   requestIdleCallback?: (
     callback: (deadline: IdleCallbackDeadline) => void,
@@ -34,6 +38,7 @@ const SESSION_ID_KEY = "moneko-attribution-session-id";
 const TRACKED_PAGE_VIEWS_KEY = "moneko-attribution-page-views";
 const MAX_TRACKED_PAGE_VIEWS = 80;
 const memoryIds: Record<string, string> = {};
+const pageViewTrackingPromises: Record<string, Promise<void>> = {};
 
 const blockedPathPrefixes = [
   "/dashboard",
@@ -82,17 +87,37 @@ export const shouldTrackAttributionPath = (pathname: string) => {
   );
 };
 
-export const trackAttributionPageView = () => {
-  if (typeof window === "undefined") return;
-  if (!shouldTrackAttributionPath(window.location.pathname)) return;
+export const trackAttributionPageView = (
+  options: TrackAttributionPageViewOptions = {},
+) => {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (!shouldTrackAttributionPath(window.location.pathname)) {
+    return Promise.resolve();
+  }
 
   const pageViewKey = `${window.location.pathname}${window.location.search}`;
-  if (hasTrackedPageView(pageViewKey)) return;
+  if (hasTrackedPageView(pageViewKey)) {
+    return pageViewTrackingPromises[pageViewKey] ?? Promise.resolve();
+  }
   rememberTrackedPageView(pageViewKey);
 
+  const runTracking = () => {
+    const promise = trackAttributionEvent("page_view").finally(() => {
+      delete pageViewTrackingPromises[pageViewKey];
+    });
+    pageViewTrackingPromises[pageViewKey] = promise;
+    return promise;
+  };
+
+  if (options.immediate || shouldTrackPageViewImmediately()) {
+    return runTracking();
+  }
+
   scheduleAttributionTracking(() => {
-    void trackAttributionEvent("page_view");
+    void runTracking();
   });
+
+  return Promise.resolve();
 };
 
 export const trackDownloadClick = (platform: "ios" | "android") => {
@@ -203,6 +228,13 @@ const deriveSource = (
 const getFirstQueryParamValue = (value: string | string[] | undefined) => {
   if (Array.isArray(value)) return value.find(Boolean) ?? "";
   return value ?? "";
+};
+
+const shouldTrackPageViewImmediately = () => {
+  return (
+    new URLSearchParams(window.location.search).get("source") ===
+    "compare-with-chatgpt"
+  );
 };
 
 const getReferrerDomain = (referrer: string) => {

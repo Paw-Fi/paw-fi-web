@@ -59,6 +59,19 @@ const changelogs: ChangelogEntry[] = [
   //   ],
   // },
   {
+  title: "Receipt Display Fix",
+  date: "2026-06-06",
+  version: "2.1.4",
+  tags: ["Receipts", "Fix", "UI"],
+  description:
+    "Saved receipts now appear correctly immediately after saving, providing a smoother and more reliable experience when managing your receipts.",
+  items: [
+    "Fixed an issue where saved receipts were not displayed immediately after saving",
+    "Improved receipt syncing and display reliability",
+    "General stability and performance improvements",
+  ],
+},
+  {
     title: "Wallet Transfer Fix & Faster Charts",
     date: "2026-06-02",
     version: "2.1.3",
