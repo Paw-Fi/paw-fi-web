@@ -333,6 +333,7 @@ export async function getBudgetStatusDirect(
     )
     .eq("type", "expense")
     .eq("currency", currency)
+    .is("deleted_at", null)
     .gte("date", monthStartStr)
     .lt("date", nextMonthStr);
 

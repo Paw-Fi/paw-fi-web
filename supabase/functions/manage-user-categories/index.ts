@@ -172,7 +172,8 @@ Deno.serve(async (req: Request) => {
           .update({ category: newName })
           .eq("user_id", userId)
           .eq("category", oldName)
-          .eq("type", "income");
+          .eq("type", "income")
+          .is("deleted_at", null);
         if (error) throw error;
       } else {
         const { error: expenseError } = await supabase
@@ -180,7 +181,8 @@ Deno.serve(async (req: Request) => {
           .update({ category: newName })
           .eq("user_id", userId)
           .eq("category", oldName)
-          .eq("type", "expense");
+          .eq("type", "expense")
+          .is("deleted_at", null);
         if (expenseError) throw expenseError;
 
         const { error: nullTypeError } = await supabase
@@ -188,7 +190,8 @@ Deno.serve(async (req: Request) => {
           .update({ category: newName })
           .eq("user_id", userId)
           .eq("category", oldName)
-          .is("type", null);
+          .is("type", null)
+          .is("deleted_at", null);
         if (nullTypeError) throw nullTypeError;
       }
 
@@ -313,20 +316,23 @@ Deno.serve(async (req: Request) => {
           .update({ category: fallback })
           .eq("user_id", userId)
           .eq("category", name)
-          .eq("type", "income");
+          .eq("type", "income")
+          .is("deleted_at", null);
       } else {
         await supabase
           .from("expenses")
           .update({ category: fallback })
           .eq("user_id", userId)
           .eq("category", name)
-          .eq("type", "expense");
+          .eq("type", "expense")
+          .is("deleted_at", null);
         await supabase
           .from("expenses")
           .update({ category: fallback })
           .eq("user_id", userId)
           .eq("category", name)
-          .is("type", null);
+          .is("type", null)
+          .is("deleted_at", null);
       }
 
       await supabase

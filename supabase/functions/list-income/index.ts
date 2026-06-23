@@ -264,6 +264,7 @@ Deno.serve(async (req: Request) => {
         { count: "exact" },
       )
       .eq("type", "income")
+      .is("deleted_at", null)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);

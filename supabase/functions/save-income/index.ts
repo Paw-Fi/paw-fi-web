@@ -509,6 +509,7 @@ Deno.serve(async (req: Request) => {
         .select("*")
         .eq("user_id", userId)
         .eq("idempotency_key", normalizedIdempotencyKey)
+        .is("deleted_at", null)
         .limit(1);
 
       existingIncomeQuery = resolvedHouseholdId

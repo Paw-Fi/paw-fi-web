@@ -246,6 +246,7 @@ export async function saveExpenseDirect(
       .from("expenses")
       .update(payload)
       .eq("id", params.expenseId)
+      .is("deleted_at", null)
       .select()
       .single();
   }
@@ -426,6 +427,7 @@ export async function saveExpenseDirect(
     .from("expenses")
     .select("*")
     .eq("id", insertRes.data.id)
+    .is("deleted_at", null)
     .single();
 
   return refreshed.error ? insertRes : refreshed;
@@ -503,8 +505,13 @@ export async function deleteExpenseDirect(
 
   const { data, error } = await supabase
     .from("expenses")
-    .delete()
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_reason: "user_deleted",
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", sanitizedExpenseId)
+    .is("deleted_at", null)
     .select("id")
     .maybeSingle();
 

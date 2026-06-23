@@ -823,12 +823,14 @@ export async function saveTransactionsBatchInternal(
             "id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category",
           )
           .in("import_request_key", requestKeys)
+          .is("deleted_at", null)
         : Promise.resolve({ data: [], error: null }),
       semanticKeys.length > 0
         ? supabase
           .from("expenses")
           .select("import_semantic_key")
           .in("import_semantic_key", semanticKeys)
+          .is("deleted_at", null)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -1272,7 +1274,8 @@ export async function saveTransactionsBatchInternal(
                       split_group_id: update.split_group_id,
                       household_id: update.household_id,
                     })
-                    .eq("id", update.id);
+                    .eq("id", update.id)
+                    .is("deleted_at", null);
                 },
               );
             }

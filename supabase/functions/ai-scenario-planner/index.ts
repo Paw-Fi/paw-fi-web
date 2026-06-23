@@ -393,7 +393,8 @@ serve(async (req: Request): Promise<Response> => {
       .gte("date", fromStr)
       .lte("date", toStr)
       .in("type", ["expense", "income"])
-      .in("currency", selectedCurrencies);
+      .in("currency", selectedCurrencies)
+      .is("deleted_at", null);
 
     if (mode === "household") {
       expensesQuery = expensesQuery.eq("household_id", householdId);
