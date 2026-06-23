@@ -397,6 +397,13 @@ function hasAmbiguousCurrencySymbol(
   return AMBIGUOUS_TEXT_TOKEN_REGEX.test(text);
 }
 
+export function hasAmbiguousCurrencyEvidenceInOCRText(
+  text?: string | null,
+  symbol?: string | null,
+): boolean {
+  return hasAmbiguousCurrencySymbol(normalizeEvidenceText(text), symbol);
+}
+
 export function resolveCurrencyFromOCR(
   input: OcrCurrencyResolutionInput,
 ): OcrCurrencyResolutionResult {
