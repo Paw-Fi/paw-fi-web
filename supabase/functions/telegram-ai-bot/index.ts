@@ -97,6 +97,7 @@ import {
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
   buildTransactionMutationFailureText,
+  invokeTransactionDelete,
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
@@ -2904,28 +2905,22 @@ Deno.serve(async (req: Request) => {
                 } else if ("error" in resolved) {
                   toolResult = { error: resolved.error };
                 } else {
-                  const { data, error } = await supabase.functions.invoke(
-                    "delete-expense",
-                    {
-                      body: { userId, expenseIds: resolved.candidate.id },
-                      headers: buildInternalInvokeHeaders(internalFunctionKey),
-                    },
+                  const deleteResult = await invokeTransactionDelete(
+                    supabase,
+                    internalFunctionKey,
+                    userId,
+                    resolved.candidate.id,
                   );
-                  const success = !error && data?.success === true;
-                  const formatted = success
-                    ? ""
-                    : formatInvokeError(error ?? data?.error) ||
-                      "Failed to delete transaction";
-                  toolResult = success
+                  toolResult = deleteResult.success
                     ? { success: true }
-                    : { error: formatted };
-                  if (!success) {
+                    : { error: deleteResult.formatted };
+                  if (!deleteResult.success) {
                     await reportTelegramToolInvokeFailure({
                       traceId,
                       toolName: "delete_transaction",
                       targetFunction: "delete-expense",
-                      formatted,
-                      error: error ?? data?.error,
+                      formatted: deleteResult.formatted,
+                      error: deleteResult.error,
                       context: { expenseId: resolved.candidate.id },
                     });
                   }
@@ -3232,29 +3227,23 @@ Deno.serve(async (req: Request) => {
                           "No matching transaction found. Ask user to list recent transactions first or provide more details.",
                       };
                     } else {
-                      const { data, error } = await supabase.functions.invoke(
-                        "delete-expense",
-                        {
-                          body: { userId, expenseIds: expenseId },
-                          headers:
-                            buildInternalInvokeHeaders(internalFunctionKey),
-                        },
+                      const deleteResult = await invokeTransactionDelete(
+                        supabase,
+                        internalFunctionKey,
+                        userId,
+                        expenseId,
+                        "Failed to delete recurring transaction",
                       );
-                      const success = !error && data?.success === true;
-                      const formatted = success
-                        ? ""
-                        : formatInvokeError(error ?? data?.error) ||
-                          "Failed to delete recurring transaction";
-                      toolResult = success
+                      toolResult = deleteResult.success
                         ? { success: true }
-                        : { error: formatted };
-                      if (!success) {
+                        : { error: deleteResult.formatted };
+                      if (!deleteResult.success) {
                         await reportTelegramToolInvokeFailure({
                           traceId,
                           toolName: "manage_recurring",
                           targetFunction: "delete-expense",
-                          formatted,
-                          error: error ?? data?.error,
+                          formatted: deleteResult.formatted,
+                          error: deleteResult.error,
                           context: { action, expenseId },
                         });
                       }

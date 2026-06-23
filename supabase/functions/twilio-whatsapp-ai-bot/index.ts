@@ -95,6 +95,7 @@ import {
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
   buildTransactionMutationFailureText,
+  invokeTransactionDelete,
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
@@ -765,7 +766,8 @@ async function buildFinancialSnapshot(
     .gte("date", startDate)
     .lte("date", endDate)
     .eq("currency", currency)
-    .eq("contact_id", contactId);
+    .eq("contact_id", contactId)
+    .is("deleted_at", null);
   if (error) return { error };
 
   let totalExpense = 0;
@@ -1740,18 +1742,16 @@ Deno.serve(async (req: Request) => {
             } else if ("error" in resolved) {
               toolResult = { error: resolved.error };
             } else {
-              const { data, error } = await supabase.functions.invoke(
-                "delete-expense",
-                {
-                  body: { userId, expenseIds: resolved.candidate.id },
-                  headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
-                },
+              const deleteResult = await invokeTransactionDelete(
+                supabase,
+                INTERNAL_FUNCTION_KEY,
+                userId,
+                resolved.candidate.id,
               );
-              const success = !error && data?.success === true;
-              toolResult = success
+              toolResult = deleteResult.success
                 ? { success: true }
                 : {
-                    error: error ?? data?.error ?? "Failed to delete",
+                    error: deleteResult.formatted,
                   };
             }
           } else if (call.name === "create_custom_category") {
@@ -3919,6 +3919,7 @@ Deno.serve(async (req: Request) => {
                     .from("expenses")
                     .select("id, user_id, household_id")
                     .eq("id", expenseId)
+                    .is("deleted_at", null)
                     .maybeSingle();
 
                 if (expenseFetchError || !expenseRow) {
@@ -4228,58 +4229,15 @@ Deno.serve(async (req: Request) => {
               toolResult = { error: resolved.error };
             } else {
               const expenseId = resolved.candidate.id;
-              const { data: expenseToDelete, error: deleteFetchError } =
-                await supabase
-                  .from("expenses")
-                  .select("id, user_id, household_id")
-                  .eq("id", expenseId)
-                  .maybeSingle();
-
-              if (deleteFetchError || !expenseToDelete) {
-                toolResult = {
-                  error:
-                    "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-                };
-              } else {
-                const deleteExpenseHouseholdId = (expenseToDelete as any)
-                  .household_id as string | null;
-                if (!deleteExpenseHouseholdId) {
-                  if ((expenseToDelete as any).user_id !== userId) {
-                    toolResult = {
-                      error:
-                        "You don't have permission to delete this transaction.",
-                    };
-                  }
-                } else {
-                  const isMember = await ensureHouseholdMember(
-                    supabase,
-                    deleteExpenseHouseholdId,
-                    userId,
-                  );
-                  if (!isMember) {
-                    toolResult = {
-                      error:
-                        "You don't have permission to delete this transaction.",
-                    };
-                  }
-                }
-
-                if (!(toolResult as any).error) {
-                  const { data, error } = await supabase.functions.invoke(
-                    "delete-expense",
-                    {
-                      body: { userId, expenseIds: expenseId },
-                      headers: buildInternalInvokeHeaders(
-                        INTERNAL_FUNCTION_KEY,
-                      ),
-                    },
-                  );
-                  const success = !error && data?.success === true;
-                  toolResult = success
-                    ? { success: true }
-                    : { error: error ?? data?.error ?? "Failed to delete" };
-                }
-              }
+              const deleteResult = await invokeTransactionDelete(
+                supabase,
+                INTERNAL_FUNCTION_KEY,
+                userId,
+                expenseId,
+              );
+              toolResult = deleteResult.success
+                ? { success: true }
+                : { error: deleteResult.formatted };
             }
           } else if (call.name === "list_expenses") {
             const { householdId, spaceMeta } = resolveBotSpaceScope(
@@ -4915,6 +4873,7 @@ Deno.serve(async (req: Request) => {
                       .from("expenses")
                       .select("id, amount_cents, household_id, split_group_id")
                       .eq("id", resolvedExpenseId)
+                      .is("deleted_at", null)
                       .maybeSingle();
                     expenseRow = row;
                     if (!householdId && row?.household_id) {
@@ -5081,39 +5040,34 @@ Deno.serve(async (req: Request) => {
                       "No matching transaction found. Ask user to list recent transactions first or provide more details.",
                   };
                 } else {
-                  const { data, error } = await supabase.functions.invoke(
-                    "delete-expense",
-                    {
-                      body: { userId, expenseIds: expenseId },
-                      headers: buildInternalInvokeHeaders(
-                        INTERNAL_FUNCTION_KEY,
-                      ),
-                    },
+                  const deleteResult = await invokeTransactionDelete(
+                    supabase,
+                    INTERNAL_FUNCTION_KEY,
+                    userId,
+                    expenseId,
+                    "Failed to delete expense",
                   );
-                  const success = !error && data?.success === true;
-                  const formatted = success
-                    ? ""
-                    : formatInvokeError(error ?? data?.error) ||
-                      "Failed to delete expense";
-                  toolResult = success
+                  toolResult = deleteResult.success
                     ? { success: true }
-                    : { error: formatted };
-                  if (!success) {
+                    : { error: deleteResult.formatted };
+                  if (!deleteResult.success) {
                     if (WHATSAPP_DEBUG) {
-                      debugNotes.push(`delete-expense error: ${formatted}`);
+                      debugNotes.push(
+                        `delete-expense error: ${deleteResult.formatted}`,
+                      );
                     }
                     console.error(
                       "[twilio-whatsapp-ai-bot] delete-expense error",
                       {
-                        error,
-                        formatted,
+                        error: deleteResult.error,
+                        formatted: deleteResult.formatted,
                       },
                     );
                     await reportTwilioToolInvokeFailure({
                       toolName: "delete_transaction",
                       targetFunction: "delete-expense",
-                      formatted,
-                      error: error ?? data?.error,
+                      formatted: deleteResult.formatted,
+                      error: deleteResult.error,
                       context: { expenseId },
                     });
                   }

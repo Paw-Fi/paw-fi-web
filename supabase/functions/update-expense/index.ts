@@ -876,6 +876,7 @@ Deno.serve(async (req: Request) => {
         "id, user_id, household_id, contact_id, split_group_id, amount_cents, currency, raw_text, category, date, created_at, type, source, is_recurring, recurrence_rule, bank_account_id, account_id, provider, provider_transaction_id, provider_fields, user_overrides",
       )
       .eq("id", normalizedExpenseId)
+      .is("deleted_at", null)
       .single();
 
     if (fetchError) {
@@ -1978,6 +1979,7 @@ Deno.serve(async (req: Request) => {
       .from("expenses")
       .update(updatePayload)
       .eq("id", normalizedExpenseId)
+      .is("deleted_at", null)
       .select()
       .single();
 

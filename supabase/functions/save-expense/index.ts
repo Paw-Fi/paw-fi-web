@@ -515,6 +515,7 @@ Deno.serve(async (req: Request) => {
         .select("*")
         .eq("user_id", userId)
         .eq("idempotency_key", normalizedIdempotencyKey)
+        .is("deleted_at", null)
         .limit(1);
 
       existingExpenseQuery = insertScopeHouseholdId
@@ -903,12 +904,14 @@ Deno.serve(async (req: Request) => {
           household_id: body.householdId,
           account_id: sharedScopeAccountId,
         })
-        .eq("id", expense.id);
+        .eq("id", expense.id)
+        .is("deleted_at", null);
 
       const { data: refreshedExpense, error: refreshError } = await supabase
         .from("expenses")
         .select("*")
         .eq("id", expense.id)
+        .is("deleted_at", null)
         .single();
       if (!refreshError && refreshedExpense) {
         responseExpense = refreshedExpense;

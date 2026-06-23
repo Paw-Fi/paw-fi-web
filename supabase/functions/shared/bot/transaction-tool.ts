@@ -1,5 +1,6 @@
 import { buildInternalInvokeHeaders } from "../auth.ts";
 import { normalizeCalendarDateString } from "../date-normalization.ts";
+import { formatInvokeError } from "../formatting-helpers.ts";
 import { resolveCurrencyFromOCR } from "../ocr-currency-resolver.ts";
 import {
   normalizeAiToolMoneyCents,
@@ -306,6 +307,59 @@ export async function invokeTransactionSave(
       headers: buildInternalInvokeHeaders(internalKey),
     },
   );
+}
+
+export async function invokeTransactionDelete(
+  supabase: FunctionInvoker,
+  internalKey: string,
+  userId: string,
+  expenseId: string,
+  fallbackError = "Failed to delete transaction",
+): Promise<{
+  data: any;
+  error: any;
+  success: boolean;
+  formatted: string;
+}> {
+  const normalizedExpenseId =
+    typeof expenseId === "string" ? expenseId.trim() : "";
+  if (!UUID_REGEX.test(normalizedExpenseId)) {
+    return {
+      data: null,
+      error: "Invalid transaction id.",
+      success: false,
+      formatted: "Invalid transaction id.",
+    };
+  }
+
+  if (!internalKey) {
+    return {
+      data: null,
+      error: "Internal key not configured",
+      success: false,
+      formatted: "Internal key not configured",
+    };
+  }
+
+  const { data, error } = await supabase.functions.invoke("delete-expense", {
+    body: { userId, expenseIds: normalizedExpenseId },
+    headers: buildInternalInvokeHeaders(internalKey),
+  });
+  const success = !error && data?.success === true;
+  const rawError = error ?? data?.error ?? data;
+  const errorMessageSource = error ?? data?.error ?? null;
+  const formatted = success
+    ? ""
+    : errorMessageSource
+      ? formatInvokeError(errorMessageSource) || fallbackError
+      : fallbackError;
+
+  return {
+    data,
+    error: rawError,
+    success,
+    formatted,
+  };
 }
 
 export function buildTransactionMutationFailureText(

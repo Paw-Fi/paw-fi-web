@@ -111,6 +111,7 @@ Deno.serve(async (req: Request) => {
       .from('expenses')
       .select('id, acknowledged_by')
       .eq('id', incomeId)
+      .is('deleted_at', null)
       .single();
 
     // Create notification for income owner
@@ -118,6 +119,7 @@ Deno.serve(async (req: Request) => {
       .from('expenses')
       .select('user_id, household_id, category, amount_cents, currency')
       .eq('id', incomeId)
+      .is('deleted_at', null)
       .single();
 
     if (incomeOwner && incomeOwner.household_id && incomeOwner.user_id !== userId) {

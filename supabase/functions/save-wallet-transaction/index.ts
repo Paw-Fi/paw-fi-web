@@ -759,6 +759,7 @@ async function buildWalletPocketInsight(params: {
     .from("expenses")
     .select("amount_cents,category,type")
     .eq("currency", budgetCurrency)
+    .is("deleted_at", null)
     .gte("date", monthStart)
     .lt("date", monthEndExclusive);
   expenseQuery = applyWalletScopeFilter({
@@ -2332,6 +2333,7 @@ Deno.serve(async (req: Request) => {
           .from("expenses")
           .select("id, category, amount_cents, currency")
           .eq("wallet_capture_idempotency_key", requestIdempotencyKey)
+          .is("deleted_at", null)
           .maybeSingle();
 
         if (existingExpense) {
@@ -2596,6 +2598,7 @@ Deno.serve(async (req: Request) => {
         .from("expenses")
         .select("*")
         .eq("id", expense.id)
+        .is("deleted_at", null)
         .single();
 
       if (refreshedExpense) {

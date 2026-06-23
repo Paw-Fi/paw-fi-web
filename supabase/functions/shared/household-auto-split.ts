@@ -656,7 +656,8 @@ export async function createHouseholdAutoSplitForTransaction({
       split_group_id: buildResult.group.id,
       household_id: householdId,
     })
-    .eq("id", transactionId);
+    .eq("id", transactionId)
+    .is("deleted_at", null);
   if (updateError) {
     return { kind: "failed", error: updateError };
   }

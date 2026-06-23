@@ -307,7 +307,8 @@ Deno.serve(async (req: Request) => {
     .select("amount_cents,currency")
     .eq("contact_id", contactId)
     .eq("date", dateStr)
-    .eq("currency", budgetCurrency);
+    .eq("currency", budgetCurrency)
+    .is("deleted_at", null);
 
   const totalSpentCents = (expenseRows || []).reduce(
     (sum, r: any) => sum + (r.amount_cents || 0),

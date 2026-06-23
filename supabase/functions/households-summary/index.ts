@@ -184,6 +184,7 @@ serve(async (req) => {
       .from('expenses')
       .select('*')
       .eq('household_id', household_id)
+      .is('deleted_at', null)
       .gte('date', startDate.split('T')[0]) // expenses table uses 'date' not 'created_at'
       .lte('date', endDate.split('T')[0]);
 
