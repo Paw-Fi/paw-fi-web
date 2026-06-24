@@ -6,7 +6,6 @@
  * 
  * NOTE: Some variables are optional depending on the function:
  * - STRIPE_WEBHOOK_SECRET: Required only for stripe-webhook function
- * - Premium price IDs: Optional until Premium tier is launched
  */
 
 interface EnvironmentConfig {
@@ -21,8 +20,8 @@ interface EnvironmentConfig {
   // Stripe Price IDs
   stripeMonthlyPlusPlanId: string;
   stripeYearlyPlusPlanId: string;
-  stripeMonthlyPremiumPlanId?: string; // Optional - Premium not yet available
-  stripeYearlyPremiumPlanId?: string;  // Optional - Premium not yet available
+  stripeMonthlyPremiumPlanId: string;
+  stripeYearlyPremiumPlanId: string;
   
   // Application
   appUrl: string;
@@ -33,7 +32,6 @@ interface EnvironmentConfig {
 
 interface ValidationOptions {
   requireWebhookSecret?: boolean; // Set to true for webhook function
-  requirePremiumPrices?: boolean; // Set to true when Premium launches
 }
 
 class EnvironmentValidationError extends Error {
@@ -84,12 +82,9 @@ export function validateEnvironment(options: ValidationOptions = {}): Environmen
     stripeMonthlyPlusPlanId: getEnvVar('STRIPE_MONTHLY_PLUS_PLAN_ID'),
     stripeYearlyPlusPlanId: getEnvVar('STRIPE_YEARLY_PLUS_PLAN_ID'),
     
-    // Premium plans - Optional (not yet available)
-    // Use same Plus IDs as fallback until Premium is configured
-    stripeMonthlyPremiumPlanId: getEnvVar('STRIPE_MONTHLY_PREMIUM_PLAN_ID', false) || 
-                                getEnvVar('STRIPE_MONTHLY_PLUS_PLAN_ID', false),
-    stripeYearlyPremiumPlanId: getEnvVar('STRIPE_YEARLY_PREMIUM_PLAN_ID', false) || 
-                               getEnvVar('STRIPE_YEARLY_PLUS_PLAN_ID', false),
+    // Premium plans
+    stripeMonthlyPremiumPlanId: getEnvVar('STRIPE_MONTHLY_PREMIUM_PLAN_ID'),
+    stripeYearlyPremiumPlanId: getEnvVar('STRIPE_YEARLY_PREMIUM_PLAN_ID'),
     
     // Application
     appUrl: getEnvVar('APP_URL', false) || 'https://moneko.io',
@@ -172,9 +167,8 @@ export function logEnvironmentInfo(): void {
     priceIdsConfigured: {
       plusMonthly: !!Deno.env.get('STRIPE_MONTHLY_PLUS_PLAN_ID'),
       plusYearly: !!Deno.env.get('STRIPE_YEARLY_PLUS_PLAN_ID'),
-      premiumMonthly: !!Deno.env.get('STRIPE_MONTHLY_PREMIUM_PLAN_ID') || !!Deno.env.get('STRIPE_MONTHLY_PLUS_PLAN_ID'),
-      premiumYearly: !!Deno.env.get('STRIPE_YEARLY_PREMIUM_PLAN_ID') || !!Deno.env.get('STRIPE_YEARLY_PLUS_PLAN_ID'),
+      premiumMonthly: !!Deno.env.get('STRIPE_MONTHLY_PREMIUM_PLAN_ID'),
+      premiumYearly: !!Deno.env.get('STRIPE_YEARLY_PREMIUM_PLAN_ID'),
     },
   });
 }
-

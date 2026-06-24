@@ -22,6 +22,8 @@ export interface TrendPoint {
 export interface SubscriptionAnalytics {
   monthlyActive: SubscriptionMetric;
   yearlyActive: SubscriptionMetric;
+  premiumMonthlyActive: SubscriptionMetric;
+  premiumYearlyActive: SubscriptionMetric;
   lifetimeActive: SubscriptionMetric;
   totalCancelled: SubscriptionMetric;
   trialToActive: SubscriptionMetric;
@@ -38,6 +40,8 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
   const [data, setData] = useState<SubscriptionAnalytics>({
     monthlyActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
     yearlyActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
+    premiumMonthlyActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
+    premiumYearlyActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
     lifetimeActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
     totalCancelled: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
     trialToActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
@@ -58,12 +62,16 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
 
         let monthlyActiveCount = 0;
         let yearlyActiveCount = 0;
+        let premiumMonthlyActiveCount = 0;
+        let premiumYearlyActiveCount = 0;
         let lifetimeActiveCount = 0;
         let cancelledCount = 0;
         let trialToActiveCount = 0;
 
         const monthlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
         const yearlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
+        const premiumMonthlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
+        const premiumYearlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
         const lifetimeProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
         const cancelledProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
         const trialToActiveProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
@@ -84,6 +92,18 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
             else if (provider === 'app_store') yearlyProviders.apple += count;
           }
 
+          if (row.plan_type === 'premium' && row.billing_interval === 'monthly' && row.status === 'active') {
+            premiumMonthlyActiveCount += count;
+            if (provider === 'stripe') premiumMonthlyProviders.stripe += count;
+            else if (provider === 'app_store') premiumMonthlyProviders.apple += count;
+          }
+
+          if (row.plan_type === 'premium' && row.billing_interval === 'yearly' && row.status === 'active') {
+            premiumYearlyActiveCount += count;
+            if (provider === 'stripe') premiumYearlyProviders.stripe += count;
+            else if (provider === 'app_store') premiumYearlyProviders.apple += count;
+          }
+
           if (row.plan_type === 'lifetime' && row.status === 'active') {
             lifetimeActiveCount += count;
             if (provider === 'stripe') lifetimeProviders.stripe += count;
@@ -100,6 +120,7 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
             row.status === 'active'
             && (
               (row.plan_type === 'plus' && (row.billing_interval === 'monthly' || row.billing_interval === 'yearly'))
+              || (row.plan_type === 'premium' && (row.billing_interval === 'monthly' || row.billing_interval === 'yearly'))
               || row.plan_type === 'lifetime'
             )
           ) {
@@ -130,6 +151,18 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
               trend: [],
               changePercent: 0,
               providers: yearlyProviders,
+            },
+            premiumMonthlyActive: {
+              currentValue: premiumMonthlyActiveCount,
+              trend: [],
+              changePercent: 0,
+              providers: premiumMonthlyProviders,
+            },
+            premiumYearlyActive: {
+              currentValue: premiumYearlyActiveCount,
+              trend: [],
+              changePercent: 0,
+              providers: premiumYearlyProviders,
             },
             lifetimeActive: {
               currentValue: lifetimeActiveCount,
@@ -166,6 +199,10 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
         const monthlyPrevTrend = buildTrend(dailyMap, 'monthly_active', 59, 30);
         const yearlyTrend = buildTrend(dailyMap, 'yearly_active', 29, 0);
         const yearlyPrevTrend = buildTrend(dailyMap, 'yearly_active', 59, 30);
+        const premiumMonthlyTrend = buildTrend(dailyMap, 'premium_monthly_active', 29, 0);
+        const premiumMonthlyPrevTrend = buildTrend(dailyMap, 'premium_monthly_active', 59, 30);
+        const premiumYearlyTrend = buildTrend(dailyMap, 'premium_yearly_active', 29, 0);
+        const premiumYearlyPrevTrend = buildTrend(dailyMap, 'premium_yearly_active', 59, 30);
         const lifetimeTrend = buildTrend(dailyMap, 'lifetime_active', 29, 0);
         const lifetimePrevTrend = buildTrend(dailyMap, 'lifetime_active', 59, 30);
         const cancelledTrend = buildTrend(dailyMap, 'cancelled', 29, 0);
@@ -185,6 +222,18 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
             trend: yearlyTrend,
             changePercent: calculateChangePercent(yearlyTrend, yearlyPrevTrend),
             providers: yearlyProviders,
+          },
+          premiumMonthlyActive: {
+            currentValue: premiumMonthlyActiveCount,
+            trend: premiumMonthlyTrend,
+            changePercent: calculateChangePercent(premiumMonthlyTrend, premiumMonthlyPrevTrend),
+            providers: premiumMonthlyProviders,
+          },
+          premiumYearlyActive: {
+            currentValue: premiumYearlyActiveCount,
+            trend: premiumYearlyTrend,
+            changePercent: calculateChangePercent(premiumYearlyTrend, premiumYearlyPrevTrend),
+            providers: premiumYearlyProviders,
           },
           lifetimeActive: {
             currentValue: lifetimeActiveCount,

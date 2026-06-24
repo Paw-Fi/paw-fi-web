@@ -2,9 +2,15 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
-import { SUBSCRIPTION_PRICES } from "../shared/stripe-subscription-prices.ts";
+import { getPriceId } from "../shared/stripe-subscription-prices.ts";
+import type {
+  BillingInterval,
+  PlanType,
+} from "../shared/subscription-constants.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { canGrantPaywallReturnTrial } from "../shared/paywall-return-trial-eligibility.ts";
+import { buildCheckoutPageUrl } from "../shared/checkout-redirect.ts";
+import { getSubscriptionChangePolicy } from "../shared/subscription-change-policy.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -50,12 +56,12 @@ serve(async (req) => {
     >;
     const action = typeof body.action === "string" ? body.action : null;
     const plan = typeof body.plan === "string" ? body.plan : null;
-    const billingInterval =
-      typeof body.billingInterval === "string" ? body.billingInterval : null;
-    const prorationDate =
-      typeof body.prorationDate === "number" ? body.prorationDate : null;
-    const exitAtIso =
-      typeof body.exitAtIso === "string" ? body.exitAtIso : null;
+    const billingInterval = typeof body.billingInterval === "string"
+      ? body.billingInterval
+      : null;
+    const exitAtIso = typeof body.exitAtIso === "string"
+      ? body.exitAtIso
+      : null;
 
     const returnTrialDurationMinutesRaw = Number(
       Deno.env.get("PAYWALL_RETURN_TRIAL_DURATION_MINUTES") ??
@@ -63,7 +69,7 @@ serve(async (req) => {
     );
     const returnTrialDurationMinutes =
       Number.isFinite(returnTrialDurationMinutesRaw) &&
-      returnTrialDurationMinutesRaw > 0
+        returnTrialDurationMinutesRaw > 0
         ? Math.floor(returnTrialDurationMinutesRaw)
         : 7 * 24 * 60;
 
@@ -250,8 +256,10 @@ serve(async (req) => {
 
         // Cannot "upgrade" to Lifetime via plan change - must use checkout
         if (plan === "lifetime") {
-          const origin = req.headers.get("origin") || "https://moneko.io";
-          const checkoutUrl = `${origin}/checkout?plan=lifetime`;
+          const checkoutUrl = buildCheckoutPageUrl(
+            Deno.env.get("APP_URL") || "https://moneko.io",
+            { plan: "lifetime" },
+          );
 
           return new Response(
             JSON.stringify({
@@ -273,8 +281,34 @@ serve(async (req) => {
           plus: 1,
           premium: 2,
         };
-        const isUpgrade =
-          (PLAN_HIERARCHY[plan] ?? 0) > (PLAN_HIERARCHY[currentPlan] ?? 0);
+
+        if (!(plan in PLAN_HIERARCHY) && plan !== "lifetime") {
+          return new Response(JSON.stringify({ error: "Invalid plan" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (billingInterval !== "monthly" && billingInterval !== "yearly") {
+          return new Response(
+            JSON.stringify({ error: "Invalid billing interval" }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const currentInterval = subscription?.billing_interval as
+          | BillingInterval
+          | null
+          | undefined;
+        const changePolicy = getSubscriptionChangePolicy({
+          currentPlan: currentPlan as PlanType,
+          newPlan: plan as PlanType,
+          currentInterval,
+          newInterval: billingInterval as BillingInterval,
+        });
 
         // Special case: Downgrading to free plan (cancel subscription)
         if (plan === "free") {
@@ -332,8 +366,10 @@ serve(async (req) => {
           subscription.status !== "active" ||
           currentPlan === "free"
         ) {
-          const origin = req.headers.get("origin") || "https://moneko.io";
-          const checkoutUrl = `${origin}/checkout?plan=${plan}&billing=${billingInterval}`;
+          const checkoutUrl = buildCheckoutPageUrl(
+            Deno.env.get("APP_URL") || "https://moneko.io",
+            { plan, billing: billingInterval },
+          );
 
           return new Response(
             JSON.stringify({
@@ -349,7 +385,25 @@ serve(async (req) => {
         }
 
         // For existing subscriptions, update the subscription in Stripe
-        const priceId = (SUBSCRIPTION_PRICES as any)?.[plan]?.[billingInterval];
+        let priceId: string;
+        try {
+          priceId = getPriceId(
+            plan as PlanType,
+            billingInterval as BillingInterval,
+          );
+        } catch (error) {
+          return new Response(
+            JSON.stringify({
+              error: error instanceof Error
+                ? error.message
+                : "Invalid plan or billing interval",
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
 
         if (!priceId) {
           return new Response(
@@ -380,8 +434,24 @@ serve(async (req) => {
 
         const subscriptionItemId = stripeSubscription.items.data[0].id;
 
-        // UPGRADES: Apply immediately with proration
-        if (isUpgrade) {
+        if (changePolicy.billingBehavior === "no_change") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message:
+                "No changes needed - you are already on this plan and billing interval.",
+              subscription: stripeSubscription,
+              isUpgrade: false,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        // Immediate changes: plan upgrades and same-plan billing interval changes.
+        if (changePolicy.billingBehavior === "immediate") {
           const updateParams: any = {
             items: [
               {
@@ -397,10 +467,6 @@ serve(async (req) => {
             payment_behavior: "error_if_incomplete",
             cancel_at_period_end: false,
           };
-
-          if (prorationDate) {
-            updateParams.proration_date = prorationDate;
-          }
 
           const updatedSubscription = await stripe.subscriptions.update(
             subscription.stripe_subscription_id,
@@ -423,9 +489,11 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: `Subscription upgraded to ${plan} (${billingInterval})`,
+              message: changePolicy.isIntervalChange
+                ? `Subscription billing interval changed to ${billingInterval}`
+                : `Subscription upgraded to ${plan} (${billingInterval})`,
               subscription: updatedSubscription,
-              isUpgrade: true,
+              isUpgrade: changePolicy.isUpgrade,
             }),
             {
               status: 200,
@@ -489,7 +557,8 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: `Subscription will downgrade to ${plan} (${billingInterval}) at end of current period`,
+              message:
+                `Subscription will change to ${plan} (${billingInterval}) at end of current period`,
               subscription: stripeSubscription,
               isUpgrade: false,
               pendingChange: {
@@ -508,7 +577,9 @@ serve(async (req) => {
         } catch (scheduleError: any) {
           console.error("Error creating subscription schedule:", scheduleError);
           throw new Error(
-            `Failed to schedule downgrade: ${scheduleError?.message ?? "unknown"}`,
+            `Failed to schedule downgrade: ${
+              scheduleError?.message ?? "unknown"
+            }`,
           );
         }
       }

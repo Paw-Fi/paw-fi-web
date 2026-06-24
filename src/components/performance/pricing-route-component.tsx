@@ -134,8 +134,13 @@ export function PricingRouteComponent() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  type PlanType = "monthly" | "yearly" | "lifetime";
-  const [selectedPlanId, setSelectedPlanId] = useState<PlanType>("yearly");
+  type PlanType =
+    | "plus_monthly"
+    | "plus_yearly"
+    | "premium_monthly"
+    | "premium_yearly"
+    | "lifetime";
+  const [selectedPlanId, setSelectedPlanId] = useState<PlanType>("plus_yearly");
 
   useEffect(() => {
     setIsLoading(false);
@@ -143,31 +148,61 @@ export function PricingRouteComponent() {
 
   const pricingTiers = getPricingTiers();
 
-  const monthlyTier = pricingTiers.find(
+  const plusMonthlyTier = pricingTiers.find(
     (t) =>
       t.title === "Plus" ||
       (t.title.includes("Plus") && !t.title.includes("Yearly")),
   );
-  const yearlyTier = pricingTiers.find((t) => t.title.includes("Yearly"));
+  const plusYearlyTier = pricingTiers.find(
+    (t) => t.title.includes("Plus") && t.title.includes("Yearly"),
+  );
+  const premiumMonthlyTier = pricingTiers.find(
+    (t) =>
+      t.title === "Premium" ||
+      (t.title.includes("Premium") && !t.title.includes("Yearly")),
+  );
+  const premiumYearlyTier = pricingTiers.find(
+    (t) => t.title.includes("Premium") && t.title.includes("Yearly"),
+  );
   const lifetimeTier = pricingTiers.find((t) => t.title.includes("Lifetime"));
 
   const safelyGetTier = (tier: any, fallbackParams: any) =>
     tier || fallbackParams;
 
-  const mTier = safelyGetTier(monthlyTier, {
-    title: "Monthly",
+  const pmTier = safelyGetTier(plusMonthlyTier, {
+    title: "Plus Monthly",
     priceMonthly: "$4.99",
     compareAtPriceMonthly: "$9.99",
   });
-  const yTier = safelyGetTier(yearlyTier, {
-    title: "Yearly",
+  const pyTier = safelyGetTier(plusYearlyTier, {
+    title: "Plus Yearly",
     priceMonthly: "$34.99",
     compareAtPriceMonthly: "$119.88",
+  });
+  const prmTier = safelyGetTier(premiumMonthlyTier, {
+    title: "Premium Monthly",
+    priceMonthly: "$7.99",
+    compareAtPriceMonthly: "$9.99",
+  });
+  const pryTier = safelyGetTier(premiumYearlyTier, {
+    title: "Premium Yearly",
+    priceMonthly: "$59.99",
+    compareAtPriceMonthly: "$95.88",
   });
   const lTier = safelyGetTier(lifetimeTier, {
     title: "Lifetime",
     priceMonthly: "$69.99",
   });
+  const selectedTier =
+    selectedPlanId === "plus_monthly"
+      ? plusMonthlyTier
+      : selectedPlanId === "plus_yearly"
+        ? plusYearlyTier
+        : selectedPlanId === "premium_monthly"
+          ? premiumMonthlyTier
+          : selectedPlanId === "premium_yearly"
+            ? premiumYearlyTier
+            : lifetimeTier;
 
   const faqData = [
     {
@@ -220,17 +255,23 @@ export function PricingRouteComponent() {
 
       setIsLoading(false);
 
-      if (selectedPlanId === "lifetime") {
-        navigate({
-          to: "/checkout",
-          search: { plan: "lifetime" },
-        });
-      } else {
-        navigate({
-          to: "/checkout",
-          search: { plan: "plus", billing: selectedPlanId },
-        });
-      }
+      const selectedPlan =
+        selectedPlanId === "lifetime"
+          ? { plan: "lifetime", billing: undefined }
+          : selectedPlanId === "premium_monthly"
+            ? { plan: "premium", billing: "monthly" }
+            : selectedPlanId === "premium_yearly"
+              ? { plan: "premium", billing: "yearly" }
+              : selectedPlanId === "plus_monthly"
+                ? { plan: "plus", billing: "monthly" }
+                : { plan: "plus", billing: "yearly" };
+
+      navigate({
+        to: "/checkout",
+        search: selectedPlan.billing
+          ? { plan: selectedPlan.plan, billing: selectedPlan.billing }
+          : { plan: selectedPlan.plan },
+      });
     } catch (err) {
       console.error("Error handling subscription:", err);
       setIsLoading(false);
@@ -411,7 +452,7 @@ export function PricingRouteComponent() {
                 <div className="bg-card relative flex flex-col rounded-[calc(2rem-2px)] p-6 shadow-inner sm:p-8">
                   <div className="mb-6 text-center lg:text-left">
                     <h2 className="from-foreground to-foreground/70 bg-gradient-to-br bg-clip-text text-2xl font-bold text-transparent">
-                      Unlock Moneko Pro
+                      Choose your Moneko plan
                     </h2>
                     <p className="text-muted-foreground mt-1 text-sm">
                       Start building wealth effortlessly.
@@ -421,21 +462,38 @@ export function PricingRouteComponent() {
                   {/* Plan Selection */}
                   <div className="mb-8 flex flex-col gap-2">
                     <PlanRow
-                      title="Yearly"
+                      title="Plus Yearly"
                       subtitle="Billed annually"
-                      price={yTier.priceMonthly}
-                      originalPrice={yTier.compareAtPriceMonthly}
+                      price={pyTier.priceMonthly}
+                      originalPrice={pyTier.compareAtPriceMonthly}
                       badge="Best Value"
-                      selected={selectedPlanId === "yearly"}
-                      onClick={() => setSelectedPlanId("yearly")}
+                      selected={selectedPlanId === "plus_yearly"}
+                      onClick={() => setSelectedPlanId("plus_yearly")}
                     />
                     <PlanRow
-                      title="Monthly"
+                      title="Plus Monthly"
                       subtitle="Billed monthly"
-                      price={mTier.priceMonthly}
-                      originalPrice={mTier.compareAtPriceMonthly}
-                      selected={selectedPlanId === "monthly"}
-                      onClick={() => setSelectedPlanId("monthly")}
+                      price={pmTier.priceMonthly}
+                      originalPrice={pmTier.compareAtPriceMonthly}
+                      selected={selectedPlanId === "plus_monthly"}
+                      onClick={() => setSelectedPlanId("plus_monthly")}
+                    />
+                    <PlanRow
+                      title="Premium Yearly"
+                      subtitle="Billed annually"
+                      price={pryTier.priceMonthly}
+                      originalPrice={pryTier.compareAtPriceMonthly}
+                      badge="Premium"
+                      selected={selectedPlanId === "premium_yearly"}
+                      onClick={() => setSelectedPlanId("premium_yearly")}
+                    />
+                    <PlanRow
+                      title="Premium Monthly"
+                      subtitle="Billed monthly"
+                      price={prmTier.priceMonthly}
+                      originalPrice={prmTier.compareAtPriceMonthly}
+                      selected={selectedPlanId === "premium_monthly"}
+                      onClick={() => setSelectedPlanId("premium_monthly")}
                     />
                     <PlanRow
                       title="Lifetime"
@@ -449,7 +507,7 @@ export function PricingRouteComponent() {
 
                   {/* Feature Checklist inside the card */}
                   <div className="border-border/50 mb-8 space-y-3 border-t pt-6">
-                    {yearlyTier?.features.map((feature: any, idx: number) => (
+                    {selectedTier?.features.map((feature: any, idx: number) => (
                       <div key={idx} className="flex items-center gap-3">
                         <Check className="text-primary h-4 w-4 shrink-0" />
                         <span className="text-foreground/80 text-sm">
@@ -468,7 +526,9 @@ export function PricingRouteComponent() {
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       {selectedPlanId === "lifetime"
                         ? "Secure Lifetime Access"
-                        : "Upgrade to Pro"}
+                        : selectedPlanId.startsWith("premium")
+                          ? "Upgrade to Premium"
+                          : "Upgrade to Plus"}
                       <Rocket className="h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
                     </span>
                     <div className="group-hover:animate-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -484,10 +544,14 @@ export function PricingRouteComponent() {
                       transition={{ duration: 0.2 }}
                       className="text-muted-foreground mt-4 text-center text-xs"
                     >
-                      {selectedPlanId === "yearly" &&
-                        "Save up to 70% compared to monthly. Modify your plan anytime."}
-                      {selectedPlanId === "monthly" &&
-                        "No commitment. Cancel or upgrade to yearly anytime."}
+                      {selectedPlanId === "plus_yearly" &&
+                        "Save with annual Plus billing. Modify your plan anytime."}
+                      {selectedPlanId === "plus_monthly" &&
+                        "No commitment. Cancel or upgrade anytime."}
+                      {selectedPlanId === "premium_yearly" &&
+                        "Premium-tier access with the best annual value."}
+                      {selectedPlanId === "premium_monthly" &&
+                        "Advanced features with monthly flexibility."}
                       {selectedPlanId === "lifetime" &&
                         "One-time payment. Enjoy future updates for free."}
                     </motion.p>

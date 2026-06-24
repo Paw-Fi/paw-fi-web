@@ -29,11 +29,18 @@ import {
 } from "../shared/stripe-retry.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
-  PlanType,
   BillingInterval,
-  isValidPlan,
   isValidInterval,
+  isValidPlan,
+  PlanType,
 } from "../shared/subscription-constants.ts";
+import { buildCheckoutRedirectUrls } from "../shared/checkout-redirect.ts";
+import {
+  checkoutVerificationPersistenceErrorResponse,
+  isEmailCheckoutAuthorized,
+  persistCheckoutSessionVerificationOrExpire,
+  unauthorizedEmailCheckoutResponse,
+} from "../shared/checkout-session-security.ts";
 
 // Validate environment on startup
 const env = validateEnvironment();
@@ -131,16 +138,28 @@ serve(async (req: Request) => {
       });
     }
 
+    if (
+      !isEmailCheckoutAuthorized(
+        req.headers,
+        Deno.env.get("EMAIL_CHECKOUT_TOKEN"),
+      )
+    ) {
+      return unauthorizedEmailCheckoutResponse(corsHeaders);
+    }
+
     // Parse the request body (email, plan, billingInterval, successUrl, cancelUrl, promoCode)
     const { email, plan, billingInterval, successUrl, cancelUrl, promoCode } =
       await req.json();
 
     // Validate email
     if (!email || !validateEmail(email)) {
-      return new Response(JSON.stringify({ error: "Valid email is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Valid email is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Validate plan
@@ -184,7 +203,7 @@ serve(async (req: Request) => {
       .single();
 
     if (userError || !userData) {
-      console.error("User not found for email:", email);
+      console.error("Checkout-by-email user lookup failed");
       return new Response(JSON.stringify({ error: "User not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -197,10 +216,9 @@ serve(async (req: Request) => {
     let priceId: string;
     try {
       // Lifetime doesn't use billing interval
-      priceId =
-        plan === "lifetime"
-          ? getPriceId(plan as PlanType)
-          : getPriceId(plan as PlanType, billingInterval as BillingInterval);
+      priceId = plan === "lifetime"
+        ? getPriceId(plan as PlanType)
+        : getPriceId(plan as PlanType, billingInterval as BillingInterval);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Error getting price ID:", message);
@@ -212,7 +230,7 @@ serve(async (req: Request) => {
 
     // Double-check price ID is valid
     if (!validatePriceId(priceId)) {
-      console.error("Invalid price ID format:", priceId);
+      console.error("Invalid price ID format for checkout-by-email");
       return new Response(
         JSON.stringify({ error: "Invalid price configuration" }),
         {
@@ -223,12 +241,9 @@ serve(async (req: Request) => {
     }
 
     console.log("Creating checkout session by email:", {
-      email,
-      userId,
       plan,
       billingInterval,
-      priceId,
-      promoCode,
+      hasPromoCode: Boolean(promoCode),
     });
 
     // SECURITY: Check if user is bound to a household subscription
@@ -254,8 +269,6 @@ serve(async (req: Request) => {
 
       if (ownerSubError) {
         console.error("Failed to verify household owner subscription:", {
-          userId,
-          boundToUserId,
           ownerSubError,
         });
         return new Response(
@@ -267,8 +280,7 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription =
-        !!ownerSub &&
+      const ownerHasActiveSubscription = !!ownerSub &&
         !ownerSub.bound_to_user_id &&
         ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
           ownerSub.status === "trialing" ||
@@ -276,9 +288,7 @@ serve(async (req: Request) => {
 
       if (ownerHasActiveSubscription) {
         console.error("User is bound to active household subscription:", {
-          userId,
-          boundTo: boundToUserId,
-          household: existingSub.bound_to_household_id,
+          hasHousehold: Boolean(existingSub.bound_to_household_id),
         });
         return new Response(
           JSON.stringify({
@@ -294,9 +304,7 @@ serve(async (req: Request) => {
       }
 
       console.log("Allowing checkout for bound user:", {
-        userId,
-        boundTo: boundToUserId,
-        household: existingSub.bound_to_household_id,
+        hasHousehold: Boolean(existingSub.bound_to_household_id),
         ownerPlan: ownerSub?.plan ?? null,
         ownerStatus: ownerSub?.status ?? null,
       });
@@ -349,7 +357,7 @@ serve(async (req: Request) => {
     let customerId = mappingData?.stripe_customer_id;
 
     if (!customerId) {
-      console.log("Creating new Stripe customer for user:", userId);
+      console.log("Creating new Stripe customer for checkout-by-email user");
 
       const customer = await createCustomerWithRetry(stripe, {
         email: userData.email,
@@ -372,17 +380,17 @@ serve(async (req: Request) => {
         },
       );
 
-      console.log("Created Stripe customer:", customerId);
+      console.log("Created Stripe customer for checkout-by-email user");
     } else {
       // Verify customer exists in Stripe
       try {
         await retrieveCustomerWithRetry(stripe, customerId);
-        console.log("Using existing Stripe customer:", customerId);
+        console.log(
+          "Using existing Stripe customer for checkout-by-email user",
+        );
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
         console.error(
-          "Customer not found in Stripe, creating new one:",
-          message,
+          "Customer not found in Stripe, creating new checkout-by-email customer",
         );
 
         const customer = await createCustomerWithRetry(stripe, {
@@ -408,38 +416,12 @@ serve(async (req: Request) => {
     }
 
     try {
-      // Determine URLs
-      const origin = req.headers.get("origin") || env.appUrl;
-      const originUrl = safeParseUrl(origin);
-      const appUrl = safeParseUrl(env.appUrl);
-      const baseOrigin = originUrl?.origin || appUrl?.origin || env.appUrl;
-
-      const allowedHosts = new Set(
-        [
-          originUrl?.hostname,
-          appUrl?.hostname,
-          "moneko.io",
-          "www.moneko.io",
-          "localhost",
-          "127.0.0.1",
-        ].filter((host): host is string => Boolean(host)),
-      );
-
-      const sanitizedSuccessUrl = sanitizeRedirectUrl(
-        typeof successUrl === "string" ? successUrl : null,
-        allowedHosts,
-      );
-      const sanitizedCancelUrl = sanitizeRedirectUrl(
-        typeof cancelUrl === "string" ? cancelUrl : null,
-        allowedHosts,
-      );
-
-      const finalSuccessUrl =
-        sanitizedSuccessUrl ||
-        `${baseOrigin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`;
-      const finalCancelUrl =
-        sanitizedCancelUrl ||
-        `${baseOrigin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`;
+      const { successUrl: finalSuccessUrl, cancelUrl: finalCancelUrl } =
+        buildCheckoutRedirectUrls({
+          appUrl: env.appUrl,
+          successUrl: typeof successUrl === "string" ? successUrl : null,
+          cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
+        });
 
       // For public verify-payment, we add a per-session nonce to the redirect URL.
       // We create the Stripe session first (to get session.id), then persist the nonce.
@@ -456,10 +438,8 @@ serve(async (req: Request) => {
       // LIFETIME PLAN: Use payment mode (one-time) instead of subscription mode
       if (plan === "lifetime") {
         console.log("Creating LIFETIME checkout session (payment mode):", {
-          userId,
           plan,
-          priceId,
-          promoCode,
+          hasPromoCode: Boolean(promoCode),
         });
 
         // If promo code provided, look up the Stripe promotion code ID
@@ -475,16 +455,16 @@ serve(async (req: Request) => {
 
             if (promoCodes.data.length > 0) {
               promotionCodeId = promoCodes.data[0].id;
-              console.log("Found promotion code:", {
-                code: promoCode,
-                id: promotionCodeId,
-              });
+              console.log(
+                "Found promotion code for checkout-by-email lifetime",
+              );
             } else {
-              console.error("Promotion code not found or inactive:", promoCode);
+              console.error("Promotion code not found or inactive");
               return new Response(
                 JSON.stringify({
                   error: "Invalid promotion code",
-                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                  details:
+                    `The promotion code '${promoCode}' is not valid or has expired.`,
                 }),
                 {
                   status: 400,
@@ -496,7 +476,7 @@ serve(async (req: Request) => {
               );
             }
           } catch (promoError) {
-            console.error("Error looking up promotion code:", promoError);
+            console.error("Error looking up promotion code");
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
@@ -523,10 +503,10 @@ serve(async (req: Request) => {
           mode: "payment", // ONE-TIME payment, NOT subscription
           success_url: finalSuccessUrlWithNonce,
           cancel_url: finalCancelUrlWithNonce,
-          // Use discounts if promo code provided, otherwise allow promotion codes
+          // Lifetime discounts must be supplied explicitly; do not expose public promotion-code entry by default.
           ...(promotionCodeId
             ? { discounts: [{ promotion_code: promotionCodeId }] }
-            : { allow_promotion_codes: true }),
+            : { allow_promotion_codes: false }),
           // CRITICAL: Enable invoice creation for one-time payments (Stripe official invoices)
           invoice_creation: {
             enabled: true,
@@ -561,8 +541,7 @@ serve(async (req: Request) => {
             stripeErr?.message?.includes("customer")
           ) {
             console.log(
-              "Customer not found during checkout, recreating:",
-              customerId,
+              "Customer not found during checkout, recreating checkout-by-email customer",
             );
 
             const newCustomer = await createCustomerWithRetry(stripe, {
@@ -600,53 +579,35 @@ serve(async (req: Request) => {
 
         console.log("Lifetime checkout session created:", {
           id: session.id,
-          customerId,
-          url: session.url,
         });
 
         // Persist nonce keyed to the Stripe Checkout Session ID.
-        try {
-          const { error: verificationPersistError } = await supabase
-            .from("stripe_checkout_session_verifications")
-            .upsert(
-              {
-                session_id: session.id,
-                user_id: userId,
-                nonce: verificationNonce,
-                plan,
-              },
-              {
-                onConflict: "session_id",
-              },
-            );
-
-          if (verificationPersistError) {
-            reportCreateCheckoutSessionError(
-              "persist_verification_nonce",
-              verificationPersistError,
-              {
+        const verificationPersisted =
+          await persistCheckoutSessionVerificationOrExpire({
+            sessionId: session.id,
+            persist: () =>
+              supabase.from("stripe_checkout_session_verifications").upsert(
+                {
+                  session_id: session.id,
+                  user_id: userId,
+                  nonce: verificationNonce,
+                  plan,
+                },
+                {
+                  onConflict: "session_id",
+                },
+              ),
+            expire: (sessionId) => stripe.checkout.sessions.expire(sessionId),
+            reportError: (phase, error) =>
+              reportCreateCheckoutSessionError(phase, error, {
                 sessionId: session.id,
-                userId,
                 plan,
                 mode: "payment",
-              },
-            );
-            console.error(
-              "Failed to persist stripe checkout session verification nonce:",
-              verificationPersistError,
-            );
-          }
-        } catch (e) {
-          reportCreateCheckoutSessionError("persist_verification_nonce", e, {
-            sessionId: session.id,
-            userId,
-            plan,
-            mode: "payment",
+              }),
           });
-          console.error(
-            "Failed to persist stripe checkout session verification nonce:",
-            e,
-          );
+
+        if (!verificationPersisted) {
+          return checkoutVerificationPersistenceErrorResponse(corsHeaders);
         }
 
         return new Response(
@@ -664,11 +625,9 @@ serve(async (req: Request) => {
 
       // RECURRING PLANS (Plus, Premium): Use subscription mode
       console.log("Creating SUBSCRIPTION checkout session:", {
-        userId,
         plan,
         billingInterval,
-        priceId,
-        promoCode,
+        hasPromoCode: Boolean(promoCode),
       });
 
       // If promo code provided, look up the Stripe promotion code ID
@@ -684,16 +643,16 @@ serve(async (req: Request) => {
 
           if (promoCodes.data.length > 0) {
             subscriptionPromotionCodeId = promoCodes.data[0].id;
-            console.log("Found promotion code for subscription:", {
-              code: promoCode,
-              id: subscriptionPromotionCodeId,
-            });
+            console.log(
+              "Found promotion code for checkout-by-email subscription",
+            );
           } else {
-            console.error("Promotion code not found or inactive:", promoCode);
+            console.error("Promotion code not found or inactive");
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
-                details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                details:
+                  `The promotion code '${promoCode}' is not valid or has expired.`,
               }),
               {
                 status: 400,
@@ -702,7 +661,7 @@ serve(async (req: Request) => {
             );
           }
         } catch (promoError) {
-          console.error("Error looking up promotion code:", promoError);
+          console.error("Error looking up promotion code");
           return new Response(
             JSON.stringify({
               error: "Invalid promotion code",
@@ -805,8 +764,7 @@ serve(async (req: Request) => {
           stripeErr?.message?.includes("customer")
         ) {
           console.log(
-            "Customer not found during checkout, recreating:",
-            customerId,
+            "Customer not found during checkout, recreating checkout-by-email customer",
           );
 
           const newCustomer = await createCustomerWithRetry(stripe, {
@@ -841,54 +799,36 @@ serve(async (req: Request) => {
 
       console.log("Checkout session created:", {
         id: session.id,
-        customerId,
-        url: session.url,
       });
 
       // Persist a nonce keyed to the Stripe Checkout Session ID.
       // This allows verify-payment to be called by logged-out users safely.
-      try {
-        const { error: verificationPersistError } = await supabase
-          .from("stripe_checkout_session_verifications")
-          .upsert(
-            {
-              session_id: session.id,
-              user_id: userId,
-              nonce: verificationNonce,
-              plan,
-            },
-            {
-              onConflict: "session_id",
-            },
-          );
-
-        if (verificationPersistError) {
-          reportCreateCheckoutSessionError(
-            "persist_verification_nonce",
-            verificationPersistError,
-            {
+      const verificationPersisted =
+        await persistCheckoutSessionVerificationOrExpire({
+          sessionId: session.id,
+          persist: () =>
+            supabase.from("stripe_checkout_session_verifications").upsert(
+              {
+                session_id: session.id,
+                user_id: userId,
+                nonce: verificationNonce,
+                plan,
+              },
+              {
+                onConflict: "session_id",
+              },
+            ),
+          expire: (sessionId) => stripe.checkout.sessions.expire(sessionId),
+          reportError: (phase, error) =>
+            reportCreateCheckoutSessionError(phase, error, {
               sessionId: session.id,
-              userId,
               plan,
               mode: "subscription",
-            },
-          );
-          console.error(
-            "Failed to persist stripe checkout session verification nonce:",
-            verificationPersistError,
-          );
-        }
-      } catch (e) {
-        reportCreateCheckoutSessionError("persist_verification_nonce", e, {
-          sessionId: session.id,
-          userId,
-          plan,
-          mode: "subscription",
+            }),
         });
-        console.error(
-          "Failed to persist stripe checkout session verification nonce:",
-          e,
-        );
+
+      if (!verificationPersisted) {
+        return checkoutVerificationPersistenceErrorResponse(corsHeaders);
       }
 
       // Return session details

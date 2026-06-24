@@ -211,6 +211,26 @@ function PerformancePage() {
         compareRange.start,
         compareRange.end,
       ),
+      premiumMonthlyCurrent: sumTrendByDateRange(
+        subscriptionAnalytics.premiumMonthlyActive.trend,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+      premiumMonthlyCompare: sumTrendByDateRange(
+        subscriptionAnalytics.premiumMonthlyActive.trend,
+        compareRange.start,
+        compareRange.end,
+      ),
+      premiumYearlyCurrent: sumTrendByDateRange(
+        subscriptionAnalytics.premiumYearlyActive.trend,
+        normalizedRange.start,
+        normalizedRange.end,
+      ),
+      premiumYearlyCompare: sumTrendByDateRange(
+        subscriptionAnalytics.premiumYearlyActive.trend,
+        compareRange.start,
+        compareRange.end,
+      ),
       lifetimeCurrent: sumTrendByDateRange(
         subscriptionAnalytics.lifetimeActive.trend,
         normalizedRange.start,
@@ -645,7 +665,7 @@ function PerformancePage() {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SubscriptionMetricCard
-                title="Monthly Active"
+                title="Plus Monthly Active"
                 value={subscriptionTotals.monthlyCurrent}
                 trend={filterTrendByDateRange(
                   subscriptionAnalytics.monthlyActive.trend,
@@ -661,7 +681,7 @@ function PerformancePage() {
                 icon={<Calendar className="h-4 w-4" />}
               />
               <SubscriptionMetricCard
-                title="Yearly Active"
+                title="Plus Yearly Active"
                 value={subscriptionTotals.yearlyCurrent}
                 trend={filterTrendByDateRange(
                   subscriptionAnalytics.yearlyActive.trend,
@@ -675,6 +695,38 @@ function PerformancePage() {
                 providers={subscriptionAnalytics.yearlyActive.providers}
                 color="#8B5CF6"
                 icon={<CalendarDays className="h-4 w-4" />}
+              />
+              <SubscriptionMetricCard
+                title="Premium Monthly Active"
+                value={subscriptionTotals.premiumMonthlyCurrent}
+                trend={filterTrendByDateRange(
+                  subscriptionAnalytics.premiumMonthlyActive.trend,
+                  normalizedRange.start,
+                  normalizedRange.end,
+                )}
+                changePercent={calculateChangePercent(
+                  subscriptionTotals.premiumMonthlyCurrent,
+                  subscriptionTotals.premiumMonthlyCompare,
+                )}
+                providers={subscriptionAnalytics.premiumMonthlyActive.providers}
+                color="#D97706"
+                icon={<BadgeCheck className="h-4 w-4" />}
+              />
+              <SubscriptionMetricCard
+                title="Premium Yearly Active"
+                value={subscriptionTotals.premiumYearlyCurrent}
+                trend={filterTrendByDateRange(
+                  subscriptionAnalytics.premiumYearlyActive.trend,
+                  normalizedRange.start,
+                  normalizedRange.end,
+                )}
+                changePercent={calculateChangePercent(
+                  subscriptionTotals.premiumYearlyCurrent,
+                  subscriptionTotals.premiumYearlyCompare,
+                )}
+                providers={subscriptionAnalytics.premiumYearlyActive.providers}
+                color="#A855F7"
+                icon={<BadgeCheck className="h-4 w-4" />}
               />
               <SubscriptionMetricCard
                 title="Lifetime Active"

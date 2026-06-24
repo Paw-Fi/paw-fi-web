@@ -8,11 +8,11 @@
  * - STRIPE_MONTHLY_PLUS_PLAN_ID (or STRIPE_PLUS_MONTHLY_PRICE_ID)
  * - STRIPE_YEARLY_PLUS_PLAN_ID (or STRIPE_PLUS_YEARLY_PRICE_ID)
  * - STRIPE_LIFETIME_PRICE_ID (one-time payment, no recurring)
- * - STRIPE_MONTHLY_PREMIUM_PLAN_ID (optional - Premium not yet available)
- * - STRIPE_YEARLY_PREMIUM_PLAN_ID (optional - Premium not yet available)
+ * - STRIPE_MONTHLY_PREMIUM_PLAN_ID
+ * - STRIPE_YEARLY_PREMIUM_PLAN_ID
  */
 
-import { PlanType, BillingInterval } from "./subscription-constants.ts";
+import { BillingInterval, PlanType } from "./subscription-constants.ts";
 
 interface PriceConfig {
   monthly: string;
@@ -23,8 +23,43 @@ interface SubscriptionPrices {
   free: null;
   plus: PriceConfig;
   lifetime: string; // One-time payment price ID
-  premium?: PriceConfig;
+  premium: PriceConfig;
 }
+
+function arePremiumPriceIdsConfigured(prices: SubscriptionPrices): boolean {
+  return Boolean(prices.premium.monthly && prices.premium.yearly);
+}
+
+type StripeSubscriptionPriceSource = {
+  metadata?: Record<string, string | null | undefined> | null;
+  items?: {
+    data?: Array<
+      {
+        price?: {
+          id?: string | null;
+        } | null;
+      } | null
+    >;
+  } | null;
+};
+
+type StripeInvoicePriceSource = {
+  metadata?: Record<string, string | null | undefined> | null;
+  lines?: {
+    data?: Array<
+      {
+        price?: {
+          id?: string | null;
+        } | null;
+        pricing?: {
+          price_details?: {
+            price?: string | null;
+          } | null;
+        } | null;
+      } | null
+    >;
+  } | null;
+};
 
 /**
  * Get subscription prices from environment variables
@@ -34,12 +69,10 @@ export function getSubscriptionPrices(): SubscriptionPrices {
   return {
     free: null,
     plus: {
-      monthly:
-        Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
+      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_MONTHLY_PRICE_ID") ||
         "",
-      yearly:
-        Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
+      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_YEARLY_PRICE_ID") ||
         "",
     },
@@ -99,8 +132,20 @@ export function getPriceId(plan: PlanType, interval?: BillingInterval): string {
     throw new Error(`Billing interval is required for plan "${plan}"`);
   }
 
-  const recurringPrices =
-    plan === "plus" ? prices.plus : plan === "premium" ? prices.premium : null;
+  if (plan === "premium") {
+    if (!arePremiumPriceIdsConfigured(prices)) {
+      throw new Error(
+        "Premium price IDs are not fully configured. " +
+          "Please set STRIPE_MONTHLY_PREMIUM_PLAN_ID and STRIPE_YEARLY_PREMIUM_PLAN_ID",
+      );
+    }
+  }
+
+  const recurringPrices = plan === "plus"
+    ? prices.plus
+    : plan === "premium"
+    ? prices.premium
+    : null;
 
   const priceId = recurringPrices?.[interval] || "";
 
@@ -163,10 +208,14 @@ export function getAllPriceIds(): string[] {
  * Check if all required price IDs are configured
  */
 export function areAllPriceIdsConfigured(): boolean {
-  // Required: Plus (2 intervals) + Lifetime (1 one-time) = 3.
-  // Premium is optional until launched.
   const prices = getSubscriptionPrices();
-  return Boolean(prices.plus.monthly && prices.plus.yearly && prices.lifetime);
+  return Boolean(
+    prices.plus.monthly &&
+      prices.plus.yearly &&
+      prices.premium.monthly &&
+      prices.premium.yearly &&
+      prices.lifetime,
+  );
 }
 
 /**
@@ -175,8 +224,10 @@ export function areAllPriceIdsConfigured(): boolean {
  * NOTE: Lifetime plan returns null for interval since it's one-time
  */
 export function getPlanFromPriceId(
-  priceId: string,
+  priceId: string | null | undefined,
 ): { plan: PlanType; interval: BillingInterval | null } | null {
+  if (!priceId) return null;
+
   const prices = getSubscriptionPrices();
 
   // Check if it's the Lifetime plan (one-time payment)
@@ -199,6 +250,29 @@ export function getPlanFromPriceId(
         };
       }
     }
+  }
+
+  return null;
+}
+
+export function resolveSubscriptionPlanFromPrice(
+  subscription: StripeSubscriptionPriceSource,
+): { plan: PlanType; interval: BillingInterval | null } | null {
+  for (const item of subscription.items?.data ?? []) {
+    const planInfo = getPlanFromPriceId(item?.price?.id);
+    if (planInfo) return planInfo;
+  }
+
+  return null;
+}
+
+export function resolveInvoicePlanFromLinePrices(
+  invoice: StripeInvoicePriceSource,
+): { plan: PlanType; interval: BillingInterval | null } | null {
+  for (const line of invoice.lines?.data ?? []) {
+    const priceId = line?.price?.id || line?.pricing?.price_details?.price;
+    const planInfo = getPlanFromPriceId(priceId);
+    if (planInfo) return planInfo;
   }
 
   return null;
