@@ -58,7 +58,7 @@ export function ProtectedRouteSubscription({
   }
 
   if (!user) {
-    return <Navigate to="/onboarding" search={{ q: "" }} />;
+    return <Navigate to="/login" search={{ redirect: undefined }} />;
   }
 
   return <>{children}</>;

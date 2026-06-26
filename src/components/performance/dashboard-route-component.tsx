@@ -485,7 +485,7 @@ export function Dashboard() {
 
         // 3. CRITICAL FIX: Navigate FIRST, then clear cache
         // This prevents race condition where new route tries to fetch cleared queries
-        await navigate({ to: "/" });
+        await navigate({ to: "/login", search: { redirect: undefined } });
 
         // 4. Clear query cache AFTER navigation completes
         // Use setTimeout to ensure navigation finishes before cache clear
