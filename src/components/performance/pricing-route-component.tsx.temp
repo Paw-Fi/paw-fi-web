@@ -1,7 +1,7 @@
+import { useState, useEffect } from "react";
 import { Variants, motion, AnimatePresence } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
-import { useState, useEffect } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
@@ -51,7 +51,7 @@ function BillingToggle({
   onChange: (yearly: boolean) => void;
 }) {
   return (
-    <div className="border-border/40 bg-card/50 mx-auto flex w-fit items-center rounded-full border p-1.5 shadow-sm backdrop-blur-md">
+    <div className="mx-auto flex w-fit items-center rounded-full border border-border/40 bg-card/50 p-1.5 shadow-sm backdrop-blur-md">
       <button
         onClick={() => onChange(false)}
         className={classNames(
@@ -64,7 +64,7 @@ function BillingToggle({
         {!isYearly && (
           <motion.div
             layoutId="billing-toggle-bg"
-            className="border-border/30 bg-background absolute inset-0 rounded-full border shadow-md"
+            className="absolute inset-0 rounded-full border border-border/30 bg-background shadow-md"
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           />
         )}
@@ -82,12 +82,12 @@ function BillingToggle({
         {isYearly && (
           <motion.div
             layoutId="billing-toggle-bg"
-            className="border-border/30 bg-background absolute inset-0 rounded-full border shadow-md"
+            className="absolute inset-0 rounded-full border border-border/30 bg-background shadow-md"
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           />
         )}
         <span className="relative z-10">Yearly</span>
-        <span className="bg-primary/10 text-primary relative z-10 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase">
+        <span className="relative z-10 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-primary uppercase">
           Save 40%
         </span>
       </button>
@@ -119,41 +119,41 @@ function PricingCard({
   return (
     <div className="relative flex w-full flex-col">
       {isPopular && (
-        <div className="from-primary/30 absolute inset-0 -z-10 rounded-[2rem] bg-gradient-to-br to-purple-500/30 opacity-60 blur-2xl" />
+        <div className="absolute inset-0 -z-10 rounded-[2rem] bg-gradient-to-br from-primary/30 to-purple-500/30 blur-2xl opacity-60" />
       )}
       <div
         className={classNames(
           "relative flex flex-1 flex-col rounded-[2rem] p-8 transition-all duration-300 hover:-translate-y-1 sm:p-10",
           isPopular
-            ? "border-primary bg-card/80 border-2 shadow-2xl backdrop-blur-2xl"
-            : "border-border/50 bg-card/40 hover:bg-card/50 border-2 shadow-lg backdrop-blur-xl hover:shadow-xl",
+            ? "border-2 border-primary bg-card/80 shadow-2xl backdrop-blur-2xl"
+            : "border border-border/50 bg-card/40 shadow-lg backdrop-blur-xl hover:bg-card/50 hover:shadow-xl",
         )}
       >
         {isPopular && (
-          <div className="absolute -top-4 right-0 left-0 flex justify-center">
-            <div className="bg-primary text-primary-foreground flex items-center gap-1.5 rounded-full px-4 py-1 text-xs font-bold tracking-widest uppercase shadow-lg">
+          <div className="absolute -top-4 left-0 right-0 flex justify-center">
+            <div className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1 text-xs font-bold tracking-widest text-primary-foreground shadow-lg uppercase">
               <Sparkles className="h-3.5 w-3.5" />
               Most Popular
             </div>
           </div>
         )}
 
-        <div className="mb-8 flex min-h-[96px] flex-col justify-start">
-          <h3 className="text-foreground text-2xl font-extrabold tracking-tight">
+        <div className="mb-6 flex-1">
+          <h3 className="text-2xl font-extrabold tracking-tight text-foreground">
             {title}
           </h3>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         </div>
 
-        <div className="mb-8 flex min-h-[116px] flex-col justify-start gap-1">
+        <div className="mb-8 flex flex-col gap-1">
           <div className="flex items-baseline gap-1">
-            <span className="text-foreground text-5xl font-black tracking-tighter sm:text-6xl">
+            <span className="text-5xl font-black tracking-tighter text-foreground sm:text-6xl">
               {price}
             </span>
             {period && (
-              <span className="text-muted-foreground text-base font-semibold">
+              <span className="text-base font-semibold text-muted-foreground">
                 {period}
               </span>
             )}
@@ -166,7 +166,7 @@ function PricingCard({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-muted-foreground/60 text-sm font-medium line-through"
+                  className="text-sm font-medium text-muted-foreground/60 line-through"
                 >
                   Regularly {comparePrice}
                 </motion.span>
@@ -180,9 +180,9 @@ function PricingCard({
           onClick={onSubscribe}
           variant={isPopular ? "default" : "outline"}
           className={classNames(
-            "group relative w-full overflow-hidden rounded-full py-6 text-base font-bold transition-all",
+            "group relative mb-10 w-full overflow-hidden rounded-full py-6 text-base font-bold transition-all",
             isPopular
-              ? "shadow-primary/25 hover:shadow-primary/40 shadow-xl"
+              ? "shadow-xl shadow-primary/25 hover:shadow-primary/40"
               : "bg-background/50 hover:bg-muted",
           )}
         >
@@ -195,28 +195,31 @@ function PricingCard({
           )}
         </Button>
 
-        {features.length > 0 && (
-          <div className="border-border/50 mt-8 border-t pt-6">
-            {isPopular && (
-              <p className="text-foreground mb-4 text-left text-sm font-bold">
-                Everything in Plus, and
-              </p>
-            )}
-            <ul className="space-y-3">
-              {features.map((feature) => (
-                <li
-                  key={feature}
-                  className="flex gap-3 text-sm leading-relaxed"
-                >
-                  <Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
-                  <span className="text-muted-foreground font-medium">
-                    {feature}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <div className="space-y-4">
+          <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+            Includes:
+          </p>
+          {features.map((feature, idx) => (
+            <div key={idx} className="flex items-start gap-3">
+              <div
+                className={classNames(
+                  "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                  isPopular ? "bg-primary/20" : "bg-primary/10",
+                )}
+              >
+                <Check
+                  className={classNames(
+                    "h-3.5 w-3.5",
+                    isPopular ? "text-primary" : "text-primary/70",
+                  )}
+                />
+              </div>
+              <span className="text-sm font-medium leading-snug text-foreground/80">
+                {feature}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -227,13 +230,6 @@ export function PricingRouteComponent() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isYearly, setIsYearly] = useState(true);
-
-  type PlanType =
-    | "plus_monthly"
-    | "plus_yearly"
-    | "premium_monthly"
-    | "premium_yearly"
-    | "lifetime";
 
   useEffect(() => {
     setIsLoading(false);
@@ -319,21 +315,9 @@ export function PricingRouteComponent() {
     ],
   });
 
-  const plusChecklistFeatures = [
-    "AI expense capture",
-    "Messaging app capture",
-    "Email receipt import",
-    "Shared budgets",
-    "Standard support",
-  ];
-
-  const premiumChecklistFeatures = [
-    "Bank sync",
-    "Multiple currencies",
-    "Currency converter",
-    "Live exchange rates",
-    "Priority support",
-  ];
+  const getFeaturesArray = (tier: any) => {
+    return tier?.features?.map((f: any) => f.text || f) || [];
+  };
 
   const faqData = [
     {
@@ -367,6 +351,13 @@ export function PricingRouteComponent() {
         "Discounts may be offered during limited-time promotions. Join our Discord or contact hello@moneko.io for current options.",
     },
   ];
+
+  type PlanType =
+    | "plus_monthly"
+    | "plus_yearly"
+    | "premium_monthly"
+    | "premium_yearly"
+    | "lifetime";
 
   const handleSubscribe = async (planId: PlanType) => {
     try {
@@ -448,14 +439,14 @@ export function PricingRouteComponent() {
           <div className="absolute inset-0 z-0">
             <DotPattern />
           </div>
-          <div className="bg-card/90 border-border/50 relative z-10 mx-auto w-full max-w-[90%] rounded-2xl border p-5 shadow-2xl backdrop-blur md:max-w-[70%] lg:max-w-[80%]">
+          <div className="relative z-10 mx-auto w-full max-w-[90%] rounded-2xl border border-border/50 bg-card/90 p-5 shadow-2xl backdrop-blur md:max-w-[70%] lg:max-w-[80%]">
             <div className="mb-4 flex items-end justify-end gap-3">
-              <div className="bg-primary text-primary-foreground rounded-2xl rounded-tr-sm p-3 text-sm">
+              <div className="rounded-2xl rounded-tr-sm bg-primary p-3 text-sm text-primary-foreground">
                 Can I afford a new car next month?
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="bg-muted text-foreground rounded-2xl rounded-tl-sm p-3 text-sm">
+              <div className="rounded-2xl rounded-tl-sm bg-muted p-3 text-sm text-foreground">
                 Based on your pockets, you can afford a $400/mo payment if we
                 reallocate the 'Dining Out' pocket.
               </div>
@@ -472,7 +463,7 @@ export function PricingRouteComponent() {
       className: "lg:col-span-1",
       Icon: Users,
       component: (
-        <div className="bg-background absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden bg-background">
           <OrbitingCircles duration={15} radius={50} speed={1}>
             <img
               src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=b6e3f4"
@@ -487,8 +478,8 @@ export function PricingRouteComponent() {
               className="h-10 w-10 rounded-full shadow-md"
             />
           </OrbitingCircles>
-          <div className="bg-primary/20 border-primary outline-border z-10 flex h-16 w-16 items-center justify-center space-x-1 rounded-full border-2 shadow-lg outline outline-1">
-            <Users className="text-primary h-8 w-8" />
+          <div className="z-10 flex h-16 w-16 items-center justify-center space-x-1 rounded-full border-2 border-primary bg-primary/20 shadow-lg outline outline-1 outline-border">
+            <Users className="h-8 w-8 text-primary" />
           </div>
         </div>
       ),
@@ -504,13 +495,13 @@ export function PricingRouteComponent() {
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-emerald-500/10 to-transparent">
           <div className="group/mock relative">
             <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 opacity-25 blur transition duration-500 group-hover/mock:opacity-75"></div>
-            <div className="bg-card relative flex items-center gap-3 rounded-xl border p-4">
+            <div className="relative flex items-center gap-3 rounded-xl border bg-card p-4">
               <div className="rounded-full bg-[#25D366] p-2">
                 <Check className="h-4 w-4 text-white" />
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">Coffee 4.50</span>
-                <span className="text-muted-foreground text-xs">
+                <span className="text-xs text-muted-foreground">
                   Logged to "Dining" pocket
                 </span>
               </div>
@@ -528,7 +519,7 @@ export function PricingRouteComponent() {
       <HomeHeader />
 
       <div className="min-h-screen pb-20">
-        {/* Unified Pricing Hero Section */}
+        {/* Apple-style Pricing Hero Section */}
         <section className="relative mx-auto max-w-7xl px-4 pt-20 pb-16 md:pt-32 md:pb-24">
           <motion.div
             initial="hidden"
@@ -538,7 +529,7 @@ export function PricingRouteComponent() {
           >
             <motion.div
               variants={itemVariants}
-              className="bg-primary/10 text-primary mb-8 inline-flex items-center gap-2 rounded-full px-3 py-1.5"
+              className="mb-8 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-primary"
             >
               <ShieldCheck className="h-4 w-4" />
               <span className="text-sm font-semibold tracking-wide">
@@ -548,21 +539,21 @@ export function PricingRouteComponent() {
 
             <motion.h1
               variants={itemVariants}
-              className="text-foreground mb-6 max-w-4xl text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl"
+              className="mb-6 max-w-4xl text-5xl font-extrabold tracking-tight text-foreground sm:text-6xl lg:text-7xl"
             >
               One simple app. <br className="hidden sm:block" />
-              <span className="from-primary bg-gradient-to-r to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                 Master your money.
               </span>
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
-              className="text-muted-foreground mb-12 max-w-2xl text-lg leading-relaxed sm:text-xl"
+              className="mb-12 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl"
             >
               Stop manually tracking every penny in spreadsheets. Moneko
-              automates the heavy lifting with AI, giving you the intentionality
-              of zero-based budgeting.
+              automates the heavy lifting with AI, giving you the
+              intentionality of zero-based budgeting.
             </motion.p>
 
             <motion.div variants={itemVariants} className="w-full">
@@ -572,7 +563,7 @@ export function PricingRouteComponent() {
             {/* Pricing Cards Grid */}
             <motion.div
               variants={itemVariants}
-              className="mx-auto mt-16 grid w-full max-w-4xl items-stretch gap-8 md:grid-cols-2 xl:gap-10"
+              className="mx-auto mt-16 grid w-full max-w-6xl gap-8 md:grid-cols-2 xl:grid-cols-3 xl:gap-10 items-stretch"
             >
               <PricingCard
                 title="Plus"
@@ -584,7 +575,16 @@ export function PricingRouteComponent() {
                     ? pyTier.compareAtPriceMonthly
                     : pmTier.compareAtPriceMonthly
                 }
-                features={plusChecklistFeatures}
+                features={
+                  getFeaturesArray(isYearly ? pyTier : pmTier).length > 0
+                    ? getFeaturesArray(isYearly ? pyTier : pmTier)
+                    : [
+                        "Log expenses your way (Text, Photo, Voice)",
+                        "Stay in control with Pockets",
+                        "Track spending across currencies",
+                        "Budget in WhatsApp",
+                      ]
+                }
                 buttonText="Get Plus"
                 onSubscribe={() =>
                   handleSubscribe(isYearly ? "plus_yearly" : "plus_monthly")
@@ -601,7 +601,16 @@ export function PricingRouteComponent() {
                     ? pryTier.compareAtPriceMonthly
                     : prmTier.compareAtPriceMonthly
                 }
-                features={premiumChecklistFeatures}
+                features={
+                  getFeaturesArray(isYearly ? pryTier : prmTier).length > 0
+                    ? getFeaturesArray(isYearly ? pryTier : prmTier)
+                    : [
+                        "Everything in Plus",
+                        "Proactive AI Coaching",
+                        "Household Sync for partners",
+                        "AI Scenario Planning",
+                      ]
+                }
                 isPopular={true}
                 buttonText="Get Premium"
                 onSubscribe={() =>
@@ -610,6 +619,44 @@ export function PricingRouteComponent() {
                   )
                 }
               />
+
+              <PricingCard
+                title="Lifetime"
+                description="One-time payment. Enjoy all Premium features and future updates forever."
+                price={lTier.priceMonthly}
+                period="one-time"
+                comparePrice="$150.00"
+                features={
+                  getFeaturesArray(lTier).length > 0
+                    ? getFeaturesArray(lTier)
+                    : [
+                        "All Premium features included",
+                        "Pay once, use forever",
+                        "Exclusive early access to new features",
+                        "Priority support",
+                      ]
+                }
+                buttonText="Get Lifetime"
+                onSubscribe={() => handleSubscribe("lifetime")}
+              />
+            </motion.div>
+
+            {/* Discord Promo for Lifetime */}
+            <motion.div
+              variants={itemVariants}
+              className="mx-auto mt-12 flex w-full max-w-xl justify-center px-4"
+            >
+              <div
+                className="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/5 px-6 py-4 transition-all duration-200 hover:bg-[#5865F2]/10"
+                onClick={() => window.open(DISCORD_URL, "_blank")}
+                role="button"
+                tabIndex={0}
+              >
+                <DiscordLogoIcon className="h-6 w-6 text-[#5865F2]" />
+                <span className="text-sm font-bold text-[#5865F2] dark:text-[#8ea1e1]">
+                  Join Discord for an exclusive Lifetime discount code
+                </span>
+              </div>
             </motion.div>
           </motion.div>
         </section>
@@ -630,17 +677,18 @@ export function PricingRouteComponent() {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={containerVariants}
-          className="mx-auto mt-8 mb-16 max-w-7xl px-4 md:mb-24"
+          className="mx-auto mt-16 mb-16 max-w-7xl px-4 md:mt-24 md:mb-24"
         >
-          <div className="mb-10 w-full text-center lg:text-left">
-            <h2 className="mb-3 text-2xl font-bold tracking-tight md:text-3xl">
+          <div className="mb-12 w-full text-center lg:text-left">
+            <h2 className="mb-4 text-3xl font-extrabold tracking-tight md:text-4xl">
               Premium Features
             </h2>
-            <p className="text-muted-foreground mx-auto max-w-xl text-lg lg:mx-0">
-              Experience the future of budgeting with cutting-edge tools.
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground lg:mx-0">
+              Experience the future of budgeting with cutting-edge tools
+              designed to save you time.
             </p>
           </div>
-          <div className="bg-card border-border/50 min-h-[800px] overflow-hidden rounded-3xl border shadow-2xl lg:min-h-[500px]">
+          <div className="min-h-[800px] overflow-hidden rounded-3xl border border-border/50 bg-card shadow-2xl lg:min-h-[500px]">
             <BentoGrid className="h-full lg:grid-rows-2">
               {bentoFeatures.map((feature) => (
                 <BentoCard key={feature.name} {...feature} />
@@ -649,7 +697,7 @@ export function PricingRouteComponent() {
           </div>
         </motion.div>
 
-        {/* Deep Dive Feature Comparison */}
+        {/* Feature Highlights List */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -659,13 +707,40 @@ export function PricingRouteComponent() {
         >
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-extrabold tracking-tight md:text-4xl">
-              Compare Plans
+              Everything you get with Pro
             </h2>
-            <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-              A side-by-side look at what Moneko can do for you.
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+              A complete budgeting toolkit designed to save you time and keep
+              your finances on track.
             </p>
           </div>
-          <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
+          <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-2">
+            {[
+              "Log expenses your way. Add spending by text, photo, voice, or email in seconds.",
+              "Forward receipts, done. Email receipts are automatically captured and logged for you.",
+              "Budget in WhatsApp. Add transactions and get summaries without leaving chat.",
+              "Stay in control with Pockets. Use simple envelope-style budgeting to set limits and save with purpose.",
+              "Built for solo or shared finances. Manage your own budget or plan together as a household.",
+              "One plan for the whole household. Everyone stays aligned under a single subscription.",
+              "Stay on top of bills and income. Track recurring payments and paydays with less manual work.",
+              "See the impact before you decide. Use AI-powered scenario planning to explore what-if decisions.",
+              "Track spending across currencies. Keep your budget clear, even when money moves globally.",
+              "Bank sync via Plaid, coming soon. Auto-import transactions when direct bank connections launch.",
+            ].map((feature, idx) => (
+              <motion.div
+                key={idx}
+                variants={itemVariants}
+                className="flex items-start gap-4 rounded-2xl border border-border/50 bg-card/40 p-5 backdrop-blur-md transition-colors hover:bg-card/60"
+              >
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Check className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-base font-medium leading-relaxed text-foreground/90">
+                  {feature}
+                </span>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
 
         {/* FAQs */}
@@ -687,21 +762,21 @@ export function PricingRouteComponent() {
           viewport={{ once: true, margin: "-50px" }}
           variants={itemVariants}
         >
-          <Card className="mx-auto max-w-2xl border-0 bg-transparent text-center shadow-none">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-foreground text-3xl font-bold">
+          <Card className="mx-auto max-w-3xl border-0 bg-transparent text-center shadow-none">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
                 Still have questions?
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription className="text-muted-foreground mb-8 text-lg">
+              <CardDescription className="mb-10 text-lg text-muted-foreground">
                 We're here to help you make the best decision for your financial
                 future.
               </CardDescription>
               <Button
                 size="lg"
                 variant="outline"
-                className="bg-background hover:bg-muted rounded-full border-2 px-8 font-medium"
+                className="rounded-full border-2 bg-background px-10 py-6 text-base font-bold transition-transform hover:scale-105 hover:bg-muted"
                 asChild
               >
                 <a
@@ -718,15 +793,15 @@ export function PricingRouteComponent() {
 
       {/* Global Loading Overlay */}
       {isLoading && (
-        <div className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
-          <Card className="border-none p-8 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md">
+          <Card className="border-border/50 bg-card/90 p-10 shadow-2xl backdrop-blur-xl">
             <CardContent className="flex flex-col items-center gap-6 p-0">
               <div className="relative">
-                <div className="border-primary/20 absolute inset-0 animate-pulse rounded-full border-4" />
-                <Loader2 className="text-primary relative h-12 w-12 animate-spin" />
+                <div className="absolute inset-0 animate-pulse rounded-full border-4 border-primary/20" />
+                <Loader2 className="relative h-14 w-14 animate-spin text-primary" />
               </div>
-              <p className="text-foreground animate-pulse text-sm font-medium">
-                Processing your request...
+              <p className="animate-pulse text-base font-bold text-foreground">
+                Preparing your checkout...
               </p>
             </CardContent>
           </Card>

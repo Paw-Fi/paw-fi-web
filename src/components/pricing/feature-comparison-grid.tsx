@@ -7,87 +7,134 @@ interface FeatureComparisonGridProps {
   prefersReducedMotion?: boolean;
 }
 
-export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureComparisonGridProps) {
-  const plans = Object.values(planData);
+interface ComparisonValue {
+  included: boolean | null;
+  label?: string;
+}
 
-  const features = [
+interface ComparisonFeature {
+  category: string;
+  description: string;
+  values: Record<string, ComparisonValue>;
+}
+
+export function FeatureComparisonGrid({
+  prefersReducedMotion,
+}: FeatureComparisonGridProps) {
+  // Only show plus and premium plans
+  const plans = [planData.plus, planData.premium];
+
+  const features: ComparisonFeature[] = [
     {
-      category: "Fast Expense Capture",
-      key: "fastCapture" as const,
-      description: "Log expenses quickly via text, photo, or voice"
+      category: "AI Expense Capture",
+      description: "Log expenses with AI-assisted capture workflows",
+      values: {
+        plus: { included: true },
+        premium: { included: true },
+      },
     },
     {
-      category: "Pockets (Envelope Budgeting)", 
-      key: "pockets" as const,
-      description: "Allocate each month’s budget into pockets"
+      category: "Messaging App Capture",
+      description: "Capture spending from messaging workflows",
+      values: {
+        plus: { included: true },
+        premium: { included: true },
+      },
     },
     {
-      category: "WhatsApp Assistant",
-      key: "whatsapp" as const,
-      description: "Capture expenses and request summaries from chat"
+      category: "Email Receipt Import",
+      description: "Forward receipts and import expenses automatically",
+      values: {
+        plus: { included: true },
+        premium: { included: true },
+      },
     },
     {
-      category: "Scenario Planning",
-      key: "scenarioPlanning" as const, 
-      description: "Ask “what if?” questions and save insights"
+      category: "Shared Budgets",
+      description: "Plan budgets across personal and shared finances",
+      values: {
+        plus: { included: true },
+        premium: { included: true },
+      },
     },
     {
-      category: "Personal vs Household Modes",
-      key: "personalHousehold" as const,
-      description: "Switch between personal and household dashboards"
+      category: "Bank Sync",
+      description: "Connect accounts and import transactions automatically",
+      values: {
+        plus: { included: false },
+        premium: { included: true },
+      },
     },
     {
-      category: "Recurring Items",
-      key: "recurring" as const,
-      description: "Track repeating bills and income"
+      category: "Multiple Currencies",
+      description: "Track and analyze finances across currencies",
+      values: {
+        plus: { included: false },
+        premium: { included: true },
+      },
     },
     {
-      category: "Multi-currency View",
-      key: "multiCurrency" as const, 
-      description: "Change the currency for charts and budgets"
+      category: "Currency Converter",
+      description: "Convert between supported currencies inside Moneko",
+      values: {
+        plus: { included: false },
+        premium: { included: true },
+      },
     },
     {
-      category: "Home Screen Widgets",
-      key: "homeWidgets" as const,
-      description: "See pockets and quick actions on your device home screen"
-    }
+      category: "Live Exchange Rates",
+      description: "Use up-to-date rates for currency-aware insights",
+      values: {
+        plus: { included: false },
+        premium: { included: true },
+      },
+    },
+    {
+      category: "Customer Support",
+      description: "Get help when you need support",
+      values: {
+        plus: { included: null, label: "Standard" },
+        premium: { included: null, label: "Priority" },
+      },
+    },
   ];
-
 
   const gridVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, staggerChildren: 0.1 }
-    }
+      transition: { duration: 0.5, staggerChildren: 0.1 },
+    },
   };
 
   const rowVariants = {
     hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 }
+    visible: { opacity: 1, x: 0 },
   };
 
   return (
-    <div
-      className="mt-20 overflow-hidden rounded-xl bg-card shadow-sm"    
-    >
-      <div className="bg-subtle-background px-8 py-6">
-        <h3 className="text-xl font-bold text-foreground">Plan Features at a Glance</h3>
-        <p className="text-muted-foreground-color mt-2">Compare what’s included in Starter, Plus, and Lifetime</p>
+    <div className="bg-card mt-20 overflow-hidden rounded-xl shadow-sm">
+      <div className="bg-muted/30 border-border/50 rounded-t-xl border-b px-8 py-6">
+        <h3 className="text-foreground text-xl font-bold">
+          Plan Features at a Glance
+        </h3>
+        <p className="text-muted-foreground mt-2">
+          Compare what’s included in Plus and Premium
+        </p>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-subtle-background">
-              <th className="px-8 py-5 text-left text-sm font-semibold text-foreground">
+            <tr className="bg-muted/10 border-border/50 border-b">
+              <th className="text-foreground px-8 py-5 text-left text-sm font-semibold">
                 Feature
               </th>
               {plans.map((plan) => (
                 <th
                   key={plan.id}
-                  className="px-6 py-5 text-center text-sm font-semibold text-foreground"
+                  className="text-foreground px-6 py-5 text-center text-sm font-semibold"
                 >
                   {plan.title}
                 </th>
@@ -97,48 +144,37 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
           <tbody>
             {features.map((feature, index) => (
               <tr
-                key={feature.key}               
-                className="hover:bg-subtle-background/50 transition-colors duration-150"
+                key={feature.category}
+                className="hover:bg-muted/30 border-border/20 border-b transition-colors duration-150 last:border-0"
               >
                 <td className="px-8 py-4">
-                  <div className="text-sm font-medium text-foreground">
+                  <div className="text-foreground text-sm font-medium">
                     {feature.category}
                   </div>
-                  <div className="text-xs text-muted-foreground-color mt-1">
+                  <div className="text-muted-foreground mt-1 text-xs">
                     {feature.description}
                   </div>
                 </td>
                 {plans.map((plan) => {
-                  const planFeature = plan.featureComparison[feature.key];
+                  const planFeature = feature.values[plan.id];
                   return (
                     <td key={plan.id} className="px-6 py-4 text-center">
-                      {planFeature.isIncluded ? (
+                      {planFeature.included === true ? (
                         <div className="flex flex-col items-center">
                           <FontAwesomeIcon
                             icon={faCheck}
-                            className={`h-5 w-5 ${
-                              planFeature.highlight
-                                ? "text-primary"
-                                : "text-success"
-                            }`}
+                            className="text-primary h-5 w-5"
                           />
-                          {planFeature.limit && (
-                            <span
-                              className={`mt-1 text-xs font-medium ${
-                                planFeature.highlight
-                                  ? "text-primary"
-                                  : "text-muted-foreground-color"
-                              }`}
-                            >
-                              {planFeature.limit}
-                            </span>
-                          )}
                         </div>
-                      ) : (
+                      ) : planFeature.included === false ? (
                         <FontAwesomeIcon
                           icon={faTimes}
-                          className="h-5 w-5 text-muted-foreground-color/50"
+                          className="text-muted-foreground/30 h-5 w-5"
                         />
+                      ) : (
+                        <span className="text-primary text-xs font-semibold">
+                          {planFeature.label}
+                        </span>
                       )}
                     </td>
                   );
