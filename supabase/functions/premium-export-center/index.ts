@@ -222,16 +222,29 @@ Deno.serve(async (req: Request) => {
           corsHeaders,
         );
       }
+      if (!attachment.storage_path.startsWith(`${auth.userId}/`)) {
+        return jsonResponse(
+          { success: false, error: "Attachment not found" },
+          404,
+          corsHeaders,
+        );
+      }
       const { data, error } = await supabase.storage
-        .from(attachment.storage_bucket || "email-import-attachments")
-        .createSignedUrl(attachment.storage_path, 60 * 10);
+        .from("email-import-attachments")
+        .createSignedUrl(attachment.storage_path, 60 * 10, {
+          download: attachment.filename,
+        });
       if (error || !data?.signedUrl) {
         throw error ?? new Error("signed URL missing");
       }
       return jsonResponse(
         {
           success: true,
-          data: { attachment, signedUrl: data.signedUrl, expiresIn: 600 },
+          data: {
+            signedUrl: data.signedUrl,
+            expiresIn: 600,
+            filename: attachment.filename,
+          },
         },
         200,
         corsHeaders,
@@ -429,6 +442,7 @@ async function listAttachments(
     .from("email_import_attachments")
     .select("id, filename, content_type, size_bytes, created_at")
     .eq("user_id", userId)
+    .in("status", ["stored", "linked"])
     .gte("created_at", `${filters.startDate}T00:00:00.000Z`)
     .lte("created_at", `${filters.endDate}T23:59:59.999Z`)
     .order("created_at", { ascending: false });
@@ -450,6 +464,7 @@ async function getOwnAttachment(
     )
     .eq("id", attachmentId)
     .eq("user_id", userId)
+    .in("status", ["stored", "linked"])
     .maybeSingle();
   if (error) throw error;
   return data as EmailAttachmentRow | null;
@@ -818,6 +833,7 @@ async function fetchEmailAttachments(
       "id, storage_bucket, storage_path, filename, content_type, size_bytes, created_at",
     )
     .eq("user_id", userId)
+    .in("status", ["stored", "linked"])
     .gte("created_at", `${filters.startDate}T00:00:00.000Z`)
     .lte("created_at", `${filters.endDate}T23:59:59.999Z`)
     .order("created_at", { ascending: true })

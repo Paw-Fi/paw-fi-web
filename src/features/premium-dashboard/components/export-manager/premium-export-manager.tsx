@@ -60,13 +60,13 @@ export function PremiumExportManager() {
             Data Privacy & Exports
           </h1>
           <span className="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold tracking-wider text-emerald-600 uppercase sm:inline-flex dark:bg-emerald-500/10 dark:text-emerald-400">
-            <ShieldCheck className="h-3.5 w-3.5" /> E2E Encrypted
+            <ShieldCheck className="h-3.5 w-3.5" /> Private Storage
           </span>
         </div>
         <p className="text-muted-foreground mt-2 max-w-2xl">
           Generate tax-ready packages and secure backups of your data. All
-          exports are compiled securely on our isolated infrastructure to ensure
-          absolute privacy.
+          exports are compiled securely on our isolated infrastructure and kept
+          in private storage.
         </p>
       </div>
 
@@ -171,8 +171,8 @@ export function PremiumExportManager() {
               <Lock className="h-3.5 w-3.5 opacity-60" />
             </CardTitle>
             <CardDescription className="text-sm text-slate-300 dark:text-slate-600">
-              Complete snapshot including all original email attachments,
-              end-to-end encrypted.
+              Complete snapshot including all original email attachments from
+              private storage.
             </CardDescription>
           </CardHeader>
           <CardContent className="mt-auto pt-0">

@@ -104,7 +104,7 @@ export function usePremiumExportJobs() {
         );
       if (data?.data?.signedUrl) {
         toast.success("Secure download starting...");
-        window.open(data.data.signedUrl, "_blank");
+        window.open(data.data.signedUrl, "_blank", "noopener,noreferrer");
       } else {
         throw new Error("No secure download link received");
       }
@@ -133,7 +133,7 @@ export function usePremiumExportJobs() {
         );
       if (data?.data?.signedUrl) {
         toast.success("Secure attachment download starting...");
-        window.open(data.data.signedUrl, "_blank");
+        window.open(data.data.signedUrl, "_blank", "noopener,noreferrer");
       } else {
         throw new Error("No secure download link received");
       }

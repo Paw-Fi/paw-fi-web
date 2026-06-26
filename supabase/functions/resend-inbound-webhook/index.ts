@@ -11,7 +11,6 @@ import { sendEmail } from "../shared/email-service.ts";
 import { baseTemplate, renderFooter } from "../shared/email-layout.ts";
 import {
   escapeHtml,
-  formatCurrency,
   pluralize,
   sanitizeSubject,
 } from "../shared/email-utils.ts";
@@ -45,6 +44,7 @@ import {
   sanitizeStorageFilename,
   sha256Hex,
 } from "../shared/premium-storage.ts";
+import { createFollowupEmailBuilder } from "./email-templates/import-followup-email.ts";
 
 const APP_URL = Deno.env.get("APP_URL") || "https://moneko.io";
 const DEFAULT_IMPORT_INBOX_EMAIL = "files@inbound.moneko.io";
@@ -190,6 +190,11 @@ function resolveImportInboxEmails(): string[] {
 const IMPORT_INBOX_EMAILS = resolveImportInboxEmails();
 const PRIMARY_IMPORT_INBOX_EMAIL =
   IMPORT_INBOX_EMAILS[0] || DEFAULT_IMPORT_INBOX_EMAIL;
+const buildFollowupEmail = createFollowupEmailBuilder({
+  appUrl: APP_URL,
+  importInboxEmail: PRIMARY_IMPORT_INBOX_EMAIL,
+  supportEmail: SUPPORT_EMAIL,
+});
 
 function shouldProcessInboundToConfiguredInboxes(
   recipients?: string[] | null,
@@ -932,112 +937,6 @@ function buildUnavailableEmail(params: {
       }),
     ),
     text: `Moneko could not process the files sent from ${senderEmail}. ${reason} To import files, forward them to ${PRIMARY_IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help. Open Moneko settings to configure Email File Import: ${APP_URL}`,
-  };
-}
-
-function buildFollowupEmail(params: {
-  senderEmail: string;
-  subjectLine: string;
-  savedCount: number;
-  duplicateCount: number;
-  failedCount: number;
-  transactions: Array<Record<string, unknown>>;
-  attachmentResults: AttachmentProcessingResult[];
-  retainedAttachmentCount: number;
-  retainedOriginals: boolean;
-}) {
-  const {
-    senderEmail,
-    subjectLine,
-    savedCount,
-    duplicateCount,
-    failedCount,
-    transactions,
-    attachmentResults,
-    retainedAttachmentCount,
-    retainedOriginals,
-  } = params;
-
-  const transactionLines =
-    transactions
-      .slice(0, 30)
-      .map((item) => {
-        const type = item.type === "income" ? "Income" : "Expense";
-        const amount = Number(item.amount ?? 0);
-        const currency =
-          typeof item.currency === "string" ? item.currency : "USD";
-        const category =
-          typeof item.category === "string" ? item.category : "other";
-        const description =
-          typeof item.description === "string" &&
-          item.description.trim().length > 0
-            ? item.description.trim()
-            : typeof item.merchant === "string" &&
-                item.merchant.trim().length > 0
-              ? item.merchant.trim()
-              : "Imported transaction";
-        const date = typeof item.date === "string" ? item.date : "";
-
-        return `<li><strong>${escapeHtml(type)}</strong>: ${escapeHtml(
-          description,
-        )} · ${escapeHtml(category)} · ${escapeHtml(
-          formatCurrency(amount, currency),
-        )}${date ? ` · ${escapeHtml(date)}` : ""}</li>`;
-      })
-      .join("") + (transactions.length > 30 ? "<li>...</li>" : "");
-
-  const attachmentLines = attachmentResults
-    .map(
-      (item) =>
-        `<li>${escapeHtml(item.filename)}: ${
-          item.success
-            ? `${item.itemCount} ${pluralize(
-                item.itemCount,
-                "transaction",
-              )} found`
-            : escapeHtml(item.error || "analysis failed")
-        }</li>`,
-    )
-    .join("");
-
-  const content = `
-    <h1 class="title">Your files were processed</h1>
-    <p class="subtitle">We finished processing the files forwarded from ${escapeHtml(
-      senderEmail,
-    )}.</p>
-    <p><strong>Saved:</strong> ${savedCount} ${pluralize(
-      savedCount,
-      "transaction",
-    )}</p>
-    <p><strong>Duplicates skipped:</strong> ${duplicateCount}</p>
-    <p><strong>Failed:</strong> ${failedCount}</p>
-    ${
-      retainedOriginals
-        ? `<p><strong>Secure originals saved:</strong> ${retainedAttachmentCount}</p>`
-        : ""
-    }
-    <p><strong>Attachment summary</strong></p>
-    <ul>${attachmentLines}</ul>
-    ${
-      transactionLines
-        ? `<p><strong>Saved transactions</strong></p><ul>${transactionLines}</ul>`
-        : ""
-    }
-  `;
-
-  const retentionFooter = retainedOriginals
-    ? "Your original forwarded files were saved securely and are available from your Premium Export Center. Replies are not monitored."
-    : "Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored.";
-
-  return {
-    subject: sanitizeSubject("Moneko import report"),
-    html: baseTemplate(
-      content,
-      renderFooter({
-        customReason: retentionFooter,
-      }),
-    ),
-    text: `Moneko processed files from ${senderEmail}. Import inbox: ${PRIMARY_IMPORT_INBOX_EMAIL}. Saved: ${savedCount}. Duplicates skipped: ${duplicateCount}. Failed: ${failedCount}. ${retentionFooter}; contact ${SUPPORT_EMAIL} if you need help.`,
   };
 }
 
