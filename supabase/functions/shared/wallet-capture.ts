@@ -1,4 +1,8 @@
-import { resolveCurrencyFromOCR } from "./ocr-currency-resolver.ts";
+import {
+  hasAmbiguousCurrencyEvidenceInOCRText,
+  resolveCurrencyFromOCR,
+  resolveSingleStrongCurrencyEvidenceFromOCRText,
+} from "./ocr-currency-resolver.ts";
 
 export interface WalletTransactionLike {
   currency?: string | null;
@@ -10,6 +14,10 @@ export interface WalletTransactionLike {
   transactionDate?: string | null;
   packageName?: string | null;
   sourcePackage?: string | null;
+  accountCurrency?: string | null;
+  currencyEvidenceRaw?: string | null;
+  currencyEvidenceType?: string | null;
+  currencyAmbiguous?: boolean | null;
 }
 
 export interface WalletCaptureScopeResolution {
@@ -55,10 +63,13 @@ export function resolveWalletTransactionCurrency(
 export function resolveWalletCaptureCurrency(params: {
   tx: WalletTransactionLike;
   preferredCurrency?: string | null;
+  accountCurrency?: string | null;
   captureSource?: string | null;
 }): string | null {
   const payloadCurrency = resolveWalletTransactionCurrency(params.tx);
   const preferredCurrency = (params.preferredCurrency || "").trim() || null;
+  const accountCurrency =
+    (params.accountCurrency || params.tx.accountCurrency || "").trim() || null;
   const captureSource = normalizeWalletCaptureSource(params.captureSource);
 
   if (captureSource !== "android_notification_listener") {
@@ -69,6 +80,7 @@ export function resolveWalletCaptureCurrency(params: {
     params.tx.note,
     params.tx.rawMerchant,
     params.tx.merchantName,
+    params.tx.currencyEvidenceRaw,
   ]
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
@@ -79,15 +91,56 @@ export function resolveWalletCaptureCurrency(params: {
     ? normalizedPayloadCurrency.toUpperCase()
     : null;
   const detectedCurrencySymbol = detectedCurrencyCode
-    ? null
-    : normalizedPayloadCurrency || null;
+    ? params.tx.currencyEvidenceRaw || null
+    : params.tx.currencyEvidenceRaw || normalizedPayloadCurrency || null;
+  const fallbackCurrency =
+    accountCurrency || preferredCurrency || payloadCurrency || "USD";
 
   return resolveCurrencyFromOCR({
     detectedCurrencyCode,
     detectedCurrencySymbol,
     rawOcrText,
-    userPreferredCurrency: preferredCurrency || payloadCurrency || "USD",
+    userPreferredCurrency: fallbackCurrency,
   }).finalCurrencyCode;
+}
+
+export function resolveStrongWalletCaptureCurrencyEvidence(
+  tx: WalletTransactionLike,
+): string | null {
+  const rawOcrText = [
+    tx.note,
+    tx.rawMerchant,
+    tx.merchantName,
+    tx.currencyEvidenceRaw,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .join("\n");
+  return resolveSingleStrongCurrencyEvidenceFromOCRText(rawOcrText);
+}
+
+export function hasAmbiguousWalletCaptureCurrencyEvidence(
+  tx: WalletTransactionLike,
+): boolean {
+  const rawOcrText = [
+    tx.note,
+    tx.rawMerchant,
+    tx.merchantName,
+    tx.currencyEvidenceRaw,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .join("\n");
+  if (resolveSingleStrongCurrencyEvidenceFromOCRText(rawOcrText)) {
+    return false;
+  }
+  if (tx.currencyAmbiguous === true) return true;
+  return hasAmbiguousCurrencyEvidenceInOCRText(
+    rawOcrText,
+    tx.currencyEvidenceRaw,
+  );
 }
 
 export function resolveWalletTransactionDate(

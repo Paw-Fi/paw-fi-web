@@ -15,10 +15,7 @@ import {
   faPiggyBank,
   faRobot,
   faSync,
-  faUserGraduate,
-  faUsers,
-  faUserTie,
-  faWallet,
+  faLightbulb,
 } from "@fortawesome/free-solid-svg-icons";
 
 // Basic plan option interface used in PlanSelector
@@ -257,199 +254,63 @@ export const planData: Record<string, PlanData> = {
     id: "premium",
     name: "Premium",
     title: "Premium",
-    subtitle: "Higher-tier subscription for advanced Moneko access",
+    subtitle: "Advanced money automation for connected finances",
     description:
-      "A higher-tier recurring subscription. Premium-specific benefits can be configured as the product offering is finalized.",
-    monthlyPrice: 9.99,
-    yearlyPrice: 79.99,
-    compareAtMonthlyPrice: 14.99,
-    compareAtYearlyPrice: 179.88,
-    annualTotal: 79.99,
-    priceMonthly: "$9.99",
-    priceYearly: "$79.99",
-    compareAtPriceMonthly: "$14.99",
-    compareAtPriceYearly: "$179.88",
+      "Everything in Plus, with Premium-tier access for advanced currency controls, bank sync, custom dashboards, and priority support.",
+    monthlyPrice: 7.99,
+    yearlyPrice: 59.99,
+    compareAtMonthlyPrice: 9.99,
+    compareAtYearlyPrice: 95.88,
+    annualTotal: 59.99,
+    priceMonthly: "$7.99",
+    priceYearly: "$59.99",
+    compareAtPriceMonthly: "$9.99",
+    compareAtPriceYearly: "$95.88",
     priceFrequencyText: "/month",
-    highlight: false,
+    highlight: true,
     popular: false,
     actionText: "Upgrade to Premium",
     actionLink: "/checkout?plan=premium",
-    audienceText: "For users who want the highest recurring Moneko tier.",
-    bgColor: "bg-white dark:bg-slate-800",
+    badgeText: "Advanced",
+    audienceText: "",
+    bgColor:
+      "bg-gradient-to-br from-amber-50 to-violet-50 dark:from-amber-900/20 dark:to-violet-900/20",
     textColor: "text-gray-900 dark:text-white",
-    borderColor: "border-purple-200 dark:border-purple-800",
+    borderColor: "border-amber-200 dark:border-amber-800",
     features: [
-      "Everything currently available to paid subscribers",
-      "Premium subscription lifecycle support — upgrades, downgrades, renewals",
-      "Premium benefits can be configured without changing billing infrastructure",
-      "Personal & Household modes — solo or shared finances",
-      "One subscription shared across all household members",
-      "Recurring bills & income tracking — never miss a payment",
-      "Scenario planning — what-if insights with AI",
-      "Multi-currency support — track spending globally",
-    ],
-    featureItems: [
-      {
-        text: "Everything currently available to paid subscribers",
-        icon: faGift,
-      },
-      { text: "Premium subscription lifecycle support", icon: faSync },
-      { text: "Premium benefits can be configured later", icon: faUserTie },
-      {
-        text: "Personal & Household modes — solo or shared finances",
-        icon: faUsers,
-      },
-      {
-        text: "One subscription shared across all household members",
-        icon: faUsers,
-      },
-      {
-        text: "Recurring bills & income tracking — never miss a payment",
-        icon: faSync,
-      },
-      {
-        text: "Scenario planning — what-if insights with AI",
-        icon: faLightbulb,
-      },
-      {
-        text: "Multi-currency support — track spending globally",
-        icon: faChartLine,
-      },
-    ],
-    featureComparison: {
-      fastCapture: {
-        description: "Fast capture workflow",
-        isIncluded: true,
-        limit: "Paid-plan access",
-        highlight: true,
-      },
-      pockets: {
-        description: "Pockets & envelopes",
-        isIncluded: true,
-        highlight: true,
-      },
-      whatsapp: {
-        description: "WhatsApp assistant",
-        isIncluded: true,
-        limit: "Paid-plan access",
-        highlight: true,
-      },
-      scenarioPlanning: {
-        description: "Scenario planning",
-        isIncluded: true,
-        highlight: true,
-      },
-      personalHousehold: {
-        description: "Personal vs Household mode",
-        isIncluded: true,
-        highlight: true,
-      },
-      recurring: {
-        description: "Recurring bills & income",
-        isIncluded: true,
-        highlight: true,
-      },
-      multiCurrency: {
-        description: "Multi-currency view",
-        isIncluded: true,
-        limit: "Switch currency",
-        highlight: true,
-      },
-      homeWidgets: {
-        description: "Home screen widgets",
-        isIncluded: true,
-        highlight: true,
-      },
-      emailCapture: {
-        description: "Email receipt capture",
-        isIncluded: true,
-        limit: "Paid-plan access",
-        highlight: true,
-      },
-      householdSharing: {
-        description: "Shared household subscription",
-        isIncluded: true,
-        limit: "All members",
-        highlight: true,
-      },
-    },
-  },
-
-  lifetime: {
-    id: "lifetime",
-    name: "Lifetime",
-    title: "Lifetime",
-    subtitle: "All features — one-time payment, lifetime access",
-    description: "A limited-time one-time payment option for lifetime access.",
-    monthlyPrice: 69.99,
-    yearlyPrice: 69.99,
-    annualTotal: 69.99,
-    priceMonthly: "$69.99",
-    priceYearly: "$69.99",
-    priceFrequencyText: "",
-    highlight: false,
-    actionText: "Secure Lifetime Access",
-    actionLink: "/checkout?plan=lifetime",
-    audienceText: "Limited-time lifetime access offer (one-time).",
-    bgColor: "bg-white dark:bg-slate-800",
-    textColor: "text-gray-900 dark:text-white",
-    features: [
-      "Lifetime access to all Plus features — pay once, use forever",
-      "Unlimited AI expense capture — text, photo, voice, email",
-      "Smart email receipt capture — forward receipts to auto-log",
-      "WhatsApp budgeting assistant — capture + summaries on chat",
-      "Personal & Household modes — solo or shared finances",
-      "One subscription shared across all household members",
-      "Recurring bills & income tracking — never miss a payment",
-      "Scenario planning — what-if insights with AI",
-      "Multi-currency support — track spending globally",
+      "Everything in Plus",
+      "Advanced multi-currency controls — premium conversion tools",
       "Bank sync via Plaid — auto-import transactions (Coming Soon)",
+      "Custom dashboards — build focused money views",
+      "Unlimited learning modules — guided money skills",
+      "Priority support — faster help when you need it",
+      "Premium-tier access for all household members",
     ],
     featureItems: [
+      { text: "Everything in Plus", icon: faGift },
       {
-        text: "Lifetime access to all Plus features — pay once, use forever",
-        icon: faGift,
-      },
-      {
-        text: "Unlimited AI expense capture — text, photo, voice, email",
-        icon: faRobot,
-      },
-      {
-        text: "Smart email receipt capture — forward receipts to auto-log",
-        icon: faEnvelope,
-      },
-      {
-        text: "WhatsApp budgeting assistant — capture + summaries on chat",
-        icon: faComments,
-      },
-      {
-        text: "Envelope budgeting with Pockets — set, track, save",
-        icon: faPiggyBank,
-      },
-      {
-        text: "Personal & Household modes — solo or shared finances",
-        icon: faUsers,
-      },
-      {
-        text: "One subscription shared across all household members",
-        icon: faUsers,
-      },
-      {
-        text: "Recurring bills & income tracking — never miss a payment",
-        icon: faSync,
-      },
-      {
-        text: "Scenario planning — what-if insights with AI",
-        icon: faLightbulb,
-      },
-      {
-        text: "Multi-currency support — track spending globally",
+        text: "Advanced multi-currency controls — premium conversion tools",
         icon: faChartLine,
       },
-      { text: "Home screen widgets — quick add & budget glance", icon: faGift },
       {
         text: "Bank sync via Plaid — auto-import transactions (Coming Soon)",
         icon: faWallet,
+      },
+      {
+        text: "Custom dashboards — build focused money views",
+        icon: faBullseye,
+      },
+      {
+        text: "Unlimited learning modules — guided money skills",
+        icon: faGraduationCap,
+      },
+      {
+        text: "Priority support — faster help when you need it",
+        icon: faHeadset,
+      },
+      {
+        text: "Premium-tier access for all household members",
+        icon: faUsers,
       },
     ],
     featureComparison: {
@@ -486,9 +347,9 @@ export const planData: Record<string, PlanData> = {
         highlight: true,
       },
       multiCurrency: {
-        description: "Multi-currency view",
+        description: "Advanced multi-currency view",
         isIncluded: true,
-        limit: "Switch currency",
+        limit: "Premium controls",
         highlight: true,
       },
       homeWidgets: {
@@ -525,7 +386,7 @@ export function getPlanOptions(): PlanOption[] {
   }));
 }
 
-// Helper function to get pricing tiers for PricingPage with 3 separate plans
+// Helper function to get pricing tiers for PricingPage
 export function getPricingTiers(): PricingTier[] {
   // Plus Monthly
   const plusMonthly: PricingTier = {
@@ -576,12 +437,12 @@ export function getPricingTiers(): PricingTier[] {
     priceFrequencyText: "/month",
     description: planData.premium.description,
     features: planData.premium.featureItems,
-    actionText: "Subscribe Premium Monthly",
+    actionText: "Subscribe Monthly",
     actionLink: "/checkout?plan=premium&billing=monthly",
     highlight: false,
     trialText: planData.premium.trialText,
     audienceText: planData.premium.audienceText,
-    badgeText: planData.premium.badgeText,
+    badgeText: "Advanced",
     bgColor: planData.premium.bgColor,
     textColor: planData.premium.textColor,
     borderColor: planData.premium.borderColor,
@@ -590,13 +451,13 @@ export function getPricingTiers(): PricingTier[] {
   // Premium Yearly
   const premiumYearly: PricingTier = {
     title: planData.premium.title + " Yearly",
-    subtitle: "Annual subscription to Moneko Premium",
+    subtitle: "Best value — annual subscription to Moneko Premium",
     priceMonthly: planData.premium.priceYearly,
     compareAtPriceMonthly: planData.premium.compareAtPriceYearly,
     priceFrequencyText: "/year",
     description: planData.premium.description,
     features: planData.premium.featureItems,
-    actionText: "Subscribe Premium Yearly",
+    actionText: "Subscribe Yearly",
     actionLink: "/checkout?plan=premium&billing=yearly",
     highlight: false,
     trialText: planData.premium.trialText,
@@ -607,24 +468,5 @@ export function getPricingTiers(): PricingTier[] {
     borderColor: planData.premium.borderColor,
   };
 
-  // Lifetime
-  const lifetime: PricingTier = {
-    title: planData.lifetime.title,
-    subtitle: planData.lifetime.subtitle,
-    priceMonthly: "$69.99",
-    priceFrequencyText: "",
-    description: planData.lifetime.description,
-    features: planData.lifetime.featureItems,
-    actionText: "Get Lifetime Access",
-    actionLink: "/checkout?plan=lifetime",
-    highlight: false,
-    trialText: planData.lifetime.trialText,
-    audienceText: planData.lifetime.audienceText,
-    badgeText: "Limited Time",
-    bgColor: planData.lifetime.bgColor,
-    textColor: planData.lifetime.textColor,
-    borderColor: planData.lifetime.borderColor,
-  };
-
-  return [plusMonthly, plusYearly, premiumMonthly, premiumYearly, lifetime];
+  return [plusMonthly, plusYearly, premiumMonthly, premiumYearly];
 }

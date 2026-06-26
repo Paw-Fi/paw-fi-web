@@ -95,6 +95,7 @@ import {
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
   buildTransactionMutationFailureText,
+  invokeTransactionDelete,
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
@@ -125,13 +126,18 @@ import {
   buildWalletTools,
   cloneBotToolDeclarations,
 } from "../shared/bot/tool-definitions.ts";
-import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
+import {
+  hasExplicitTransactionCurrency,
+  resolveWalletIdInScope,
+  resolveWalletForTransactionToolCall,
+  resolveWalletTransactionCurrency,
+} from "../shared/bot/wallet-scope.ts";
 import {
   buildWalletMutationFailureText,
   createBotWalletFromToolCall,
-  createBotWalletTransfer,
+  createBotWalletTransferFromToolCall,
   listBotWallets,
-  updateBotWallet,
+  updateBotWalletFromToolCall,
 } from "../shared/bot/wallet-tools.ts";
 import {
   buildUnsafeWalletMutationClaimFallback,
@@ -760,7 +766,8 @@ async function buildFinancialSnapshot(
     .gte("date", startDate)
     .lte("date", endDate)
     .eq("currency", currency)
-    .eq("contact_id", contactId);
+    .eq("contact_id", contactId)
+    .is("deleted_at", null);
   if (error) return { error };
 
   let totalExpense = 0;
@@ -1534,24 +1541,39 @@ Deno.serve(async (req: Request) => {
 
                 if (
                   (updatesArgs as any).wallet_id !== undefined ||
-                  (updatesArgs as any).account_id !== undefined
+                  (updatesArgs as any).account_id !== undefined ||
+                  (updatesArgs as any).wallet_name !== undefined
                 ) {
-                  updates.account_id =
-                    (updatesArgs as any).wallet_id ||
-                    (updatesArgs as any).account_id ||
-                    null;
-                } else if ((updatesArgs as any).wallet_name !== undefined) {
-                  const walletResolution = await resolveWalletIdInScope(
-                    supabase,
-                    userId,
-                    scopeResult.householdId,
-                    (updatesArgs as any).wallet_name,
-                    "twilio-whatsapp-ai-bot",
-                  );
+                  const walletResolution =
+                    await resolveWalletForTransactionToolCall(
+                      supabase,
+                      userId,
+                      scopeResult.householdId,
+                      updatesArgs as Record<string, unknown>,
+                      "twilio-whatsapp-ai-bot",
+                    );
                   if (walletResolution.error) {
                     toolResult = { error: walletResolution.error };
                   } else {
                     updates.account_id = walletResolution.accountId || null;
+                    const currencyResult = resolveWalletTransactionCurrency({
+                      wallet: walletResolution,
+                      walletName:
+                        (updatesArgs as any).wallet_name ||
+                        (updatesArgs as any).wallet_id ||
+                        (updatesArgs as any).account_id,
+                      transactionCurrency:
+                        updates.currency || resolved.candidate.currency,
+                      fallbackCurrency: userCurrency,
+                      hasExplicitCurrency: hasExplicitTransactionCurrency(
+                        updatesArgs as Record<string, unknown>,
+                      ),
+                    });
+                    if (currencyResult.error || !currencyResult.currency) {
+                      toolResult = { error: currencyResult.error };
+                    } else if (walletResolution.accountId) {
+                      updates.currency = currencyResult.currency;
+                    }
                   }
                 }
 
@@ -1720,18 +1742,16 @@ Deno.serve(async (req: Request) => {
             } else if ("error" in resolved) {
               toolResult = { error: resolved.error };
             } else {
-              const { data, error } = await supabase.functions.invoke(
-                "delete-expense",
-                {
-                  body: { userId, expenseIds: resolved.candidate.id },
-                  headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
-                },
+              const deleteResult = await invokeTransactionDelete(
+                supabase,
+                INTERNAL_FUNCTION_KEY,
+                userId,
+                resolved.candidate.id,
               );
-              const success = !error && data?.success === true;
-              toolResult = success
+              toolResult = deleteResult.success
                 ? { success: true }
                 : {
-                    error: error ?? data?.error ?? "Failed to delete",
+                    error: deleteResult.formatted,
                   };
             }
           } else if (call.name === "create_custom_category") {
@@ -1814,12 +1834,26 @@ Deno.serve(async (req: Request) => {
                   call.args,
                 )
               : {};
-            const requestedWallet = await resolveAppRequestedWalletId(
-              call.args.wallet_name,
+            const requestedWallet = await resolveWalletForTransactionToolCall(
+              supabase,
+              userId,
               householdId,
+              call.args,
+              "twilio-whatsapp-ai-bot",
             );
             if (requestedWallet.error) {
               toolResult = { error: requestedWallet.error };
+              continue;
+            }
+            const currencyResult = resolveWalletTransactionCurrency({
+              wallet: requestedWallet,
+              walletName: call.args.wallet_name,
+              transactionCurrency: transaction.currency,
+              fallbackCurrency: userCurrency,
+              hasExplicitCurrency: hasExplicitTransactionCurrency(call.args),
+            });
+            if (currencyResult.error || !currencyResult.currency) {
+              toolResult = { error: currencyResult.error };
               continue;
             }
             console.log(
@@ -1828,7 +1862,7 @@ Deno.serve(async (req: Request) => {
                 type: transaction.type,
                 amount: transaction.amount,
                 category: transaction.category,
-                currency: transaction.currency || userCurrency,
+                currency: currencyResult.currency,
                 householdId,
                 isPortfolio:
                   spaceMeta?.isPortfolio ??
@@ -1845,7 +1879,7 @@ Deno.serve(async (req: Request) => {
                 amount: transaction.amount,
                 category: transaction.category,
                 date: transaction.date!,
-                currency: transaction.currency || userCurrency,
+                currency: currencyResult.currency,
                 description: transaction.description,
                 merchant: transaction.merchant,
                 householdId,
@@ -1931,12 +1965,27 @@ Deno.serve(async (req: Request) => {
                   break;
                 }
                 const transaction = transactionResult.transaction;
-                const requestedWallet = await resolveAppRequestedWalletId(
-                  tx.wallet_name,
-                  householdId,
-                );
+                const requestedWallet =
+                  await resolveWalletForTransactionToolCall(
+                    supabase,
+                    userId,
+                    householdId,
+                    tx,
+                    "twilio-whatsapp-ai-bot",
+                  );
                 if (requestedWallet.error) {
                   toolResult = { error: requestedWallet.error };
+                  break;
+                }
+                const currencyResult = resolveWalletTransactionCurrency({
+                  wallet: requestedWallet,
+                  walletName: tx.wallet_name,
+                  transactionCurrency: transaction.currency,
+                  fallbackCurrency: userCurrency,
+                  hasExplicitCurrency: hasExplicitTransactionCurrency(tx),
+                });
+                if (currencyResult.error || !currencyResult.currency) {
+                  toolResult = { error: currencyResult.error };
                   break;
                 }
 
@@ -1960,7 +2009,7 @@ Deno.serve(async (req: Request) => {
                   type: transaction.type,
                   amount: transaction.amount,
                   category: transaction.category,
-                  currency: transaction.currency || userCurrency,
+                  currency: currencyResult.currency,
                   accountId: requestedWallet.accountId ?? undefined,
                   date: transaction.date!,
                   description: transaction.description,
@@ -3395,9 +3444,12 @@ Deno.serve(async (req: Request) => {
               continue;
             }
 
-            const requestedAccount = await resolveRequestedAccountId(
-              call.args.wallet_name,
+            const requestedAccount = await resolveWalletForTransactionToolCall(
+              supabase,
+              userId,
               householdId,
+              call.args,
+              "twilio-whatsapp-ai-bot",
             );
             if (requestedAccount.error) {
               toolResult = { error: requestedAccount.error };
@@ -3427,6 +3479,20 @@ Deno.serve(async (req: Request) => {
               continue;
             }
             const transaction = normalizedTransaction.transaction;
+            const currencyResult = resolveWalletTransactionCurrency({
+              wallet: requestedAccount,
+              walletName: call.args.wallet_name,
+              transactionCurrency: transaction.currency,
+              fallbackCurrency: userCurrency,
+              hasExplicitCurrency: hasExplicitTransactionCurrency(call.args),
+            });
+            if (currencyResult.error || !currencyResult.currency) {
+              toolResult = { error: currencyResult.error };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
             const recurrenceRule = call.args.is_recurring
               ? buildRecurrenceRule(call.args, transaction.date!) || {
                   frequency: "monthly",
@@ -3454,7 +3520,7 @@ Deno.serve(async (req: Request) => {
               {
                 amount: transaction.amount,
                 category: transaction.category,
-                currency: transaction.currency || userCurrency,
+                currency: currencyResult.currency,
                 date: transaction.date!,
                 description: transaction.description,
                 merchant: transaction.merchant,
@@ -3558,12 +3624,26 @@ Deno.serve(async (req: Request) => {
                 break;
               }
               const transaction = transactionResult.transaction;
-              const requestedWallet = await resolveRequestedAccountId(
-                tx.wallet_name,
+              const requestedWallet = await resolveWalletForTransactionToolCall(
+                supabase,
+                userId,
                 householdId,
+                tx,
+                "twilio-whatsapp-ai-bot",
               );
               if (requestedWallet.error) {
                 toolResult = { error: requestedWallet.error };
+                break;
+              }
+              const currencyResult = resolveWalletTransactionCurrency({
+                wallet: requestedWallet,
+                walletName: tx.wallet_name,
+                transactionCurrency: transaction.currency,
+                fallbackCurrency: userCurrency,
+                hasExplicitCurrency: hasExplicitTransactionCurrency(tx),
+              });
+              if (currencyResult.error || !currencyResult.currency) {
+                toolResult = { error: currencyResult.error };
                 break;
               }
 
@@ -3587,7 +3667,7 @@ Deno.serve(async (req: Request) => {
                 type: transaction.type,
                 amount: transaction.amount,
                 category: transaction.category,
-                currency: transaction.currency || userCurrency,
+                currency: currencyResult.currency,
                 accountId: requestedWallet.accountId ?? undefined,
                 date: transaction.date!,
                 description: transaction.description,
@@ -3724,41 +3804,13 @@ Deno.serve(async (req: Request) => {
             }
           } else if (call.name === "update_wallet") {
             const { householdId } = resolveBotSpaceScope(call.args, spaceMap);
-            const requestedWallet = await resolveRequestedAccountId(
-              call.args.wallet_name,
-              householdId,
-            );
-            if (requestedWallet.error || !requestedWallet.accountId) {
-              toolResult = {
-                error:
-                  requestedWallet.error ||
-                  "Wallet was not found in the selected scope.",
-              };
-              toolResponses.push({
-                functionResponse: { name: call.name, response: toolResult },
-              });
-              continue;
-            }
-            const walletResult = await updateBotWallet({
+            const walletResult = await updateBotWalletFromToolCall({
               supabase,
               internalFunctionKey: INTERNAL_FUNCTION_KEY,
               userId,
               householdId,
-              accountId: requestedWallet.accountId,
-              walletName: call.args.wallet_name,
-              name: call.args.new_name,
-              icon: call.args.icon,
-              color: call.args.color,
-              openingBalanceCents: Number.isFinite(call.args.opening_balance)
-                ? Math.round(Number(call.args.opening_balance) * 100)
-                : undefined,
-              goalAmountCents: Number.isFinite(call.args.goal_amount)
-                ? Math.round(Number(call.args.goal_amount) * 100)
-                : undefined,
-              isDefault:
-                typeof call.args.is_default === "boolean"
-                  ? call.args.is_default
-                  : undefined,
+              args: call.args || {},
+              logPrefix: "twilio-whatsapp-ai-bot",
             });
             toolResult = walletResult.result;
             if (walletResult.failure) {
@@ -3772,53 +3824,14 @@ Deno.serve(async (req: Request) => {
             }
           } else if (call.name === "create_wallet_transfer") {
             const { householdId } = resolveBotSpaceScope(call.args, spaceMap);
-            const fromWallet = await resolveRequestedAccountId(
-              call.args.from_wallet_name,
-              householdId,
-            );
-            const toWallet = await resolveRequestedAccountId(
-              call.args.to_wallet_name,
-              householdId,
-            );
-            if (fromWallet.error || !fromWallet.accountId) {
-              toolResult = {
-                error:
-                  fromWallet.error ||
-                  "Source wallet was not found in the selected scope.",
-              };
-              toolResponses.push({
-                functionResponse: { name: call.name, response: toolResult },
-              });
-              continue;
-            }
-            if (toWallet.error || !toWallet.accountId) {
-              toolResult = {
-                error:
-                  toWallet.error ||
-                  "Destination wallet was not found in the selected scope.",
-              };
-              toolResponses.push({
-                functionResponse: { name: call.name, response: toolResult },
-              });
-              continue;
-            }
-            const walletResult = await createBotWalletTransfer({
+            const walletResult = await createBotWalletTransferFromToolCall({
               supabase,
               internalFunctionKey: INTERNAL_FUNCTION_KEY,
               userId,
               householdId,
-              fromAccountId: fromWallet.accountId,
-              toAccountId: toWallet.accountId,
-              fromWalletName: call.args.from_wallet_name,
-              toWalletName: call.args.to_wallet_name,
-              amount: call.args.amount,
-              amountCents: Math.round(Number(call.args.amount || 0) * 100),
-              currency: call.args.currency || userCurrency,
-              date: normalizeDateInput(
-                call.args.date,
-                formatDateInTimeZone(userTimezone),
-              ),
-              note: call.args.note,
+              args: call.args || {},
+              defaultDate: formatDateInTimeZone(userTimezone),
+              logPrefix: "twilio-whatsapp-ai-bot",
             });
             toolResult = walletResult.result;
             if (walletResult.failure) {
@@ -3906,6 +3919,7 @@ Deno.serve(async (req: Request) => {
                     .from("expenses")
                     .select("id, user_id, household_id")
                     .eq("id", expenseId)
+                    .is("deleted_at", null)
                     .maybeSingle();
 
                 if (expenseFetchError || !expenseRow) {
@@ -3998,24 +4012,41 @@ Deno.serve(async (req: Request) => {
 
                     if (
                       (updatesArgs as any).wallet_id !== undefined ||
-                      (updatesArgs as any).account_id !== undefined
+                      (updatesArgs as any).account_id !== undefined ||
+                      (updatesArgs as any).wallet_name !== undefined
                     ) {
-                      updates.account_id =
-                        (updatesArgs as any).wallet_id ||
-                        (updatesArgs as any).account_id ||
-                        null;
-                    } else if ((updatesArgs as any).wallet_name !== undefined) {
-                      const walletResolution = await resolveWalletIdInScope(
-                        supabase,
-                        userId,
-                        scopeResult.householdId,
-                        (updatesArgs as any).wallet_name,
-                        "twilio-whatsapp-ai-bot",
-                      );
+                      const walletResolution =
+                        await resolveWalletForTransactionToolCall(
+                          supabase,
+                          userId,
+                          scopeResult.householdId,
+                          updatesArgs as Record<string, unknown>,
+                          "twilio-whatsapp-ai-bot",
+                        );
                       if (walletResolution.error) {
                         toolResult = { error: walletResolution.error };
                       } else {
                         updates.account_id = walletResolution.accountId || null;
+                        const currencyResult = resolveWalletTransactionCurrency(
+                          {
+                            wallet: walletResolution,
+                            walletName:
+                              (updatesArgs as any).wallet_name ||
+                              (updatesArgs as any).wallet_id ||
+                              (updatesArgs as any).account_id,
+                            transactionCurrency:
+                              updates.currency || resolved.candidate.currency,
+                            fallbackCurrency: userCurrency,
+                            hasExplicitCurrency: hasExplicitTransactionCurrency(
+                              updatesArgs as Record<string, unknown>,
+                            ),
+                          },
+                        );
+                        if (currencyResult.error || !currencyResult.currency) {
+                          toolResult = { error: currencyResult.error };
+                        } else if (walletResolution.accountId) {
+                          updates.currency = currencyResult.currency;
+                        }
                       }
                     }
 
@@ -4198,58 +4229,15 @@ Deno.serve(async (req: Request) => {
               toolResult = { error: resolved.error };
             } else {
               const expenseId = resolved.candidate.id;
-              const { data: expenseToDelete, error: deleteFetchError } =
-                await supabase
-                  .from("expenses")
-                  .select("id, user_id, household_id")
-                  .eq("id", expenseId)
-                  .maybeSingle();
-
-              if (deleteFetchError || !expenseToDelete) {
-                toolResult = {
-                  error:
-                    "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-                };
-              } else {
-                const deleteExpenseHouseholdId = (expenseToDelete as any)
-                  .household_id as string | null;
-                if (!deleteExpenseHouseholdId) {
-                  if ((expenseToDelete as any).user_id !== userId) {
-                    toolResult = {
-                      error:
-                        "You don't have permission to delete this transaction.",
-                    };
-                  }
-                } else {
-                  const isMember = await ensureHouseholdMember(
-                    supabase,
-                    deleteExpenseHouseholdId,
-                    userId,
-                  );
-                  if (!isMember) {
-                    toolResult = {
-                      error:
-                        "You don't have permission to delete this transaction.",
-                    };
-                  }
-                }
-
-                if (!(toolResult as any).error) {
-                  const { data, error } = await supabase.functions.invoke(
-                    "delete-expense",
-                    {
-                      body: { userId, expenseIds: expenseId },
-                      headers: buildInternalInvokeHeaders(
-                        INTERNAL_FUNCTION_KEY,
-                      ),
-                    },
-                  );
-                  const success = !error && data?.success === true;
-                  toolResult = success
-                    ? { success: true }
-                    : { error: error ?? data?.error ?? "Failed to delete" };
-                }
-              }
+              const deleteResult = await invokeTransactionDelete(
+                supabase,
+                INTERNAL_FUNCTION_KEY,
+                userId,
+                expenseId,
+              );
+              toolResult = deleteResult.success
+                ? { success: true }
+                : { error: deleteResult.formatted };
             }
           } else if (call.name === "list_expenses") {
             const { householdId, spaceMeta } = resolveBotSpaceScope(
@@ -4710,6 +4698,34 @@ Deno.serve(async (req: Request) => {
                     call.args,
                   )
                 : {};
+              const requestedWallet = await resolveWalletForTransactionToolCall(
+                supabase,
+                userId,
+                householdId,
+                call.args,
+                "twilio-whatsapp-ai-bot",
+              );
+              if (requestedWallet.error) {
+                toolResult = { error: requestedWallet.error };
+                toolResponses.push({
+                  functionResponse: { name: call.name, response: toolResult },
+                });
+                continue;
+              }
+              const currencyResult = resolveWalletTransactionCurrency({
+                wallet: requestedWallet,
+                walletName: call.args.wallet_name || call.args.wallet_id,
+                transactionCurrency: transaction.currency,
+                fallbackCurrency: userCurrency,
+                hasExplicitCurrency: hasExplicitTransactionCurrency(call.args),
+              });
+              if (currencyResult.error || !currencyResult.currency) {
+                toolResult = { error: currencyResult.error };
+                toolResponses.push({
+                  functionResponse: { name: call.name, response: toolResult },
+                });
+                continue;
+              }
               const { data, error } = await invokeTransactionSave(
                 supabase,
                 INTERNAL_FUNCTION_KEY,
@@ -4717,13 +4733,14 @@ Deno.serve(async (req: Request) => {
                 {
                   amount: transaction.amount,
                   category: transaction.category,
-                  currency: transaction.currency || userCurrency,
+                  currency: currencyResult.currency,
                   date: transaction.date!,
                   description: transaction.description,
                   merchant: transaction.merchant,
                   type,
                   householdId,
                   isPortfolio: spaceMeta?.isPortfolio ?? false,
+                  accountId: requestedWallet.accountId ?? undefined,
                   payerUserId: splitConfig.payerUserId,
                   customSplits: splitConfig.customSplits,
                   isRecurring: true,
@@ -4856,6 +4873,7 @@ Deno.serve(async (req: Request) => {
                       .from("expenses")
                       .select("id, amount_cents, household_id, split_group_id")
                       .eq("id", resolvedExpenseId)
+                      .is("deleted_at", null)
                       .maybeSingle();
                     expenseRow = row;
                     if (!householdId && row?.household_id) {
@@ -5022,39 +5040,34 @@ Deno.serve(async (req: Request) => {
                       "No matching transaction found. Ask user to list recent transactions first or provide more details.",
                   };
                 } else {
-                  const { data, error } = await supabase.functions.invoke(
-                    "delete-expense",
-                    {
-                      body: { userId, expenseIds: expenseId },
-                      headers: buildInternalInvokeHeaders(
-                        INTERNAL_FUNCTION_KEY,
-                      ),
-                    },
+                  const deleteResult = await invokeTransactionDelete(
+                    supabase,
+                    INTERNAL_FUNCTION_KEY,
+                    userId,
+                    expenseId,
+                    "Failed to delete expense",
                   );
-                  const success = !error && data?.success === true;
-                  const formatted = success
-                    ? ""
-                    : formatInvokeError(error ?? data?.error) ||
-                      "Failed to delete expense";
-                  toolResult = success
+                  toolResult = deleteResult.success
                     ? { success: true }
-                    : { error: formatted };
-                  if (!success) {
+                    : { error: deleteResult.formatted };
+                  if (!deleteResult.success) {
                     if (WHATSAPP_DEBUG) {
-                      debugNotes.push(`delete-expense error: ${formatted}`);
+                      debugNotes.push(
+                        `delete-expense error: ${deleteResult.formatted}`,
+                      );
                     }
                     console.error(
                       "[twilio-whatsapp-ai-bot] delete-expense error",
                       {
-                        error,
-                        formatted,
+                        error: deleteResult.error,
+                        formatted: deleteResult.formatted,
                       },
                     );
                     await reportTwilioToolInvokeFailure({
                       toolName: "delete_transaction",
                       targetFunction: "delete-expense",
-                      formatted,
-                      error: error ?? data?.error,
+                      formatted: deleteResult.formatted,
+                      error: deleteResult.error,
                       context: { expenseId },
                     });
                   }

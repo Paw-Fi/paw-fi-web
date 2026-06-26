@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 // Define types for subscription data
@@ -56,6 +56,8 @@ const fetchSubscription = async (
 ): Promise<SubscriptionData> => {
   if (!userId) throw new Error("User ID is required");
 
+  console.log("Fetching subscription for user ID:", userId);
+
   // For GET requests with Supabase Edge Functions, we need to construct the URL with query parameters
   // directly as a string to ensure they're properly passed
   const { data, error } = await supabase.functions.invoke(
@@ -64,9 +66,11 @@ const fetchSubscription = async (
   );
 
   if (error) {
+    console.error("Error fetching subscription:", error);
     throw new Error(`Failed to fetch subscription data: ${error.message}`);
   }
 
+  console.log("Subscription data received:", data);
   return data as SubscriptionData;
 };
 
@@ -199,6 +203,10 @@ export function useSubscription(userId: string | undefined) {
     error: previewError,
   } = useMutation({
     mutationFn: previewSubscriptionChange,
+    onError: (error: Error) => {
+      console.error("Preview error:", error);
+      // Error will be handled in the component
+    },
   });
 
   // Update subscription mutation
@@ -211,6 +219,10 @@ export function useSubscription(userId: string | undefined) {
     onSuccess: () => {
       // Invalidate and refetch subscription data after successful update
       queryClient.invalidateQueries({ queryKey: ["subscription", userId] });
+    },
+    onError: (error: Error) => {
+      console.error("Subscription update error:", error);
+      // Error will be handled in the component
     },
   });
 
@@ -270,8 +282,8 @@ export function useSubscription(userId: string | undefined) {
   const isExpired = subscriptionData && subscriptionData.status === "canceled";
 
   // Check if user has an active subscription
-  const isActive = subscriptionData && subscriptionData.plan !== "free" &&
-    !isExpired;
+  const isActive =
+    subscriptionData && subscriptionData.plan !== "free" && !isExpired;
 
   return {
     subscription: subscriptionData || null,

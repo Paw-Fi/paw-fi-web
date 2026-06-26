@@ -49,6 +49,10 @@ export const applePayTrackingArticle: HelpArticle = {
       answer: "Choose Capture Wallet Transaction from Moneko.",
     },
     {
+      question: 'Why is the shortcut not asking me to map fields when I choose "Capture Wallet Transactions"?',
+      answer: 'You need to tap Create New Shortcut first, then select Capture Wallet Transactions from the list. If you skip the "Create New Shortcut" step and try to add the action directly, the Shortcuts app may not prompt you to configure the required fields (merchant, amount, and date).',
+    },
+    {
       question: "What variables do I need to map?",
       answer: "Map: Amount to Shortcut Input → Amount, and Merchant to Shortcut Input → Merchant.",
     },
@@ -70,6 +74,10 @@ export const applePayTrackingArticle: HelpArticle = {
     {
       name: "Create Personal Automation",
       text: "In the Shortcuts app, create a new automation with the Wallet trigger.",
+    },
+    {
+      name: "Create New Shortcut",
+      text: "Tap Create New Shortcut first, then choose Capture Wallet Transaction from the list.",
     },
     {
       name: "Add Moneko Action",
@@ -139,7 +147,20 @@ The automation is now set to run when a Wallet transaction happens.
 
 ---
 
-## Step 4: Add the Moneko Action
+## Step 4: Create New Shortcut
+
+1. Tap **Create New Shortcut** first.
+2. Then choose **Capture Wallet Transaction** from the list.
+
+<img src="https://www.moneko.io/blogs/create-new-shortcut.jpeg" alt="Create New Shortcut screen in iOS Shortcuts app showing the step to tap Create New Shortcut before selecting Capture Wallet Transactions" class="w-full rounded-lg border border-border shadow-sm" />
+
+### Expected Result
+
+The shortcut workflow is initialized correctly and the Moneko action is ready to be configured.
+
+---
+
+## Step 5: Add the Moneko Action
 
 1. Tap **Add Action**.
 2. Search for **Moneko**.
@@ -151,7 +172,7 @@ The Moneko action is added to your automation.
 
 ---
 
-## Step 5: Map the Transaction Amount
+## Step 6: Map the Transaction Amount
 
 1. Tap **Amount**.
 2. Select **Select Variable**.
@@ -165,7 +186,7 @@ The Apple Pay transaction amount is connected to the Moneko action.
 
 ---
 
-## Step 6: Map the Merchant Name
+## Step 7: Map the Merchant Name
 
 1. Tap **Merchant**.
 2. Select **Select Variable**.
@@ -179,7 +200,7 @@ The Apple Pay merchant name is connected to the Moneko action.
 
 ---
 
-## Step 7: Save and Enable the Automation
+## Step 8: Save and Enable the Automation
 
 1. Tap the **check icon** to save.
 2. Open the automation again.
@@ -192,7 +213,7 @@ The automation is saved and allowed to run automatically.
 
 ---
 
-## Step 8: Finish Setup
+## Step 9: Finish Setup
 
 You are done.
 
@@ -270,10 +291,15 @@ Check that:
 
 - Moneko is updated to the latest version
 - the Wallet automation was created
+- you tapped **Create New Shortcut** before choosing the action
 - the **Capture Wallet Transaction** action was added
 - **Amount** is mapped to **Shortcut Input → Amount**
 - **Merchant** is mapped to **Shortcut Input → Merchant**
 - **Run Immediately** is turned on
 - **Ask Before Running** is disabled if prompted
+
+### The Shortcut Is Not Asking Me to Map Fields
+
+You need to tap **Create New Shortcut** first, then select **Capture Wallet Transactions** from the list. If you skip the "Create New Shortcut" step and try to add the action directly, the Shortcuts app may not prompt you to configure the required fields (merchant, amount, and date). Starting with "Create New Shortcut" ensures the workflow is initialized correctly and the mapping step appears as expected.
 `,
 };

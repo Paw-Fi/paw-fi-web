@@ -8,12 +8,12 @@ import {
   canGrantPaywallReturnTrial,
   hasRecentPaywallReturnExit,
 } from "../shared/paywall-return-trial-eligibility.ts";
-import {
+import type {
   BillingInterval,
-  isValidInterval,
-  isValidPlan,
   PlanType,
 } from "../shared/subscription-constants.ts";
+import { buildCheckoutPageUrl } from "../shared/checkout-redirect.ts";
+import { getSubscriptionChangePolicy } from "../shared/subscription-change-policy.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -24,11 +24,6 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
-const appUrl = (Deno.env.get("APP_URL") || "https://moneko.io").replace(
-  /\/+$/,
-  "",
-);
-
 serve(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
@@ -244,16 +239,6 @@ serve(async (req) => {
           );
         }
 
-        if (!isValidPlan(plan) || !isValidInterval(billingInterval)) {
-          return new Response(
-            JSON.stringify({ error: "Invalid plan or billing interval" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-
         // Get current plan for comparison
         const currentPlan = subscription?.plan || "free";
 
@@ -273,13 +258,15 @@ serve(async (req) => {
 
         // Cannot "upgrade" to Lifetime via plan change - must use checkout
         if (plan === "lifetime") {
-          const checkoutUrl = new URL("/checkout", appUrl);
-          checkoutUrl.searchParams.set("plan", "lifetime");
+          const checkoutUrl = buildCheckoutPageUrl(
+            Deno.env.get("APP_URL") || "https://moneko.io",
+            { plan: "lifetime" },
+          );
 
           return new Response(
             JSON.stringify({
               action: "redirect_to_checkout",
-              url: checkoutUrl.toString(),
+              url: checkoutUrl,
               message:
                 "Lifetime is a one-time purchase. Please complete checkout to upgrade.",
             }),
@@ -296,10 +283,34 @@ serve(async (req) => {
           plus: 1,
           premium: 2,
         };
-        const isUpgrade =
-          (PLAN_HIERARCHY[plan] ?? 0) > (PLAN_HIERARCHY[currentPlan] ?? 0);
-        const isIntervalChange = plan === currentPlan &&
-          billingInterval !== subscription?.billing_interval;
+
+        if (!(plan in PLAN_HIERARCHY) && plan !== "lifetime") {
+          return new Response(JSON.stringify({ error: "Invalid plan" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (billingInterval !== "monthly" && billingInterval !== "yearly") {
+          return new Response(
+            JSON.stringify({ error: "Invalid billing interval" }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const currentInterval = subscription?.billing_interval as
+          | BillingInterval
+          | null
+          | undefined;
+        const changePolicy = getSubscriptionChangePolicy({
+          currentPlan: currentPlan as PlanType,
+          newPlan: plan as PlanType,
+          currentInterval,
+          newInterval: billingInterval as BillingInterval,
+        });
 
         // Special case: Downgrading to free plan (cancel subscription)
         if (plan === "free") {
@@ -357,14 +368,15 @@ serve(async (req) => {
           subscription.status !== "active" ||
           currentPlan === "free"
         ) {
-          const checkoutUrl = new URL("/checkout", appUrl);
-          checkoutUrl.searchParams.set("plan", plan);
-          checkoutUrl.searchParams.set("billing", billingInterval);
+          const checkoutUrl = buildCheckoutPageUrl(
+            Deno.env.get("APP_URL") || "https://moneko.io",
+            { plan, billing: billingInterval },
+          );
 
           return new Response(
             JSON.stringify({
               action: "redirect_to_checkout",
-              url: checkoutUrl.toString(),
+              url: checkoutUrl,
               message: "Please complete checkout to subscribe to this plan",
             }),
             {
@@ -381,8 +393,18 @@ serve(async (req) => {
             plan as PlanType,
             billingInterval as BillingInterval,
           );
-        } catch (_error) {
-          priceId = "";
+        } catch (error) {
+          return new Response(
+            JSON.stringify({
+              error: error instanceof Error
+                ? error.message
+                : "Invalid plan or billing interval",
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
         }
 
         if (!priceId) {
@@ -414,8 +436,24 @@ serve(async (req) => {
 
         const subscriptionItemId = stripeSubscription.items.data[0].id;
 
-        // Upgrades and same-plan interval changes apply immediately with proration.
-        if (isUpgrade || isIntervalChange) {
+        if (changePolicy.billingBehavior === "no_change") {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message:
+                "No changes needed - you are already on this plan and billing interval.",
+              subscription: stripeSubscription,
+              isUpgrade: false,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        // Immediate changes: plan upgrades and same-plan billing interval changes.
+        if (changePolicy.billingBehavior === "immediate") {
           const updateParams: any = {
             items: [
               {
@@ -430,7 +468,6 @@ serve(async (req) => {
             proration_behavior: "always_invoice", // Immediate charge with proration
             payment_behavior: "error_if_incomplete",
             cancel_at_period_end: false,
-            proration_date: Math.floor(Date.now() / 1000),
           };
 
           const updatedSubscription = await stripe.subscriptions.update(
@@ -454,11 +491,11 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: isUpgrade
-                ? `Subscription upgraded to ${plan} (${billingInterval})`
-                : `Subscription billing interval changed to ${billingInterval}`,
+              message: changePolicy.isIntervalChange
+                ? `Subscription billing interval changed to ${billingInterval}`
+                : `Subscription upgraded to ${plan} (${billingInterval})`,
               subscription: updatedSubscription,
-              isUpgrade,
+              isUpgrade: changePolicy.isUpgrade,
             }),
             {
               status: 200,
@@ -523,7 +560,7 @@ serve(async (req) => {
             JSON.stringify({
               success: true,
               message:
-                `Subscription will downgrade to ${plan} (${billingInterval}) at end of current period`,
+                `Subscription will change to ${plan} (${billingInterval}) at end of current period`,
               subscription: stripeSubscription,
               isUpgrade: false,
               pendingChange: {

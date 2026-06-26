@@ -35,14 +35,16 @@ import {
   resolveCategory,
 } from "../shared/category-resolution.ts";
 import { normalizeCategoryForStorage } from "../shared/category-colors.ts";
-import { assertAccountInScope } from "../shared/accounts.ts";
+import { assertAccountInScope, getAccountOrNull } from "../shared/accounts.ts";
 import {
   buildWalletCaptureIdempotencyKey,
   getLocalYyyyMmDdInTimeZone,
+  hasAmbiguousWalletCaptureCurrencyEvidence,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureSource,
   resolveWalletCaptureCurrency,
   resolveWalletCaptureScope,
+  resolveStrongWalletCaptureCurrencyEvidence,
   resolveWalletTransactionCurrency,
   resolveWalletTransactionDate,
   resolveWalletTransactionPackageName,
@@ -113,6 +115,10 @@ interface TransactionPayload {
   notificationKey?: string | null;
   notificationPostTime?: string | null;
   sourceAppLabel?: string | null;
+  accountCurrency?: string | null;
+  currencyEvidenceRaw?: string | null;
+  currencyEvidenceType?: string | null;
+  currencyAmbiguous?: boolean | null;
 }
 
 interface RequestBody {
@@ -216,6 +222,13 @@ function buildWalletCaptureRequestLogContext(
           type: truncateForLog(tx.type ?? null, 16),
           amount: typeof tx.amount === "number" ? tx.amount : null,
           currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
+          accountCurrency: truncateForLog(tx.accountCurrency ?? null, 12),
+          currencyEvidenceRaw: truncateForLog(tx.currencyEvidenceRaw ?? null, 32),
+          currencyEvidenceType: truncateForLog(
+            tx.currencyEvidenceType ?? null,
+            32,
+          ),
+          currencyAmbiguous: tx.currencyAmbiguous === true,
           date: truncateForLog(resolveWalletTransactionDate(tx), 32),
           merchantName: truncateForLog(tx.merchantName ?? null, 120),
           rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
@@ -759,6 +772,7 @@ async function buildWalletPocketInsight(params: {
     .from("expenses")
     .select("amount_cents,category,type")
     .eq("currency", budgetCurrency)
+    .is("deleted_at", null)
     .gte("date", monthStart)
     .lt("date", monthEndExclusive);
   expenseQuery = applyWalletScopeFilter({
@@ -1360,6 +1374,9 @@ async function claimAndroidWalletCaptureEvent(params: {
   currency: string;
   date: string;
   notificationPostedAt: Date;
+  currencyEvidenceRaw: string | null;
+  currencyEvidenceType: string | null;
+  currencyAmbiguous: boolean;
 }): Promise<AndroidWalletCaptureClaimResult> {
   const scopeKey = buildWalletCaptureScopeKey(
     params.householdId,
@@ -1379,27 +1396,46 @@ async function claimAndroidWalletCaptureEvent(params: {
     merchantKey,
   });
 
-  const { data, error } = await params.supabase.rpc(
-    "claim_android_wallet_capture_event",
+  const baseRpcArgs = {
+    p_user_id: params.userId,
+    p_scope_key: scopeKey,
+    p_household_id: params.householdId,
+    p_is_portfolio: params.isPortfolio,
+    p_account_id: params.accountId,
+    p_capture_source: params.captureSource,
+    p_source_package: params.sourcePackage,
+    p_source_app_label: params.sourceAppLabel,
+    p_exact_event_key: params.exactEventKey,
+    p_logical_fingerprint: logicalFingerprint,
+    p_merchant_key: merchantKey || null,
+    p_transaction_type: params.transactionType,
+    p_amount_cents: params.amountCents,
+    p_currency: params.currency,
+    p_transaction_date: params.date,
+    p_notification_posted_at: params.notificationPostedAt.toISOString(),
+  };
+
+  let { data, error } = await params.supabase.rpc(
+    "claim_android_wallet_capture_event_v2",
     {
-      p_user_id: params.userId,
-      p_scope_key: scopeKey,
-      p_household_id: params.householdId,
-      p_is_portfolio: params.isPortfolio,
-      p_account_id: params.accountId,
-      p_capture_source: params.captureSource,
-      p_source_package: params.sourcePackage,
-      p_source_app_label: params.sourceAppLabel,
-      p_exact_event_key: params.exactEventKey,
-      p_logical_fingerprint: logicalFingerprint,
-      p_merchant_key: merchantKey || null,
-      p_transaction_type: params.transactionType,
-      p_amount_cents: params.amountCents,
-      p_currency: params.currency,
-      p_transaction_date: params.date,
-      p_notification_posted_at: params.notificationPostedAt.toISOString(),
+      ...baseRpcArgs,
+      p_currency_evidence_raw: params.currencyEvidenceRaw,
+      p_currency_evidence_type: params.currencyEvidenceType,
+      p_currency_is_ambiguous: params.currencyAmbiguous,
     },
   );
+
+  if (
+    error?.code === "PGRST202" ||
+    String(error?.message || "").includes("claim_android_wallet_capture_event_v2")
+  ) {
+    const fallback = await params.supabase.rpc(
+      "claim_android_wallet_capture_event",
+      baseRpcArgs,
+    );
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     throw new Error(`ANDROID_CAPTURE_DEDUP_FAILED:${error.message}`);
@@ -1972,6 +2008,7 @@ Deno.serve(async (req: Request) => {
     }
 
     let accountId: string | null = null;
+    let selectedAccountCurrency: string | null = null;
     if (requestedAccountId) {
       const isAccountInScope = await assertAccountInScope(
         supabase,
@@ -1980,6 +2017,11 @@ Deno.serve(async (req: Request) => {
       );
       if (isAccountInScope) {
         accountId = requestedAccountId;
+        const account = await getAccountOrNull(supabase, requestedAccountId);
+        selectedAccountCurrency =
+          typeof account?.currency === "string"
+            ? account.currency.trim().toUpperCase()
+            : null;
       } else {
         return errorResponse(
           "Provided accountId does not belong to this scope or currency",
@@ -2072,9 +2114,39 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const strongCurrencyEvidence =
+      captureSource === "android_notification_listener"
+        ? resolveStrongWalletCaptureCurrencyEvidence(tx)
+        : null;
+    const androidCurrencyAmbiguous =
+      captureSource === "android_notification_listener" &&
+      hasAmbiguousWalletCaptureCurrencyEvidence(tx);
+    if (
+      accountId &&
+      selectedAccountCurrency &&
+      strongCurrencyEvidence &&
+      strongCurrencyEvidence !== selectedAccountCurrency
+    ) {
+      logWalletCaptureValidationFailure(
+        "explicit_currency_conflicts_with_wallet",
+        requestDebugContext,
+        {
+          accountId,
+          accountCurrency: selectedAccountCurrency,
+          strongCurrencyEvidence,
+        },
+      );
+      return errorResponse(
+        "Transaction currency does not match the selected wallet currency",
+        400,
+        "VALIDATION_ERROR",
+      );
+    }
+
     const resolvedCaptureCurrency = resolveWalletCaptureCurrency({
       tx,
       preferredCurrency,
+      accountCurrency: selectedAccountCurrency,
       captureSource,
     });
     const currency = validateCurrency(resolvedCaptureCurrency ?? "USD");
@@ -2206,6 +2278,17 @@ Deno.serve(async (req: Request) => {
             tx,
             body.clientCreatedAt,
           ),
+          currencyEvidenceRaw:
+            typeof tx.currencyEvidenceRaw === "string"
+              ? tx.currencyEvidenceRaw.trim() || null
+              : null,
+          currencyEvidenceType:
+            typeof tx.currencyEvidenceType === "string"
+              ? tx.currencyEvidenceType.trim() || null
+              : androidCurrencyAmbiguous
+                ? "ambiguous_symbol"
+                : null,
+          currencyAmbiguous: androidCurrencyAmbiguous,
         });
 
         if (androidClaim.status === "duplicate") {
@@ -2332,6 +2415,7 @@ Deno.serve(async (req: Request) => {
           .from("expenses")
           .select("id, category, amount_cents, currency")
           .eq("wallet_capture_idempotency_key", requestIdempotencyKey)
+          .is("deleted_at", null)
           .maybeSingle();
 
         if (existingExpense) {
@@ -2596,6 +2680,7 @@ Deno.serve(async (req: Request) => {
         .from("expenses")
         .select("*")
         .eq("id", expense.id)
+        .is("deleted_at", null)
         .single();
 
       if (refreshedExpense) {

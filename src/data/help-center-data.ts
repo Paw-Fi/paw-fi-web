@@ -2458,6 +2458,72 @@ export const helpCenterData: FAQCategory[] = [
       },
     ],
   },
+  {
+    id: "apple-wallet-sync",
+    name: "Apple Wallet & iOS Shortcuts",
+    description:
+      "Set up and troubleshoot Apple Wallet transaction capture using iOS Shortcuts",
+    icon: "Smartphone",
+    questions: [
+      {
+        id: "apple-wallet-shortcut-setup",
+        question: "How do I set up the Apple Wallet capture shortcut in Moneko?",
+        answer:
+          "Moneko offers an iOS Shortcut that lets you capture Apple Pay transactions automatically. Here is how to set it up: 1) Open the Settings page inside the Moneko app. 2) Tap Apple Wallet Capture under Integrations. 3) Tap Set Up Shortcut — this opens the Shortcuts app. 4) Tap Create New Shortcut first. 5) Then choose Capture Wallet Transactions from the list. Once configured, every time you pay with Apple Pay, the shortcut can log the transaction directly into Moneko — merchant, amount, and date — without you having to type anything.",
+        category: "apple-wallet-sync",
+        keywords: [
+          "apple wallet shortcut",
+          "ios shortcut",
+          "apple pay capture",
+          "wallet automation",
+          "capture wallet transactions",
+          "setup shortcut",
+        ],
+        relatedQuestions: [
+          "apple-wallet-shortcut-fields",
+          "apple-wallet-what-is-captured",
+        ],
+      },
+      {
+        id: "apple-wallet-shortcut-fields",
+        question:
+          'Why is the shortcut not asking me to map fields when I choose "Capture Wallet Transactions"?',
+        answer:
+          'You need to tap Create New Shortcut first, then select Capture Wallet Transactions from the list. If you skip the "Create New Shortcut" step and try to add the action directly, the Shortcuts app may not prompt you to configure the required fields (merchant, amount, and date). Starting with "Create New Shortcut" ensures the workflow is initialized correctly and the mapping step appears as expected.',
+        category: "apple-wallet-sync",
+        keywords: [
+          "shortcut not mapping fields",
+          "capture wallet transactions no prompt",
+          "fields not appearing",
+          "shortcut setup issue",
+          "create new shortcut first",
+          "ios shortcut troubleshooting",
+        ],
+        relatedQuestions: [
+          "apple-wallet-shortcut-setup",
+          "apple-wallet-what-is-captured",
+        ],
+      },
+      {
+        id: "apple-wallet-what-is-captured",
+        question: "What data does the Apple Wallet shortcut capture?",
+        answer:
+          "The Moneko Apple Wallet shortcut captures: merchant name, transaction amount, and transaction date. This happens automatically when triggered after an Apple Pay purchase. The captured data is then sent to Moneko, which reads the amount and merchant, allocates the expense to the right pocket automatically, and confirms the remaining balance. No bank connection is required, and your Apple Card data never passes through a third-party server.",
+        category: "apple-wallet-sync",
+        keywords: [
+          "what does shortcut capture",
+          "apple wallet data",
+          "transaction details",
+          "merchant amount date",
+          "apple pay logging",
+        ],
+        relatedQuestions: [
+          "apple-wallet-shortcut-setup",
+          "apple-wallet-shortcut-fields",
+        ],
+      },
+    ],
+  },
 ];
 // Calculate and export metadata
 export const totalQuestions = helpCenterData.reduce(

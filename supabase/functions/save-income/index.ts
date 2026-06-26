@@ -29,6 +29,7 @@ import {
   type HouseholdAutoSplitSettings,
   type HouseholdMemberRow,
 } from "../shared/household-auto-split.ts";
+import { normalizeClientCreatedAt } from "../shared/transaction-request-validation.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -154,8 +155,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule = body.recurrence_rule ??
-      (body as any).recurrenceRule;
+    const legacyRecurrenceRule =
+      body.recurrence_rule ?? (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -165,8 +166,8 @@ Deno.serve(async (req: Request) => {
 
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -249,8 +250,13 @@ Deno.serve(async (req: Request) => {
       final: effectiveCategory,
     });
 
-    if (!body.amount || body.amount <= 0) {
-      return errorResponse("Valid amount greater than 0 is required", 400);
+    if (typeof body.amount !== "number" || !Number.isFinite(body.amount)) {
+      return errorResponse("Valid amount is required", 400);
+    }
+
+    const normalizedAmount = Math.abs(body.amount);
+    if (normalizedAmount <= 0) {
+      return errorResponse("Valid amount is required", 400);
     }
 
     if (!body.category) {
@@ -282,6 +288,17 @@ Deno.serve(async (req: Request) => {
     }
     body.date = normalizedDate;
 
+    const normalizedClientCreatedAt = normalizeClientCreatedAt(
+      body.clientCreatedAt,
+    );
+    if (!normalizedClientCreatedAt) {
+      return errorResponse(
+        "clientCreatedAt must be an ISO timestamp with timezone",
+        400,
+        "VALIDATION_ERROR",
+      );
+    }
+
     if (body.recurrence_rule) {
       const normalizedAnchorDate = normalizeCalendarDateString(
         body.recurrence_rule.anchor_date,
@@ -293,9 +310,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -427,7 +445,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Convert amount to cents
-    const amountCents = Math.round(body.amount * 100);
+    const amountCents = Math.round(normalizedAmount * 100);
 
     let accountId: string | null = null;
     if (body.accountId) {
@@ -466,7 +484,7 @@ Deno.serve(async (req: Request) => {
       currency: currency,
       owner_type: ownerType,
       privacy_scope: privacyScope,
-      created_at: body.clientCreatedAt || new Date().toISOString(),
+      created_at: normalizedClientCreatedAt,
       attachments: Array.isArray(body.attachments) ? body.attachments : [],
       is_recurring: body.isRecurring || false,
       recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
@@ -491,6 +509,7 @@ Deno.serve(async (req: Request) => {
         .select("*")
         .eq("user_id", userId)
         .eq("idempotency_key", normalizedIdempotencyKey)
+        .is("deleted_at", null)
         .limit(1);
 
       existingIncomeQuery = resolvedHouseholdId
@@ -566,8 +585,8 @@ Deno.serve(async (req: Request) => {
         responseIncome = splitResult.transaction;
       } else if (splitResult.kind === "skipped") {
         splitSkipped = true;
-        warningMessage = warningMessage ??
-          "Income saved to household without split lines";
+        warningMessage =
+          warningMessage ?? "Income saved to household without split lines";
       } else if (splitResult.kind === "invalid") {
         console.warn("[save-income] Invalid household split payload:", {
           code: splitResult.code,
@@ -579,8 +598,8 @@ Deno.serve(async (req: Request) => {
           "[save-income] Failed to create household split:",
           splitResult.error,
         );
-        warningMessage = warningMessage ??
-          "Income saved but split group creation failed";
+        warningMessage =
+          warningMessage ?? "Income saved but split group creation failed";
       }
     }
 

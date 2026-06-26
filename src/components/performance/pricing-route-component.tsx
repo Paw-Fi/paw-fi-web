@@ -24,6 +24,7 @@ import {
   Users,
   Sparkles,
   ShieldCheck,
+  ChevronRight,
 } from "lucide-react";
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
@@ -42,88 +43,180 @@ import { OrbitingCircles } from "@/components/ui/orbiting-circles";
 
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
-function PlanRow({
+function BillingToggle({
+  isYearly,
+  onChange,
+}: {
+  isYearly: boolean;
+  onChange: (yearly: boolean) => void;
+}) {
+  return (
+    <div className="border-border/40 bg-card/50 mx-auto flex w-fit items-center rounded-full border p-1.5 shadow-sm backdrop-blur-md">
+      <button
+        onClick={() => onChange(false)}
+        className={classNames(
+          "relative rounded-full px-8 py-2.5 text-sm font-semibold transition-colors duration-300",
+          !isYearly
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground/80",
+        )}
+      >
+        {!isYearly && (
+          <motion.div
+            layoutId="billing-toggle-bg"
+            className="border-border/30 bg-background absolute inset-0 rounded-full border shadow-md"
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+        <span className="relative z-10">Monthly</span>
+      </button>
+      <button
+        onClick={() => onChange(true)}
+        className={classNames(
+          "relative flex items-center gap-2 rounded-full px-8 py-2.5 text-sm font-semibold transition-colors duration-300",
+          isYearly
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground/80",
+        )}
+      >
+        {isYearly && (
+          <motion.div
+            layoutId="billing-toggle-bg"
+            className="border-border/30 bg-background absolute inset-0 rounded-full border shadow-md"
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+        <span className="relative z-10">Yearly</span>
+        <span className="bg-primary/10 text-primary relative z-10 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase">
+          Save 40%
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function PricingCard({
   title,
   price,
-  originalPrice,
-  subtitle,
-  badge,
-  selected,
-  onClick,
+  period,
+  comparePrice,
+  description,
+  features,
+  isPopular,
+  buttonText,
+  onSubscribe,
 }: {
   title: string;
   price: string;
-  originalPrice?: string;
-  subtitle: string;
-  badge?: string;
-  selected: boolean;
-  onClick: () => void;
+  period?: string;
+  comparePrice?: string;
+  description: string;
+  features: string[];
+  isPopular?: boolean;
+  buttonText: string;
+  onSubscribe: () => void;
 }) {
   return (
-    <div
-      onClick={onClick}
-      className={classNames(
-        "relative flex cursor-pointer flex-col justify-between gap-4 rounded-xl border-2 p-4 transition-all sm:flex-row sm:items-center",
-        selected
-          ? "border-primary bg-primary/5 shadow-sm"
-          : "border-b-border/30 hover:bg-muted/50 bg-background/50 border-transparent",
+    <div className="relative flex w-full flex-col">
+      {isPopular && (
+        <div className="from-primary/30 absolute inset-0 -z-10 rounded-[2rem] bg-gradient-to-br to-purple-500/30 opacity-60 blur-2xl" />
       )}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className={classNames(
-            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-            selected ? "border-primary" : "border-muted-foreground/30",
-          )}
-        >
-          {selected && (
-            <motion.div
-              layoutId="radio-dot"
-              className="bg-primary h-2.5 w-2.5 rounded-full"
-            />
-          )}
+      <div
+        className={classNames(
+          "relative flex flex-1 flex-col rounded-[2rem] p-8 transition-all duration-300 hover:-translate-y-1 sm:p-10",
+          isPopular
+            ? "border-primary bg-card/80 border-2 shadow-2xl backdrop-blur-2xl"
+            : "border-border/50 bg-card/40 hover:bg-card/50 border-2 shadow-lg backdrop-blur-xl hover:shadow-xl",
+        )}
+      >
+        {isPopular && (
+          <div className="absolute -top-4 right-0 left-0 flex justify-center">
+            <div className="bg-primary text-primary-foreground flex items-center gap-1.5 rounded-full px-4 py-1 text-xs font-bold tracking-widest uppercase shadow-lg">
+              <Sparkles className="h-3.5 w-3.5" />
+              Most Popular
+            </div>
+          </div>
+        )}
+
+        <div className="mb-8 flex min-h-[96px] flex-col justify-start">
+          <h3 className="text-foreground text-2xl font-extrabold tracking-tight">
+            {title}
+          </h3>
+          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+            {description}
+          </p>
         </div>
 
-        <div>
-          <div className="flex items-center gap-2">
-            <span
-              className={classNames(
-                "font-semibold",
-                selected ? "text-foreground" : "text-foreground/80",
-              )}
-            >
-              {title}
+        <div className="mb-8 flex min-h-[116px] flex-col justify-start gap-1">
+          <div className="flex items-baseline gap-1">
+            <span className="text-foreground text-5xl font-black tracking-tighter sm:text-6xl">
+              {price}
             </span>
-            {badge && (
-              <Badge
-                variant={selected ? "default" : "secondary"}
-                className={classNames(
-                  "px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase",
-                  selected ? "" : "opacity-70",
-                )}
-              >
-                {badge}
-              </Badge>
+            {period && (
+              <span className="text-muted-foreground text-base font-semibold">
+                {period}
+              </span>
             )}
           </div>
-          <span className="text-muted-foreground text-sm">{subtitle}</span>
-        </div>
-      </div>
 
-      <div className="ml-8 flex items-center gap-2 text-left sm:ml-0 sm:block sm:text-right">
-        {originalPrice && (
-          <span className="text-muted-foreground/60 text-xs line-through sm:block">
-            {originalPrice}
-          </span>
-        )}
-        <span
+          <div className="mt-1 h-5">
+            {comparePrice && (
+              <AnimatePresence mode="wait">
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-muted-foreground/60 text-sm font-medium line-through"
+                >
+                  Regularly {comparePrice}
+                </motion.span>
+              </AnimatePresence>
+            )}
+          </div>
+        </div>
+
+        <Button
+          size="lg"
+          onClick={onSubscribe}
+          variant={isPopular ? "default" : "outline"}
           className={classNames(
-            "text-lg font-bold",
-            selected ? "text-foreground" : "text-foreground/80",
+            "group relative w-full overflow-hidden rounded-full py-6 text-base font-bold transition-all",
+            isPopular
+              ? "shadow-primary/25 hover:shadow-primary/40 shadow-xl"
+              : "bg-background/50 hover:bg-muted",
           )}
         >
-          {price}
-        </span>
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            {buttonText}
+            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </span>
+          {isPopular && (
+            <div className="group-hover:animate-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          )}
+        </Button>
+
+        {features.length > 0 && (
+          <div className="border-border/50 mt-8 border-t pt-6">
+            {isPopular && (
+              <p className="text-foreground mb-4 text-left text-sm font-bold">
+                Everything in Plus, and
+              </p>
+            )}
+            <ul className="space-y-3">
+              {features.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex gap-3 text-sm leading-relaxed"
+                >
+                  <Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="text-muted-foreground font-medium">
+                    {feature}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -133,9 +226,14 @@ export function PricingRouteComponent() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [isYearly, setIsYearly] = useState(true);
 
-  type PlanType = "monthly" | "yearly" | "lifetime";
-  const [selectedPlanId, setSelectedPlanId] = useState<PlanType>("yearly");
+  type PlanType =
+    | "plus_monthly"
+    | "plus_yearly"
+    | "premium_monthly"
+    | "premium_yearly"
+    | "lifetime";
 
   useEffect(() => {
     setIsLoading(false);
@@ -143,31 +241,99 @@ export function PricingRouteComponent() {
 
   const pricingTiers = getPricingTiers();
 
-  const monthlyTier = pricingTiers.find(
+  const plusMonthlyTier = pricingTiers.find(
     (t) =>
       t.title === "Plus" ||
       (t.title.includes("Plus") && !t.title.includes("Yearly")),
   );
-  const yearlyTier = pricingTiers.find((t) => t.title.includes("Yearly"));
+  const plusYearlyTier = pricingTiers.find(
+    (t) => t.title.includes("Plus") && t.title.includes("Yearly"),
+  );
+  const premiumMonthlyTier = pricingTiers.find(
+    (t) =>
+      t.title === "Premium" ||
+      (t.title.includes("Premium") && !t.title.includes("Yearly")),
+  );
+  const premiumYearlyTier = pricingTiers.find(
+    (t) => t.title.includes("Premium") && t.title.includes("Yearly"),
+  );
   const lifetimeTier = pricingTiers.find((t) => t.title.includes("Lifetime"));
 
   const safelyGetTier = (tier: any, fallbackParams: any) =>
     tier || fallbackParams;
 
-  const mTier = safelyGetTier(monthlyTier, {
-    title: "Monthly",
+  const pmTier = safelyGetTier(plusMonthlyTier, {
+    title: "Plus Monthly",
     priceMonthly: "$4.99",
     compareAtPriceMonthly: "$9.99",
+    features: [
+      "Log expenses your way (Text, Photo, Voice)",
+      "Stay in control with Pockets",
+      "Track spending across currencies",
+      "Budget in WhatsApp",
+    ],
   });
-  const yTier = safelyGetTier(yearlyTier, {
-    title: "Yearly",
+  const pyTier = safelyGetTier(plusYearlyTier, {
+    title: "Plus Yearly",
     priceMonthly: "$34.99",
     compareAtPriceMonthly: "$119.88",
+    features: [
+      "Log expenses your way (Text, Photo, Voice)",
+      "Stay in control with Pockets",
+      "Track spending across currencies",
+      "Budget in WhatsApp",
+    ],
+  });
+  const prmTier = safelyGetTier(premiumMonthlyTier, {
+    title: "Premium Monthly",
+    priceMonthly: "$7.99",
+    compareAtPriceMonthly: "$9.99",
+    features: [
+      "Everything in Plus",
+      "Proactive AI Coaching",
+      "Household Sync for partners",
+      "AI Scenario Planning",
+      "Bank sync via Plaid (coming soon)",
+    ],
+  });
+  const pryTier = safelyGetTier(premiumYearlyTier, {
+    title: "Premium Yearly",
+    priceMonthly: "$59.99",
+    compareAtPriceMonthly: "$95.88",
+    features: [
+      "Everything in Plus",
+      "Proactive AI Coaching",
+      "Household Sync for partners",
+      "AI Scenario Planning",
+      "Bank sync via Plaid (coming soon)",
+    ],
   });
   const lTier = safelyGetTier(lifetimeTier, {
     title: "Lifetime",
     priceMonthly: "$69.99",
+    features: [
+      "All Premium features included",
+      "Pay once, use forever",
+      "Exclusive early access to new features",
+      "Priority support",
+    ],
   });
+
+  const plusChecklistFeatures = [
+    "AI expense capture",
+    "Messaging app capture",
+    "Email receipt import",
+    "Shared budgets",
+    "Standard support",
+  ];
+
+  const premiumChecklistFeatures = [
+    "Bank sync",
+    "Multiple currencies",
+    "Currency converter",
+    "Live exchange rates",
+    "Priority support",
+  ];
 
   const faqData = [
     {
@@ -202,7 +368,7 @@ export function PricingRouteComponent() {
     },
   ];
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (planId: PlanType) => {
     try {
       setIsLoading(true);
 
@@ -220,17 +386,23 @@ export function PricingRouteComponent() {
 
       setIsLoading(false);
 
-      if (selectedPlanId === "lifetime") {
-        navigate({
-          to: "/checkout",
-          search: { plan: "lifetime" },
-        });
-      } else {
-        navigate({
-          to: "/checkout",
-          search: { plan: "plus", billing: selectedPlanId },
-        });
-      }
+      const selectedPlan =
+        planId === "lifetime"
+          ? { plan: "lifetime", billing: undefined }
+          : planId === "premium_monthly"
+            ? { plan: "premium", billing: "monthly" }
+            : planId === "premium_yearly"
+              ? { plan: "premium", billing: "yearly" }
+              : planId === "plus_monthly"
+                ? { plan: "plus", billing: "monthly" }
+                : { plan: "plus", billing: "yearly" };
+
+      navigate({
+        to: "/checkout",
+        search: selectedPlan.billing
+          ? { plan: selectedPlan.plan, billing: selectedPlan.billing }
+          : { plan: selectedPlan.plan },
+      });
     } catch (err) {
       console.error("Error handling subscription:", err);
       setIsLoading(false);
@@ -357,159 +529,87 @@ export function PricingRouteComponent() {
 
       <div className="min-h-screen pb-20">
         {/* Unified Pricing Hero Section */}
-        <section className="relative mx-auto max-w-7xl px-4 pt-16 pb-12 md:pt-28 md:pb-20">
+        <section className="relative mx-auto max-w-7xl px-4 pt-20 pb-16 md:pt-32 md:pb-24">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={containerVariants}
-            className="flex flex-col items-center justify-between gap-12 lg:flex-row lg:items-start xl:gap-20"
+            className="flex flex-col items-center text-center"
           >
-            {/* Left Column: Value Prop */}
-            <div className="flex w-full max-w-2xl flex-1 flex-col items-center pt-0 text-center lg:items-start lg:pt-8 lg:text-left">
-              <motion.div
-                variants={itemVariants}
-                className="bg-primary/10 text-primary mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1.5"
-              >
-                <ShieldCheck className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  30-day money-back guarantee
-                </span>
-              </motion.div>
-
-              <motion.h1
-                variants={itemVariants}
-                className="text-foreground mb-6 text-4xl leading-[1.1] font-bold tracking-tight sm:text-5xl lg:text-6xl"
-              >
-                One simple app.
-                <br className="hidden sm:block" />
-                <span className="from-primary bg-gradient-to-r to-purple-600 bg-clip-text text-transparent">
-                  Master your money.
-                </span>
-              </motion.h1>
-
-              <motion.p
-                variants={itemVariants}
-                className="text-muted-foreground mb-10 max-w-xl text-lg leading-relaxed"
-              >
-                Stop manually tracking every penny in spreadsheets. Moneko
-                automates the heavy lifting with AI, giving you the
-                intentionality of zero-based budgeting.
-              </motion.p>
-
-              {/* Note: The old core features map was removed here as we are replacing it with the Bento Grid below */}
-            </div>
-
-            {/* Right Column: Interactive Pricing Checkout Box */}
             <motion.div
               variants={itemVariants}
-              className="w-md shrink-0 lg:w-[32rem]"
+              className="bg-primary/10 text-primary mb-8 inline-flex items-center gap-2 rounded-full px-3 py-1.5"
             >
-              <div className="border-border/50 bg-card/60 relative overflow-hidden rounded-[2rem] border p-[2px] shadow-2xl backdrop-blur-3xl">
-                {/* Subtle animated gradient border effect */}
-                <div className="from-primary/30 absolute inset-0 bg-gradient-to-br to-purple-500/30 opacity-20" />
+              <ShieldCheck className="h-4 w-4" />
+              <span className="text-sm font-semibold tracking-wide">
+                30-day money-back guarantee
+              </span>
+            </motion.div>
 
-                <div className="bg-card relative flex flex-col rounded-[calc(2rem-2px)] p-6 shadow-inner sm:p-8">
-                  <div className="mb-6 text-center lg:text-left">
-                    <h2 className="from-foreground to-foreground/70 bg-gradient-to-br bg-clip-text text-2xl font-bold text-transparent">
-                      Unlock Moneko Pro
-                    </h2>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      Start building wealth effortlessly.
-                    </p>
-                  </div>
+            <motion.h1
+              variants={itemVariants}
+              className="text-foreground mb-6 max-w-4xl text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl"
+            >
+              One simple app. <br className="hidden sm:block" />
+              <span className="from-primary bg-gradient-to-r to-purple-600 bg-clip-text text-transparent">
+                Master your money.
+              </span>
+            </motion.h1>
 
-                  {/* Plan Selection */}
-                  <div className="mb-8 flex flex-col gap-2">
-                    <PlanRow
-                      title="Yearly"
-                      subtitle="Billed annually"
-                      price={yTier.priceMonthly}
-                      originalPrice={yTier.compareAtPriceMonthly}
-                      badge="Best Value"
-                      selected={selectedPlanId === "yearly"}
-                      onClick={() => setSelectedPlanId("yearly")}
-                    />
-                    <PlanRow
-                      title="Monthly"
-                      subtitle="Billed monthly"
-                      price={mTier.priceMonthly}
-                      originalPrice={mTier.compareAtPriceMonthly}
-                      selected={selectedPlanId === "monthly"}
-                      onClick={() => setSelectedPlanId("monthly")}
-                    />
-                    <PlanRow
-                      title="Lifetime"
-                      subtitle="Yours forever"
-                      price={lTier.priceMonthly}
-                      badge="Limited"
-                      selected={selectedPlanId === "lifetime"}
-                      onClick={() => setSelectedPlanId("lifetime")}
-                    />
-                  </div>
+            <motion.p
+              variants={itemVariants}
+              className="text-muted-foreground mb-12 max-w-2xl text-lg leading-relaxed sm:text-xl"
+            >
+              Stop manually tracking every penny in spreadsheets. Moneko
+              automates the heavy lifting with AI, giving you the intentionality
+              of zero-based budgeting.
+            </motion.p>
 
-                  {/* Feature Checklist inside the card */}
-                  <div className="border-border/50 mb-8 space-y-3 border-t pt-6">
-                    {yearlyTier?.features.map((feature: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        <Check className="text-primary h-4 w-4 shrink-0" />
-                        <span className="text-foreground/80 text-sm">
-                          {feature.text || feature}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+            <motion.div variants={itemVariants} className="w-full">
+              <BillingToggle isYearly={isYearly} onChange={setIsYearly} />
+            </motion.div>
 
-                  {/* Checkout CTA */}
-                  <Button
-                    size="lg"
-                    className="group relative w-full overflow-hidden py-6 text-base font-medium shadow-md"
-                    onClick={handleSubscribe}
-                  >
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      {selectedPlanId === "lifetime"
-                        ? "Secure Lifetime Access"
-                        : "Upgrade to Pro"}
-                      <Rocket className="h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
-                    </span>
-                    <div className="group-hover:animate-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                  </Button>
+            {/* Pricing Cards Grid */}
+            <motion.div
+              variants={itemVariants}
+              className="mx-auto mt-16 grid w-full max-w-4xl items-stretch gap-8 md:grid-cols-2 xl:gap-10"
+            >
+              <PricingCard
+                title="Plus"
+                description="Everything you need to automate your budget and track spending."
+                price={isYearly ? pyTier.priceMonthly : pmTier.priceMonthly}
+                period={isYearly ? "/yr" : "/mo"}
+                comparePrice={
+                  isYearly
+                    ? pyTier.compareAtPriceMonthly
+                    : pmTier.compareAtPriceMonthly
+                }
+                features={plusChecklistFeatures}
+                buttonText="Get Plus"
+                onSubscribe={() =>
+                  handleSubscribe(isYearly ? "plus_yearly" : "plus_monthly")
+                }
+              />
 
-                  {/* Dynamic Subtext */}
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={selectedPlanId}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-muted-foreground mt-4 text-center text-xs"
-                    >
-                      {selectedPlanId === "yearly" &&
-                        "Save up to 70% compared to monthly. Modify your plan anytime."}
-                      {selectedPlanId === "monthly" &&
-                        "No commitment. Cancel or upgrade to yearly anytime."}
-                      {selectedPlanId === "lifetime" &&
-                        "One-time payment. Enjoy future updates for free."}
-                    </motion.p>
-                  </AnimatePresence>
-
-                  {selectedPlanId === "lifetime" && (
-                    <div
-                      className="group mx-auto mt-4 w-full cursor-pointer"
-                      onClick={() => window.open(DISCORD_URL, "_blank")}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <div className="flex items-center justify-center gap-2.5 rounded-xl border border-[#5865F2]/20 bg-[#5865F2]/10 px-4 py-3 transition-all duration-200 hover:bg-[#5865F2]/20">
-                        <DiscordLogoIcon className="h-4 w-4 flex-shrink-0 text-[#5865F2]" />
-                        <span className="text-xs font-semibold text-[#5865F2] dark:text-[#8ea1e1]">
-                          Join Discord for a discount code
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <PricingCard
+                title="Premium"
+                description="Advanced features including dual-persona AI coaching and household sync."
+                price={isYearly ? pryTier.priceMonthly : prmTier.priceMonthly}
+                period={isYearly ? "/yr" : "/mo"}
+                comparePrice={
+                  isYearly
+                    ? pryTier.compareAtPriceMonthly
+                    : prmTier.compareAtPriceMonthly
+                }
+                features={premiumChecklistFeatures}
+                isPopular={true}
+                buttonText="Get Premium"
+                onSubscribe={() =>
+                  handleSubscribe(
+                    isYearly ? "premium_yearly" : "premium_monthly",
+                  )
+                }
+              />
             </motion.div>
           </motion.div>
         </section>
@@ -549,7 +649,7 @@ export function PricingRouteComponent() {
           </div>
         </motion.div>
 
-        {/* Feature Highlights List */}
+        {/* Deep Dive Feature Comparison */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -557,55 +657,16 @@ export function PricingRouteComponent() {
           variants={containerVariants}
           className="mx-auto mt-20 max-w-7xl px-4 md:mt-32"
         >
-          <div className="mb-10 text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Everything you get with Pro
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-extrabold tracking-tight md:text-4xl">
+              Compare Plans
             </h2>
             <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-              A complete budgeting toolkit designed to save you time and keep your finances on track.
+              A side-by-side look at what Moneko can do for you.
             </p>
           </div>
-          <div className="mx-auto grid max-w-4xl gap-4">
-            {[
-              "Log expenses your way. Add spending by text, photo, voice, or email in seconds.",
-              "Forward receipts, done. Email receipts are automatically captured and logged for you.",
-              "Budget in WhatsApp. Add transactions and get summaries without leaving chat.",
-              "Stay in control with Pockets. Use simple envelope-style budgeting to set limits and save with purpose.",
-              "Built for solo or shared finances. Manage your own budget or plan together as a household.",
-              "One plan for the whole household. Everyone stays aligned under a single subscription.",
-              "Stay on top of bills and income. Track recurring payments and paydays with less manual work.",
-              "See the impact before you decide. Use AI-powered scenario planning to explore what-if decisions.",
-              "Track spending across currencies. Keep your budget clear, even when money moves globally.",
-              "Bank sync via Plaid, coming soon. Auto-import transactions when direct bank connections launch.",
-            ].map((feature, idx) => (
-              <motion.div
-                key={idx}
-                variants={itemVariants}
-                className="flex items-start gap-4 rounded-xl border border-border/50 bg-card/50 p-4 backdrop-blur-sm"
-              >
-                <div className="bg-primary/10 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-                  <Check className="text-primary h-3.5 w-3.5" />
-                </div>
-                <span className="text-foreground/90 text-base leading-relaxed">{feature}</span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Deep Dive Feature Comparison */}
-        {/* <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={containerVariants}
-          className="mt-20 md:mt-32 max-w-7xl mx-auto px-4"
-        >
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Everything you get with Pro</h2>
-            <p className="text-muted-foreground text-lg">A side-by-side look at what Moneko can do for you.</p>
-          </div>
           <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
-        </motion.div> */}
+        </motion.div>
 
         {/* FAQs */}
         <motion.div

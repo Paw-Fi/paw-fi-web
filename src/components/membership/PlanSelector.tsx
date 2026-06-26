@@ -125,44 +125,23 @@ export function PlanSelector({
       return;
     }
 
-    // Check if already on this plan
-    if (planId === currentPlan) {
-      // For Lifetime, no billing interval to check
-      if (planId === "lifetime") {
-        toast.info("You already have Lifetime access");
-        return;
-      }
-      // For recurring plans, check billing interval
-      if (billingInterval === currentBillingInterval) {
-        toast.info("You are already on this plan with this billing interval");
-        return;
-      }
+    if (planId === currentPlan && billingInterval === currentBillingInterval) {
+      toast.info("You are already on this plan with this billing interval");
+      return;
     }
 
-    // Determine if this is an upgrade or downgrade
-    const currentLevel = getPlanLevel(currentPlan);
-    const newLevel = getPlanLevel(planId);
+    if (planId === "lifetime") {
+      navigate({
+        to: "/checkout",
+        search: {
+          plan: "lifetime",
+        },
+      });
+      return;
+    }
 
-    // UPGRADE: Existing recurring subscribers stay in the plan-change flow so
-    // Stripe updates the current subscription instead of creating a new one.
-    if (newLevel > currentLevel) {
-      // Lifetime: one-time payment, no billing interval
-      if (planId === "lifetime") {
-        navigate({
-          to: "/checkout",
-          search: {
-            plan: "lifetime", // No billing interval for Lifetime
-          },
-        });
-        return;
-      }
-
-      if (currentPlan !== "free") {
-        setSelectedPlan(planId);
-        return;
-      }
-
-      // Recurring plans: include billing interval
+    // New paid subscriptions still need checkout for payment collection.
+    if (currentPlan === "free" || !currentPlan) {
       navigate({
         to: "/checkout",
         search: {
@@ -174,7 +153,8 @@ export function PlanSelector({
       return;
     }
 
-    // DOWNGRADE or BILLING INTERVAL CHANGE: Show preview dialog
+    // Existing recurring changes are handled by preview/update so Stripe can
+    // apply the correct immediate or period-end behavior.
     setSelectedPlan(planId);
   };
 
@@ -298,40 +278,37 @@ export function PlanSelector({
       </motion.div>
 
       {/* Action Button - Moved to top for better UX */}
-      {hasSelectedPlanChange && (
-        <motion.div
-          className="flex justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Button
-            onClick={handleChangePlan}
-            disabled={isLoading || isPreviewLoading}
-            size="lg"
-            className="from-primary/90 to-primary hover:from-primary hover:to-primary/90 bg-gradient-to-r px-8 py-3 text-base font-semibold shadow-lg"
+      {selectedPlan &&
+        (selectedPlan !== currentPlan ||
+          billingInterval !== currentBillingInterval) && (
+          <motion.div
+            className="flex justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            {isLoading || isPreviewLoading
-              ? (
+            <Button
+              onClick={handleChangePlan}
+              disabled={isLoading || isPreviewLoading}
+              size="lg"
+              className="from-primary/90 to-primary hover:from-primary hover:to-primary/90 bg-gradient-to-r px-8 py-3 text-base font-semibold shadow-lg"
+            >
+              {isLoading || isPreviewLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   {isPreviewLoading ? "Calculating..." : "Processing..."}
                 </>
-              )
-              : (
+              ) : (
                 <>
                   {currentPlan === "free" || !currentPlan
-                    ? `Upgrade to ${
-                      selectedPlan.charAt(0).toUpperCase() +
-                      selectedPlan.slice(1)
-                    }`
+                    ? `Upgrade to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
                     : "Review Change"}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </>
               )}
-          </Button>
-        </motion.div>
-      )}
+            </Button>
+          </motion.div>
+        )}
 
       {/* Plan Cards */}
       <motion.div
@@ -343,6 +320,10 @@ export function PlanSelector({
         <AnimatePresence>
           {plans.map((plan, index) => {
             const isCurrentPlan = currentPlan === plan.id;
+            const isCurrentPlanAndInterval =
+              isCurrentPlan &&
+              (plan.id === "lifetime" ||
+                billingInterval === currentBillingInterval);
             const isSelected = selectedPlan === plan.id;
             const isBillingIntervalChange = isCurrentPlan &&
               plan.id !== "free" &&
@@ -368,14 +349,12 @@ export function PlanSelector({
                 className="relative"
               >
                 <Card
-                  className={`relative cursor-pointer overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${
-                    getPlanGradient(
-                      plan.id,
-                      isSelected,
-                      plan.popular || false,
-                    )
-                  } ${canSelectPlan ? "" : "cursor-default"}`}
-                  onClick={() => canSelectPlan && handleSelectPlan(plan.id)}
+                  className={`relative cursor-pointer overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${getPlanGradient(
+                    plan.id,
+                    isSelected,
+                    plan.popular || false,
+                  )} ${isCurrentPlanAndInterval ? "cursor-default" : ""}`}
+                  onClick={() => handleSelectPlan(plan.id)}
                 >
                   {plan.popular && (
                     <div className="absolute -top-px left-1/2 -translate-x-1/2">
@@ -449,55 +428,42 @@ export function PlanSelector({
 
                     {/* Action Button */}
                     <div className="pt-4">
-                      {isCurrentPlan && !isBillingIntervalChange
-                        ? (
-                          <div className="border-muted bg-muted/50 flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-3">
-                            <CheckCircle2 className="mr-2 h-4 w-4 text-green-500 dark:text-green-400" />
-                            <span className="text-muted-foreground text-sm font-medium">
-                              Current Plan
-                            </span>
-                          </div>
-                        )
-                        : (
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectPlan(plan.id);
-                            }}
-                            variant={isSelected ? "default" : "secondary"}
-                            className="w-full"
-                          >
-                            {isSelected
-                              ? (
-                                <>
-                                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                                  Selected
-                                </>
-                              )
-                              : isBillingIntervalChange
-                              ? (
-                                `Switch to ${
-                                  billingInterval.charAt(0).toUpperCase() +
-                                  billingInterval.slice(1)
-                                }`
-                              )
-                              : getPlanLevel(plan.id) >
-                                  getPlanLevel(currentPlan)
-                              ? (
-                                <>
-                                  Upgrade to {plan.name}
-                                  <ArrowRight className="ml-2 h-4 w-4" />
-                                </>
-                              )
-                              : plan.id === "free"
-                              ? (
-                                "Cancel Subscription"
-                              )
-                              : (
-                                "Change Plan"
-                              )}
-                          </Button>
-                        )}
+                      {isCurrentPlanAndInterval ? (
+                        <div className="border-muted bg-muted/50 flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-3">
+                          <CheckCircle2 className="mr-2 h-4 w-4 text-green-500 dark:text-green-400" />
+                          <span className="text-muted-foreground text-sm font-medium">
+                            Current Plan
+                          </span>
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectPlan(plan.id);
+                          }}
+                          variant={isSelected ? "default" : "secondary"}
+                          className="w-full"
+                        >
+                          {isSelected ? (
+                            <>
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Selected
+                            </>
+                          ) : isCurrentPlan ? (
+                            "Switch Billing"
+                          ) : getPlanLevel(plan.id) >
+                            getPlanLevel(currentPlan) ? (
+                            <>
+                              Upgrade to {plan.name}
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </>
+                          ) : plan.id === "free" ? (
+                            "Cancel Subscription"
+                          ) : (
+                            "Change Plan"
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

@@ -454,7 +454,8 @@ serve(async (req) => {
     await supabase
       .from("expenses")
       .update({ split_group_id: splitGroup.id })
-      .eq("id", expense_id);
+      .eq("id", expense_id)
+      .is("deleted_at", null);
 
     // Calculate balances (who owes whom)
     const balances: Record<string, number> = {};

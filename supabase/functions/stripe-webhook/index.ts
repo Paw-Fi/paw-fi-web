@@ -27,10 +27,17 @@ import {
   getChangeType,
   PlanType,
 } from "../shared/subscription-constants.ts";
-import { getPlanFromPriceId } from "../shared/stripe-subscription-prices.ts";
+import {
+  resolveInvoicePlanFromLinePrices,
+  resolveSubscriptionPlanFromPrice,
+} from "../shared/stripe-subscription-prices.ts";
 import { resolveStripeCurrentPeriodEnd } from "../shared/stripe-subscription-period.ts";
 import { resolveStripeSubscriptionUserCandidate } from "../shared/stripe-subscription-user.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  allowZeroAmountLifetimeGrants,
+  isPositiveStripeAmount,
+} from "../shared/lifetime-grant-policy.ts";
 
 interface EmailTemplate {
   html: string;
@@ -96,7 +103,11 @@ function redactUserId(userId: string): string {
   return userId.length >= 8 ? `${userId.slice(0, 8)}…` : userId;
 }
 
-const ACCESS_GRANTING_STATUSES = new Set<string>(["active", "trialing"]);
+const ACCESS_GRANTING_STATUSES = new Set<string>([
+  "active",
+  "trialing",
+  "past_due",
+]);
 const TERMINAL_DOWNGRADE_STATUSES = new Set<string>([
   "canceled",
   "incomplete_expired",
@@ -953,26 +964,6 @@ async function getPlanNameFromProductId(productId: string | null | undefined) {
   }
 }
 
-function resolveRecurringPlanInfoFromSubscription(
-  subscription: Stripe.Subscription,
-): { plan: PlanType; interval: BillingInterval } {
-  const priceId = subscription.items.data[0]?.price?.id;
-  const planInfo = getPlanFromPriceId(priceId);
-
-  if (planInfo?.plan && planInfo.interval) {
-    return {
-      plan: planInfo.plan,
-      interval: planInfo.interval,
-    };
-  }
-
-  throw new Error(
-    `Unknown Stripe subscription price ID for ${subscription.id}: ${
-      priceId || "missing"
-    }`,
-  );
-}
-
 // Helper function to create lifetime subscription payload
 // Reduces code duplication for referral system and lifetime upgrades
 function createLifetimeSubscriptionPayload(
@@ -1387,11 +1378,19 @@ async function handleSubscriptionUpdated(
       }
     }
 
-    const resolvedPlanInfo = resolveRecurringPlanInfoFromSubscription(
-      subscription,
-    );
-    const finalPlan = resolvedPlanInfo.plan;
-    const finalInterval = resolvedPlanInfo.interval;
+    const storedStatus = mapStripeStatusToStoredStatus(status);
+    const pricePlanInfo = resolveSubscriptionPlanFromPrice(subscription);
+    if (
+      !pricePlanInfo ||
+      pricePlanInfo.plan === "lifetime" ||
+      !pricePlanInfo.interval
+    ) {
+      throw new Error(
+        `Unknown Stripe price for recurring subscription ${subscription.id}`,
+      );
+    }
+    const finalPlan = pricePlanInfo.plan;
+    const finalInterval = pricePlanInfo.interval;
 
     const trialStart = typeof subscription.trial_start === "number" &&
         !Number.isNaN(subscription.trial_start)
@@ -1406,7 +1405,6 @@ async function handleSubscriptionUpdated(
     const previousInterval = previousSub?.billing_interval as
       | BillingInterval
       | null;
-    const storedStatus = mapStripeStatusToStoredStatus(status);
     let periodResolution = resolveStripeCurrentPeriodEnd({
       subscription,
       invoice: relatedInvoice,
@@ -1416,8 +1414,7 @@ async function handleSubscriptionUpdated(
 
     if (
       periodResolution.source === "missing" &&
-      isAccessGrantingStatus(storedStatus) &&
-      finalPlan !== "lifetime"
+      isAccessGrantingStatus(storedStatus)
     ) {
       try {
         const expandedSubscription = await stripe.subscriptions.retrieve(
@@ -1446,8 +1443,7 @@ async function handleSubscriptionUpdated(
 
     if (
       periodResolution.source === "missing" &&
-      isAccessGrantingStatus(storedStatus) &&
-      finalPlan !== "lifetime"
+      isAccessGrantingStatus(storedStatus)
     ) {
       reportStripeWebhookError(
         "handle_subscription_updated_missing_period_end",
@@ -1564,13 +1560,12 @@ async function handleSubscriptionUpdated(
     const isNew = hasAccessNow && !hadAccessBefore;
 
     if (isNew) {
-      const isLifetime = finalPlan === "lifetime";
       const emailTemplate = subscriptionCreatedTemplate({
         name,
         planName,
-        endDate: isLifetime ? undefined : endDate,
+        endDate,
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-        isLifetime,
+        isLifetime: false,
       });
 
       enqueueUserEmail(user.email, name, emailTemplate);
@@ -1862,14 +1857,15 @@ async function handleInvoicePaymentSucceeded(
       const user = await getUserByCustomerId(customerId);
       const mappedUserId = user?.id as string | undefined;
 
-      // Try to determine plan and user by multiple fallbacks
-      // 1) PaymentIntent metadata (preferred when present)
+      // Try to determine plan and user. Lifetime grants must be proven by the
+      // paid line item price, never by mutable metadata alone.
       const paymentIntentId = typeof invoice.payment_intent === "string"
         ? invoice.payment_intent
         : invoice.payment_intent?.id;
 
-      let determinedPlan: PlanType | null = null;
-      let determinedUserId: string | null = null;
+      const linePricePlanInfo = resolveInvoicePlanFromLinePrices(invoice);
+      let determinedPlan: PlanType | null = linePricePlanInfo?.plan ?? null;
+      let metadataUserId: string | null = null;
 
       if (paymentIntentId) {
         try {
@@ -1880,8 +1876,10 @@ async function handleInvoicePaymentSucceeded(
           const piUserId = paymentIntent.metadata?.user_id as
             | string
             | undefined;
-          if (piPlan) determinedPlan = piPlan;
-          if (piUserId) determinedUserId = piUserId;
+          if (piPlan && piPlan !== "lifetime" && !determinedPlan) {
+            determinedPlan = piPlan;
+          }
+          if (isUuid(piUserId)) metadataUserId = piUserId;
         } catch (piErr) {
           reportStripeWebhookError(
             "handle_invoice_payment_succeeded_retrieve_payment_intent",
@@ -1895,60 +1893,49 @@ async function handleInvoicePaymentSucceeded(
         }
       }
 
-      // 2) Invoice metadata fallback (plan)
-      if (!determinedPlan && (invoice as any).metadata?.plan) {
+      // Invoice metadata fallback is context only; it cannot grant Lifetime.
+      if (
+        !determinedPlan &&
+        (invoice as any).metadata?.plan &&
+        (invoice as any).metadata.plan !== "lifetime"
+      ) {
         determinedPlan = (invoice as any).metadata.plan as string as PlanType;
       }
 
-      // 2b) Invoice metadata fallback (user id)
-      if (!determinedUserId && (invoice as any).metadata) {
+      // Invoice metadata can corroborate customer mapping, but cannot select the entitlement user.
+      if (!metadataUserId && (invoice as any).metadata) {
         const meta: any = (invoice as any).metadata;
-        if (meta.user_id || meta.userId) {
-          determinedUserId = (meta.user_id || meta.userId) as string;
+        const invoiceMetadataUserId = meta.user_id || meta.userId;
+        if (isUuid(invoiceMetadataUserId)) {
+          metadataUserId = invoiceMetadataUserId;
         }
       }
 
-      // 3) Price ID mapping from invoice lines
-      if (!determinedPlan && invoice.lines?.data?.length) {
-        const lineAny: any = invoice.lines.data[0];
-        const priceId = lineAny?.price?.id ||
-          lineAny?.pricing?.price_details?.price;
-        if (priceId) {
-          const planInfo = getPlanFromPriceId(priceId);
-          if (planInfo?.plan) {
-            determinedPlan = planInfo.plan;
-          }
-        }
+      if (metadataUserId && mappedUserId && metadataUserId !== mappedUserId) {
+        reportStripeWebhookError(
+          "one_time_invoice_metadata_user_conflict",
+          new Error(
+            "Stripe invoice metadata user_id conflicts with customer mapping",
+          ),
+          {
+            invoiceId: invoice.id,
+            customerId,
+            mappedUserId,
+            metadataUserId,
+          },
+        );
+        console.error(
+          "Skipping one-time invoice with metadata user_id conflict",
+          {
+            invoiceId: invoice.id,
+            mappedUserId: redactUserId(mappedUserId),
+            metadataUserId: redactUserId(metadataUserId),
+          },
+        );
+        return;
       }
 
-      // 4) Product name heuristic (last resort)
-      if (!determinedPlan && invoice.lines?.data?.length) {
-        const productId = getProductIdFromPrice(invoice.lines.data[0]?.price);
-        if (productId) {
-          try {
-            const product = await stripe.products.retrieve(productId);
-            if (product?.name && /lifetime/i.test(product.name)) {
-              determinedPlan = "lifetime";
-            }
-          } catch (prodErr) {
-            reportStripeWebhookError(
-              "handle_invoice_payment_succeeded_retrieve_product",
-              prodErr,
-              {
-                invoiceId: invoice.id,
-                productId,
-              },
-            );
-            console.error(
-              "Error retrieving product for invoice line:",
-              prodErr,
-            );
-          }
-        }
-      }
-
-      // Resolve userId: prefer PI metadata, else mapped user from customer
-      const userId = determinedUserId || mappedUserId;
+      const userId = mappedUserId ?? null;
 
       if (!determinedPlan) {
         console.log(
@@ -1964,7 +1951,7 @@ async function handleInvoicePaymentSucceeded(
 
       if (!userId) {
         console.error(
-          "Cannot fulfill one-time invoice: user not resolved from customer mapping or metadata",
+          "Cannot fulfill one-time invoice: user not resolved from customer mapping",
           {
             invoiceId: invoice.id,
             customerId,
@@ -1975,7 +1962,28 @@ async function handleInvoicePaymentSucceeded(
 
       // Only fulfill one-time Lifetime. Recurring plans must come via subscriptions
       if (determinedPlan === "lifetime") {
-        // Note: invoice.amount_paid can be 0 (100% discount). Stripe marks status=paid; honor that.
+        if (linePricePlanInfo?.plan !== "lifetime") {
+          console.error(
+            "Skipping Lifetime fulfillment without configured Lifetime price",
+            {
+              invoiceId: invoice.id,
+              customerId,
+            },
+          );
+          return;
+        }
+
+        if (
+          !isPositiveStripeAmount(invoice.amount_paid) &&
+          !allowZeroAmountLifetimeGrants()
+        ) {
+          console.error(
+            "Skipping zero-amount Lifetime invoice; enable ALLOW_ZERO_AMOUNT_LIFETIME_GRANTS to allow",
+            { invoiceId: invoice.id },
+          );
+          return;
+        }
+
         console.log(
           `ONE-TIME LIFETIME FULFILLMENT: user=${userId}, invoice=${invoice.id}, amount_paid=${invoice.amount_paid}`,
         );
@@ -2573,9 +2581,9 @@ async function handleCheckoutSessionCompleted(
       );
     }
 
-    const userId = userIdFromVerification ||
-      userIdFromCustomerMapping ||
-      userIdFromSession ||
+    const authoritativeUserId = userIdFromVerification ||
+      userIdFromCustomerMapping;
+    const userId = authoritativeUserId || userIdFromSession ||
       userIdFromPaymentIntent;
 
     if (!userId) {
@@ -2618,6 +2626,15 @@ async function handleCheckoutSessionCompleted(
       );
     } else if (session.mode === "payment") {
       console.log("One-time payment completed:", session.id);
+
+      if (!authoritativeUserId) {
+        throw new PermanentWebhookError(
+          "USER_NOT_AUTHORIZED_FOR_LIFETIME",
+          `Checkout session ${sessionId} has no verification row or customer mapping`,
+        );
+      }
+
+      const lifetimeUserId = authoritativeUserId;
 
       // Resolve plan (server-side record preferred).
       let plan: string | null = planFromVerification;
@@ -2663,7 +2680,7 @@ async function handleCheckoutSessionCompleted(
             {
               sessionId,
               paymentStatus,
-              userId: redactUserId(userId),
+              userId: redactUserId(lifetimeUserId),
             },
           );
           return;
@@ -2673,6 +2690,30 @@ async function handleCheckoutSessionCompleted(
           throw new PermanentWebhookError(
             "INVALID_PAYMENT_STATUS",
             `Checkout session ${sessionId} has no_payment_required but amount_total != 0`,
+          );
+        }
+
+        if (
+          !isPositiveStripeAmount(amountTotal) &&
+          !allowZeroAmountLifetimeGrants()
+        ) {
+          throw new PermanentWebhookError(
+            "ZERO_AMOUNT_LIFETIME_NOT_ALLOWED",
+            `Checkout session ${sessionId} has zero-amount Lifetime payment without explicit allowance`,
+          );
+        }
+
+        const lineItems = await stripe.checkout.sessions.listLineItems(
+          sessionId,
+          { limit: 100 },
+        );
+        const checkoutLinePlanInfo = resolveInvoicePlanFromLinePrices({
+          lines: lineItems as any,
+        });
+        if (checkoutLinePlanInfo?.plan !== "lifetime") {
+          throw new PermanentWebhookError(
+            "LIFETIME_PRICE_NOT_VERIFIED",
+            `Checkout session ${sessionId} did not include configured Lifetime price`,
           );
         }
 
@@ -2688,14 +2729,14 @@ async function handleCheckoutSessionCompleted(
             sessionId,
             paymentStatus,
             paymentIntentStatus: piStatus,
-            userId: redactUserId(userId),
+            userId: redactUserId(lifetimeUserId),
           });
           return;
         }
 
         console.log(
           "Processing Lifetime plan purchase for user:",
-          redactUserId(userId),
+          redactUserId(lifetimeUserId),
         );
 
         // CRITICAL: Fetch old subscription ID BEFORE upserting lifetime
@@ -2703,7 +2744,7 @@ async function handleCheckoutSessionCompleted(
         const { data: oldSubData } = await supabase
           .from("subscriptions")
           .select("stripe_subscription_id, plan, status")
-          .eq("user_id", userId)
+          .eq("user_id", lifetimeUserId)
           .maybeSingle();
 
         const oldStripeSubscriptionId = oldSubData?.stripe_subscription_id;
@@ -2716,7 +2757,7 @@ async function handleCheckoutSessionCompleted(
         // Create or update subscription record for Lifetime plan
         // Use helper function to create consistent lifetime payload
         const lifetimeSubscriptionData = createLifetimeSubscriptionPayload(
-          userId,
+          lifetimeUserId,
           customerId,
           eventId,
         );
@@ -2815,10 +2856,10 @@ async function handleCheckoutSessionCompleted(
             console.error("Referral acceptance has invalid IDs; skipping", {
               sessionId,
             });
-          } else if (refereeUserId !== userId) {
+          } else if (refereeUserId !== lifetimeUserId) {
             console.error("Referral acceptance referee mismatch; skipping", {
               sessionId,
-              purchaser: redactUserId(userId),
+              purchaser: redactUserId(lifetimeUserId),
               referee: redactUserId(refereeUserId),
             });
           } else if (referrerUserId === refereeUserId) {
@@ -2826,7 +2867,7 @@ async function handleCheckoutSessionCompleted(
               "Referral acceptance has same referrer/referee; skipping",
               {
                 sessionId,
-                userId: redactUserId(userId),
+                userId: redactUserId(lifetimeUserId),
               },
             );
           } else if (acceptance.status === "completed") {
@@ -2882,7 +2923,11 @@ async function handleCheckoutSessionCompleted(
           oldStripeSubscriptionId.startsWith("sub_")
         ) {
           console.log(
-            `🔄 Canceling old subscription ${oldStripeSubscriptionId} for user ${userId} (upgraded to lifetime)`,
+            `🔄 Canceling old subscription ${oldStripeSubscriptionId} for user ${
+              redactUserId(
+                lifetimeUserId,
+              )
+            } (upgraded to lifetime)`,
           );
 
           try {
@@ -2899,7 +2944,7 @@ async function handleCheckoutSessionCompleted(
               cancelError,
               {
                 oldStripeSubscriptionId,
-                userId,
+                userId: redactUserId(lifetimeUserId),
                 sessionId: session.id,
               },
             );
@@ -2929,7 +2974,7 @@ async function handleCheckoutSessionCompleted(
         const { data: userData } = await supabase
           .from("users")
           .select("email, full_name")
-          .eq("id", userId)
+          .eq("id", lifetimeUserId)
           .single();
 
         if (userData) {
@@ -2943,9 +2988,7 @@ async function handleCheckoutSessionCompleted(
           });
 
           enqueueUserEmail(userData.email, name, emailTemplate);
-          console.log(
-            `Lifetime confirmation email queued for ${userData.email}`,
-          );
+          console.log("Lifetime confirmation email queued");
         }
       } else {
         // CRITICAL ERROR: Payment mode used for non-lifetime plan
@@ -2953,10 +2996,10 @@ async function handleCheckoutSessionCompleted(
           "CRITICAL: Payment mode checkout with non-lifetime plan!",
           {
             sessionId: session.id,
-            userId,
-            customerId,
+            userId: redactUserId(lifetimeUserId),
+            hasCustomer: Boolean(customerId),
             plan,
-            metadata: session.metadata,
+            hasMetadata: Boolean(session.metadata),
           },
         );
 
@@ -3411,12 +3454,18 @@ async function handleSubscriptionPendingUpdateApplied(
       return;
     }
 
-    // Extract new plan from metadata
-    const resolvedPlanInfo = resolveRecurringPlanInfoFromSubscription(
-      subscription,
-    );
-    const plan = resolvedPlanInfo.plan;
-    const billingInterval = resolvedPlanInfo.interval;
+    const pricePlanInfo = resolveSubscriptionPlanFromPrice(subscription);
+    if (
+      !pricePlanInfo ||
+      pricePlanInfo.plan === "lifetime" ||
+      !pricePlanInfo.interval
+    ) {
+      throw new Error(
+        `Unknown Stripe price for applied subscription update ${subscription.id}`,
+      );
+    }
+    const plan = pricePlanInfo.plan;
+    const billingInterval = pricePlanInfo.interval;
 
     // Get previous plan for change type detection
     const { data: previousSub } = await supabase

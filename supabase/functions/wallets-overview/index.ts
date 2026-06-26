@@ -701,7 +701,7 @@ Deno.serve(async (req: Request) => {
     if (accountIds.length > 0) {
       const { data: expenseRows } = await supabase
         .from("expenses")
-        .select("account_id, amount_cents, type")
+        .select("account_id, amount_cents, type, currency")
         .in("account_id", accountIds)
         .is("deleted_at", null);
 
@@ -710,6 +710,9 @@ Deno.serve(async (req: Request) => {
       for (const row of (expenseRows ?? []) as Array<Record<string, unknown>>) {
         const accountId = `${row.account_id ?? ""}`;
         if (!accountId) continue;
+        if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
+          continue;
+        }
         const amount = toNumber(row.amount_cents);
         if (`${row.type ?? "expense"}`.toLowerCase() === "income") {
           incomeIn.set(accountId, (incomeIn.get(accountId) ?? 0) + amount);
@@ -720,11 +723,11 @@ Deno.serve(async (req: Request) => {
 
       const { data: transferOutRows } = await supabase
         .from("account_transfers")
-        .select("from_account_id, amount_cents")
+        .select("from_account_id, amount_cents, currency")
         .in("from_account_id", accountIds);
       const { data: transferInRows } = await supabase
         .from("account_transfers")
-        .select("to_account_id, amount_cents")
+        .select("to_account_id, amount_cents, currency")
         .in("to_account_id", accountIds);
 
       const transferOut = new Map<string, number>();
@@ -733,6 +736,9 @@ Deno.serve(async (req: Request) => {
       >) {
         const key = `${row.from_account_id ?? ""}`;
         if (!key) continue;
+        if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
+          continue;
+        }
         transferOut.set(
           key,
           (transferOut.get(key) ?? 0) + toNumber(row.amount_cents),
@@ -745,6 +751,9 @@ Deno.serve(async (req: Request) => {
       >) {
         const key = `${row.to_account_id ?? ""}`;
         if (!key) continue;
+        if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
+          continue;
+        }
         transferIn.set(
           key,
           (transferIn.get(key) ?? 0) + toNumber(row.amount_cents),

@@ -4,6 +4,15 @@ import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { validate as validateUuid } from "https://deno.land/std@0.177.0/uuid/mod.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  allowZeroAmountLifetimeGrants,
+  isPositiveStripeAmount,
+} from "../shared/lifetime-grant-policy.ts";
+import { resolveInvoicePlanFromLinePrices } from "../shared/stripe-subscription-prices.ts";
+import {
+  buildPaymentVerificationResult,
+  resolveRecurringPaymentEntitlement,
+} from "../shared/verify-payment-entitlement.ts";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -75,13 +84,6 @@ function safeUnixToISO(
   }
 }
 
-function toBillingInterval(value: unknown): "monthly" | "yearly" | null {
-  if (value === "monthly" || value === "yearly") return value;
-  if (value === "month") return "monthly";
-  if (value === "year") return "yearly";
-  return null;
-}
-
 function getStripeCustomerId(session: Stripe.Checkout.Session): string | null {
   const customer = session.customer as unknown;
   if (typeof customer === "string" && customer) return customer;
@@ -119,8 +121,9 @@ serve(async (req: Request) => {
       v?: unknown;
     } | null;
 
-    const sessionId =
-      typeof body?.sessionId === "string" ? body.sessionId : null;
+    const sessionId = typeof body?.sessionId === "string"
+      ? body.sessionId
+      : null;
     const v = typeof body?.v === "string" ? body.v : null;
 
     // verify-payment is deployed publicly (--no-verify-jwt) to support logged-out users.
@@ -268,8 +271,8 @@ serve(async (req: Request) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     const paymentStatus = session.payment_status;
-    const isPaymentSuccess =
-      paymentStatus === "paid" || paymentStatus === "no_payment_required";
+    const isPaymentSuccess = paymentStatus === "paid" ||
+      paymentStatus === "no_payment_required";
 
     // Check if the payment was successful
     if (!isPaymentSuccess) {
@@ -328,13 +331,66 @@ serve(async (req: Request) => {
     if (session.mode === "payment") {
       console.log("Lifetime payment session detected - fulfilling immediately");
 
-      const plan = session.metadata?.plan || "lifetime";
+      if (paymentStatus !== "paid") {
+        return new Response(
+          JSON.stringify({
+            verified: false,
+            message: `Payment status is ${paymentStatus}`,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (
+        !isPositiveStripeAmount(session.amount_total) &&
+        !allowZeroAmountLifetimeGrants()
+      ) {
+        return new Response(
+          JSON.stringify({
+            verified: false,
+            message: "Lifetime payment amount could not be verified",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const lineItems = await stripe.checkout.sessions.listLineItems(
+        sessionId,
+        { limit: 100 },
+      );
+      const linePlanInfo = resolveInvoicePlanFromLinePrices({
+        lines: lineItems as any,
+      });
+
+      if (linePlanInfo?.plan !== "lifetime") {
+        return new Response(
+          JSON.stringify({
+            verified: false,
+            message: "Lifetime price could not be verified",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const plan = "lifetime";
+
+      let persistenceError: unknown = null;
+      let stripeCustomerId: string | null = null;
 
       // Idempotent DB upsert so mobile deep-link callback can unlock immediately.
-      // Webhook may still run later; this makes the UX robust.
+      // The callback must still fail closed if entitlement persistence fails.
       try {
         const now = new Date();
-        const stripeCustomerId = getStripeCustomerId(session);
+        stripeCustomerId = getStripeCustomerId(session);
 
         const subscriptionData = {
           user_id: userId,
@@ -361,18 +417,24 @@ serve(async (req: Request) => {
           updated_at: now.toISOString(),
         };
 
-        await supabase
+        const { error: upsertError } = await supabase
           .from("subscriptions")
           .upsert(subscriptionData, { onConflict: "user_id" });
 
-        console.log("Lifetime subscription upserted for user:", userId);
+        if (upsertError) {
+          persistenceError = upsertError;
+          console.error("Failed to upsert lifetime subscription:", upsertError);
+        } else {
+          console.log("Lifetime subscription upserted for user:", userId);
+        }
       } catch (dbError) {
+        persistenceError = dbError;
         console.error("Failed to upsert lifetime subscription:", dbError);
-        // Keep returning verified=true so client can proceed; webhook may still fix state.
       }
 
-      return new Response(
-        JSON.stringify({
+      const result = buildPaymentVerificationResult({
+        persistenceError,
+        success: {
           verified: true,
           message: "Lifetime payment successful",
           subscription: {
@@ -384,9 +446,13 @@ serve(async (req: Request) => {
             cancel_at_period_end: false,
             trial_end: null,
             stripe_subscription_id: null,
-            stripe_customer_id: getStripeCustomerId(session),
+            stripe_customer_id: stripeCustomerId,
           },
-        } satisfies VerifyPaymentResponse),
+        },
+      });
+
+      return new Response(
+        JSON.stringify(result satisfies VerifyPaymentResponse),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -412,8 +478,24 @@ serve(async (req: Request) => {
     // Retrieve the subscription from Stripe
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
+    const entitlement = resolveRecurringPaymentEntitlement(subscription);
+    if (!entitlement.verified) {
+      return new Response(
+        JSON.stringify(
+          {
+            verified: false,
+            message: entitlement.message,
+          } satisfies VerifyPaymentResponse,
+        ),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Extract subscription details with proper null handling
-    const plan = subscription.metadata.plan || "plus";
+    const plan = entitlement.plan;
     const status = subscription.status;
 
     // CRITICAL: For trialing subscriptions without payment method, use trial_end as current_period_end
@@ -440,9 +522,7 @@ serve(async (req: Request) => {
 
     const cancelAtPeriodEnd = subscription.cancel_at_period_end;
 
-    const billingInterval =
-      toBillingInterval(subscription.metadata?.billing_interval) ||
-      toBillingInterval(subscription.items.data[0]?.price?.recurring?.interval);
+    const billingInterval = entitlement.billingInterval;
 
     console.log("Subscription details:", {
       id: subscriptionId,
@@ -456,9 +536,10 @@ serve(async (req: Request) => {
 
     // Update the user's subscription in the database
     // userId is already validated as a valid UUID
+    let persistenceError: unknown = null;
+    const stripeCustomerId = getStripeCustomerId(session);
     try {
       const now = new Date();
-      const stripeCustomerId = getStripeCustomerId(session);
 
       const subscriptionData = {
         user_id: userId,
@@ -490,16 +571,17 @@ serve(async (req: Request) => {
         .upsert(subscriptionData, { onConflict: "user_id" });
 
       if (upsertError) {
+        persistenceError = upsertError;
         console.error("Error upserting subscription:", upsertError);
       }
     } catch (dbError) {
+      persistenceError = dbError;
       console.error("Database error:", dbError);
-      // Continue with verification even if database operations fail
     }
 
-    // Return success response with subscription details
-    return new Response(
-      JSON.stringify({
+    const result = buildPaymentVerificationResult({
+      persistenceError,
+      success: {
         verified: true,
         subscription: {
           provider: "stripe",
@@ -510,9 +592,14 @@ serve(async (req: Request) => {
           cancel_at_period_end: cancelAtPeriodEnd,
           trial_end: trialEnd,
           stripe_subscription_id: subscriptionId,
-          stripe_customer_id: getStripeCustomerId(session),
+          stripe_customer_id: stripeCustomerId,
         },
-      } satisfies VerifyPaymentResponse),
+      },
+    });
+
+    // Return success response with subscription details
+    return new Response(
+      JSON.stringify(result satisfies VerifyPaymentResponse),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

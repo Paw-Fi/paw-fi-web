@@ -566,7 +566,8 @@ Rules:
       .from("expenses")
       .select("amount_cents,currency")
       .eq("contact_id", contactId)
-      .eq("date", dateStr);
+      .eq("date", dateStr)
+      .is("deleted_at", null);
 
     // Group expenses by currency
     const currencyTotals = new Map<string, number>();
@@ -636,7 +637,8 @@ Rules:
       .from("expenses")
       .select("amount_cents,currency")
       .eq("contact_id", contactId)
-      .eq("date", dateForTotals);
+      .eq("date", dateForTotals)
+      .is("deleted_at", null);
 
     const currencyTotals = new Map<string, number>();
     (allExpenseRows || []).forEach((r: any) => {

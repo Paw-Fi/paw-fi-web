@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { getSubscriptionDisplayPrice } from "../shared/subscription-display-prices.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -12,6 +13,20 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 type Platform = "ios" | "android";
+
+type SubscriptionProductRow = {
+  id: string;
+  platform: Platform;
+  plan: string;
+  billing_interval: string | null;
+  store_product_id: string;
+  display_name: string;
+  tagline: string;
+  badge_text: string | null;
+  is_popular: boolean;
+  sort_order: number;
+  is_active: boolean;
+};
 
 function isPlatform(value: unknown): value is Platform {
   return value === "ios" || value === "android";
@@ -74,8 +89,6 @@ serve(async (req: Request) => {
           "tagline",
           "badge_text",
           "is_popular",
-          "display_price_usd",
-          "original_price_usd",
           "sort_order",
           "is_active",
         ].join(","),
@@ -95,7 +108,21 @@ serve(async (req: Request) => {
       );
     }
 
-    return new Response(JSON.stringify({ products: data ?? [] }), {
+    const rows = (data ?? []) as unknown as SubscriptionProductRow[];
+    const products = rows.map((product) => {
+      const price = getSubscriptionDisplayPrice(
+        product.plan,
+        product.billing_interval,
+      );
+
+      return {
+        ...product,
+        display_price_usd: price.displayPriceUsd,
+        original_price_usd: price.originalPriceUsd,
+      };
+    });
+
+    return new Response(JSON.stringify({ products }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

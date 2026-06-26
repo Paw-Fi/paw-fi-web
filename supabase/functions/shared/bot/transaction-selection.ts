@@ -77,6 +77,7 @@ export async function resolveBotTransactionSelection(params: {
       "id, amount_cents, currency, date, category, raw_text, merchant, type, household_id",
     )
     .eq("user_id", params.userId)
+    .is("deleted_at", null)
     .limit(10);
 
   if (match.type) {

@@ -192,7 +192,7 @@ Deno.serve(async (req: Request) => {
     const { data: expenses, error } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring, provider, provider_transaction_id",
+        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring, provider, provider_transaction_id, deleted_at",
       )
       .in("id", expenseIds);
 
@@ -291,6 +291,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const allowedExpenseIds: string[] = [];
+    const alreadyDeletedIds: string[] = [];
     for (const id of expenseIds) {
       const expense = expenseById.get(id);
       if (!expense) continue;
@@ -341,11 +342,36 @@ Deno.serve(async (req: Request) => {
       }
 
       if (allowed) {
-        allowedExpenseIds.push(id);
+        if ((expense as any)?.deleted_at) {
+          alreadyDeletedIds.push(id);
+        } else {
+          allowedExpenseIds.push(id);
+        }
       }
     }
 
     if (allowedExpenseIds.length === 0) {
+      if (alreadyDeletedIds.length > 0 && failedIds.length === 0) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            deletedCount: 0,
+            alreadyDeletedCount: alreadyDeletedIds.length,
+            failedCount: 0,
+            failedIds,
+            resolvedUserId: userId,
+            meta: {
+              ...(resolvedIdentityMeta ?? {}),
+              clientRecordId,
+              clientMutationId,
+            },
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
       if (expenseIds.length === 1) {
         const reason = failedIds[0]?.reason ?? "unknown";
         if (reason === "not_found") {
@@ -382,37 +408,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { error: delError } = await supabase
+    const { error: softDeleteError } = await supabase
       .from("expenses")
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_reason: "user_deleted",
+        updated_at: new Date().toISOString(),
+      })
       .in("id", allowedExpenseIds);
 
-    const manualExpenseIds = allowedExpenseIds.filter(
-      (id) => !importedProviderExpenseIds.includes(id),
-    );
-
-    if (importedProviderExpenseIds.length > 0) {
-      const { error: softDeleteError } = await supabase
-        .from("expenses")
-        .update({
-          deleted_at: new Date().toISOString(),
-          deleted_reason: "user_deleted",
-          updated_at: new Date().toISOString(),
-        })
-        .in("id", importedProviderExpenseIds);
-
-      if (softDeleteError) {
-        return errorResponse("Failed to delete expense", 500);
-      }
-    }
-
-    if (manualExpenseIds.length > 0) {
-      const { error: delError } = await supabase
-        .from("expenses")
-        .delete()
-        .in("id", manualExpenseIds);
-
-      if (delError) return errorResponse("Failed to delete expense", 500);
+    if (softDeleteError) {
+      return errorResponse("Failed to delete expense", 500);
     }
 
     console.log("[delete-expense] Successfully deleted expenses", {
@@ -538,6 +544,7 @@ Deno.serve(async (req: Request) => {
     const responseData: any = {
       success: failedIds.length === 0,
       deletedCount: allowedExpenseIds.length,
+      alreadyDeletedCount: alreadyDeletedIds.length,
       failedCount: failedIds.length,
       failedIds,
       resolvedUserId: userId,

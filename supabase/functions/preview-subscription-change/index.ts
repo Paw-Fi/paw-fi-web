@@ -3,8 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
 import { getPriceId } from "../shared/stripe-subscription-prices.ts";
+import type {
+  BillingInterval,
+  PlanType,
+} from "../shared/subscription-constants.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { BillingInterval, PlanType } from "../shared/subscription-constants.ts";
+import { buildCheckoutPageUrl } from "../shared/checkout-redirect.ts";
+import { getSubscriptionChangePolicy } from "../shared/subscription-change-policy.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -22,6 +27,10 @@ const PLAN_HIERARCHY = {
   plus: 1,
   premium: 2,
 };
+
+function resolveRecurringPriceId(plan: string, interval: string): string {
+  return getPriceId(plan as PlanType, interval as BillingInterval);
+}
 
 serve(async (req) => {
   try {
@@ -66,6 +75,13 @@ serve(async (req) => {
 
     if (!newPlan) {
       return new Response(JSON.stringify({ error: "Plan is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!(newPlan in PLAN_HIERARCHY) && newPlan !== "lifetime") {
+      return new Response(JSON.stringify({ error: "Invalid plan" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -151,8 +167,10 @@ serve(async (req) => {
 
     // Cannot preview "upgrade" to Lifetime - must use checkout
     if (newPlan === "lifetime") {
-      const origin = req.headers.get("origin") || "https://moneko.io";
-      const checkoutUrl = `${origin}/checkout?plan=lifetime`;
+      const checkoutUrl = buildCheckoutPageUrl(
+        Deno.env.get("APP_URL") || "https://moneko.io",
+        { plan: "lifetime" },
+      );
 
       return new Response(
         JSON.stringify({
@@ -182,12 +200,13 @@ serve(async (req) => {
       );
     }
 
-    // Determine if this is an upgrade or downgrade (without lifetime)
-    const hierarchy: Record<string, number> = PLAN_HIERARCHY;
-    const isUpgrade = (hierarchy[newPlan] ?? 0) > (hierarchy[currentPlan] ?? 0);
-    const isDowngrade =
-      (hierarchy[newPlan] ?? 0) < (hierarchy[currentPlan] ?? 0);
-    const isSamePlan = newPlan === currentPlan;
+    const changePolicy = getSubscriptionChangePolicy({
+      currentPlan: currentPlan as PlanType,
+      newPlan: newPlan as PlanType,
+      currentInterval: subscription?.billing_interval as BillingInterval | null,
+      newInterval: billingInterval as BillingInterval,
+    });
+    const { isUpgrade, isDowngrade, isSamePlan } = changePolicy;
 
     // Special case: Downgrading to free plan (cancellation)
     if (newPlan === "free") {
@@ -228,7 +247,6 @@ serve(async (req) => {
           currentPeriodEnd: (subscription as any).current_period_end,
           message:
             `Your subscription will be canceled and you'll return to the free plan on ${periodEnd}. You'll continue to have access to your current plan until then.`,
-          prorationDate: Math.floor(Date.now() / 1000),
         }),
         {
           status: 200,
@@ -246,17 +264,14 @@ serve(async (req) => {
       // For new subscriptions, return basic pricing info without preview
       let priceId: string;
       try {
-        priceId = getPriceId(
-          newPlan as PlanType,
-          billingInterval as BillingInterval,
-        );
-      } catch (_error) {
-        priceId = "";
-      }
-
-      if (!priceId) {
+        priceId = resolveRecurringPriceId(newPlan, billingInterval);
+      } catch (error) {
         return new Response(
-          JSON.stringify({ error: "Invalid plan or billing interval" }),
+          JSON.stringify({
+            error: error instanceof Error
+              ? error.message
+              : "Invalid plan or billing interval",
+          }),
           {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -282,7 +297,6 @@ serve(async (req) => {
           } ${price.currency.toUpperCase()} ${
             newBillingInterval === "monthly" ? "per month" : "per year"
           }`,
-          prorationDate: Math.floor(Date.now() / 1000),
         }),
         {
           status: 200,
@@ -294,17 +308,14 @@ serve(async (req) => {
     // For existing subscriptions, get the new price ID
     let newPriceId: string;
     try {
-      newPriceId = getPriceId(
-        newPlan as PlanType,
-        billingInterval as BillingInterval,
-      );
-    } catch (_error) {
-      newPriceId = "";
-    }
-
-    if (!newPriceId) {
+      newPriceId = resolveRecurringPriceId(newPlan, billingInterval);
+    } catch (error) {
       return new Response(
-        JSON.stringify({ error: "Invalid plan or billing interval" }),
+        JSON.stringify({
+          error: error instanceof Error
+            ? error.message
+            : "Invalid plan or billing interval",
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -330,7 +341,6 @@ serve(async (req) => {
     }
 
     const subscriptionItemId = stripeSubscription.items.data[0].id;
-    const currentPriceId = stripeSubscription.items.data[0].price.id;
 
     // Set proration date to now for consistent calculations
     const prorationDate = Math.floor(Date.now() / 1000);
@@ -368,7 +378,7 @@ serve(async (req) => {
       );
 
       // Determine billing behavior
-      let billingBehavior = "immediate";
+      let billingBehavior = changePolicy.billingBehavior;
       let message = "";
 
       if (isUpgrade) {
@@ -447,7 +457,6 @@ serve(async (req) => {
           currency: upcomingInvoice.currency,
           currentPeriodEnd: stripeSubscription.current_period_end,
           message,
-          prorationDate, // Return this to use in actual update
           preview: {
             amountDue: upcomingInvoice.amount_due,
             subtotal: upcomingInvoice.subtotal,

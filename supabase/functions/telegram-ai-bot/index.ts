@@ -97,6 +97,7 @@ import {
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
   buildTransactionMutationFailureText,
+  invokeTransactionDelete,
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
@@ -127,13 +128,17 @@ import {
   buildWalletTools,
   cloneBotToolDeclarations,
 } from "../shared/bot/tool-definitions.ts";
-import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
+import {
+  hasExplicitTransactionCurrency,
+  resolveWalletForTransactionToolCall,
+  resolveWalletTransactionCurrency,
+} from "../shared/bot/wallet-scope.ts";
 import {
   buildWalletMutationFailureText,
   createBotWalletFromToolCall,
-  createBotWalletTransfer,
+  createBotWalletTransferFromToolCall,
   listBotWallets,
-  updateBotWallet,
+  updateBotWalletFromToolCall,
 } from "../shared/bot/wallet-tools.ts";
 import {
   buildUnsafeWalletMutationClaimFallback,
@@ -1875,14 +1880,33 @@ Deno.serve(async (req: Request) => {
                         call.args,
                       )
                     : {};
-                const requestedWallet = await resolveWalletIdInScope(
-                  supabase,
-                  userId,
-                  householdId,
-                  call.args.wallet_name,
-                );
+                const requestedWallet =
+                  await resolveWalletForTransactionToolCall(
+                    supabase,
+                    userId,
+                    householdId,
+                    call.args,
+                    "telegram-ai-bot",
+                  );
                 if (requestedWallet.error) {
                   toolResult = { error: requestedWallet.error };
+                  lastToolResult = toolResult;
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
+                const currencyResult = resolveWalletTransactionCurrency({
+                  wallet: requestedWallet,
+                  walletName: call.args.wallet_name,
+                  transactionCurrency: transaction.currency,
+                  fallbackCurrency: userCurrency,
+                  hasExplicitCurrency: hasExplicitTransactionCurrency(
+                    call.args,
+                  ),
+                });
+                if (currencyResult.error || !currencyResult.currency) {
+                  toolResult = { error: currencyResult.error };
                   lastToolResult = toolResult;
                   toolResponses.push({
                     functionResponse: { name: call.name, response: toolResult },
@@ -1907,7 +1931,7 @@ Deno.serve(async (req: Request) => {
                     description: transaction.description,
                     merchant: transaction.merchant,
                     date: transaction.date!,
-                    currency: transaction.currency || userCurrency,
+                    currency: currencyResult.currency,
                     type: transaction.type,
                     householdId,
                     isPortfolio:
@@ -2000,16 +2024,31 @@ Deno.serve(async (req: Request) => {
                     break;
                   }
                   const transaction = transactionResult.transaction;
-                  const requestedWallet = await resolveWalletIdInScope(
-                    supabase,
-                    userId,
-                    householdId,
-                    row.wallet_name,
-                  );
+                  const requestedWallet =
+                    await resolveWalletForTransactionToolCall(
+                      supabase,
+                      userId,
+                      householdId,
+                      row,
+                      "telegram-ai-bot",
+                    );
                   if (requestedWallet.error) {
                     batchBuildError = `Transaction ${
                       index + 1
                     }: ${requestedWallet.error}`;
+                    break;
+                  }
+                  const currencyResult = resolveWalletTransactionCurrency({
+                    wallet: requestedWallet,
+                    walletName: row.wallet_name,
+                    transactionCurrency: transaction.currency,
+                    fallbackCurrency: userCurrency,
+                    hasExplicitCurrency: hasExplicitTransactionCurrency(row),
+                  });
+                  if (currencyResult.error || !currencyResult.currency) {
+                    batchBuildError = `Transaction ${
+                      index + 1
+                    }: ${currencyResult.error}`;
                     break;
                   }
                   const splitConfig =
@@ -2030,7 +2069,7 @@ Deno.serve(async (req: Request) => {
                     description: transaction.description || "",
                     merchant: transaction.merchant,
                     date: transaction.date!,
-                    currency: transaction.currency || userCurrency,
+                    currency: currencyResult.currency,
                     accountId: requestedWallet.accountId ?? undefined,
                     source: row.source,
                     ownerType: row.owner_type || "me",
@@ -2146,178 +2185,49 @@ Deno.serve(async (req: Request) => {
                   call.args,
                   spaceMap,
                 );
-                const requestedWallet = await resolveWalletIdInScope(
+                const walletResult = await updateBotWalletFromToolCall({
                   supabase,
+                  internalFunctionKey,
                   userId,
                   householdId,
-                  call.args.wallet_name,
-                );
-                if (requestedWallet.error || !requestedWallet.accountId) {
-                  toolResult = {
-                    error:
-                      requestedWallet.error ||
-                      "Wallet was not found in the selected scope.",
-                  };
-                } else {
-                  const newNameResult =
-                    call.args.new_name != null
-                      ? normalizeRequiredAiToolString(
-                          call.args.new_name,
-                          "new_name",
-                        )
-                      : { ok: true as const, value: undefined };
-                  const goalAmountResult = normalizeAiToolMoneyCents(
-                    call.args.goal_amount,
-                    "goal_amount",
-                    { allowNegative: false },
-                  );
-                  const openingBalanceResult = normalizeAiToolMoneyCents(
-                    call.args.opening_balance,
-                    "opening_balance",
-                    { allowNegative: true },
-                  );
-                  if (!newNameResult.ok) {
-                    toolResult = { error: newNameResult.error };
-                    toolResponses.push({
-                      functionResponse: {
-                        name: call.name,
-                        response: toolResult,
-                      },
-                    });
-                    continue;
-                  }
-                  if (!goalAmountResult.ok) {
-                    toolResult = { error: goalAmountResult.error };
-                    toolResponses.push({
-                      functionResponse: {
-                        name: call.name,
-                        response: toolResult,
-                      },
-                    });
-                    continue;
-                  }
-                  if (!openingBalanceResult.ok) {
-                    toolResult = { error: openingBalanceResult.error };
-                    toolResponses.push({
-                      functionResponse: {
-                        name: call.name,
-                        response: toolResult,
-                      },
-                    });
-                    continue;
-                  }
-                  const hasUpdate =
-                    newNameResult.value !== undefined ||
-                    typeof call.args.icon === "string" ||
-                    typeof call.args.color === "string" ||
-                    openingBalanceResult.cents !== undefined ||
-                    goalAmountResult.cents !== undefined ||
-                    typeof call.args.is_default === "boolean";
-                  if (!hasUpdate) {
-                    toolResult = {
-                      error: "At least one wallet update is required.",
-                    };
-                    toolResponses.push({
-                      functionResponse: {
-                        name: call.name,
-                        response: toolResult,
-                      },
-                    });
-                    continue;
-                  }
-                  const walletResult = await updateBotWallet({
-                    supabase,
-                    internalFunctionKey,
-                    userId,
-                    householdId,
-                    accountId: requestedWallet.accountId,
-                    walletName: call.args.wallet_name,
-                    name: newNameResult.value,
-                    icon: call.args.icon,
-                    color: call.args.color,
-                    openingBalanceCents: openingBalanceResult.cents,
-                    goalAmountCents: goalAmountResult.cents,
-                    isDefault:
-                      typeof call.args.is_default === "boolean"
-                        ? call.args.is_default
-                        : undefined,
+                  args: call.args || {},
+                  logPrefix: "telegram-ai-bot",
+                });
+                toolResult = walletResult.result;
+                if (walletResult.failure) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "update_wallet",
+                    targetFunction: walletResult.failure.targetFunction,
+                    formatted: walletResult.failure.formatted,
+                    error: walletResult.failure.error,
+                    context: walletResult.failure.context,
                   });
-                  toolResult = walletResult.result;
-                  if (walletResult.failure) {
-                    await reportTelegramToolInvokeFailure({
-                      traceId,
-                      toolName: "update_wallet",
-                      targetFunction: walletResult.failure.targetFunction,
-                      formatted: walletResult.failure.formatted,
-                      error: walletResult.failure.error,
-                      context: walletResult.failure.context,
-                    });
-                  }
                 }
               } else if (call.name === "create_wallet_transfer") {
-                const amountResult = normalizeAiToolAmount(call.args.amount);
-                if (!amountResult.ok) {
-                  toolResult = { error: amountResult.error };
-                  toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
-                  });
-                  continue;
-                }
                 const { householdId } = resolveBotSpaceScope(
                   call.args,
                   spaceMap,
                 );
-                const fromWallet = await resolveWalletIdInScope(
+                const walletResult = await createBotWalletTransferFromToolCall({
                   supabase,
+                  internalFunctionKey,
                   userId,
                   householdId,
-                  call.args.from_wallet_name,
-                );
-                const toWallet = await resolveWalletIdInScope(
-                  supabase,
-                  userId,
-                  householdId,
-                  call.args.to_wallet_name,
-                );
-                if (fromWallet.error || !fromWallet.accountId) {
-                  toolResult = {
-                    error:
-                      fromWallet.error ||
-                      "Source wallet was not found in the selected scope.",
-                  };
-                } else if (toWallet.error || !toWallet.accountId) {
-                  toolResult = {
-                    error:
-                      toWallet.error ||
-                      "Destination wallet was not found in the selected scope.",
-                  };
-                } else {
-                  const walletResult = await createBotWalletTransfer({
-                    supabase,
-                    internalFunctionKey,
-                    userId,
-                    householdId,
-                    fromAccountId: fromWallet.accountId,
-                    toAccountId: toWallet.accountId,
-                    fromWalletName: call.args.from_wallet_name,
-                    toWalletName: call.args.to_wallet_name,
-                    amount: call.args.amount,
-                    amountCents: Math.round(amountResult.amount * 100),
-                    currency: call.args.currency || userCurrency,
-                    date: call.args.date || formatDateInTimeZone(userTimezone),
-                    note: call.args.note,
+                  args: call.args || {},
+                  defaultDate: formatDateInTimeZone(userTimezone),
+                  logPrefix: "telegram-ai-bot",
+                });
+                toolResult = walletResult.result;
+                if (walletResult.failure) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "create_wallet_transfer",
+                    targetFunction: walletResult.failure.targetFunction,
+                    formatted: walletResult.failure.formatted,
+                    error: walletResult.failure.error,
+                    context: walletResult.failure.context,
                   });
-                  toolResult = walletResult.result;
-                  if (walletResult.failure) {
-                    await reportTelegramToolInvokeFailure({
-                      traceId,
-                      toolName: "create_wallet_transfer",
-                      targetFunction: walletResult.failure.targetFunction,
-                      formatted: walletResult.failure.formatted,
-                      error: walletResult.failure.error,
-                      context: walletResult.failure.context,
-                    });
-                  }
                 }
               } else if (call.name === "generate_chart_url") {
                 const chartConfig = {
@@ -2734,24 +2644,41 @@ Deno.serve(async (req: Request) => {
 
                     if (
                       (updatesArgs as any).wallet_id !== undefined ||
-                      (updatesArgs as any).account_id !== undefined
+                      (updatesArgs as any).account_id !== undefined ||
+                      (updatesArgs as any).wallet_name !== undefined
                     ) {
-                      updates.account_id =
-                        (updatesArgs as any).wallet_id ||
-                        (updatesArgs as any).account_id ||
-                        null;
-                    } else if ((updatesArgs as any).wallet_name !== undefined) {
-                      const walletResolution = await resolveWalletIdInScope(
-                        supabase,
-                        userId,
-                        scopeResult.householdId,
-                        (updatesArgs as any).wallet_name,
-                        "telegram-ai-bot",
-                      );
+                      const walletResolution =
+                        await resolveWalletForTransactionToolCall(
+                          supabase,
+                          userId,
+                          scopeResult.householdId,
+                          updatesArgs as Record<string, unknown>,
+                          "telegram-ai-bot",
+                        );
                       if (walletResolution.error) {
                         toolResult = { error: walletResolution.error };
                       } else {
                         updates.account_id = walletResolution.accountId || null;
+                        const currencyResult = resolveWalletTransactionCurrency(
+                          {
+                            wallet: walletResolution,
+                            walletName:
+                              (updatesArgs as any).wallet_name ||
+                              (updatesArgs as any).wallet_id ||
+                              (updatesArgs as any).account_id,
+                            transactionCurrency:
+                              updates.currency || resolved.candidate.currency,
+                            fallbackCurrency: userCurrency,
+                            hasExplicitCurrency: hasExplicitTransactionCurrency(
+                              updatesArgs as Record<string, unknown>,
+                            ),
+                          },
+                        );
+                        if (currencyResult.error || !currencyResult.currency) {
+                          toolResult = { error: currencyResult.error };
+                        } else if (walletResolution.accountId) {
+                          updates.currency = currencyResult.currency;
+                        }
                       }
                     }
 
@@ -2978,28 +2905,22 @@ Deno.serve(async (req: Request) => {
                 } else if ("error" in resolved) {
                   toolResult = { error: resolved.error };
                 } else {
-                  const { data, error } = await supabase.functions.invoke(
-                    "delete-expense",
-                    {
-                      body: { userId, expenseIds: resolved.candidate.id },
-                      headers: buildInternalInvokeHeaders(internalFunctionKey),
-                    },
+                  const deleteResult = await invokeTransactionDelete(
+                    supabase,
+                    internalFunctionKey,
+                    userId,
+                    resolved.candidate.id,
                   );
-                  const success = !error && data?.success === true;
-                  const formatted = success
-                    ? ""
-                    : formatInvokeError(error ?? data?.error) ||
-                      "Failed to delete transaction";
-                  toolResult = success
+                  toolResult = deleteResult.success
                     ? { success: true }
-                    : { error: formatted };
-                  if (!success) {
+                    : { error: deleteResult.formatted };
+                  if (!deleteResult.success) {
                     await reportTelegramToolInvokeFailure({
                       traceId,
                       toolName: "delete_transaction",
                       targetFunction: "delete-expense",
-                      formatted,
-                      error: error ?? data?.error,
+                      formatted: deleteResult.formatted,
+                      error: deleteResult.error,
                       context: { expenseId: resolved.candidate.id },
                     });
                   }
@@ -3306,29 +3227,23 @@ Deno.serve(async (req: Request) => {
                           "No matching transaction found. Ask user to list recent transactions first or provide more details.",
                       };
                     } else {
-                      const { data, error } = await supabase.functions.invoke(
-                        "delete-expense",
-                        {
-                          body: { userId, expenseIds: expenseId },
-                          headers:
-                            buildInternalInvokeHeaders(internalFunctionKey),
-                        },
+                      const deleteResult = await invokeTransactionDelete(
+                        supabase,
+                        internalFunctionKey,
+                        userId,
+                        expenseId,
+                        "Failed to delete recurring transaction",
                       );
-                      const success = !error && data?.success === true;
-                      const formatted = success
-                        ? ""
-                        : formatInvokeError(error ?? data?.error) ||
-                          "Failed to delete recurring transaction";
-                      toolResult = success
+                      toolResult = deleteResult.success
                         ? { success: true }
-                        : { error: formatted };
-                      if (!success) {
+                        : { error: deleteResult.formatted };
+                      if (!deleteResult.success) {
                         await reportTelegramToolInvokeFailure({
                           traceId,
                           toolName: "manage_recurring",
                           targetFunction: "delete-expense",
-                          formatted,
-                          error: error ?? data?.error,
+                          formatted: deleteResult.formatted,
+                          error: deleteResult.error,
                           context: { action, expenseId },
                         });
                       }
@@ -3509,69 +3424,84 @@ Deno.serve(async (req: Request) => {
                           call.args,
                         )
                       : {};
-                  const requestedWallet = await resolveWalletIdInScope(
-                    supabase,
-                    userId,
-                    householdId,
-                    call.args.wallet_name,
-                  );
+                  const requestedWallet =
+                    await resolveWalletForTransactionToolCall(
+                      supabase,
+                      userId,
+                      householdId,
+                      call.args,
+                      "telegram-ai-bot",
+                    );
                   if (requestedWallet.error) {
                     toolResult = { error: requestedWallet.error };
                   } else {
-                    const { data, error } = await invokeTransactionSave(
-                      supabase,
-                      internalFunctionKey,
-                      userId,
-                      {
-                        amount: transaction.amount,
-                        category: transaction.category,
-                        description: transaction.description,
-                        merchant: transaction.merchant,
-                        date: transaction.date || dateValue,
-                        currency: transaction.currency || userCurrency,
-                        type: transaction.type,
-                        householdId,
-                        isPortfolio:
-                          spaceMeta?.isPortfolio ??
-                          call.args.is_portfolio === true,
-                        accountId: requestedWallet.accountId ?? undefined,
-                        isRecurring: true,
-                        recurrence_rule: recurrenceRule,
-                        payerUserId: splitConfig.payerUserId,
-                        customSplits: splitConfig.customSplits,
-                        source: call.args.source,
-                        ownerType: call.args.owner_type,
-                        privacyScope: call.args.privacy_scope,
-                      },
-                    );
-                    const targetFunction =
-                      transaction.type === "income"
-                        ? "save-income"
-                        : "save-expense";
-                    const success = !error && data?.success === true;
-                    const formatted = success
-                      ? ""
-                      : (await formatInvokeErrorWithResponseBody(
-                          error ?? data?.error,
-                        )) || "Failed to save recurring transaction";
-                    toolResult = success
-                      ? { success: true, data: data?.data ?? data }
-                      : { error: formatted };
-                    if (!success) {
-                      await reportTelegramToolInvokeFailure({
-                        traceId,
-                        toolName: "manage_recurring",
-                        targetFunction,
-                        formatted,
-                        error: error ?? data?.error,
-                        context: {
-                          action,
-                          type: transaction.type,
+                    const currencyResult = resolveWalletTransactionCurrency({
+                      wallet: requestedWallet,
+                      walletName: call.args.wallet_name,
+                      transactionCurrency: transaction.currency,
+                      fallbackCurrency: userCurrency,
+                      hasExplicitCurrency: hasExplicitTransactionCurrency(
+                        call.args,
+                      ),
+                    });
+                    if (currencyResult.error || !currencyResult.currency) {
+                      toolResult = { error: currencyResult.error };
+                    } else {
+                      const { data, error } = await invokeTransactionSave(
+                        supabase,
+                        internalFunctionKey,
+                        userId,
+                        {
                           amount: transaction.amount,
                           category: transaction.category,
+                          description: transaction.description,
+                          merchant: transaction.merchant,
+                          date: transaction.date || dateValue,
+                          currency: currencyResult.currency,
+                          type: transaction.type,
                           householdId,
+                          isPortfolio:
+                            spaceMeta?.isPortfolio ??
+                            call.args.is_portfolio === true,
+                          accountId: requestedWallet.accountId ?? undefined,
+                          isRecurring: true,
+                          recurrence_rule: recurrenceRule,
+                          payerUserId: splitConfig.payerUserId,
+                          customSplits: splitConfig.customSplits,
+                          source: call.args.source,
+                          ownerType: call.args.owner_type,
+                          privacyScope: call.args.privacy_scope,
                         },
-                      });
+                      );
+                      const targetFunction =
+                        transaction.type === "income"
+                          ? "save-income"
+                          : "save-expense";
+                      const success = !error && data?.success === true;
+                      const formatted = success
+                        ? ""
+                        : (await formatInvokeErrorWithResponseBody(
+                            error ?? data?.error,
+                          )) || "Failed to save recurring transaction";
+                      toolResult = success
+                        ? { success: true, data: data?.data ?? data }
+                        : { error: formatted };
+                      if (!success) {
+                        await reportTelegramToolInvokeFailure({
+                          traceId,
+                          toolName: "manage_recurring",
+                          targetFunction,
+                          formatted,
+                          error: error ?? data?.error,
+                          context: {
+                            action,
+                            type: transaction.type,
+                            amount: transaction.amount,
+                            category: transaction.category,
+                            householdId,
+                          },
+                        });
+                      }
                     }
                   }
                 }

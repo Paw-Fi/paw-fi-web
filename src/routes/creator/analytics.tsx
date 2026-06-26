@@ -858,6 +858,7 @@ function getPageMeta(pageId: string) {
 function formatPlanChoice(value: string | null) {
   if (!value || value === "unknown") return "No plan chosen yet";
   if (value === "plus") return "Moneko Plus";
+  if (value === "premium") return "Moneko Premium";
   if (value === "lifetime") return "Lifetime";
   return humanizeKey(value);
 }
