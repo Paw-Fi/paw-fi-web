@@ -198,7 +198,8 @@ export function MembershipDashboard() {
                       )}
                     {subscription?.plan !== "lifetime" &&
                       subscription?.status === "active" &&
-                      subscription?.cancel_at_period_end && (
+                      subscription?.cancel_at_period_end &&
+                      subscription?.current_period_end && (
                         <>
                           Expires on{" "}
                           {new Date(

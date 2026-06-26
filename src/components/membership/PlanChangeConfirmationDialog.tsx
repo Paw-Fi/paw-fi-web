@@ -55,7 +55,7 @@ interface PlanChangeConfirmationDialogProps {
   onOpenChange: (open: boolean) => void;
   preview: PlanChangePreview | null;
   isLoading: boolean;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 }
 
 export function PlanChangeConfirmationDialog({

@@ -32,6 +32,54 @@ function resolveRecurringPriceId(plan: string, interval: string): string {
   return getPriceId(plan as PlanType, interval as BillingInterval);
 }
 
+async function previewSubscriptionUpdateInvoice(params: {
+  customerId: string;
+  subscriptionId: string;
+  subscriptionItemId: string;
+  priceId: string;
+  prorationDate: number;
+}) {
+  const invoices = stripe.invoices as any;
+
+  if (typeof invoices.createPreview === "function") {
+    return await invoices.createPreview({
+      customer: params.customerId,
+      subscription: params.subscriptionId,
+      subscription_details: {
+        items: [
+          {
+            id: params.subscriptionItemId,
+            price: params.priceId,
+          },
+        ],
+        proration_date: params.prorationDate,
+      },
+    });
+  }
+
+  if (typeof invoices.retrieveUpcoming === "function") {
+    return await invoices.retrieveUpcoming({
+      customer: params.customerId,
+      subscription: params.subscriptionId,
+      subscription_items: [
+        {
+          id: params.subscriptionItemId,
+          price: params.priceId,
+        },
+      ],
+      subscription_proration_date: params.prorationDate,
+    });
+  }
+
+  throw new Error("Stripe invoice preview API is not available");
+}
+
+function isProrationLineItem(line: any): boolean {
+  return Boolean(
+    line?.proration || line?.parent?.subscription_item_details?.proration,
+  );
+}
+
 serve(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
@@ -347,21 +395,17 @@ serve(async (req) => {
 
     // Preview the upcoming invoice with the subscription change
     try {
-      const upcomingInvoice = await stripe.invoices.upcoming({
-        customer: stripeSubscription.customer as string,
-        subscription: subscription.stripe_subscription_id,
-        subscription_items: [
-          {
-            id: subscriptionItemId,
-            price: newPriceId,
-          },
-        ],
-        subscription_proration_date: prorationDate,
+      const upcomingInvoice = await previewSubscriptionUpdateInvoice({
+        customerId: stripeSubscription.customer as string,
+        subscriptionId: subscription.stripe_subscription_id,
+        subscriptionItemId,
+        priceId: newPriceId,
+        prorationDate,
       });
 
       // Calculate proration amounts
       const prorationLineItems = upcomingInvoice.lines.data.filter(
-        (line: any) => line.proration,
+        (line: any) => isProrationLineItem(line),
       );
       const totalProration = prorationLineItems.reduce(
         (sum: number, line: any) => sum + line.amount,
@@ -370,7 +414,7 @@ serve(async (req) => {
 
       // Get the new recurring amount
       const recurringLineItems = upcomingInvoice.lines.data.filter(
-        (line: any) => !line.proration,
+        (line: any) => !isProrationLineItem(line),
       );
       const newRecurringAmount = recurringLineItems.reduce(
         (sum: number, line: any) => sum + line.amount,
@@ -464,7 +508,7 @@ serve(async (req) => {
             lineItems: upcomingInvoice.lines.data.map((line: any) => ({
               description: line.description,
               amount: line.amount,
-              proration: line.proration,
+              proration: isProrationLineItem(line),
               period: line.period,
             })),
           },

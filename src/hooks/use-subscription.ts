@@ -6,7 +6,7 @@ interface Subscription {
   id: string;
   plan: string;
   status: string;
-  current_period_end: string;
+  current_period_end: string | null;
   next_payment_date: string | null;
   cancel_at_period_end: boolean;
   stripe_subscription_id: string | null;
@@ -16,6 +16,10 @@ interface Subscription {
   created_at: string;
   updated_at: string;
   days_until_next_payment: number | null;
+  billing_interval?: string | null;
+  pending_plan?: string | null;
+  pending_interval?: string | null;
+  pending_effective_date?: string | null;
 }
 
 interface Feature {
@@ -43,12 +47,78 @@ interface Invoice {
 }
 
 interface SubscriptionData {
-  subscription: Subscription | null;
+  subscription: Subscription | Subscription[] | null;
   features: Feature[];
   payment_method: PaymentMethod | null;
   invoices: Invoice[];
   days_until_next_payment: number | null;
 }
+
+interface SubscriptionMutationVariables {
+  userId: string;
+  action: string;
+  plan?: string;
+  billingInterval?: string;
+}
+
+interface SubscriptionMutationResponse {
+  success?: boolean;
+  action?: string;
+  subscription?: {
+    status?: string;
+    current_period_end?: number | null;
+    cancel_at_period_end?: boolean;
+  };
+  pendingChange?: {
+    plan: string;
+    billingInterval: string;
+    effectiveDate: string;
+  };
+}
+
+const subscriptionQueryKey = (userId: string | undefined) => [
+  "subscription",
+  userId,
+];
+
+const normalizeSubscriptionData = (
+  subscription: SubscriptionData["subscription"],
+): Subscription | null => {
+  return Array.isArray(subscription) ? subscription[0] || null : subscription;
+};
+
+const updateCachedSubscription = (
+  current: SubscriptionData | undefined,
+  updater: (subscription: Subscription | null) => Subscription | null,
+): SubscriptionData | undefined => {
+  if (!current) return current;
+
+  const nextSubscription = updater(normalizeSubscriptionData(current.subscription));
+
+  return {
+    ...current,
+    subscription: Array.isArray(current.subscription)
+      ? nextSubscription
+        ? [nextSubscription]
+        : []
+      : nextSubscription,
+  };
+};
+
+const unixSecondsToIso = (value: number | null | undefined) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return new Date(value * 1000).toISOString();
+};
+
+const getDaysUntil = (dateIso: string | null) => {
+  if (!dateIso) return null;
+  const date = new Date(dateIso);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.max(
+    0,
+    Math.ceil((date.getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
+  );
+};
 
 // Fetcher function for subscription data
 const fetchSubscription = async (
@@ -135,12 +205,7 @@ const updateSubscription = async ({
   action,
   plan,
   billingInterval,
-}: {
-  userId: string;
-  action: string;
-  plan?: string;
-  billingInterval?: string;
-}) => {
+}: SubscriptionMutationVariables): Promise<SubscriptionMutationResponse> => {
   try {
     const response = await supabase.functions.invoke("update-subscription", {
       method: "POST",
@@ -172,7 +237,7 @@ const updateSubscription = async ({
       throw new Error(data.error as string);
     }
 
-    return data;
+    return data as SubscriptionMutationResponse;
   } catch (err) {
     // Re-throw if it's already our custom error
     if (err instanceof Error) {
@@ -187,7 +252,7 @@ export function useSubscription(userId: string | undefined) {
 
   // Fetch subscription data
   const { data, error, isLoading } = useQuery<SubscriptionData>({
-    queryKey: ["subscription", userId],
+    queryKey: subscriptionQueryKey(userId),
     queryFn: () => fetchSubscription(userId),
     enabled: !!userId,
     staleTime: 0, // Always fetch fresh data
@@ -211,14 +276,87 @@ export function useSubscription(userId: string | undefined) {
 
   // Update subscription mutation
   const {
-    mutate: mutateSubscription,
+    mutateAsync: mutateSubscription,
     isPending: isMutating,
     error: mutationError,
   } = useMutation({
     mutationFn: updateSubscription,
-    onSuccess: () => {
-      // Invalidate and refetch subscription data after successful update
-      queryClient.invalidateQueries({ queryKey: ["subscription", userId] });
+    onSuccess: async (response, variables) => {
+      const queryKey = subscriptionQueryKey(variables.userId);
+
+      queryClient.setQueryData<SubscriptionData>(queryKey, (current) => {
+        if (variables.action === "change_plan") {
+          if (response.pendingChange) {
+            return updateCachedSubscription(current, (subscription) => {
+              if (!subscription) return subscription;
+
+              return {
+                ...subscription,
+                pending_plan: response.pendingChange?.plan ?? null,
+                pending_interval:
+                  response.pendingChange?.billingInterval ?? null,
+                pending_effective_date:
+                  response.pendingChange?.effectiveDate ?? null,
+                updated_at: new Date().toISOString(),
+              };
+            });
+          }
+
+          if (response.success && variables.plan && variables.billingInterval) {
+            return updateCachedSubscription(current, (subscription) => {
+              if (!subscription) return subscription;
+
+              const currentPeriodEnd =
+                unixSecondsToIso(response.subscription?.current_period_end) ??
+                subscription.current_period_end;
+
+              return {
+                ...subscription,
+                plan: variables.plan!,
+                billing_interval: variables.billingInterval!,
+                status: response.subscription?.status ?? subscription.status,
+                current_period_end: currentPeriodEnd,
+                next_payment_date: currentPeriodEnd,
+                days_until_next_payment: getDaysUntil(currentPeriodEnd),
+                cancel_at_period_end:
+                  response.subscription?.cancel_at_period_end ?? false,
+                pending_plan: null,
+                pending_interval: null,
+                pending_effective_date: null,
+                updated_at: new Date().toISOString(),
+              };
+            });
+          }
+        }
+
+        if (variables.action === "cancel") {
+          return updateCachedSubscription(current, (subscription) =>
+            subscription
+              ? {
+                  ...subscription,
+                  cancel_at_period_end: true,
+                  updated_at: new Date().toISOString(),
+                }
+              : subscription,
+          );
+        }
+
+        if (variables.action === "resume") {
+          return updateCachedSubscription(current, (subscription) =>
+            subscription
+              ? {
+                  ...subscription,
+                  cancel_at_period_end: false,
+                  updated_at: new Date().toISOString(),
+                }
+              : subscription,
+          );
+        }
+
+        return current;
+      });
+
+      await queryClient.invalidateQueries({ queryKey });
     },
     onError: (error: Error) => {
       console.error("Subscription update error:", error);
@@ -229,7 +367,7 @@ export function useSubscription(userId: string | undefined) {
   // Helper functions for subscription actions
   const cancelSubscription = async () => {
     if (!userId) return;
-    return mutateSubscription({
+    await mutateSubscription({
       userId,
       action: "cancel",
     });
@@ -253,7 +391,7 @@ export function useSubscription(userId: string | undefined) {
 
   const changePlan = async (plan: string, billingInterval: string) => {
     if (!userId) return;
-    return mutateSubscription({
+    await mutateSubscription({
       userId,
       action: "change_plan",
       plan,
@@ -282,8 +420,9 @@ export function useSubscription(userId: string | undefined) {
   const isExpired = subscriptionData && subscriptionData.status === "canceled";
 
   // Check if user has an active subscription
-  const isActive =
-    subscriptionData && subscriptionData.plan !== "free" && !isExpired;
+  const isActive = Boolean(
+    subscriptionData && subscriptionData.plan !== "free" && !isExpired,
+  );
 
   return {
     subscription: subscriptionData || null,

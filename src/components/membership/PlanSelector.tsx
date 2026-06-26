@@ -15,7 +15,7 @@ interface PlanSelectorProps {
   currentPlan: string;
   currentStatus?: string;
   currentBillingInterval?: string; // Add current billing interval
-  onChangePlan: (plan: string, billingInterval: string) => void;
+  onChangePlan: (plan: string, billingInterval: string) => void | Promise<void>;
   onPreviewPlanChange: (plan: string, billingInterval: string) => void;
   isLoading: boolean;
   isPreviewLoading: boolean;
@@ -168,16 +168,29 @@ export function PlanSelector({
     onPreviewPlanChange(selectedPlan, billingInterval);
   };
 
-  const handleConfirmChange = () => {
+  const handleConfirmChange = async () => {
     if (!selectedPlan || !previewData) return;
 
-    onChangePlan(selectedPlan, billingInterval);
-    setShowConfirmDialog(false);
-    resetPreview();
-    setSelectedPlan(null);
+    try {
+      await onChangePlan(selectedPlan, billingInterval);
+      setShowConfirmDialog(false);
+      resetPreview();
+      setSelectedPlan(null);
 
-    // Show success message
-    toast.success("Your subscription will be updated shortly!");
+      const scheduledChangeDate = previewData.currentPeriodEnd
+        ? new Date(previewData.currentPeriodEnd * 1000).toLocaleDateString()
+        : null;
+
+      toast.success(
+        previewData.billingBehavior === "immediate"
+          ? "Your subscription has been updated."
+          : scheduledChangeDate
+            ? `Your subscription will change from ${previewData.currentPlan} to ${previewData.newPlan} at the end of your billing period on ${scheduledChangeDate}.`
+            : "Your subscription change has been scheduled.",
+      );
+    } catch {
+      // Mutation errors are surfaced through mutationError.
+    }
   };
 
   const handleCancelChange = () => {

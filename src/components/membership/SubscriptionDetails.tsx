@@ -52,7 +52,7 @@ interface SubscriptionDetailsProps {
     included: boolean;
     limit_value: number | null;
   }>;
-  onCancelSubscription?: () => void;
+  onCancelSubscription?: () => void | Promise<void>;
   isCanceling?: boolean;
   isActive?: boolean;
 }
@@ -109,6 +109,14 @@ export function SubscriptionDetails({
         );
     }
   };
+
+  const cancellationEffectiveDate = subscription?.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -318,7 +326,8 @@ export function SubscriptionDetails({
                 {isActive &&
                   !isSharedHouseholdAccess &&
                   !isSystemGrantedTrial &&
-                  subscription?.plan !== "lifetime" && (
+                  subscription?.plan !== "lifetime" &&
+                  !subscription?.cancel_at_period_end && (
                     <>
                       <Separator className="my-6" />
                       <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/20 dark:bg-red-950/10">
@@ -381,16 +390,25 @@ export function SubscriptionDetails({
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                setShowCancelDialog(false);
-                onCancelSubscription?.();
-                toast.success(
-                  "Your subscription has been scheduled for cancellation. You'll retain access until the end of your billing period.",
-                );
+              onClick={async () => {
+                try {
+                  await onCancelSubscription?.();
+                  setShowCancelDialog(false);
+                  toast.success(
+                    cancellationEffectiveDate
+                      ? `Your subscription will change from ${subscription?.plan ?? "your current plan"} to free at the end of your billing period on ${cancellationEffectiveDate}.`
+                      : "Your subscription has been scheduled for cancellation. You'll retain access until the end of your billing period.",
+                  );
+                } catch {
+                  toast.error(
+                    "Failed to cancel subscription. Please try again.",
+                  );
+                }
               }}
+              disabled={isCanceling}
               className="bg-red-600 hover:bg-red-700"
             >
-              Yes, Cancel Subscription
+              {isCanceling ? "Canceling..." : "Yes, Cancel Subscription"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
