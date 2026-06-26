@@ -24,9 +24,115 @@ export interface PlanOption {
   description: string;
   monthlyPrice: number;
   yearlyPrice: number;
+  priceMonthly: string;
+  priceYearly: string;
+  compareAtPriceMonthly?: string;
+  compareAtPriceYearly?: string;
   features: string[];
   popular?: boolean;
 }
+
+export interface PlanComparisonValue {
+  included: boolean | null;
+  label?: string;
+}
+
+export interface PlanComparisonFeature {
+  category: string;
+  description: string;
+  values: Record<string, PlanComparisonValue>;
+}
+
+export const plusChecklistFeatures = [
+  "AI expense capture",
+  "Messaging app capture",
+  "Email receipt import",
+  "Shared budgets",
+  "Standard support",
+];
+
+export const premiumChecklistFeatures = [
+  "Bank sync",
+  "Multiple currencies",
+  "Currency converter",
+  "Live exchange rates",
+  "Priority support",
+];
+
+export const planComparisonFeatures: PlanComparisonFeature[] = [
+  {
+    category: "AI Expense Capture",
+    description: "Log expenses with AI-assisted capture workflows",
+    values: {
+      plus: { included: true },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Messaging App Capture",
+    description: "Capture spending from messaging workflows",
+    values: {
+      plus: { included: true },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Email Receipt Import",
+    description: "Forward receipts and import expenses automatically",
+    values: {
+      plus: { included: true },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Shared Budgets",
+    description: "Plan budgets across personal and shared finances",
+    values: {
+      plus: { included: true },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Bank Sync",
+    description: "Connect accounts and import transactions automatically",
+    values: {
+      plus: { included: false },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Multiple Currencies",
+    description: "Track and analyze finances across currencies",
+    values: {
+      plus: { included: false },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Currency Converter",
+    description: "Convert between supported currencies inside Moneko",
+    values: {
+      plus: { included: false },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Live Exchange Rates",
+    description: "Use up-to-date rates for currency-aware insights",
+    values: {
+      plus: { included: false },
+      premium: { included: true },
+    },
+  },
+  {
+    category: "Customer Support",
+    description: "Get help when you need support",
+    values: {
+      plus: { included: null, label: "Standard" },
+      premium: { included: null, label: "Priority" },
+    },
+  },
+];
 
 // Feature item interface used in PricingPage
 export interface FeatureItem {
@@ -380,7 +486,16 @@ export function getPlanOptions(): PlanOption[] {
     description: plan.description,
     monthlyPrice: plan.monthlyPrice,
     yearlyPrice: plan.yearlyPrice,
-    features: plan.features,
+    priceMonthly: plan.priceMonthly,
+    priceYearly: plan.priceYearly,
+    compareAtPriceMonthly: plan.compareAtPriceMonthly,
+    compareAtPriceYearly: plan.compareAtPriceYearly,
+    features:
+      plan.id === "plus"
+        ? plusChecklistFeatures
+        : plan.id === "premium"
+          ? premiumChecklistFeatures
+          : plan.features,
     popular: plan.popular || false,
   }));
 }

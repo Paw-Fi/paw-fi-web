@@ -27,6 +27,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getPlanOptions } from "@/data/pricing-plans";
+import { isSystemGrantedFreeTrialUser } from "@/utils/subscription";
 
 interface SubscriptionDetailsProps {
   subscription: {
@@ -64,6 +66,17 @@ export function SubscriptionDetails({
 }: SubscriptionDetailsProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const isSharedHouseholdAccess = Boolean(subscription?.bound_to_user_id);
+  const isSystemGrantedTrial = isSystemGrantedFreeTrialUser(subscription);
+  const sharedPlanFeatures = getPlanOptions().find(
+    (plan) => plan.id === subscription?.plan,
+  )?.features;
+  const displayedFeatures = sharedPlanFeatures
+    ? sharedPlanFeatures.map((feature) => ({
+        feature,
+        included: true,
+        limit_value: null,
+      }))
+    : features;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -120,7 +133,9 @@ export function SubscriptionDetails({
                   Current Plan
                 </p>
                 <div className="flex items-center space-x-2">
-                  {subscription?.plan && subscription.plan !== "free" ? (
+                  {subscription?.plan &&
+                  subscription.plan !== "free" &&
+                  !isSystemGrantedTrial ? (
                     <Crown className="text-primary h-4 w-4" />
                   ) : (
                     <User className="text-muted-foreground h-4 w-4" />
@@ -155,7 +170,8 @@ export function SubscriptionDetails({
                       Auto-Renew
                     </p>
                     <div className="flex items-center space-x-2">
-                      {subscription?.cancel_at_period_end ? (
+                      {subscription?.cancel_at_period_end ||
+                      isSystemGrantedTrial ? (
                         <>
                           <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
                           <span className="text-sm text-red-600 dark:text-red-400">
@@ -230,7 +246,8 @@ export function SubscriptionDetails({
                     </div>
 
                     {/* Next Payment */}
-                    {subscription?.days_until_next_payment !== null && (
+                    {(isSystemGrantedTrial ||
+                      subscription?.days_until_next_payment !== null) && (
                       <div className="space-y-2">
                         <p className="text-muted-foreground text-sm font-medium">
                           Next Payment
@@ -238,18 +255,21 @@ export function SubscriptionDetails({
                         <div className="flex items-center space-x-2">
                           <Clock className="text-muted-foreground h-4 w-4" />
                           <span className="text-foreground text-sm">
-                            {subscription.days_until_next_payment === 0
-                              ? "Today"
-                              : subscription.days_until_next_payment === 1
-                                ? "Tomorrow"
-                                : `In ${subscription.days_until_next_payment} days`}
+                            {isSystemGrantedTrial
+                              ? "-"
+                              : subscription.days_until_next_payment === 0
+                                ? "Today"
+                                : subscription.days_until_next_payment === 1
+                                  ? "Tomorrow"
+                                  : `In ${subscription.days_until_next_payment} days`}
                           </span>
                         </div>
                       </div>
                     )}
 
                     {/* Next Payment Date */}
-                    {subscription?.next_payment_date && (
+                    {(isSystemGrantedTrial ||
+                      subscription?.next_payment_date) && (
                       <div className="space-y-2">
                         <p className="text-muted-foreground text-sm font-medium">
                           Next Payment Date
@@ -257,13 +277,15 @@ export function SubscriptionDetails({
                         <div className="flex items-center space-x-2">
                           <Calendar className="text-muted-foreground h-4 w-4" />
                           <span className="text-foreground text-sm">
-                            {new Date(
-                              subscription.next_payment_date,
-                            ).toLocaleDateString(undefined, {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
+                            {isSystemGrantedTrial
+                              ? "-"
+                              : new Date(
+                                  subscription.next_payment_date!,
+                                ).toLocaleDateString(undefined, {
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                })}
                           </span>
                         </div>
                       </div>
@@ -293,38 +315,41 @@ export function SubscriptionDetails({
                 )}
 
                 {/* Cancel Subscription Button - Only for direct recurring plans */}
-                {isActive && !isSharedHouseholdAccess && subscription?.plan !== "lifetime" && (
-                  <>
-                    <Separator className="my-6" />
-                    <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/20 dark:bg-red-950/10">
-                      <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-red-900 dark:text-red-400">
-                          Cancel Subscription
-                        </h4>
-                        <p className="mt-1 text-xs text-red-700 dark:text-red-500">
-                          Your subscription will remain active until the end of
-                          the current billing period
-                        </p>
+                {isActive &&
+                  !isSharedHouseholdAccess &&
+                  !isSystemGrantedTrial &&
+                  subscription?.plan !== "lifetime" && (
+                    <>
+                      <Separator className="my-6" />
+                      <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/20 dark:bg-red-950/10">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-red-900 dark:text-red-400">
+                            Cancel Subscription
+                          </h4>
+                          <p className="mt-1 text-xs text-red-700 dark:text-red-500">
+                            Your subscription will remain active until the end
+                            of the current billing period
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setShowCancelDialog(true)}
+                          disabled={isCanceling}
+                          className="ml-4"
+                        >
+                          {isCanceling ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Canceling...
+                            </>
+                          ) : (
+                            "Cancel Plan"
+                          )}
+                        </Button>
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setShowCancelDialog(true)}
-                        disabled={isCanceling}
-                        className="ml-4"
-                      >
-                        {isCanceling ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Canceling...
-                          </>
-                        ) : (
-                          "Cancel Plan"
-                        )}
-                      </Button>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
               </>
             )}
           </CardContent>
@@ -372,7 +397,7 @@ export function SubscriptionDetails({
       </AlertDialog>
 
       {/* Features */}
-      {features && features.length > 0 && (
+      {displayedFeatures && displayedFeatures.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -387,7 +412,7 @@ export function SubscriptionDetails({
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {features.map((feature, index) => (
+                {displayedFeatures.map((feature, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: -10 }}

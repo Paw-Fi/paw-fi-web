@@ -57,6 +57,7 @@ import { Button } from "@/components/ui/button";
 import monekoLogo from "@/assets/images/logo/moneko.png";
 import finniLogo from "@/assets/images/logo/finni.png";
 import { DashboardAppProviders } from "@/providers/dashboard-app-providers";
+import { isSystemGrantedFreeTrialUser } from "@/utils/subscription";
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -146,6 +147,7 @@ export function Dashboard() {
     isActive,
     isLoading: isSubscriptionLoading,
   } = useSubscription(user?.id);
+  const isSystemGrantedTrial = isSystemGrantedFreeTrialUser(subscription);
 
   // Set trial eligibility based on subscription status
   // User is eligible only if they have NEVER had a subscription (no row exists)
@@ -659,7 +661,7 @@ export function Dashboard() {
                       <UserAvatar
                         size="md"
                         showPremiumBorder={true}
-                        showPremiumCrown={true}
+                        showPremiumCrown={!isSystemGrantedTrial}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-card-foreground dark:text-card-foreground truncate text-sm font-medium">
@@ -688,11 +690,7 @@ export function Dashboard() {
                           transition={{ duration: 0.2 }}
                         >
                           {/* Settings Option */}
-                          <Link
-                            to="/dashboard/user-settings"
-                            className="block"
-                           
-                          >
+                          <Link to="/dashboard/user-settings" className="block">
                             <motion.div
                               className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
                               whileHover={{ x: 1 }}

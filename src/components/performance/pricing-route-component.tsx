@@ -33,7 +33,11 @@ import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-g
 import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
-import { getPricingTiers } from "@/data/pricing-plans";
+import {
+  getPricingTiers,
+  plusChecklistFeatures,
+  premiumChecklistFeatures,
+} from "@/data/pricing-plans";
 
 // Added new pro-max components
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
@@ -257,8 +261,6 @@ export function PricingRouteComponent() {
   const premiumYearlyTier = pricingTiers.find(
     (t) => t.title.includes("Premium") && t.title.includes("Yearly"),
   );
-  const lifetimeTier = pricingTiers.find((t) => t.title.includes("Lifetime"));
-
   const safelyGetTier = (tier: any, fallbackParams: any) =>
     tier || fallbackParams;
 
@@ -308,33 +310,6 @@ export function PricingRouteComponent() {
       "Bank sync via Plaid (coming soon)",
     ],
   });
-  const lTier = safelyGetTier(lifetimeTier, {
-    title: "Lifetime",
-    priceMonthly: "$69.99",
-    features: [
-      "All Premium features included",
-      "Pay once, use forever",
-      "Exclusive early access to new features",
-      "Priority support",
-    ],
-  });
-
-  const plusChecklistFeatures = [
-    "AI expense capture",
-    "Messaging app capture",
-    "Email receipt import",
-    "Shared budgets",
-    "Standard support",
-  ];
-
-  const premiumChecklistFeatures = [
-    "Bank sync",
-    "Multiple currencies",
-    "Currency converter",
-    "Live exchange rates",
-    "Priority support",
-  ];
-
   const faqData = [
     {
       question: "Can I upgrade or downgrade my plan later?",

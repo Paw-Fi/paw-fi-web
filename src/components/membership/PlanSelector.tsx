@@ -6,20 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Crown,
-  Loader2,
-  Sparkles,
-  Star,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { PlanChangeConfirmationDialog } from "./PlanChangeConfirmationDialog";
 import { useNavigate } from "@tanstack/react-router";
+import { isSystemGrantedFreeTrialUser } from "@/utils/subscription";
 
 interface PlanSelectorProps {
   currentPlan: string;
+  currentStatus?: string;
   currentBillingInterval?: string; // Add current billing interval
   onChangePlan: (plan: string, billingInterval: string) => void;
   onPreviewPlanChange: (plan: string, billingInterval: string) => void;
@@ -36,6 +30,7 @@ interface PlanSelectorProps {
 
 export function PlanSelector({
   currentPlan,
+  currentStatus = "none",
   currentBillingInterval = "monthly",
   onChangePlan,
   onPreviewPlanChange,
@@ -56,6 +51,10 @@ export function PlanSelector({
 
   // Get plan options from shared data module
   const plans: PlanOption[] = getPlanOptions();
+  const isSystemGrantedTrial = isSystemGrantedFreeTrialUser({
+    plan: currentPlan,
+    status: currentStatus,
+  });
 
   // Helper function to get plan level for comparison
   const getPlanLevel = (plan: string): number => {
@@ -125,7 +124,11 @@ export function PlanSelector({
       return;
     }
 
-    if (planId === currentPlan && billingInterval === currentBillingInterval) {
+    if (
+      planId === currentPlan &&
+      billingInterval === currentBillingInterval &&
+      !isSystemGrantedTrial
+    ) {
       toast.info("You are already on this plan with this billing interval");
       return;
     }
@@ -141,7 +144,7 @@ export function PlanSelector({
     }
 
     // New paid subscriptions still need checkout for payment collection.
-    if (currentPlan === "free" || !currentPlan) {
+    if (currentPlan === "free" || !currentPlan || isSystemGrantedTrial) {
       navigate({
         to: "/checkout",
         search: {
@@ -182,27 +185,6 @@ export function PlanSelector({
     resetPreview();
   };
 
-  // Calculate savings percentage for yearly billing
-  const calculateSavings = (monthly: number, yearly: number) => {
-    if (monthly === 0) return 0;
-    const monthlyCost = monthly * 12;
-    const savings = ((monthlyCost - yearly) / monthlyCost) * 100;
-    return Math.round(savings);
-  };
-
-  const getPlanIcon = (planId: string) => {
-    switch (planId) {
-      case "free":
-        return <Star className="h-5 w-5" />;
-      case "basic":
-        return <Zap className="h-5 w-5" />;
-      case "premium":
-        return <Crown className="h-5 w-5" />;
-      default:
-        return <Sparkles className="h-5 w-5" />;
-    }
-  };
-
   const getPlanGradient = (
     planId: string,
     isSelected: boolean,
@@ -223,10 +205,6 @@ export function PlanSelector({
     }
     return "bg-card border-border";
   };
-
-  const hasSelectedPlanChange = selectedPlan &&
-    (selectedPlan !== currentPlan ||
-      billingInterval !== currentBillingInterval);
 
   return (
     <div className="space-y-8">
@@ -270,7 +248,7 @@ export function PlanSelector({
             <span className="flex items-center space-x-2">
               <span>Yearly</span>
               <Badge className="bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400">
-                Save 25%
+                Save 40%
               </Badge>
             </span>
           </button>
@@ -279,7 +257,8 @@ export function PlanSelector({
 
       {/* Action Button - Moved to top for better UX */}
       {selectedPlan &&
-        (selectedPlan !== currentPlan ||
+        (isSystemGrantedTrial ||
+          selectedPlan !== currentPlan ||
           billingInterval !== currentBillingInterval) && (
           <motion.div
             className="flex justify-center"
@@ -300,8 +279,10 @@ export function PlanSelector({
                 </>
               ) : (
                 <>
-                  {currentPlan === "free" || !currentPlan
-                    ? `Upgrade to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
+                  {currentPlan === "free" ||
+                  !currentPlan ||
+                  isSystemGrantedTrial
+                    ? `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
                     : "Review Change"}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </>
@@ -312,33 +293,29 @@ export function PlanSelector({
 
       {/* Plan Cards */}
       <motion.div
-        className="grid grid-cols-1 gap-6 lg:grid-cols-3"
+        className="mx-auto grid max-w-4xl grid-cols-1 gap-6 lg:grid-cols-2"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
         <AnimatePresence>
           {plans.map((plan, index) => {
-            const isCurrentPlan = currentPlan === plan.id;
+            const isCurrentPlan =
+              currentPlan === plan.id &&
+              !(isSystemGrantedTrial && plan.id === "plus");
             const isCurrentPlanAndInterval =
               isCurrentPlan &&
               (plan.id === "lifetime" ||
                 billingInterval === currentBillingInterval);
             const isSelected = selectedPlan === plan.id;
-            const isBillingIntervalChange = isCurrentPlan &&
-              plan.id !== "free" &&
-              plan.id !== "lifetime" &&
-              billingInterval !== currentBillingInterval;
-            const canSelectPlan = !isCurrentPlan || isBillingIntervalChange;
-
-            // Calculate price based on billing interval
-            // Lifetime plan: always show one-time price (no interval)
-            // Recurring plans: show monthly price or yearly price / 12
-            const price = plan.id === "lifetime"
-              ? plan.monthlyPrice // One-time payment
-              : billingInterval === "monthly"
-              ? plan.monthlyPrice
-              : plan.yearlyPrice / 12; // Yearly divided by 12 for monthly rate
+            const priceLabel =
+              billingInterval === "yearly"
+                ? plan.priceYearly
+                : plan.priceMonthly;
+            const compareAtPriceLabel =
+              billingInterval === "yearly"
+                ? plan.compareAtPriceYearly
+                : plan.compareAtPriceMonthly;
 
             return (
               <motion.div
@@ -382,24 +359,15 @@ export function PlanSelector({
                     <div>
                       <div className="flex items-baseline">
                         <span className="text-foreground text-3xl font-bold tracking-tight">
-                          ${price.toFixed(0)}
+                          {priceLabel}
                         </span>
-                        {plan.id !== "lifetime" && (
-                          <span className="text-muted-foreground ml-1 text-sm">
-                            /month
-                          </span>
-                        )}
+                        <span className="text-muted-foreground ml-1 text-sm">
+                          {billingInterval === "yearly" ? "/year" : "/month"}
+                        </span>
                       </div>
-                      {billingInterval === "yearly" &&
-                        plan.id !== "lifetime" && (
+                      {compareAtPriceLabel && (
                         <p className="text-muted-foreground mt-1 text-sm">
-                          Billed annually (${plan.yearlyPrice.toFixed(0)}
-                          /year)
-                        </p>
-                      )}
-                      {plan.id === "lifetime" && (
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          One-time payment
+                          Regularly {compareAtPriceLabel}
                         </p>
                       )}
                     </div>
@@ -449,6 +417,8 @@ export function PlanSelector({
                               <CheckCircle2 className="mr-2 h-4 w-4" />
                               Selected
                             </>
+                          ) : isSystemGrantedTrial && plan.id === "plus" ? (
+                            "Subscribe to Plus"
                           ) : isCurrentPlan ? (
                             "Switch Billing"
                           ) : getPlanLevel(plan.id) >

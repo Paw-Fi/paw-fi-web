@@ -11,7 +11,13 @@ import {
 } from "../shared/premium-export-utils.ts";
 import { sanitizeStorageFilename } from "../shared/premium-storage.ts";
 
-type ExportAction = "create" | "status" | "download" | "list" | "list_attachments";
+type ExportAction =
+  | "create"
+  | "status"
+  | "download"
+  | "list"
+  | "list_attachments"
+  | "download_attachment";
 type ExportType =
   | "transactions_csv"
   | "reports_csv"
@@ -24,6 +30,7 @@ type ExportType =
 interface ExportCenterRequest {
   action: ExportAction;
   jobId?: string;
+  attachmentId?: string;
   exportType?: ExportType;
   filters?: ExportFilters;
 }
@@ -178,10 +185,54 @@ Deno.serve(async (req: Request) => {
     if (body.action === "list_attachments") {
       const filters = validateFilters(body.filters ?? {});
       if ("error" in filters) {
-        return jsonResponse({ success: false, error: filters.error }, 400, corsHeaders);
+        return jsonResponse(
+          { success: false, error: filters.error },
+          400,
+          corsHeaders,
+        );
       }
       return jsonResponse(
-        { success: true, data: await listAttachments(supabase, auth.userId, filters) },
+        {
+          success: true,
+          data: await listAttachments(supabase, auth.userId, filters),
+        },
+        200,
+        corsHeaders,
+      );
+    }
+
+    if (body.action === "download_attachment") {
+      const attachmentId = sanitizeUuid(body.attachmentId ?? null);
+      if (!attachmentId) {
+        return jsonResponse(
+          { success: false, error: "Invalid attachmentId" },
+          400,
+          corsHeaders,
+        );
+      }
+      const attachment = await getOwnAttachment(
+        supabase,
+        auth.userId,
+        attachmentId,
+      );
+      if (!attachment) {
+        return jsonResponse(
+          { success: false, error: "Attachment not found" },
+          404,
+          corsHeaders,
+        );
+      }
+      const { data, error } = await supabase.storage
+        .from(attachment.storage_bucket || "email-import-attachments")
+        .createSignedUrl(attachment.storage_path, 60 * 10);
+      if (error || !data?.signedUrl) {
+        throw error ?? new Error("signed URL missing");
+      }
+      return jsonResponse(
+        {
+          success: true,
+          data: { attachment, signedUrl: data.signedUrl, expiresIn: 600 },
+        },
         200,
         corsHeaders,
       );
@@ -309,7 +360,8 @@ function isValidAction(action: unknown): action is ExportAction {
     action === "status" ||
     action === "download" ||
     action === "list" ||
-    action === "list_attachments"
+    action === "list_attachments" ||
+    action === "download_attachment"
   );
 }
 
@@ -317,10 +369,10 @@ function validateFilters(
   filters: ExportFilters,
 ): NormalizedFilters | { error: string } {
   const now = new Date();
-  const startDate = normalizeDate(filters.startDate) ??
-    `${now.getUTCFullYear()}-01-01`;
-  const endDate = normalizeDate(filters.endDate) ??
-    now.toISOString().slice(0, 10);
+  const startDate =
+    normalizeDate(filters.startDate) ?? `${now.getUTCFullYear()}-01-01`;
+  const endDate =
+    normalizeDate(filters.endDate) ?? now.toISOString().slice(0, 10);
   if (
     (filters.startDate && !normalizeDate(filters.startDate)) ||
     (filters.endDate && !normalizeDate(filters.endDate))
@@ -333,9 +385,8 @@ function validateFilters(
     filters.selectedCurrencies,
   ) ?? [displayCurrency];
   const accountIds = normalizeUuidList(filters.accountIds);
-  const householdId = filters.householdId == null
-    ? null
-    : sanitizeUuid(filters.householdId);
+  const householdId =
+    filters.householdId == null ? null : sanitizeUuid(filters.householdId);
   if (filters.householdId && !householdId) {
     return { error: "Invalid householdId" };
   }
@@ -372,7 +423,7 @@ async function listJobs(supabase: any, userId: string) {
 async function listAttachments(
   supabase: any,
   userId: string,
-  filters: NormalizedFilters
+  filters: NormalizedFilters,
 ) {
   let query = supabase
     .from("email_import_attachments")
@@ -385,6 +436,23 @@ async function listAttachments(
   const { data, error } = await query;
   if (error) throw error;
   return data;
+}
+
+async function getOwnAttachment(
+  supabase: any,
+  userId: string,
+  attachmentId: string,
+): Promise<EmailAttachmentRow | null> {
+  const { data, error } = await supabase
+    .from("email_import_attachments")
+    .select(
+      "id, storage_bucket, storage_path, filename, content_type, size_bytes, created_at",
+    )
+    .eq("id", attachmentId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as EmailAttachmentRow | null;
 }
 
 async function getOwnJob(supabase: any, userId: string, jobId: string) {
@@ -642,9 +710,9 @@ async function addEmailAttachmentFiles(
       });
       continue;
     }
-    const path = `email-originals/${row.id}-${
-      sanitizeStorageFilename(row.filename)
-    }`;
+    const path = `email-originals/${row.id}-${sanitizeStorageFilename(
+      row.filename,
+    )}`;
     files.push({ path, bytes: new Uint8Array(await data.arrayBuffer()) });
     manifestFiles.push({
       path,
@@ -660,11 +728,9 @@ async function addReceiptFiles(
   files: PremiumZipFile[],
   manifestFiles: Array<Record<string, unknown>>,
 ) {
-  for (
-    const transaction of transactions
-      .filter((row) => row.receipt_image_url)
-      .slice(0, 200)
-  ) {
+  for (const transaction of transactions
+    .filter((row) => row.receipt_image_url)
+    .slice(0, 200)) {
     try {
       const response = await fetch(transaction.receipt_image_url!);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -837,9 +903,9 @@ function buildCategoryCsv(transactions: TransactionRow[]): string {
     { amount: number; count: number; currency: string }
   >();
   for (const row of transactions) {
-    const key = `${normalizeCurrency(row.currency)}:${
-      normalizeCategory(row.category)
-    }`;
+    const key = `${normalizeCurrency(row.currency)}:${normalizeCategory(
+      row.category,
+    )}`;
     const current = categories.get(key) ?? {
       amount: 0,
       count: 0,
