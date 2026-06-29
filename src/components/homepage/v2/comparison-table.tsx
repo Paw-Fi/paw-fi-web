@@ -29,7 +29,7 @@ type FeatureRow = {
 
 const features: FeatureRow[] = [
   {
-    name: "Capture without bank sync",
+    name: "Capture with or without bank sync",
     moneko:
       "AI quick-add via text, photo, voice notes, files, or WhatsApp review",
     ynab: "Manual entry, direct import, or file import when banks don’t sync",

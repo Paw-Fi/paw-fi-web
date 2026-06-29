@@ -415,6 +415,9 @@ serve(async (req: Request) => {
           appUrl: env.appUrl,
           successUrl: typeof successUrl === "string" ? successUrl : null,
           cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
+          allowLocalhost:
+            env.appUrl.includes("localhost") ||
+            env.appUrl.includes("127.0.0.1"),
         });
 
       // For public verify-payment, we add a per-session nonce to the redirect URL.

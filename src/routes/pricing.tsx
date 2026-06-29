@@ -25,11 +25,11 @@ export const Route = createFileRoute("/pricing")({
     const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
       title:
-        "Moneko Pricing | AI Budgeting App Plans for Individuals & Households",
+        "Moneko Plus Pricing | AI Budgeting App for Individuals & Households",
       description:
-        "Compare Moneko plans for AI budgeting, WhatsApp expense tracking, Pockets, and shared household budgets. Start with a 30-day free trial.",
+        "Moneko Plus includes every current feature for AI budgeting, WhatsApp expense tracking, Pockets, multi-currency tools, bank sync, and shared household budgets.",
       keywords:
-        "moneko pricing, moneko plans, AI budgeting app pricing, budgeting app subscription, envelope budgeting app, household budgeting app, WhatsApp expense tracker, personal finance app subscription",
+        "moneko pricing, moneko plus, AI budgeting app pricing, budgeting app subscription, envelope budgeting app, household budgeting app, WhatsApp expense tracker, personal finance app subscription",
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
@@ -57,8 +57,8 @@ export const Route = createFileRoute("/pricing")({
         "@type": "AggregateOffer",
         url: pageUrl,
         priceCurrency: "USD",
-        lowPrice: "4.99",
-        highPrice: "69.99",
+        lowPrice: "10.99",
+        highPrice: "79.99",
         offerCount: pricingOffers.length,
         availability: "https://schema.org/InStock",
         offers: pricingOffers,

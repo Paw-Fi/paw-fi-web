@@ -28,7 +28,6 @@ import {
   PlanType,
 } from "../shared/subscription-constants.ts";
 import {
-  getPlanFromPriceId,
   resolveInvoicePlanFromLinePrices,
   resolveSubscriptionPlanFromPrice,
 } from "../shared/stripe-subscription-prices.ts";
@@ -950,18 +949,18 @@ async function getUserForStripeSubscription(
 
 // Helper function to get plan name from product ID
 async function getPlanNameFromProductId(productId: string | null | undefined) {
-  if (!productId) return "Plus";
+  if (!productId) return "Subscription";
 
   try {
     // Try to get product name from Stripe
     const product = await stripe.products.retrieve(productId);
-    return product.name || "Plus";
+    return product.name || "Subscription";
   } catch (error: any) {
     reportStripeWebhookError("get_plan_name_from_product_id", error, {
       productId,
     });
     console.error("Error getting product name:", error);
-    return "Plus";
+    return "Subscription";
   }
 }
 
@@ -2288,7 +2287,7 @@ async function handleInvoicePaymentFailed(
       return;
     }
 
-    let planName = "Premium";
+    let planName = "Subscription";
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       if (subscription.items?.data?.length > 0) {
@@ -2442,7 +2441,7 @@ async function handleSubscriptionTrialEnding(
     }
 
     // Get plan details - use safe extraction
-    let planName = "Premium";
+    let planName = "Subscription";
     if (subscription.items?.data?.length > 0) {
       const productId = getProductIdFromPrice(
         subscription.items.data[0]?.price,
@@ -3067,7 +3066,7 @@ async function handleCheckoutSessionAsyncPaymentFailed(
       const name = userData.full_name || "";
       const emailTemplate = paymentFailedTemplate({
         name,
-        planName: session.metadata?.plan || "Premium",
+        planName: session.metadata?.plan || "Subscription",
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         updatePaymentUrl:
           `${DASHBOARD_URL}/checkout?plan=${session.metadata?.plan}`,

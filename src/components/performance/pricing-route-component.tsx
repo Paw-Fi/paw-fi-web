@@ -33,7 +33,7 @@ import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-g
 import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
-import { getPricingTiers } from "@/data/pricing-plans";
+import { getPricingTiers, plusChecklistFeatures } from "@/data/pricing-plans";
 
 // Added new pro-max components
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
@@ -103,6 +103,7 @@ function PricingCard({
   description,
   features,
   isPopular,
+  showPopularBadge = isPopular,
   buttonText,
   onSubscribe,
 }: {
@@ -113,6 +114,7 @@ function PricingCard({
   description: string;
   features: string[];
   isPopular?: boolean;
+  showPopularBadge?: boolean;
   buttonText: string;
   onSubscribe: () => void;
 }) {
@@ -129,7 +131,7 @@ function PricingCard({
             : "border-border/50 bg-card/40 hover:bg-card/50 border-2 shadow-lg backdrop-blur-xl hover:shadow-xl",
         )}
       >
-        {isPopular && (
+        {showPopularBadge && (
           <div className="absolute -top-4 right-0 left-0 flex justify-center">
             <div className="bg-primary text-primary-foreground flex items-center gap-1.5 rounded-full px-4 py-1 text-xs font-bold tracking-widest uppercase shadow-lg">
               <Sparkles className="h-3.5 w-3.5" />
@@ -199,7 +201,7 @@ function PricingCard({
           <div className="border-border/50 mt-8 border-t pt-6">
             {isPopular && (
               <p className="text-foreground mb-4 text-left text-sm font-bold">
-                Everything in Plus, and
+                Included in Plus
               </p>
             )}
             <ul className="space-y-3">
@@ -228,12 +230,7 @@ export function PricingRouteComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isYearly, setIsYearly] = useState(true);
 
-  type PlanType =
-    | "plus_monthly"
-    | "plus_yearly"
-    | "premium_monthly"
-    | "premium_yearly"
-    | "lifetime";
+  type PlanType = "plus_monthly" | "plus_yearly";
 
   useEffect(() => {
     setIsLoading(false);
@@ -249,23 +246,12 @@ export function PricingRouteComponent() {
   const plusYearlyTier = pricingTiers.find(
     (t) => t.title.includes("Plus") && t.title.includes("Yearly"),
   );
-  const premiumMonthlyTier = pricingTiers.find(
-    (t) =>
-      t.title === "Premium" ||
-      (t.title.includes("Premium") && !t.title.includes("Yearly")),
-  );
-  const premiumYearlyTier = pricingTiers.find(
-    (t) => t.title.includes("Premium") && t.title.includes("Yearly"),
-  );
-  const lifetimeTier = pricingTiers.find((t) => t.title.includes("Lifetime"));
-
   const safelyGetTier = (tier: any, fallbackParams: any) =>
     tier || fallbackParams;
 
   const pmTier = safelyGetTier(plusMonthlyTier, {
     title: "Plus Monthly",
-    priceMonthly: "$4.99",
-    compareAtPriceMonthly: "$9.99",
+    priceMonthly: "$10.99",
     features: [
       "Log expenses your way (Text, Photo, Voice)",
       "Stay in control with Pockets",
@@ -275,8 +261,8 @@ export function PricingRouteComponent() {
   });
   const pyTier = safelyGetTier(plusYearlyTier, {
     title: "Plus Yearly",
-    priceMonthly: "$34.99",
-    compareAtPriceMonthly: "$119.88",
+    priceMonthly: "$79.99",
+    compareAtPriceMonthly: "$131.88",
     features: [
       "Log expenses your way (Text, Photo, Voice)",
       "Stay in control with Pockets",
@@ -284,62 +270,11 @@ export function PricingRouteComponent() {
       "Budget in WhatsApp",
     ],
   });
-  const prmTier = safelyGetTier(premiumMonthlyTier, {
-    title: "Premium Monthly",
-    priceMonthly: "$7.99",
-    compareAtPriceMonthly: "$9.99",
-    features: [
-      "Everything in Plus",
-      "Proactive AI Coaching",
-      "Household Sync for partners",
-      "AI Scenario Planning",
-      "Bank sync via Plaid (coming soon)",
-    ],
-  });
-  const pryTier = safelyGetTier(premiumYearlyTier, {
-    title: "Premium Yearly",
-    priceMonthly: "$59.99",
-    compareAtPriceMonthly: "$95.88",
-    features: [
-      "Everything in Plus",
-      "Proactive AI Coaching",
-      "Household Sync for partners",
-      "AI Scenario Planning",
-      "Bank sync via Plaid (coming soon)",
-    ],
-  });
-  const lTier = safelyGetTier(lifetimeTier, {
-    title: "Lifetime",
-    priceMonthly: "$69.99",
-    features: [
-      "All Premium features included",
-      "Pay once, use forever",
-      "Exclusive early access to new features",
-      "Priority support",
-    ],
-  });
-
-  const plusChecklistFeatures = [
-    "AI expense capture",
-    "Messaging app capture",
-    "Email receipt import",
-    "Shared budgets",
-    "Standard support",
-  ];
-
-  const premiumChecklistFeatures = [
-    "Bank sync",
-    "Multiple currencies",
-    "Currency converter",
-    "Live exchange rates",
-    "Priority support",
-  ];
-
   const faqData = [
     {
-      question: "Can I upgrade or downgrade my plan later?",
+      question: "Can I switch billing later?",
       answer:
-        "Yes. You can change plans from your account settings. Plan changes and billing dates are handled by Stripe based on your current subscription.",
+        "Yes. You can switch between monthly and yearly Plus billing from your account settings. Billing dates are handled by Stripe based on your current subscription.",
     },
     {
       question: "What payment methods do you accept?",
@@ -387,21 +322,13 @@ export function PricingRouteComponent() {
       setIsLoading(false);
 
       const selectedPlan =
-        planId === "lifetime"
-          ? { plan: "lifetime", billing: undefined }
-          : planId === "premium_monthly"
-            ? { plan: "premium", billing: "monthly" }
-            : planId === "premium_yearly"
-              ? { plan: "premium", billing: "yearly" }
-              : planId === "plus_monthly"
-                ? { plan: "plus", billing: "monthly" }
-                : { plan: "plus", billing: "yearly" };
+        planId === "plus_monthly"
+          ? { plan: "plus", billing: "monthly" }
+          : { plan: "plus", billing: "yearly" };
 
       navigate({
         to: "/checkout",
-        search: selectedPlan.billing
-          ? { plan: selectedPlan.plan, billing: selectedPlan.billing }
-          : { plan: selectedPlan.plan },
+        search: { plan: selectedPlan.plan, billing: selectedPlan.billing },
       });
     } catch (err) {
       console.error("Error handling subscription:", err);
@@ -572,11 +499,11 @@ export function PricingRouteComponent() {
             {/* Pricing Cards Grid */}
             <motion.div
               variants={itemVariants}
-              className="mx-auto mt-16 grid w-full max-w-4xl items-stretch gap-8 md:grid-cols-2 xl:gap-10"
+              className="mx-auto mt-16 grid w-full max-w-xl items-stretch gap-8"
             >
               <PricingCard
                 title="Plus"
-                description="Everything you need to automate your budget and track spending."
+                description="Everything Moneko offers in one simple plan."
                 price={isYearly ? pyTier.priceMonthly : pmTier.priceMonthly}
                 period={isYearly ? "/yr" : "/mo"}
                 comparePrice={
@@ -585,29 +512,11 @@ export function PricingRouteComponent() {
                     : pmTier.compareAtPriceMonthly
                 }
                 features={plusChecklistFeatures}
+                isPopular={true}
+                showPopularBadge={isYearly}
                 buttonText="Get Plus"
                 onSubscribe={() =>
                   handleSubscribe(isYearly ? "plus_yearly" : "plus_monthly")
-                }
-              />
-
-              <PricingCard
-                title="Premium"
-                description="Advanced features including dual-persona AI coaching and household sync."
-                price={isYearly ? pryTier.priceMonthly : prmTier.priceMonthly}
-                period={isYearly ? "/yr" : "/mo"}
-                comparePrice={
-                  isYearly
-                    ? pryTier.compareAtPriceMonthly
-                    : prmTier.compareAtPriceMonthly
-                }
-                features={premiumChecklistFeatures}
-                isPopular={true}
-                buttonText="Get Premium"
-                onSubscribe={() =>
-                  handleSubscribe(
-                    isYearly ? "premium_yearly" : "premium_monthly",
-                  )
                 }
               />
             </motion.div>
@@ -634,10 +543,10 @@ export function PricingRouteComponent() {
         >
           <div className="mb-10 w-full text-center lg:text-left">
             <h2 className="mb-3 text-2xl font-bold tracking-tight md:text-3xl">
-              Premium Features
+              Plus Features
             </h2>
             <p className="text-muted-foreground mx-auto max-w-xl text-lg lg:mx-0">
-              Experience the future of budgeting with cutting-edge tools.
+              Everything we currently offer is included in Plus.
             </p>
           </div>
           <div className="bg-card border-border/50 min-h-[800px] overflow-hidden rounded-3xl border shadow-2xl lg:min-h-[500px]">
@@ -659,10 +568,10 @@ export function PricingRouteComponent() {
         >
           <div className="mb-12 text-center">
             <h2 className="mb-4 text-3xl font-extrabold tracking-tight md:text-4xl">
-              Compare Plans
+              Plus Includes Everything
             </h2>
             <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-              A side-by-side look at what Moneko can do for you.
+              A quick look at every feature included in the Plus plan.
             </p>
           </div>
           <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />

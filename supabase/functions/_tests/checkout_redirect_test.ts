@@ -119,3 +119,25 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "checkout redirects: allowLocalhost permits localhost redirect urls",
+  () => {
+    const redirects = buildCheckoutRedirectUrls({
+      appUrl: "https://moneko.io",
+      successUrl:
+        "http://localhost:3000/checkout?status=success&session_id={CHECKOUT_SESSION_ID}",
+      cancelUrl: "http://127.0.0.1:3000/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}",
+      allowLocalhost: true,
+    });
+
+    assertEquals(
+      redirects.successUrl,
+      "http://localhost:3000/checkout?status=success&session_id={CHECKOUT_SESSION_ID}",
+    );
+    assertEquals(
+      redirects.cancelUrl,
+      "http://127.0.0.1:3000/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}",
+    );
+  },
+);

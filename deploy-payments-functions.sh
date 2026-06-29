@@ -109,9 +109,10 @@ echo "2) Verify Environment Variables in Supabase Dashboard (Project -> Settings
 echo "   Required (Stripe / web checkout):"
 echo "   - STRIPE_SECRET_KEY=sk_..."
 echo "   - STRIPE_WEBHOOK_SECRET=whsec_..."
-echo "   - STRIPE_MONTHLY_PLUS_PLAN_ID=price_... (or STRIPE_PLUS_MONTHLY_PRICE_ID)"
-echo "   - STRIPE_YEARLY_PLUS_PLAN_ID=price_... (or STRIPE_PLUS_YEARLY_PRICE_ID)"
-echo "   - STRIPE_LIFETIME_PRICE_ID=price_..."
+echo "   - STRIPE_MONTHLY_PLUS_PLAN_ID=price_..."
+echo "   - STRIPE_YEARLY_PLUS_PLAN_ID=price_...
+echo "   - STRIPE_MONTHLY_PREMIUM_PLAN_ID=price_..."
+echo "   - STRIPE_YEARLY_PREMIUM_PLAN_ID=price_... "
 echo "   - SUPABASE_URL=https://<project>.supabase.co"
 echo "   - SUPABASE_SERVICE_ROLE_KEY=..."
 echo ""

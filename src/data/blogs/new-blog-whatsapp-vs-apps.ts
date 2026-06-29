@@ -9,7 +9,8 @@ const newBlog: Blog = {
   slug: "whatsapp-vs-apps-2026",
   excerpt:
     "Compare WhatsApp budgeting with traditional apps in 2026, focusing on ease of logging, budget structure, privacy, setup, habit formation, features, and cost, with Moneko as a standout option.",
-  coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=1600&h=800&fit=crop",
+  coverImage:
+    "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
     metaTitle:
@@ -52,14 +53,14 @@ The key difference: the structure question gets answered inside the same chat wh
 ## Round 3 — Privacy and Bank Login Requirements
 **Traditional budgeting apps:** Almost every major budgeting app requires you to connect your bank account via Plaid or a similar open banking service. This means sharing your bank credentials — or authorising third-party access — with a company whose business model, data practices, and longevity are beyond your control. Mint's shutdown in 2024 demonstrated exactly what happens when that company disappears.
 Apps that do not require bank sync (GoodBudget, EveryDollar free tier) require more manual effort, which brings the friction problem back.
-**WhatsApp budgeting (Moneko):** No bank login required. No Plaid. No third-party bank access. The only data Moneko holds is what you explicitly send it via WhatsApp messages. Your actual bank account, balance, and transaction history are never touched.
+**WhatsApp budgeting (Moneko):** No bank login is required for the WhatsApp workflow. Moneko now offers optional Plaid bank sync for supported US and Canadian banks, but you can still budget entirely from the messages, receipts, and updates you explicitly send.
 For privacy-conscious users — or anyone who watched Mint disappear and lost their financial history — this is a meaningful structural advantage.
-**Winner:** WhatsApp budgeting (Moneko) — no bank login, no credential sharing, no third-party data risk.
+**Winner:** WhatsApp budgeting (Moneko) — bank sync is optional, so users who prefer manual or chat-first budgeting can avoid bank login entirely.
 
 ## Round 4 — Setup Time and Onboarding
 **Traditional budgeting apps:** YNAB famously has a learning curve. The four-rule system requires genuine onboarding before it clicks — there are YouTube channels, books, and communities dedicated entirely to helping people set up YNAB correctly. Even simpler apps like Monarch and Simplifi require bank connection setup, category mapping, and an initial configuration session.
-**WhatsApp budgeting (Moneko):** Setup is a single conversation. You name your pockets, set the monthly amounts, and send your first expense. The whole process takes under 10 minutes and there is nothing to configure beyond your own categories.
-**Winner:** WhatsApp budgeting (Moneko) — the onboarding gap between Moneko and YNAB is significant. Moneko requires no tutorial, no learning curve, and no bank connection setup.
+**WhatsApp budgeting (Moneko):** Setup can be a single conversation. You name your pockets, set the monthly amounts, and send your first expense. The whole process takes under 10 minutes and there is nothing to configure beyond your own categories unless you choose optional bank sync.
+**Winner:** WhatsApp budgeting (Moneko) — the onboarding gap between Moneko and YNAB is significant. Moneko requires no tutorial, no learning curve, and no bank connection setup for chat-first budgeting.
 
 ## Round 5 — Habit Formation and Long-Term Stickiness
 This is the dimension that matters most for real-world financial outcomes — not features, but whether you actually keep using the tool.
@@ -85,11 +86,12 @@ This is where traditional apps regain ground.
 - Text, voice, and receipt logging
 - Instant balance queries
 - Shared pockets for couples and households
+- Optional Plaid bank sync for supported US and Canadian banks
 - Scenario planning
 - Monthly summaries
 
-Moneko does not do investment tracking, credit monitoring, or automated bank sync. For users who want a full financial picture across investments, credit, and accounts, a traditional app like Monarch is the better fit.
-**Winner:** Traditional apps — for users who need deep financial features beyond monthly budgeting.
+Moneko does not do investment tracking or credit monitoring. For users who want brokerage tracking, credit monitoring, and a bank-sync-first dashboard above monthly budgeting, a traditional app like Monarch is the better fit.
+**Winner:** Traditional apps — for users who need deep investment and credit features beyond monthly budgeting.
 
 ## Round 7 — Cost
 
@@ -107,13 +109,13 @@ Moneko does not do investment tracking, credit monitoring, or automated bank syn
 
 - You have quit budgeting apps before due to friction or forgetting to log
 - You want the envelope method without YNAB's complexity or price
-- You prefer privacy and do not want to connect your bank account to any third-party app
+- You prefer privacy and want budgeting to work even without connecting a bank account
 - You want a shared budget with a partner without merging accounts
 - You want to start today with zero setup friction
 
 **A traditional budgeting app is better for you if:**
 
-- You want automated bank sync and hands-off transaction categorisation
+- You want a bank-sync-first workflow and hands-off transaction categorisation across every account
 - You need investment tracking and net worth dashboards alongside budgeting
 - You prefer a visual interface with charts and trend breakdowns
 - You have the discipline to open a dedicated app regularly
@@ -136,7 +138,7 @@ If any of this resonates — if you recognise yourself in the friction problem, 
 - Send your first expense: "coffee 3.50"
 - Ask "how much is left in my food pocket?" at any point
 
-No bank login. No tutorial. No learning curve.
+No bank login required for the WhatsApp workflow. No tutorial. No learning curve.
 **Try Moneko free — WhatsApp budgeting with built-in envelope pockets.**
   
   `,

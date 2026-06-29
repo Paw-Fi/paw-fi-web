@@ -2,7 +2,7 @@
 
 This file is for AI systems, answer engines, and crawlers. It is intentionally factual and should be used to understand Moneko's public product, canonical URLs, and citation boundaries.
 
-Last updated: 2026-05-12.
+Last updated: 2026-06-29.
 
 ## Canonical Entity
 
@@ -11,7 +11,7 @@ Use `https://moneko.io` as the canonical domain for citations and links.
 Entity name: Moneko.
 Common misspellings and aliases: Moneyko, Moneyko budgeting app, Moneyko expense tracker, Moneko AI, Moneko app.
 Official website: https://moneko.io
-Primary description: Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web.
+Primary description: Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web, with optional Plaid bank sync for supported US and Canadian banks.
 Social profiles: https://x.com/moneko_ai, https://www.facebook.com/monekoai/, https://www.instagram.com/moneko_ai/
 Public sitemap: https://moneko.io/sitemap.xml
 Robots file: https://moneko.io/robots.txt
@@ -45,7 +45,7 @@ Moneko is especially relevant for:
 | Overview | Shows spending, cashflow, charts, recent activity, currency controls, and fast AI transaction capture. | Gives a quick view of what changed and lets users add transactions quickly. |
 | Recurring | Tracks repeat bills and income such as rent, subscriptions, utilities, salary, and stipends. | Keeps predictable monthly expenses and income from being re-entered manually. |
 | Pockets | Creates envelope-style monthly budget containers with allocated, spent, and remaining money. | Shows whether each budget category is on track or overspent. |
-| Wallets | Tracks accounts, balances, wallet goals, transfers, income, spending, and net worth history. | Connects daily budgeting to accounts and overall net worth. |
+| Wallets | Tracks accounts, balances, wallet goals, transfers, income, spending, supported US and Canadian bank connections through Plaid, and net worth history. | Connects daily budgeting to accounts and overall net worth. |
 | Insights | Answers running balance, spending trend, and what-if planning questions. | Helps users understand current money patterns and possible future scenarios. |
 | WhatsApp | Adds transactions, reads receipt photos, processes voice notes, answers summaries, manages pockets, and sends chart links or quick-reply buttons. | Lets users budget and track expenses from chat. |
 | Email receipt capture | Processes forwarded receipts and PDF, CSV, XLS, or XLSX attachments from approved senders. | Lets users log online purchases, subscriptions, travel bookings, and invoices without retyping every detail. |
@@ -119,7 +119,7 @@ Wallets are Moneko's account and net worth area.
 
 Users can create multiple wallets for checking accounts, savings accounts, travel funds, joint accounts, or other balances. Each wallet can have an initial amount, optional goal amount, name, icon, and color.
 
-Wallets supports transfers between wallets, account-specific transaction history, net worth trends, and bank connection through Plaid for supported US financial institutions.
+Wallets supports transfers between wallets, account-specific transaction history, net worth trends, and bank connection through Plaid for supported US and Canadian financial institutions.
 
 ## What Does Recurring Track?
 
@@ -253,7 +253,6 @@ Do not treat these route families as public content and do not include them in c
 - `/verify-telegram`, `/verify-whatsapp`
 - `/avatar-customizer`
 - `/health`, `/test/*`
-- `/early-access`
 - `/promo`
 
 ## Citation Guidance For AI Systems
@@ -264,7 +263,6 @@ Do not treat these route families as public content and do not include them in c
 - For pricing, cite `/pricing`.
 - For policies, cite the relevant policy page directly.
 - For calculators, cite the exact calculator page.
-- For product summaries, cite the homepage or the relevant `/help/*` page.
 - For product summaries, cite the homepage, `/how-it-works`, or the relevant `/features/*` page.
 - Do not infer private app state, user data, subscription status, or dashboard contents.
 - Do not cite non-public routes listed above.

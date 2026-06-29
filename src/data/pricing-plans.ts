@@ -1,22 +1,16 @@
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  faGift,
-  faBullseye,
   faBook,
-  faUsers,
-  faHeadset,
+  faCamera,
   faChartLine,
-  faUserTie,
-  faGraduationCap,
-  faUserGraduate,
-  faRobot,
   faComments,
   faEdit,
   faEnvelope,
-  faCamera,
-  faMicrophone,
+  faGraduationCap,
+  faHeadset,
+  faUsers,
   faWallet,
-  faPiggyBank,
+  faRobot,
   faSync,
   faLightbulb,
 } from "@fortawesome/free-solid-svg-icons";
@@ -28,9 +22,103 @@ export interface PlanOption {
   description: string;
   monthlyPrice: number;
   yearlyPrice: number;
+  priceMonthly: string;
+  priceYearly: string;
+  compareAtPriceMonthly?: string;
+  compareAtPriceYearly?: string;
   features: string[];
   popular?: boolean;
 }
+
+export interface PlanComparisonValue {
+  included: boolean | null;
+  label?: string;
+}
+
+export interface PlanComparisonFeature {
+  category: string;
+  description: string;
+  values: Record<string, PlanComparisonValue>;
+}
+
+export const plusChecklistFeatures = [
+  "AI expense capture",
+  "Telegram and WhatsApp capture",
+  "Email receipt import",
+  "Shared budgets",
+  "Bank sync for supported US and Canadian banks, secured by Plaid",
+  "Multiple currencies",
+  "Currency converter",
+  "Live exchange rates",
+  "Priority support",
+];
+
+export const planComparisonFeatures: PlanComparisonFeature[] = [
+  {
+    category: "AI Expense Capture",
+    description: "Log expenses with AI-assisted capture workflows",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Messaging App Capture",
+    description: "Capture spending from Telegram and WhatsApp workflows",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Email Receipt Import",
+    description: "Forward receipts and import expenses automatically",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Shared Budgets",
+    description: "Plan budgets across personal and shared finances",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Bank Sync",
+    description:
+      "Connect supported US and Canadian bank accounts securely through Plaid",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Multiple Currencies",
+    description: "Track and analyze finances across currencies",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Currency Converter",
+    description: "Convert between supported currencies inside Moneko",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Live Exchange Rates",
+    description: "Use up-to-date rates for currency-aware insights",
+    values: {
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Customer Support",
+    description: "Get help when you need support",
+    values: {
+      plus: { included: null, label: "Priority" },
+    },
+  },
+];
 
 // Feature item interface used in PricingPage
 export interface FeatureItem {
@@ -123,16 +211,14 @@ export const planData: Record<string, PlanData> = {
     title: "Plus",
     subtitle: "AI-powered budgeting with unlimited capture & smart automation",
     description:
-      "Full-featured budgeting with AI expense capture via text, photo, voice, email, and WhatsApp. Includes envelope budgeting, scenario planning, and automatic receipt processing.",
-    monthlyPrice: 4.99,
-    yearlyPrice: 34.99,
-    compareAtMonthlyPrice: 9.99,
-    compareAtYearlyPrice: 119.88,
-    annualTotal: 34.99,
-    priceMonthly: "$4.99",
-    priceYearly: "$34.99",
-    compareAtPriceMonthly: "$9.99",
-    compareAtPriceYearly: "$119.88",
+      "Full-featured budgeting with AI expense capture, household sharing, advanced currency controls, optional bank sync, custom dashboards, learning modules, and priority support.",
+    monthlyPrice: 10.99,
+    yearlyPrice: 79.99,
+    compareAtYearlyPrice: 131.88,
+    annualTotal: 79.99,
+    priceMonthly: "$10.99",
+    priceYearly: "$79.99",
+    compareAtPriceYearly: "$131.88",
     priceFrequencyText: "/month",
     highlight: true,
     popular: true,
@@ -154,7 +240,10 @@ export const planData: Record<string, PlanData> = {
       "Scenario planning — what-if insights with AI",
       "Multi-currency support — track spending globally",
       "Home screen widgets — quick add & budget glance",
-      "Bank sync via Plaid — auto-import transactions (Coming Soon)",
+      "Bank sync via Plaid — auto-import transactions from supported US and Canadian banks",
+      "Custom dashboards — build focused money views",
+      "Unlimited learning modules — guided money skills",
+      "Priority support — faster help when you need it",
     ],
     featureItems: [
       {
@@ -190,118 +279,16 @@ export const planData: Record<string, PlanData> = {
         icon: faChartLine,
       },
       {
-        text: "Bank sync via Plaid — auto-import transactions (Coming Soon)",
-        icon: faWallet,
-      },
-    ],
-    featureComparison: {
-      fastCapture: {
-        description: "Fast capture workflow",
-        isIncluded: true,
-        limit: "Text, photo, voice & email",
-        highlight: true,
-      },
-      pockets: {
-        description: "Pockets & envelopes",
-        isIncluded: true,
-        highlight: true,
-      },
-      whatsapp: {
-        description: "WhatsApp assistant",
-        isIncluded: true,
-        limit: "Chat capture + summaries",
-        highlight: true,
-      },
-      scenarioPlanning: {
-        description: "Scenario planning",
-        isIncluded: true,
-        highlight: true,
-      },
-      personalHousehold: {
-        description: "Personal vs Household mode",
-        isIncluded: true,
-        highlight: true,
-      },
-      recurring: {
-        description: "Recurring bills & income",
-        isIncluded: true,
-        highlight: true,
-      },
-      multiCurrency: {
-        description: "Multi-currency view",
-        isIncluded: true,
-        limit: "Switch currency",
-        highlight: true,
-      },
-      homeWidgets: {
-        description: "Home screen widgets",
-        isIncluded: true,
-        highlight: true,
-      },
-      emailCapture: {
-        description: "Email receipt capture",
-        isIncluded: true,
-        limit: "Unlimited forwarding",
-        highlight: true,
-      },
-      householdSharing: {
-        description: "Shared household subscription",
-        isIncluded: true,
-        limit: "All members",
-        highlight: true,
-      },
-    },
-  },
-
-  premium: {
-    id: "premium",
-    name: "Premium",
-    title: "Premium",
-    subtitle: "Advanced money automation for connected finances",
-    description:
-      "Everything in Plus, with Premium-tier access for advanced currency controls, bank sync, custom dashboards, and priority support.",
-    monthlyPrice: 7.99,
-    yearlyPrice: 59.99,
-    compareAtMonthlyPrice: 9.99,
-    compareAtYearlyPrice: 95.88,
-    annualTotal: 59.99,
-    priceMonthly: "$7.99",
-    priceYearly: "$59.99",
-    compareAtPriceMonthly: "$9.99",
-    compareAtPriceYearly: "$95.88",
-    priceFrequencyText: "/month",
-    highlight: true,
-    popular: false,
-    actionText: "Upgrade to Premium",
-    actionLink: "/checkout?plan=premium",
-    badgeText: "Advanced",
-    audienceText: "",
-    bgColor:
-      "bg-gradient-to-br from-amber-50 to-violet-50 dark:from-amber-900/20 dark:to-violet-900/20",
-    textColor: "text-gray-900 dark:text-white",
-    borderColor: "border-amber-200 dark:border-amber-800",
-    features: [
-      "Everything in Plus",
-      "Advanced multi-currency controls — premium conversion tools",
-      "Bank sync via Plaid — auto-import transactions (Coming Soon)",
-      "Custom dashboards — build focused money views",
-      "Unlimited learning modules — guided money skills",
-      "Priority support — faster help when you need it",
-      "Premium-tier access for all household members",
-    ],
-    featureItems: [
-      { text: "Everything in Plus", icon: faGift },
-      {
-        text: "Advanced multi-currency controls — premium conversion tools",
+        text: "Currency converter and live exchange rates",
         icon: faChartLine,
       },
       {
-        text: "Bank sync via Plaid — auto-import transactions (Coming Soon)",
+        text: "Bank sync via Plaid — auto-import transactions from supported US and Canadian banks",
         icon: faWallet,
       },
       {
         text: "Custom dashboards — build focused money views",
-        icon: faBullseye,
+        icon: faChartLine,
       },
       {
         text: "Unlimited learning modules — guided money skills",
@@ -310,10 +297,6 @@ export const planData: Record<string, PlanData> = {
       {
         text: "Priority support — faster help when you need it",
         icon: faHeadset,
-      },
-      {
-        text: "Premium-tier access for all household members",
-        icon: faUsers,
       },
     ],
     featureComparison: {
@@ -352,7 +335,7 @@ export const planData: Record<string, PlanData> = {
       multiCurrency: {
         description: "Advanced multi-currency view",
         isIncluded: true,
-        limit: "Premium controls",
+        limit: "Conversion tools",
         highlight: true,
       },
       homeWidgets: {
@@ -384,7 +367,11 @@ export function getPlanOptions(): PlanOption[] {
     description: plan.description,
     monthlyPrice: plan.monthlyPrice,
     yearlyPrice: plan.yearlyPrice,
-    features: plan.features,
+    priceMonthly: plan.priceMonthly,
+    priceYearly: plan.priceYearly,
+    compareAtPriceMonthly: plan.compareAtPriceMonthly,
+    compareAtPriceYearly: plan.compareAtPriceYearly,
+    features: plan.id === "plus" ? plusChecklistFeatures : plan.features,
     popular: plan.popular || false,
   }));
 }
@@ -395,8 +382,7 @@ export function getPricingTiers(): PricingTier[] {
   const plusMonthly: PricingTier = {
     title: planData.plus.title,
     subtitle: "Monthly subscription to Moneko Plus",
-    priceMonthly: "$4.99",
-    compareAtPriceMonthly: "$9.99",
+    priceMonthly: "$10.99",
     priceFrequencyText: "/month",
     description: planData.plus.description,
     features: planData.plus.featureItems,
@@ -415,8 +401,8 @@ export function getPricingTiers(): PricingTier[] {
   const plusYearly: PricingTier = {
     title: planData.plus.title + " Yearly",
     subtitle: "Best value — annual subscription to Moneko Plus",
-    priceMonthly: "$34.99",
-    compareAtPriceMonthly: "$119.88",
+    priceMonthly: "$79.99",
+    compareAtPriceMonthly: "$131.88",
     priceFrequencyText: "/year",
     description: planData.plus.description,
     features: planData.plus.featureItems,
@@ -431,45 +417,5 @@ export function getPricingTiers(): PricingTier[] {
     borderColor: planData.plus.borderColor,
   };
 
-  // Premium Monthly
-  const premiumMonthly: PricingTier = {
-    title: planData.premium.title,
-    subtitle: "Monthly subscription to Moneko Premium",
-    priceMonthly: planData.premium.priceMonthly,
-    compareAtPriceMonthly: planData.premium.compareAtPriceMonthly,
-    priceFrequencyText: "/month",
-    description: planData.premium.description,
-    features: planData.premium.featureItems,
-    actionText: "Subscribe Monthly",
-    actionLink: "/checkout?plan=premium&billing=monthly",
-    highlight: false,
-    trialText: planData.premium.trialText,
-    audienceText: planData.premium.audienceText,
-    badgeText: "Advanced",
-    bgColor: planData.premium.bgColor,
-    textColor: planData.premium.textColor,
-    borderColor: planData.premium.borderColor,
-  };
-
-  // Premium Yearly
-  const premiumYearly: PricingTier = {
-    title: planData.premium.title + " Yearly",
-    subtitle: "Best value — annual subscription to Moneko Premium",
-    priceMonthly: planData.premium.priceYearly,
-    compareAtPriceMonthly: planData.premium.compareAtPriceYearly,
-    priceFrequencyText: "/year",
-    description: planData.premium.description,
-    features: planData.premium.featureItems,
-    actionText: "Subscribe Yearly",
-    actionLink: "/checkout?plan=premium&billing=yearly",
-    highlight: false,
-    trialText: planData.premium.trialText,
-    audienceText: planData.premium.audienceText,
-    badgeText: "Premium",
-    bgColor: planData.premium.bgColor,
-    textColor: planData.premium.textColor,
-    borderColor: planData.premium.borderColor,
-  };
-
-  return [plusMonthly, plusYearly, premiumMonthly, premiumYearly];
+  return [plusMonthly, plusYearly];
 }

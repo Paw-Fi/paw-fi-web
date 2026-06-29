@@ -9,7 +9,8 @@ const findTags = (names: string[]) =>
 
 const STATIC_PUBLISHED_AT = "2026-01-01T00:00:00.000Z";
 
-export const old_blogs=  [{
+export const old_blogs = [
+  {
     id: "blog-1",
     slug: "generative-engine-optimization-geo-guide",
     title:
@@ -248,7 +249,7 @@ Your emergency fund should be liquid and accessible. A high-yield savings accoun
 ### Let Moneko Help You Succeed
 
 *   **Calculate Your Goal:** Use Moneko’s **Savings Goals Calculator** to determine your precise 3-6 month emergency fund target and create a timeline to reach it.
-*   **Automate Your Savings:** Connect your bank account and set up recurring transfers to build your fund effortlessly.
+*   **Plan Your Savings:** Use recurring reminders and budget categories to decide how much to move into your emergency fund each month.
 *   **Ask for Guidance:** Unsure where to start? Chat with our **AI Financial Educator** about the best strategies to build an emergency fund fast.
 
 *Disclaimer: This content is for informational purposes only and does not constitute financial advice. All investment decisions carry risk. Conduct your own thorough research or consult a qualified financial advisor.*
@@ -370,7 +371,7 @@ Notice how the amount of interest you earn increases each year. That's the magic
 
 *   **Visualize Your Growth:** Use the **Moneko Compound Interest Calculator** to see how your savings can grow over time with different contribution amounts and interest rates.
 *   **Plan Your Investments:** Chat with our **AI Financial Advisor** about investment strategies that can help you harness the power of compounding for your retirement goals.
-*   **Set It and Forget It:** Create a recurring investment goal in your **Dashboard** to make consistent contributions and let compounding do the heavy lifting.
+*   **Set a Contribution Rhythm:** Use Moneko to plan recurring contribution targets, then make the actual transfers through your bank or brokerage.
 
 *Disclaimer: This content is for informational purposes only and does not constitute financial advice. All investment decisions carry risk. Conduct your own thorough research or consult a qualified financial advisor.*
       `,
@@ -663,7 +664,7 @@ According to <a href="https://www.investopedia.com/terms/d/dollarcostaveraging.a
 
 ### Implement DCA with Moneko
 
-*   **Automate Your Investments:** Set up a recurring investment goal in the Moneko **Dashboard**. Link your bank account and schedule regular transfers to your investment accounts.
+*   **Plan Your Investments:** Use Moneko to track contribution targets and reminders, then make transfers through your bank or brokerage.
 *   **Plan Your Strategy:** Not sure what to invest in? Chat with the **Moneko AI Financial Advisor** about building a diversified portfolio that aligns with your long-term goals.
 *   **Track Your Performance:** Monitor your investments and see the benefits of your consistent approach over time, all within your personalized dashboard.
 
@@ -3863,4 +3864,5 @@ Moneko isn't just an app; it's a dashboard for your entire FIRE journey.
       keywords:
         "financial independence, fire movement, how to retire early, financial freedom, early retirement",
     },
-  }]
+  },
+];

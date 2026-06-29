@@ -25,6 +25,7 @@ import {
   faTrophy,
   faLightbulb,
   faHammer,
+  faDownload,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
 import logo from "@assets/images/icon.svg";
@@ -56,6 +57,7 @@ import { Button } from "@/components/ui/button";
 import monekoLogo from "@/assets/images/logo/moneko.png";
 import finniLogo from "@/assets/images/logo/finni.png";
 import { DashboardAppProviders } from "@/providers/dashboard-app-providers";
+import { isSystemGrantedFreeTrialUser } from "@/utils/subscription";
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -145,6 +147,7 @@ export function Dashboard() {
     isActive,
     isLoading: isSubscriptionLoading,
   } = useSubscription(user?.id);
+  const isSystemGrantedTrial = isSystemGrantedFreeTrialUser(subscription);
 
   // Set trial eligibility based on subscription status
   // User is eligible only if they have NEVER had a subscription (no row exists)
@@ -420,36 +423,12 @@ export function Dashboard() {
       label: "Home",
       icon: faHouseChimney,
       path: "/dashboard",
-      comingSoon: true,
     },
     {
-      id: "tracker",
-      label: "Goal Guide",
-      icon: faTrophy,
-      path: "/dashboard/tracker",
-      comingSoon: true,
-    },
-    {
-      id: "portfolio",
-      label: "Portfolio",
-      icon: faHandHoldingDollar,
-      path: "/dashboard/portfolio",
-      comingSoon: true,
-    },
-    {
-      id: "income-builder",
-      label: "Income Builder",
-      icon: faHammer,
-      path: "/dashboard/income-builder",
-      comingSoon: true,
-    },
-
-    {
-      id: "learning",
-      label: "Learning",
-      icon: faChessKnight,
-      path: "/dashboard/learning",
-      comingSoon: true,
+      id: "export",
+      label: "Export",
+      icon: faDownload,
+      path: "/dashboard/export",
     },
   ];
 
@@ -508,7 +487,7 @@ export function Dashboard() {
 
         // 3. CRITICAL FIX: Navigate FIRST, then clear cache
         // This prevents race condition where new route tries to fetch cleared queries
-        await navigate({ to: "/" });
+        await navigate({ to: "/login", search: { redirect: undefined } });
 
         // 4. Clear query cache AFTER navigation completes
         // Use setTimeout to ensure navigation finishes before cache clear
@@ -682,7 +661,7 @@ export function Dashboard() {
                       <UserAvatar
                         size="md"
                         showPremiumBorder={true}
-                        showPremiumCrown={true}
+                        showPremiumCrown={!isSystemGrantedTrial}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-card-foreground dark:text-card-foreground truncate text-sm font-medium">
@@ -711,11 +690,7 @@ export function Dashboard() {
                           transition={{ duration: 0.2 }}
                         >
                           {/* Settings Option */}
-                          <Link
-                            to="/dashboard/user-settings"
-                            className="block"
-                           
-                          >
+                          <Link to="/dashboard/user-settings" className="block">
                             <motion.div
                               className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
                               whileHover={{ x: 1 }}
@@ -728,35 +703,6 @@ export function Dashboard() {
                               </div>
                               <span className="text-popover-foreground dark:text-popover-foreground text-sm font-medium">
                                 Settings
-                              </span>
-                            </motion.div>
-                          </Link>
-
-                          {/* Profile Option */}
-                          <Link
-                            to="/dashboard/user-settings/profile"
-                            className="block"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setUserMenuOpen(false);
-                              setMobileMenuOpen(false);
-                              toast.info(
-                                "Coming soon! This feature is under development.",
-                              );
-                            }}
-                          >
-                            <motion.div
-                              className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
-                              whileHover={{ x: 1 }}
-                            >
-                              <div className="bg-muted dark:bg-muted flex h-9 w-9 items-center justify-center rounded-lg">
-                                <FontAwesomeIcon
-                                  className="text-muted-foreground dark:text-muted-foreground h-4 w-4"
-                                  icon={faUser}
-                                />
-                              </div>
-                              <span className="text-popover-foreground dark:text-popover-foreground text-sm font-medium">
-                                Profile
                               </span>
                             </motion.div>
                           </Link>
@@ -785,34 +731,6 @@ export function Dashboard() {
                               </span>
                             </motion.div>
                           </Link>
-                          <a
-                            href="mailto:hello@moneko.io"
-                            className="block"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setUserMenuOpen(false);
-                              setMobileMenuOpen(false);
-                              toast.info(
-                                "Coming soon! This feature is under development.",
-                              );
-                            }}
-                          >
-                            <motion.div
-                              className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
-                              whileHover={{ x: 1 }}
-                            >
-                              <div className="bg-muted dark:bg-muted flex h-9 w-9 items-center justify-center rounded-lg">
-                                <FontAwesomeIcon
-                                  className="text-muted-foreground dark:text-muted-foreground h-4 w-4"
-                                  icon={faHeadphones}
-                                />
-                              </div>
-                              <span className="text-popover-foreground dark:text-popover-foreground text-sm font-medium">
-                                Support
-                              </span>
-                            </motion.div>
-                          </a>
-
                           {/* Divider */}
                           <div className="border-border dark:border-border border-t" />
 

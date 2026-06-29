@@ -144,7 +144,7 @@ Yes. Moneko was designed heavily around shared expense tracking. Couples and roo
 
 ### Do I need to connect bank accounts to use Moneko?
 
-No. Many users prefer faster manual-first expense tracking instead of full bank syncing. Moneko supports flexible workflows through text logging, voice logging, receipts, WhatsApp, Telegram, and Apple Wallet automations.
+No. Many users prefer faster manual-first expense tracking instead of full bank syncing. Moneko supports flexible workflows through text logging, voice logging, receipts, WhatsApp, Telegram, and Apple Wallet automations, with optional Plaid bank sync for supported US and Canadian banks.
 
 ### Does Moneko support Apple Wallet transaction tracking?
 

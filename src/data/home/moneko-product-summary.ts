@@ -19,7 +19,7 @@ export interface MonekoCaptureMethod {
 
 export const monekoContentDates = {
   published: "2026-03-19",
-  updated: "2026-04-24",
+  updated: "2026-06-29",
 };
 
 export const monekoContentByline = {
@@ -64,7 +64,7 @@ export const monekoProductAreas: MonekoProductArea[] = [
     id: "wallets",
     question: "What does Moneko Wallets track?",
     directAnswer:
-      "Moneko Wallets tracks accounts, balances, goals, transfers, income, spending, and net worth history across manual wallets and connected bank accounts where supported.",
+      "Moneko Wallets tracks accounts, balances, goals, transfers, income, spending, and net worth history across manual wallets and Plaid-connected US or Canadian bank accounts where supported.",
     details:
       "Wallets is the net worth view. It can show assets minus liabilities, account stacks, wallet goals, month-by-month history, and transfers between accounts.",
     examples: ["Checking", "Savings", "Credit cards", "Joint accounts"],

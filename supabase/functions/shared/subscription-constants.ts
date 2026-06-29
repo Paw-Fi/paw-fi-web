@@ -48,7 +48,6 @@ export const GOOD_STANDING_STATUSES: SubscriptionStatus[] = [
   "past_due",
 ];
 
-
 // Payment retry settings (for past_due subscriptions)
 export const PAYMENT_RETRY_CONFIG = {
   maxRetries: 4,

@@ -1,4 +1,5 @@
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
+import { seo } from "@/utils/seo";
 
 // @ts-ignore
 
@@ -9,27 +10,14 @@ export const Route = createFileRoute("/changelog")({
   ),
   head: () => {
     return {
-      meta: [
-        {
-          title: "Changelog | Moneko",
-          name: "description",
-          content:
-            "Track all the latest updates, features, and improvements to Moneko.",
-        },
-        {
-          property: "og:title",
-          content: "Changelog | Moneko",
-        },
-        {
-          property: "og:description",
-          content:
-            "Track all the latest updates, features, and improvements to Moneko.",
-        },
-        {
-          name: "canonical",
-          content: "https://moneko.io/changelog",
-        },
-      ],
+      meta: seo({
+        title: "Changelog | Moneko",
+        description:
+          "Track all the latest updates, features, and improvements to Moneko.",
+        image: "https://moneko.io/og-img.png",
+        url: "https://moneko.io/changelog",
+      }),
+      links: [{ rel: "canonical", href: "https://moneko.io/changelog" }],
     };
   },
 });

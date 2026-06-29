@@ -9,7 +9,8 @@ const newBlog: Blog = {
   slug: "budgeting-on-whatsapp-2026",
   excerpt:
     "Discover how WhatsApp budgeting in 2026 offers a frictionless way to manage finances with tools like Moneko, combining chat-based logging with envelope-style budgeting.",
-  coverImage: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1600&h=800&fit=crop",
+  coverImage:
+    "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
     metaTitle: "Budgeting on WhatsApp in 2026 — Does It Actually Work?",
@@ -42,7 +43,7 @@ No forms. No menus. No login. Just a conversation.
 ## The Top WhatsApp Budgeting Tools in 2026
 The space has become surprisingly crowded. Here is an honest look at what is available:
 
-- **Moneko** — The only WhatsApp budgeting assistant that combines chat-based logging with a full envelope-style pockets system. You log expenses via text, voice, or receipt on WhatsApp — and those expenses are automatically allocated against your monthly pockets (groceries, dining, rent, fun, etc.). At any moment you can ask what is left in any pocket. No bank sync required.
+- **Moneko** — The only WhatsApp budgeting assistant that combines chat-based logging with a full envelope-style pockets system. You log expenses via text, voice, or receipt on WhatsApp — and those expenses are automatically allocated against your monthly pockets (groceries, dining, rent, fun, etc.). At any moment you can ask what is left in any pocket. Bank sync is optional where supported, not required for WhatsApp budgeting.
 - **POQT (poqt.cloud)** — One of the most established players with 20,000+ active users and over USD 10 million managed. Supports text, voice, and document uploads. Strong on expense tracking but primarily category-based rather than envelope-style budgeting.
 - **Dora AI (doraai.money)** — Conversational and polished. Excellent at natural language queries like "what did I spend on Uber this week?" Great for insight-seekers but lighter on structured monthly budget control.
 - **Luccabot (luccabot.com)** — Simple and free. Good for basic income and expense tracking with daily reminders. Positioned more as a tracking tool than a full budgeting system.
@@ -69,7 +70,7 @@ It works particularly well if you:
 It is probably not for you if you:
 
 - Want deep investment tracking or net worth dashboards
-- Need automated bank sync and reconciliation
+- Need a bank-sync-first reconciliation workflow across every account
 - Prefer a visual, chart-heavy interface for financial planning
 
 ## How to Get Started Today
@@ -80,7 +81,7 @@ The barrier is genuinely low:
 - Send your first expense as a text message
 - Ask "what is left in my food pocket?" at any point during the month
 
-That is the entire onboarding. No spreadsheet. No bank login. No tutorial.
+That is the entire onboarding. No spreadsheet. No bank login required for WhatsApp budgeting. No tutorial.
 
 ## The Verdict
 WhatsApp budgeting works — specifically because it removes the step that causes most people to quit. The logging is effortless, the interface is one you already use, and the habit forms naturally.

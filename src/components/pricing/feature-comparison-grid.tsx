@@ -1,117 +1,16 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes } from "@fortawesome/free-solid-svg-icons";
-import { planData } from "@/data/pricing-plans";
-import { motion } from "framer-motion";
+import { planComparisonFeatures, planData } from "@/data/pricing-plans";
 
 interface FeatureComparisonGridProps {
   prefersReducedMotion?: boolean;
 }
 
-interface ComparisonValue {
-  included: boolean | null;
-  label?: string;
-}
-
-interface ComparisonFeature {
-  category: string;
-  description: string;
-  values: Record<string, ComparisonValue>;
-}
-
 export function FeatureComparisonGrid({
   prefersReducedMotion,
 }: FeatureComparisonGridProps) {
-  // Only show plus and premium plans
-  const plans = [planData.plus, planData.premium];
-
-  const features: ComparisonFeature[] = [
-    {
-      category: "AI Expense Capture",
-      description: "Log expenses with AI-assisted capture workflows",
-      values: {
-        plus: { included: true },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Messaging App Capture",
-      description: "Capture spending from messaging workflows",
-      values: {
-        plus: { included: true },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Email Receipt Import",
-      description: "Forward receipts and import expenses automatically",
-      values: {
-        plus: { included: true },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Shared Budgets",
-      description: "Plan budgets across personal and shared finances",
-      values: {
-        plus: { included: true },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Bank Sync",
-      description: "Connect accounts and import transactions automatically",
-      values: {
-        plus: { included: false },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Multiple Currencies",
-      description: "Track and analyze finances across currencies",
-      values: {
-        plus: { included: false },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Currency Converter",
-      description: "Convert between supported currencies inside Moneko",
-      values: {
-        plus: { included: false },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Live Exchange Rates",
-      description: "Use up-to-date rates for currency-aware insights",
-      values: {
-        plus: { included: false },
-        premium: { included: true },
-      },
-    },
-    {
-      category: "Customer Support",
-      description: "Get help when you need support",
-      values: {
-        plus: { included: null, label: "Standard" },
-        premium: { included: null, label: "Priority" },
-      },
-    },
-  ];
-
-  const gridVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, staggerChildren: 0.1 },
-    },
-  };
-
-  const rowVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 },
-  };
+  void prefersReducedMotion;
+  const plans = [planData.plus];
 
   return (
     <div className="bg-card mt-20 overflow-hidden rounded-xl shadow-sm">
@@ -120,7 +19,7 @@ export function FeatureComparisonGrid({
           Plan Features at a Glance
         </h3>
         <p className="text-muted-foreground mt-2">
-          Compare what’s included in Plus and Premium
+          Everything currently available is included in Plus
         </p>
       </div>
 
@@ -142,7 +41,7 @@ export function FeatureComparisonGrid({
             </tr>
           </thead>
           <tbody>
-            {features.map((feature, index) => (
+            {planComparisonFeatures.map((feature) => (
               <tr
                 key={feature.category}
                 className="hover:bg-muted/30 border-border/20 border-b transition-colors duration-150 last:border-0"

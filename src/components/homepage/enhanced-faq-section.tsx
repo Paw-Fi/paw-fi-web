@@ -123,7 +123,7 @@ const faqItems: FAQItem[] = [
     id: "security-bank-connection",
     question: "Is it safe to connect my bank accounts?",
     answer:
-      "If you choose to connect accounts, you can disconnect at any time. We aim to minimize sensitive data handling and follow security best practices. If you'd like details about how connections work for your setup, contact support.",
+      "Bank sync is optional and is powered by Plaid for supported US and Canadian banks. You can disconnect accounts at any time, and you can also use Moneko without bank sync through text, receipt, WhatsApp, Telegram, email, and manual wallet workflows.",
     category: "security",
     icon: faLock,
     popular: false,

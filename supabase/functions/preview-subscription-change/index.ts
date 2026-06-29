@@ -32,6 +32,54 @@ function resolveRecurringPriceId(plan: string, interval: string): string {
   return getPriceId(plan as PlanType, interval as BillingInterval);
 }
 
+async function previewSubscriptionUpdateInvoice(params: {
+  customerId: string;
+  subscriptionId: string;
+  subscriptionItemId: string;
+  priceId: string;
+  prorationDate: number;
+}) {
+  const invoices = stripe.invoices as any;
+
+  if (typeof invoices.createPreview === "function") {
+    return await invoices.createPreview({
+      customer: params.customerId,
+      subscription: params.subscriptionId,
+      subscription_details: {
+        items: [
+          {
+            id: params.subscriptionItemId,
+            price: params.priceId,
+          },
+        ],
+        proration_date: params.prorationDate,
+      },
+    });
+  }
+
+  if (typeof invoices.retrieveUpcoming === "function") {
+    return await invoices.retrieveUpcoming({
+      customer: params.customerId,
+      subscription: params.subscriptionId,
+      subscription_items: [
+        {
+          id: params.subscriptionItemId,
+          price: params.priceId,
+        },
+      ],
+      subscription_proration_date: params.prorationDate,
+    });
+  }
+
+  throw new Error("Stripe invoice preview API is not available");
+}
+
+function isProrationLineItem(line: any): boolean {
+  return Boolean(
+    line?.proration || line?.parent?.subscription_item_details?.proration,
+  );
+}
+
 serve(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
@@ -293,9 +341,7 @@ serve(async (req) => {
           immediateCharge: price.unit_amount || 0,
           currency: price.currency,
           message: `You'll be charged ${
-            (
-              (price.unit_amount || 0) / 100
-            ).toFixed(2)
+            ((price.unit_amount || 0) / 100).toFixed(2)
           } ${price.currency.toUpperCase()} ${
             newBillingInterval === "monthly" ? "per month" : "per year"
           }`,
@@ -343,28 +389,23 @@ serve(async (req) => {
     }
 
     const subscriptionItemId = stripeSubscription.items.data[0].id;
-    const currentPriceId = stripeSubscription.items.data[0].price.id;
 
     // Set proration date to now for consistent calculations
     const prorationDate = Math.floor(Date.now() / 1000);
 
     // Preview the upcoming invoice with the subscription change
     try {
-      const upcomingInvoice = await stripe.invoices.upcoming({
-        customer: stripeSubscription.customer as string,
-        subscription: subscription.stripe_subscription_id,
-        subscription_items: [
-          {
-            id: subscriptionItemId,
-            price: newPriceId,
-          },
-        ],
-        subscription_proration_date: prorationDate,
+      const upcomingInvoice = await previewSubscriptionUpdateInvoice({
+        customerId: stripeSubscription.customer as string,
+        subscriptionId: subscription.stripe_subscription_id,
+        subscriptionItemId,
+        priceId: newPriceId,
+        prorationDate,
       });
 
       // Calculate proration amounts
       const prorationLineItems = upcomingInvoice.lines.data.filter(
-        (line: any) => line.proration,
+        (line: any) => isProrationLineItem(line),
       );
       const totalProration = prorationLineItems.reduce(
         (sum: number, line: any) => sum + line.amount,
@@ -373,7 +414,7 @@ serve(async (req) => {
 
       // Get the new recurring amount
       const recurringLineItems = upcomingInvoice.lines.data.filter(
-        (line: any) => !line.proration,
+        (line: any) => !isProrationLineItem(line),
       );
       const newRecurringAmount = recurringLineItems.reduce(
         (sum: number, line: any) => sum + line.amount,
@@ -388,30 +429,18 @@ serve(async (req) => {
         // Upgrades: immediate charge with proration
         message = totalProration > 0
           ? `You'll be charged ${
-            (upcomingInvoice.amount_due / 100).toFixed(
-              2,
-            )
+            (upcomingInvoice.amount_due / 100).toFixed(2)
           } ${upcomingInvoice.currency.toUpperCase()} immediately (including prorated ${
-            (
-              totalProration / 100
-            ).toFixed(
-              2,
-            )
+            (totalProration / 100).toFixed(2)
           } ${upcomingInvoice.currency.toUpperCase()} credit for unused time). Your subscription will renew at ${
-            (
-              newRecurringAmount / 100
-            ).toFixed(2)
+            (newRecurringAmount / 100).toFixed(2)
           } ${upcomingInvoice.currency.toUpperCase()} ${
             newBillingInterval === "monthly" ? "per month" : "per year"
           }.`
           : `You'll be charged ${
-            (upcomingInvoice.amount_due / 100).toFixed(
-              2,
-            )
+            (upcomingInvoice.amount_due / 100).toFixed(2)
           } ${upcomingInvoice.currency.toUpperCase()} immediately. Your subscription will renew at ${
-            (
-              newRecurringAmount / 100
-            ).toFixed(2)
+            (newRecurringAmount / 100).toFixed(2)
           } ${upcomingInvoice.currency.toUpperCase()} ${
             newBillingInterval === "monthly" ? "per month" : "per year"
           }.`;
@@ -421,11 +450,16 @@ serve(async (req) => {
         const periodEnd = new Date(
           stripeSubscription.current_period_end * 1000,
         ).toLocaleDateString();
-        message =
-          `Your plan will change to ${newPlan} on ${periodEnd}. New rate: ${
-            (
-              newRecurringAmount / 100
-            ).toFixed(2)
+        message = totalProration < 0
+          ? `Your plan will change to ${newPlan} on ${periodEnd}. You'll receive a credit of ${
+            Math.abs(totalProration / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} applied to your next invoice. New rate: ${
+            (newRecurringAmount / 100).toFixed(2)
+          } ${upcomingInvoice.currency.toUpperCase()} ${
+            newBillingInterval === "monthly" ? "per month" : "per year"
+          }.`
+          : `Your plan will change to ${newPlan} on ${periodEnd}. New rate: ${
+            (newRecurringAmount / 100).toFixed(2)
           } ${upcomingInvoice.currency.toUpperCase()} ${
             newBillingInterval === "monthly" ? "per month" : "per year"
           }.`;
@@ -437,15 +471,9 @@ serve(async (req) => {
           // Billing interval change: immediate charge
           message =
             `Switching to ${newBillingInterval} billing. You'll be charged ${
-              (
-                upcomingInvoice.amount_due / 100
-              ).toFixed(
-                2,
-              )
+              (upcomingInvoice.amount_due / 100).toFixed(2)
             } ${upcomingInvoice.currency.toUpperCase()} immediately (including prorated credit for unused time). New rate: ${
-              (
-                newRecurringAmount / 100
-              ).toFixed(2)
+              (newRecurringAmount / 100).toFixed(2)
             } ${upcomingInvoice.currency.toUpperCase()} ${
               newBillingInterval === "monthly" ? "per month" : "per year"
             }.`;
@@ -480,7 +508,7 @@ serve(async (req) => {
             lineItems: upcomingInvoice.lines.data.map((line: any) => ({
               description: line.description,
               amount: line.amount,
-              proration: line.proration,
+              proration: isProrationLineItem(line),
               period: line.period,
             })),
           },

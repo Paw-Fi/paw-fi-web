@@ -3,12 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
 import { getPriceId } from "../shared/stripe-subscription-prices.ts";
+import { authenticateUser } from "../shared/auth.ts";
+import {
+  canGrantPaywallReturnTrial,
+  hasRecentPaywallReturnExit,
+} from "../shared/paywall-return-trial-eligibility.ts";
 import type {
   BillingInterval,
   PlanType,
 } from "../shared/subscription-constants.ts";
-import { authenticateUser } from "../shared/auth.ts";
-import { canGrantPaywallReturnTrial } from "../shared/paywall-return-trial-eligibility.ts";
 import { buildCheckoutPageUrl } from "../shared/checkout-redirect.ts";
 import { getSubscriptionChangePolicy } from "../shared/subscription-change-policy.ts";
 
@@ -21,7 +24,6 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
-
 serve(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
@@ -814,6 +816,25 @@ serve(async (req) => {
             }),
             {
               status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (
+          !hasRecentPaywallReturnExit(
+            userEligibility.paywall_return_trial_exit_at,
+            now,
+            returnTrialDurationMinutes,
+          )
+        ) {
+          console.log(
+            `[PaywallReturnTrial] grant_blocked_missing_recent_exit user=${userId}`,
+          );
+          return new Response(
+            JSON.stringify({ error: "Return trial is not available" }),
+            {
+              status: 403,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
