@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getPlanOptions } from "@/data/pricing-plans";
+import { planData } from "@/data/pricing-plans";
 import { isSystemGrantedFreeTrialUser } from "@/utils/subscription";
 
 interface SubscriptionDetailsProps {
@@ -67,16 +67,14 @@ export function SubscriptionDetails({
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const isSharedHouseholdAccess = Boolean(subscription?.bound_to_user_id);
   const isSystemGrantedTrial = isSystemGrantedFreeTrialUser(subscription);
-  const sharedPlanFeatures = getPlanOptions().find(
-    (plan) => plan.id === subscription?.plan,
-  )?.features;
+  const sharedPlanFeatures = planData[subscription?.plan as keyof typeof planData]?.features;
   const displayedFeatures = sharedPlanFeatures
     ? sharedPlanFeatures.map((feature) => ({
         feature,
         included: true,
         limit_value: null,
       }))
-    : features;
+    : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {

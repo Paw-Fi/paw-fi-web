@@ -424,12 +424,12 @@ export function Dashboard() {
       icon: faHouseChimney,
       path: "/dashboard",
     },
-    {
-      id: "export",
-      label: "Export",
-      icon: faDownload,
-      path: "/dashboard/export",
-    },
+    // {
+    //   id: "export",
+    //   label: "Export",
+    //   icon: faDownload,
+    //   path: "/dashboard/export",
+    // },
   ];
 
   // Handle menu item click - show coming soon for all except membership
