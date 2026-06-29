@@ -9,7 +9,8 @@ const newBlog: Blog = {
   slug: "telegram-bots-budgeting-2026",
   excerpt:
     "Discover the best Telegram bots for budgeting in 2026, including Moneko for envelope budgeting via chat, Cointry for multi-currency tracking, and more, ranked and reviewed for low-friction financial management.",
-  coverImage: "https://images.unsplash.com/photo-1611606063065-ee7946f0787a?q=80&w=1600&h=800&fit=crop",
+  coverImage:
+    "https://images.unsplash.com/photo-1611606063065-ee7946f0787a?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
     metaTitle: "Best Telegram Bots for Budgeting in 2026 — Ranked and Reviewed",
@@ -32,7 +33,7 @@ The question is: which bot does it best?
 ## The Top Telegram Budgeting Bots in 2026 — Ranked
 ### 1. Moneko — Best for Envelope Budgeting via Chat
 **Best for:** People who want the envelope/pocket budgeting method with zero app friction
-**Price:** Free to start, no bank sync required
+**Price:** Free to start; bank sync is optional where supported
 Moneko is the only budgeting assistant in this list that combines Telegram-style conversational logging with a full envelope pockets system — the most proven method for monthly budget control.
 Here is how it works in practice:
 
@@ -42,7 +43,7 @@ Here is how it works in practice:
 - At any point you can ask "how much is left in my food pocket?" and get an instant answer
 
 The key differentiator from every other bot on this list: Moneko gives you budget structure, not just expense tracking. Most bots tell you what you spent. Moneko tells you whether you are on track for the month — and that is the difference between logging and actually budgeting.
-No bank login required. Full privacy. Works via WhatsApp and chat as well as Telegram.
+No bank login required for chat-first budgeting. Optional Plaid bank sync is available for supported US and Canadian banks when users want connected account imports. Works via WhatsApp and chat as well as Telegram.
 
 ### 2. Cointry — Best for Multi-Currency Tracking
 **Best for:** Frequent travellers and expats managing multiple currencies

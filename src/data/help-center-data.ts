@@ -545,7 +545,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "ai-advisor-limitations",
         question: "What are the limitations of the AI Financial Advisor?",
         answer:
-          "The Moneko AI Financial Advisor is a powerful tool but has important limitations. It is not a licensed fiduciary or certified financial planner. It cannot provide regulated financial advice, such as recommending specific stocks or financial products. The AI does not have access to your live, personal bank account data for privacy reasons. Its advice is based solely on the information you provide in your profile and during conversations. For personalized investment or legal advice, you must consult a qualified human professional.",
+          "The Moneko AI Financial Advisor is a powerful tool but has important limitations. It is not a licensed fiduciary or certified financial planner. It cannot provide regulated financial advice, such as recommending specific stocks or financial products. Its guidance is based on the budgeting data available in Moneko, including information you enter manually and any synced transaction data you choose to connect where supported. For personalized investment or legal advice, you must consult a qualified human professional.",
         category: "ai-financial-advisor",
         keywords: [
           "limitations",
@@ -1031,7 +1031,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "bank-connections",
         question: "Does Moneko connect to my bank accounts?",
         answer:
-          "No, Moneko does not currently offer direct bank connections or account aggregation. All financial data, such as goal progress, income, and expenses, is self-reported by the user. This approach maximizes your privacy and security, as we never have access to your bank credentials or live transaction data. While it requires manual updates, it gives you full control over what information you share.",
+          "Yes, Moneko supports optional bank sync through Plaid for supported US and Canadian banks. You can still use Moneko without connecting a bank by logging expenses through text, receipts, WhatsApp, Telegram, email receipt capture, or manual wallet updates.",
         category: "security-privacy",
         keywords: [
           "bank connection",
@@ -1154,7 +1154,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "moneko-vs-mint",
         question: "How is Moneko different from Mint?",
         answer:
-          "Moneko and Mint (now discontinued) serve different primary purposes. Mint was primarily a backward-looking tool for budgeting and expense tracking through automatic bank account aggregation.[24][25] Moneko is a forward-looking financial planning and education platform. Our focus is on setting future goals, learning financial concepts, and getting guidance from an AI advisor, rather than just tracking past transactions. Moneko uses self-reported data to prioritize user privacy.",
+          "Moneko and Mint (now discontinued) serve different primary purposes. Mint was primarily a backward-looking tool for budgeting and expense tracking through automatic bank account aggregation.[24][25] Moneko focuses on fast capture, Pockets, Wallets, household budgeting, and AI guidance, with optional bank sync where supported rather than making bank aggregation the only way to use the app.",
         category: "comparisons",
         keywords: [
           "vs mint",
@@ -2467,7 +2467,8 @@ export const helpCenterData: FAQCategory[] = [
     questions: [
       {
         id: "apple-wallet-shortcut-setup",
-        question: "How do I set up the Apple Wallet capture shortcut in Moneko?",
+        question:
+          "How do I set up the Apple Wallet capture shortcut in Moneko?",
         answer:
           "Moneko offers an iOS Shortcut that lets you capture Apple Pay transactions automatically. Here is how to set it up: 1) Open the Settings page inside the Moneko app. 2) Tap Apple Wallet Capture under Integrations. 3) Tap Set Up Shortcut — this opens the Shortcuts app. 4) Tap Create New Shortcut first. 5) Then choose Capture Wallet Transactions from the list. Once configured, every time you pay with Apple Pay, the shortcut can log the transaction directly into Moneko — merchant, amount, and date — without you having to type anything.",
         category: "apple-wallet-sync",

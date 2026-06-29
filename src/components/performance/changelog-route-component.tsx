@@ -30,9 +30,9 @@ const inProgressItems: InProgressItem[] = [
   {
     title: "North America Bank Sync",
     description:
-      "Secure, automatic transaction syncing for US and Canadian banks via Plaid. Real-time updates without the manual effort.",
+      "Secure automatic transaction imports for supported US and Canadian banks via Plaid, without manual file uploads.",
     icon: Landmark,
-    status: "Beta Testing",
+    status: "Rolling Out",
     color: "from-blue-500/20 to-indigo-500/20",
   },
 ];
@@ -47,30 +47,34 @@ interface ChangelogEntry {
 }
 
 const changelogs: ChangelogEntry[] = [
-  // {
-  //   title: "Multi-Currency View",
-  //   date: "2026-06-15",
-  //   version: "2.2.0",
-  //   tags: ["Feature", "Currency", "Automation"],
-  //   description:
-  //     "Select and display multiple currencies simultaneously with automatic conversion to your primary currency using live exchange rates.",
-  //   items: [
-  //     "Select and display multiple currencies simultaneously with automatic conversion to your primary currency using live exchange rates",
-  //   ],
-  // },
   {
-  title: "Receipt Display Fix",
-  date: "2026-06-06",
-  version: "2.1.4",
-  tags: ["Receipts", "Fix", "UI"],
-  description:
-    "Saved receipts now appear correctly immediately after saving, providing a smoother and more reliable experience when managing your receipts.",
-  items: [
-    "Fixed an issue where saved receipts were not displayed immediately after saving",
-    "Improved receipt syncing and display reliability",
-    "General stability and performance improvements",
-  ],
-},
+    title: "Enhanced Bank Sync & Authentication",
+    date: "2026-06-28",
+    version: "2.2.0",
+    tags: ["Feature", "Bank", "Authentication"],
+    description:
+      "North America bank sync through Plaid plus new authentication security features.",
+    items: [
+      "Enable premium Plaid bank sync for supported US and Canadian banks",
+      "Launch AppLock feature with secure biometric and passcode authentication",
+      "Fix wallet transfer display issues and improve Android notification handling",
+      "Enhance dark theme styling",
+      "Resolve transaction display problems after saving receipts",
+    ],
+  },
+  {
+    title: "Receipt Display Fix",
+    date: "2026-06-06",
+    version: "2.1.4",
+    tags: ["Receipts", "Fix", "UI"],
+    description:
+      "Saved receipts now appear correctly immediately after saving, providing a smoother and more reliable experience when managing your receipts.",
+    items: [
+      "Fixed an issue where saved receipts were not displayed immediately after saving",
+      "Improved receipt syncing and display reliability",
+      "General stability and performance improvements",
+    ],
+  },
   {
     title: "Wallet Transfer Fix & Faster Charts",
     date: "2026-06-02",
@@ -410,15 +414,15 @@ const changelogs: ChangelogEntry[] = [
   },
   {
     title:
-      "Bank Sync with Plaid & Tink, Apple Sign-In, IAP, AI Scenario Planning",
+      "Bank Connection Groundwork, Apple Sign-In, IAP, AI Scenario Planning",
     date: "2026-01-28",
     version: "1.3.9",
     tags: ["Feature", "Integration", "AI", "Bank"],
     description:
-      "A major release focused on easier bank connections, simpler sign-in, smarter planning tools, and stronger shared-finance experiences.",
+      "A major release focused on bank connection groundwork, simpler sign-in, smarter planning tools, and stronger shared-finance experiences.",
     items: [
-      "Bank connections were expanded across many countries",
-      "Bank setup now adapts more smoothly based on your region",
+      "Bank connection groundwork was expanded for supported regions",
+      "Bank setup now adapts more smoothly based on regional availability",
       "Connection status and outcomes are clearer throughout the flow",
       "Apple Sign-In was added for faster, more secure login on iPhone",
       "Subscription purchase and restore flows were improved",
@@ -738,71 +742,73 @@ export function ChangelogRouteComponent() {
             </p>
           </motion.div>
 
-          {/* In Progress Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="space-y-8"
-          >
-            <div className="flex items-center justify-between px-5 sm:px-8 lg:px-10">
-              <div className="flex items-center gap-3">
-                <div>
-                  <h2 className="text-foreground text-xl font-semibold tracking-tight">
-                    In the Works
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    What we're building right now
-                  </p>
+          {/* In Progress Section — temporarily hidden */}
+          {false && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.8 }}
+              className="space-y-8"
+            >
+              <div className="flex items-center justify-between px-5 sm:px-8 lg:px-10">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h2 className="text-foreground text-xl font-semibold tracking-tight">
+                      In the Works
+                    </h2>
+                    <p className="text-muted-foreground text-sm">
+                      What we're building right now
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="no-scrollbar flex w-full snap-x snap-mandatory gap-5 overflow-x-auto px-5 sm:px-8 lg:px-10">
-              {inProgressItems.map((item, index) => (
-                <motion.div
-                  key={item.title}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                  className="min-w-[280px] snap-start sm:min-w-[340px]"
-                >
-                  <Card className="group border-border/40 bg-card/40 hover:border-primary/30 relative h-full overflow-hidden p-6 shadow-sm backdrop-blur-xl transition-all duration-300 hover:shadow-md">
-                    <div
-                      className={`absolute -top-8 -right-8 h-24 w-24 rounded-full bg-gradient-to-br ${item.color} blur-2xl transition-opacity group-hover:opacity-100`}
-                    />
+              <div className="no-scrollbar flex w-full snap-x snap-mandatory gap-5 overflow-x-auto px-5 sm:px-8 lg:px-10">
+                {inProgressItems.map((item, index) => (
+                  <motion.div
+                    key={item.title}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                    className="min-w-[280px] snap-start sm:min-w-[340px]"
+                  >
+                    <Card className="group border-border/40 bg-card/40 hover:border-primary/30 relative h-full overflow-hidden p-6 shadow-sm backdrop-blur-xl transition-all duration-300 hover:shadow-md">
+                      <div
+                        className={`absolute -top-8 -right-8 h-24 w-24 rounded-full bg-gradient-to-br ${item.color} blur-2xl transition-opacity group-hover:opacity-100`}
+                      />
 
-                    <div className="relative z-10 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="bg-background/80 border-border/50 flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm transition-transform group-hover:scale-110">
-                          <item.icon className="text-foreground h-6 w-6" />
+                      <div className="relative z-10 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="bg-background/80 border-border/50 flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm transition-transform group-hover:scale-110">
+                            <item.icon className="text-foreground h-6 w-6" />
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className="border-border/60 bg-background/50 text-[10px] font-medium tracking-wider uppercase backdrop-blur-md"
+                          >
+                            <Loader2 className="text-primary mr-1.5 h-3 w-3 animate-spin" />
+                            {item.status}
+                          </Badge>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className="border-border/60 bg-background/50 text-[10px] font-medium tracking-wider uppercase backdrop-blur-md"
-                        >
-                          <Loader2 className="text-primary mr-1.5 h-3 w-3 animate-spin" />
-                          {item.status}
-                        </Badge>
-                      </div>
 
-                      <div className="space-y-2">
-                        <h3 className="text-foreground/70 group-hover:text-foreground font-semibold tracking-tight transition-colors sm:text-lg">
-                          {item.title}
-                        </h3>
-                        <p className="text-muted-foreground/70 group-hover:text-muted-foreground text-sm leading-relaxed transition-colors sm:text-[15px]">
-                          {item.description}
-                        </p>
+                        <div className="space-y-2">
+                          <h3 className="text-foreground/70 group-hover:text-foreground font-semibold tracking-tight transition-colors sm:text-lg">
+                            {item.title}
+                          </h3>
+                          <p className="text-muted-foreground/70 group-hover:text-muted-foreground text-sm leading-relaxed transition-colors sm:text-[15px]">
+                            {item.description}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
+                    </Card>
+                  </motion.div>
+                ))}
 
-              {/* Spacer for horizontal scroll padding on mobile */}
-              <div className="min-w-[20px] sm:hidden" />
-            </div>
-          </motion.div>
+                {/* Spacer for horizontal scroll padding on mobile */}
+                <div className="min-w-[20px] sm:hidden" />
+              </div>
+            </motion.div>
+          )}
 
           {/* New Clean Timeline Component */}
           <Timeline data={timelineData} />

@@ -81,10 +81,10 @@ export function createMonekoPricingOffers(pageUrl: string) {
     {
       "@type": "Offer",
       name: "Moneko Plus Monthly",
-      price: "4.99",
+      price: "10.99",
       priceCurrency: "USD",
       description:
-        "Monthly subscription to Moneko Plus with WhatsApp-first money assistance.",
+        "Monthly subscription to Moneko Plus with every current budgeting, capture, household, currency, and support feature included.",
       url: pageUrl,
       availability: "https://schema.org/InStock",
       category: "Digital Good",
@@ -92,43 +92,10 @@ export function createMonekoPricingOffers(pageUrl: string) {
     {
       "@type": "Offer",
       name: "Moneko Plus Annual",
-      price: "34.99",
+      price: "79.99",
       priceCurrency: "USD",
       description:
-        "Annual subscription to Moneko Plus with WhatsApp assistant features.",
-      url: pageUrl,
-      availability: "https://schema.org/InStock",
-      category: "Digital Good",
-    },
-    {
-      "@type": "Offer",
-      name: "Moneko Premium Monthly",
-      price: "7.99",
-      priceCurrency: "USD",
-      description:
-        "Monthly subscription to Moneko Premium with advanced money automation features.",
-      url: pageUrl,
-      availability: "https://schema.org/InStock",
-      category: "Digital Good",
-    },
-    {
-      "@type": "Offer",
-      name: "Moneko Premium Annual",
-      price: "59.99",
-      priceCurrency: "USD",
-      description:
-        "Annual subscription to Moneko Premium with advanced money automation features.",
-      url: pageUrl,
-      availability: "https://schema.org/InStock",
-      category: "Digital Good",
-    },
-    {
-      "@type": "Offer",
-      name: "Moneko Lifetime",
-      price: "69.99",
-      priceCurrency: "USD",
-      description:
-        "Lifetime access to Moneko with Premium-tier features unlocked.",
+        "Annual subscription to Moneko Plus with every current budgeting, capture, household, currency, and support feature included.",
       url: pageUrl,
       availability: "https://schema.org/InStock",
       category: "Digital Good",

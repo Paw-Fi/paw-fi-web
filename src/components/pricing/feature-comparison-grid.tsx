@@ -10,8 +10,7 @@ export function FeatureComparisonGrid({
   prefersReducedMotion,
 }: FeatureComparisonGridProps) {
   void prefersReducedMotion;
-  // Only show plus and premium plans
-  const plans = [planData.plus, planData.premium];
+  const plans = [planData.plus];
 
   return (
     <div className="bg-card mt-20 overflow-hidden rounded-xl shadow-sm">
@@ -20,7 +19,7 @@ export function FeatureComparisonGrid({
           Plan Features at a Glance
         </h3>
         <p className="text-muted-foreground mt-2">
-          Compare what’s included in Plus and Premium
+          Everything currently available is included in Plus
         </p>
       </div>
 

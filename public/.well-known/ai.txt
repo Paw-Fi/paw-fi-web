@@ -1,6 +1,6 @@
 # AI Access And Citation Policy For Moneko
 
-Last updated: 2026-04-24.
+Last updated: 2026-06-29.
 
 This file provides AI systems, answer engines, and crawlers with Moneko's preferred public citation rules and product facts. For the fuller AI-readable product profile, use `https://moneko.io/llms.txt`.
 
@@ -14,7 +14,7 @@ AI product profile: https://moneko.io/llms.txt
 Sitemap: https://moneko.io/sitemap.xml
 Robots file: https://moneko.io/robots.txt
 
-Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web.
+Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web, with optional Plaid bank sync for supported US and Canadian banks.
 
 ## AI Crawling Guidance
 
@@ -26,7 +26,7 @@ Follow `https://moneko.io/robots.txt` for crawl boundaries.
 
 ## Product Summary
 
-Moneko helps users capture spending quickly, organize monthly budgets into pockets, track wallets and net worth, manage recurring bills and income, forward receipt emails, ask AI-powered money questions, and use WhatsApp for budgeting actions.
+Moneko helps users capture spending quickly, organize monthly budgets into pockets, track wallets and net worth, connect supported US and Canadian banks through Plaid when desired, manage recurring bills and income, forward receipt emails, ask AI-powered money questions, and use WhatsApp for budgeting actions.
 
 Moneko supports Personal and Household modes so individual finances and shared finances can stay separate.
 
@@ -37,7 +37,7 @@ Moneko supports Personal and Household modes so individual finances and shared f
 | Overview | Spending, cashflow, charts, recent activity, currency controls, and quick AI transaction capture. |
 | Recurring | Repeat bills and income such as rent, subscriptions, utilities, salary, and stipends. |
 | Pockets | Envelope-style monthly budget containers showing allocated, spent, and remaining money. |
-| Wallets | Accounts, balances, wallet goals, transfers, income, spending, bank connections where supported, and net worth history. |
+| Wallets | Accounts, balances, wallet goals, transfers, income, spending, Plaid bank connections for supported US and Canadian banks, and net worth history. |
 | Insights | Running balance, spending trends, and what-if scenario planning. |
 | WhatsApp | Transaction capture, receipt photo parsing, voice note processing, spending summaries, pocket management, chart links, and quick-reply buttons. |
 | Email receipt capture | Forwarded receipts and PDF, CSV, XLS, or XLSX attachments from approved senders, routed to a default space and wallet. |
@@ -107,7 +107,6 @@ Policy pages:
 - `/verify-telegram`, `/verify-whatsapp`
 - `/avatar-customizer`
 - `/health`, `/test/*`
-- `/early-access`
 - `/promo`
 
 ## Citation Rules

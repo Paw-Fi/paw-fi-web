@@ -85,7 +85,6 @@ function CheckoutPage() {
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false }) as CheckoutSearchParams;
   const {
-    plan,
     billing,
     promo,
     status,
@@ -98,9 +97,8 @@ function CheckoutPage() {
     userId,
   } = searchParams;
 
-  // Default to lifetime if plan not provided to avoid user confusion
-  const selectedPlan = plan || "lifetime";
-  const selectedBilling = billing || "monthly";
+  const selectedPlan = "plus";
+  const selectedBilling = billing === "yearly" ? "yearly" : "monthly";
 
   // Intentionally no verbose client logging here: search params may include tokens.
 
@@ -418,9 +416,7 @@ function CheckoutPage() {
           userId: validatedUserId,
           // NOTE: Trial eligibility is determined by backend based on subscription history
         };
-        if (selectedPlan !== "lifetime") {
-          checkoutBody.billingInterval = selectedBilling;
-        }
+        checkoutBody.billingInterval = selectedBilling;
 
         // Get the current session for auth header
         const { data: sessionData } = await supabase.auth.getSession();
@@ -598,7 +594,7 @@ function CheckoutPage() {
           <p className="text-muted-foreground-color">
             Thank you for subscribing to Moneko{" "}
             {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}. Your
-            premium features are now active.
+            Plus features are now active.
           </p>
         </div>
       </div>
@@ -747,7 +743,7 @@ function CheckoutPage() {
                 <p className="text-muted-foreground-color mx-auto max-w-2xl text-xl">
                   Subscribe to Moneko{" "}
                   {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}{" "}
-                  and unlock premium features
+                  and unlock Plus features
                 </p>
               </div>
             </motion.div>

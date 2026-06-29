@@ -1,17 +1,13 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
+import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
-
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-if (!GEMINI_API_KEY) {
-  console.error(
-    "CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.",
-  );
-}
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
+import {
+  createVertexGenerativeAI,
+  getVertexAiConfigFromEnv,
+} from "../shared/vertex-ai-chat.ts";
+import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 
 // Initialize Supabase client with service role key for DB access
 const supabaseClient = createClient(
@@ -36,6 +32,115 @@ interface CurrencyTotals {
   budget: number;
   netCashflow: number;
   budgetRemaining: number;
+}
+
+type ScenarioGenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
+
+const SCENARIO_PLANNER_MODEL_NAMES = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+] as const;
+const DEFAULT_SCENARIO_VERTEX_TIMEOUT_MS = 60000;
+
+function getScenarioPlannerModelNames(): string[] {
+  const configured = Deno.env.get("AI_SCENARIO_GEMINI_MODELS")?.trim();
+  if (!configured) return [...SCENARIO_PLANNER_MODEL_NAMES];
+
+  const modelNames = configured
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return modelNames.length > 0 ? modelNames : [...SCENARIO_PLANNER_MODEL_NAMES];
+}
+
+function getScenarioVertexTimeoutMs(): number {
+  const configured = Number(Deno.env.get("AI_SCENARIO_VERTEX_TIMEOUT_MS") || "");
+  if (Number.isFinite(configured) && configured >= 5000) {
+    return configured;
+  }
+  return DEFAULT_SCENARIO_VERTEX_TIMEOUT_MS;
+}
+
+function createTimeoutFetch(timeoutMs: number): typeof fetch {
+  return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+    fetch(input, {
+      ...init,
+      signal: init?.signal ?? AbortSignal.timeout(timeoutMs),
+    })) as typeof fetch;
+}
+
+function createScenarioGenerativeAI(): ScenarioGenerativeAIClient {
+  return createVertexGenerativeAI({
+    ...getVertexAiConfigFromEnv(),
+    fetchImpl: createTimeoutFetch(getScenarioVertexTimeoutMs()),
+  });
+}
+
+function scenarioClientErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const lowered = message.toLowerCase();
+
+  if (
+    lowered.includes("api key not valid") ||
+    lowered.includes("invalid api key") ||
+    lowered.includes("api_key_invalid")
+  ) {
+    return "Invalid API key.";
+  }
+
+  if (
+    lowered.includes("missing google_cloud_service_account") ||
+    lowered.includes("vertex ai auth is not configured") ||
+    lowered.includes("google_cloud_service_account is not valid json")
+  ) {
+    return "AI service is not configured.";
+  }
+
+  if (lowered.includes("timed out") || lowered.includes("timeout")) {
+    return "Scenario analysis timed out. Please try again.";
+  }
+
+  return "Could not analyze this scenario. Please try again.";
+}
+
+async function generateScenarioAdvice({
+  genAI,
+  modelNames,
+  advisoryPrompt,
+  generationConfig,
+}: {
+  genAI: ScenarioGenerativeAIClient;
+  modelNames: string[];
+  advisoryPrompt: string;
+  generationConfig: Record<string, unknown>;
+}): Promise<{ text: string; modelName: string }> {
+  let lastError: unknown;
+
+  for (const modelName of modelNames) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: advisoryPrompt }] }],
+        generationConfig,
+      });
+      const text = result.response.text();
+      if (text.trim().length === 0) {
+        throw new Error("Scenario planner returned an empty response");
+      }
+      return { text, modelName };
+    } catch (error) {
+      lastError = error;
+      console.error("[ai-scenario-planner] Vertex model failed", {
+        modelName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("All Vertex scenario planner models failed");
 }
 
 function normalizeCurrencyCode(value: unknown): string | null {
@@ -763,12 +868,13 @@ LANGUAGE:
 - Translate ALL labels and headers (including "# YES/NO/CAUTION", "Verdict", "The Math", etc) to ${language}.
 - Use local currency/number format.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const genAI = createScenarioGenerativeAI();
+    const modelNames = getScenarioPlannerModelNames();
     const generationConfig = {
       responseMimeType: "text/plain",
       maxOutputTokens: 2000,
       temperature: 0.6,
-    } as const;
+    };
 
     const encoder = new TextEncoder();
 
@@ -806,26 +912,42 @@ LANGUAGE:
             ),
           );
 
-          // 2) Stream Gemini content chunks as they arrive.
-          const result = await model.generateContentStream({
-            contents: [{ role: "user", parts: [{ text: advisoryPrompt }] }],
+          // 2) Generate the Vertex AI response and emit it as a single NDJSON
+          // chunk. The client contract remains unchanged.
+          const result = await generateScenarioAdvice({
+            genAI,
+            modelNames,
+            advisoryPrompt,
             generationConfig,
           });
-
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (!text) continue;
-            controller.enqueue(
-              encoder.encode(JSON.stringify({ type: "chunk", text }) + "\n"),
-            );
-          }
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({ type: "chunk", text: result.text }) + "\n",
+            ),
+          );
 
           // 3) Final done marker so client knows the stream is complete.
           controller.enqueue(
             encoder.encode(JSON.stringify({ type: "done" }) + "\n"),
           );
         } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+          console.error("[ai-scenario-planner] scenario generation failed", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+          await reportVertexAiFailure({
+            functionName: "ai-scenario-planner",
+            error: err,
+            phase: "scenario_generation",
+            modelName: modelNames[0],
+            context: {
+              fallbackModelName: modelNames.slice(1).join(","),
+              mode,
+              language,
+              displayCurrency,
+              selectedCurrencies,
+            },
+          });
+          const message = scenarioClientErrorMessage(err);
           controller.enqueue(
             encoder.encode(
               JSON.stringify({ type: "error", error: message }) + "\n",
@@ -849,7 +971,7 @@ LANGUAGE:
     console.error("Scenario planner error:", errorMessage);
     if (error instanceof Error && error.stack) console.error(error.stack);
     return new Response(
-      JSON.stringify({ error: "Internal Server Error", details: errorMessage }),
+      JSON.stringify({ error: scenarioClientErrorMessage(error) }),
       {
         status: 500,
         headers: {

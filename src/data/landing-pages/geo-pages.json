@@ -52,7 +52,7 @@
       },
       {
         "question": "What does Moneko Wallets track?",
-        "answer": "Moneko Wallets tracks accounts, balances, goals, transfers, income, spending, and net worth history. You can manually create wallets, set goals, move money between wallets, and connect supported banks through Plaid where available."
+        "answer": "Moneko Wallets tracks accounts, balances, goals, transfers, income, spending, and net worth history. You can manually create wallets, set goals, move money between wallets, and connect supported US and Canadian banks through Plaid where available."
       },
       {
         "question": "How does Moneko handle recurring bills and income?",

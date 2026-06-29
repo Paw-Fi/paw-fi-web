@@ -1,19 +1,25 @@
-import { Blog } from '@/components/blogs/blogs.typing';
+import { Blog } from "@/components/blogs/blogs.typing";
 
-import { authorsData } from './authors';
-import { tags } from './authors';
+import { authorsData } from "./authors";
+import { tags } from "./authors";
 
 const newBlog: Blog = {
-  id: 'whatsapp-budget-setup-2026',
-  title: 'How to Set Up a Monthly Budget Using Only WhatsApp — Step by Step (2026)',
-  slug: 'whatsapp-budget-setup-2026',
-  excerpt: 'Learn how to set up a monthly budget using only WhatsApp in 2026 with this step-by-step guide, leveraging Moneko for frictionless envelope budgeting directly in your chat app.',
-  coverImage: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?q=80&w=1600&h=800&fit=crop',
+  id: "whatsapp-budget-setup-2026",
+  title:
+    "How to Set Up a Monthly Budget Using Only WhatsApp — Step by Step (2026)",
+  slug: "whatsapp-budget-setup-2026",
+  excerpt:
+    "Learn how to set up a monthly budget using only WhatsApp in 2026 with this step-by-step guide, leveraging Moneko for frictionless envelope budgeting directly in your chat app.",
+  coverImage:
+    "https://images.unsplash.com/photo-1553729459-efe14ef6055d?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
-    metaTitle: 'How to Set Up a Monthly Budget Using Only WhatsApp — Step by Step (2026)',
-    metaDescription: 'Discover how to create a monthly budget using WhatsApp in 2026 with Moneko, a step-by-step guide to frictionless envelope budgeting right in your chat app.',
-    keywords: 'WhatsApp budgeting 2026, monthly budget setup, Moneko WhatsApp budgeting, envelope budgeting, personal finance guide'
+    metaTitle:
+      "How to Set Up a Monthly Budget Using Only WhatsApp — Step by Step (2026)",
+    metaDescription:
+      "Discover how to create a monthly budget using WhatsApp in 2026 with Moneko, a step-by-step guide to frictionless envelope budgeting right in your chat app.",
+    keywords:
+      "WhatsApp budgeting 2026, monthly budget setup, Moneko WhatsApp budgeting, envelope budgeting, personal finance guide",
   },
   content: `
 ## The Simplest Budgeting System You Will Actually Maintain
@@ -127,11 +133,11 @@ The reset takes under two minutes. Your budget is live again immediately.
 Over time, month-on-month data shows you patterns — which categories you consistently overspend in, where you have room to save more, how your spending changes across seasons. This longitudinal picture is genuinely valuable and it builds automatically as long as you keep logging.
 
 ## Common Questions
-**Do I need to connect my bank account?** No. Moneko does not require any bank login or connection. You log expenses manually via WhatsApp. This is intentional — it keeps your financial data private and means there is no Plaid integration or third-party bank access involved.
+**Do I need to connect my bank account?** No. Moneko's WhatsApp budgeting workflow does not require any bank login or connection. Moneko also offers optional Plaid bank sync for supported US and Canadian banks, but chat-first budgeting works with only the expenses, receipts, and updates you choose to send.
 **What if I forget to log something?** Log it when you remember. Text "coffee 3.50 yesterday" and Moneko handles the backdating. The system is forgiving — a budget with 90% of expenses logged is vastly more useful than a perfect system you abandoned in week two.
 **Can my partner use the same budget?** Yes. Moneko supports shared pockets for couples or households. Both partners can log expenses to the same set of pockets, giving both a real-time view of shared spending without requiring a joint bank account.
 **What if I spend in a category I did not set up a pocket for?** Log it with a note and Moneko will either assign it to the closest matching pocket or create a new one. You can always add pockets mid-month — the system is designed to be flexible, not rigid.
-**Is my data private?** Yes. Because Moneko does not connect to your bank, your actual account data never passes through any third-party system. The only data Moneko holds is what you explicitly send it.
+**Is my data private?** Yes. If you do not enable optional bank sync, the only budgeting data Moneko receives is what you explicitly send it through chat, receipts, or manual updates.
 
 ## What a Full Month Looks Like in Practice
 Here is a realistic picture of how this works day to day:
@@ -154,12 +160,12 @@ Moneko adds the budget structure — the pockets — that turns that frictionles
 **Try Moneko free — set up your first month of WhatsApp envelope budgeting in under 10 minutes.**
   
   `,
-  author: authorsData.find(author => author.id === 'alex-rivera')!,
+  author: authorsData.find((author) => author.id === "alex-rivera")!,
   tags: [
-    tags.find(tag => tag.id === 'tag-5')!, // Investment Strategy or similar relevant tag
+    tags.find((tag) => tag.id === "tag-5")!, // Investment Strategy or similar relevant tag
   ],
-  publishedAt: '2026-03-18T09:00:00Z',
-  featured: true
+  publishedAt: "2026-03-18T09:00:00Z",
+  featured: true,
 };
 
 export default newBlog;
