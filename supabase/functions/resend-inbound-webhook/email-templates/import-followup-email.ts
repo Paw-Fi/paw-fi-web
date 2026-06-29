@@ -25,6 +25,7 @@ export interface FollowupEmailParams {
   savedCount: number;
   duplicateCount: number;
   failedCount: number;
+  failureReasons?: string[];
   transactions: Array<Record<string, unknown>>;
   attachmentResults: FollowupAttachmentResult[];
   retainedAttachmentCount: number;
@@ -135,7 +136,22 @@ function renderImportSummary(params: FollowupEmailParams): string {
     <p><strong>Saved:</strong> ${params.savedCount} ${pluralize(params.savedCount, "transaction")}</p>
     <p><strong>Duplicates skipped:</strong> ${params.duplicateCount}</p>
     <p><strong>Failed:</strong> ${params.failedCount}</p>
+    ${renderFailureReasons(params.failureReasons)}
   `;
+}
+
+function renderFailureReasons(reasons?: string[]): string {
+  const uniqueReasons = Array.from(
+    new Set(
+      (reasons ?? [])
+        .map((reason) => reason.trim())
+        .filter((reason) => reason.length > 0),
+    ),
+  );
+
+  if (uniqueReasons.length === 0) return "";
+
+  return `<p><strong>Failure ${pluralize(uniqueReasons.length, "reason")}:</strong> ${uniqueReasons.map(escapeHtml).join("; ")}</p>`;
 }
 
 function renderSavedTransactionsSection(transactionLines: string): string {
@@ -219,7 +235,19 @@ function buildTextEmail(
     params.retainedOriginals,
     premiumDashboardUrl,
   );
-  return `Moneko processed files from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}. ${retentionFooter}${premiumText} Contact ${config.supportEmail} if you need help.`;
+  const failureReasons = Array.from(
+    new Set(
+      (params.failureReasons ?? [])
+        .map((reason) => reason.trim())
+        .filter((reason) => reason.length > 0),
+    ),
+  );
+  const failureText =
+    failureReasons.length > 0
+      ? ` Failure ${pluralize(failureReasons.length, "reason")}: ${failureReasons.join("; ")}.`
+      : "";
+
+  return `Moneko processed files from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} ${retentionFooter}${premiumText} Contact ${config.supportEmail} if you need help.`;
 }
 
 function renderPremiumText(

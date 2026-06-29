@@ -24,6 +24,7 @@ import {
   type AnalyzeRequestBody,
   runAnalyzeExpense,
 } from "../shared/analyze-core.ts";
+import { validateCurrency } from "../shared/currency-validator.ts";
 import {
   fetchUserCategoryPreferences,
   fetchUserCustomCategories,
@@ -100,6 +101,7 @@ interface ResolvedOwner {
   householdId: string | null;
   isPortfolio: boolean;
   accountId: string | null;
+  accountCurrency: string | null;
 }
 
 interface AttachmentProcessingResult {
@@ -768,6 +770,18 @@ async function resolveOwnerBySender(params: {
 
   const defaultEmail =
     normalizeEmailAddress(user?.email) || normalizedSenderEmail;
+  const accountId = sanitizeUuid(contact?.email_import_account_id ?? null);
+  let accountCurrency: string | null = null;
+  if (accountId) {
+    const { data: account } = await supabase
+      .from("accounts")
+      .select("currency")
+      .eq("id", accountId)
+      .maybeSingle();
+    accountCurrency = normalizeCurrencyCode(
+      typeof account?.currency === "string" ? account.currency : null,
+    );
+  }
 
   return {
     userId: resolved.userId,
@@ -781,7 +795,8 @@ async function resolveOwnerBySender(params: {
         : "USD",
     householdId: sanitizeUuid(contact?.email_import_household_id ?? null),
     isPortfolio: contact?.email_import_is_portfolio === true,
-    accountId: sanitizeUuid(contact?.email_import_account_id ?? null),
+    accountId,
+    accountCurrency,
   };
 }
 
@@ -905,6 +920,114 @@ async function loadCategoryContext(params: { supabase: any; userId: string }) {
     allowedIncomeCategories: merged.incomeCategories,
     categoryPreferences: preferences,
   };
+}
+
+function normalizeCurrencyCode(value?: string | null): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(normalized)) return null;
+  const validated = validateCurrency(normalized);
+  return validated === normalized ? validated : null;
+}
+
+async function loadCurrencyRates(params: {
+  supabase: any;
+}): Promise<Record<string, number> | null> {
+  const { data, error } = await params.supabase
+    .from("currency_rate_snapshots")
+    .select("rates")
+    .eq("base_currency", "USD")
+    .maybeSingle();
+
+  if (error || !data?.rates || typeof data.rates !== "object") {
+    return null;
+  }
+
+  const rates: Record<string, number> = {};
+  for (const [code, value] of Object.entries(data.rates)) {
+    const currency = normalizeCurrencyCode(code);
+    const rate = typeof value === "number" ? value : Number(value);
+    if (currency && Number.isFinite(rate) && rate > 0) {
+      rates[currency] = rate;
+    }
+  }
+
+  return rates;
+}
+
+function convertCurrencyAmount(params: {
+  amount: number;
+  fromCurrency: string;
+  toCurrency: string;
+  rates: Record<string, number>;
+}): number | null {
+  const fromRate = params.rates[params.fromCurrency];
+  const toRate = params.rates[params.toCurrency];
+  if (!Number.isFinite(fromRate) || !Number.isFinite(toRate)) return null;
+  if (fromRate <= 0 || toRate <= 0) return null;
+
+  const converted = (params.amount / fromRate) * toRate;
+  return Math.round(converted * 100) / 100;
+}
+
+async function maybeConvertItemsToImportAccountCurrency(params: {
+  supabase: any;
+  items: Array<Record<string, unknown>>;
+  owner: ResolvedOwner;
+  emailId: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const targetCurrency = normalizeCurrencyCode(params.owner.accountCurrency);
+  if (!params.owner.accountId || !targetCurrency) return params.items;
+
+  const needsConversion = params.items.some((item) => {
+    const itemCurrency = normalizeCurrencyCode(
+      typeof item.currency === "string" ? item.currency : null,
+    );
+    return itemCurrency != null && itemCurrency !== targetCurrency;
+  });
+  if (!needsConversion) return params.items;
+
+  const rates = await loadCurrencyRates({ supabase: params.supabase });
+  if (!rates) return params.items;
+
+  return params.items.map((item) => {
+    const sourceCurrency = normalizeCurrencyCode(
+      typeof item.currency === "string" ? item.currency : null,
+    );
+    const amount = Number(item.amount ?? 0);
+    if (
+      !sourceCurrency ||
+      sourceCurrency === targetCurrency ||
+      !Number.isFinite(amount)
+    ) {
+      return item;
+    }
+
+    const convertedAmount = convertCurrencyAmount({
+      amount,
+      fromCurrency: sourceCurrency,
+      toCurrency: targetCurrency,
+      rates,
+    });
+    if (convertedAmount == null) return item;
+
+    console.log(
+      "[resend-inbound-webhook] converted import transaction currency",
+      {
+        emailId: params.emailId,
+        accountId: params.owner.accountId,
+        fromCurrency: sourceCurrency,
+        toCurrency: targetCurrency,
+        originalAmount: amount,
+        convertedAmount,
+      },
+    );
+
+    return {
+      ...item,
+      amount: convertedAmount,
+      currency: targetCurrency,
+    };
+  });
 }
 
 function buildUnavailableEmail(params: {
@@ -1993,7 +2116,25 @@ export async function handleResendInboundWebhook(
         return jsonResponse({ success: true, failed: true });
       }
 
-      const sortedAnalyzedItems = sortImportedTransactions(analyzedItems);
+      setStage("currency_conversion_start", {
+        analyzedItemCount: analyzedItems.length,
+        accountId: owner.accountId,
+        accountCurrency: owner.accountCurrency,
+      });
+      const convertedAnalyzedItems =
+        await maybeConvertItemsToImportAccountCurrency({
+          supabase,
+          items: analyzedItems,
+          owner,
+          emailId: emailData.email_id,
+        });
+      setStage("currency_conversion_complete", {
+        analyzedItemCount: convertedAnalyzedItems.length,
+      });
+
+      const sortedAnalyzedItems = sortImportedTransactions(
+        convertedAnalyzedItems,
+      );
 
       ensureSoftDeadline(processingStartedAtMs, "save_transactions");
       setStage("pre_save_heartbeat_start", {
@@ -2044,11 +2185,23 @@ export async function handleResendInboundWebhook(
         (item) => item.duplicate === true,
       ).length;
       const failedCount = saveResult.results.filter(
-        (item) => item.success === false,
+        (item) => item.success === false && item.duplicate !== true,
       ).length;
       const savedCount = saveResult.results.filter(
         (item) => item.success === true,
       ).length;
+      const failureReasons = Array.from(
+        new Set(
+          saveResult.results
+            .filter((item) => item.success === false && item.duplicate !== true)
+            .map((item) => String(item.error || "").trim())
+            .filter((reason) => reason.length > 0),
+        ),
+      );
+      const savedTransactions = saveResult.results
+        .filter((item) => item.success === true)
+        .map((item) => sortedAnalyzedItems[item.index])
+        .filter((item): item is Record<string, unknown> => item != null);
 
       const followup = buildFollowupEmail({
         senderEmail,
@@ -2056,7 +2209,8 @@ export async function handleResendInboundWebhook(
         savedCount,
         duplicateCount,
         failedCount,
-        transactions: sortedAnalyzedItems,
+        failureReasons,
+        transactions: savedTransactions,
         attachmentResults,
         retainedAttachmentCount,
         retainedOriginals: shouldRetainOriginalAttachments,
@@ -2082,6 +2236,7 @@ export async function handleResendInboundWebhook(
           savedCount,
           duplicateCount,
           failedCount,
+          failureReasons,
           attachmentResults,
           retainedAttachmentCount,
           retainedOriginals: shouldRetainOriginalAttachments,
