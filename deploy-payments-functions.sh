@@ -12,7 +12,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="qbuynyxyemigtnvdujts"
+PROJECT_REF="pbopcsmrcykdzbilpilf"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  Deploying Payments Functions to Supabase"

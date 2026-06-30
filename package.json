@@ -89,7 +89,7 @@
     "react": "^19.2.1",
     "react-activity-calendar": "^2.7.14",
     "react-chartjs-2": "^5.3.0",
-    "react-day-picker": "latest",
+    "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.1",
     "react-ga4": "^2.1.0",
     "react-gtm-module": "^2.0.11",
