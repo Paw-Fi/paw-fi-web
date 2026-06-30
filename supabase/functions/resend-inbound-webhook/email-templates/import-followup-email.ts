@@ -7,7 +7,7 @@ import {
 } from "../../shared/email-utils.ts";
 
 interface FollowupEmailBuilderConfig {
-  appUrl: string;
+  appTransactionsUrl: string;
   importInboxEmail: string;
   supportEmail: string;
 }
@@ -28,8 +28,7 @@ export interface FollowupEmailParams {
   failureReasons?: string[];
   transactions: Array<Record<string, unknown>>;
   attachmentResults: FollowupAttachmentResult[];
-  retainedAttachmentCount: number;
-  retainedOriginals: boolean;
+  appTransactionsUrl?: string;
 }
 
 export function createFollowupEmailBuilder(config: FollowupEmailBuilderConfig) {
@@ -40,29 +39,26 @@ function buildFollowupEmail(
   params: FollowupEmailParams,
   config: FollowupEmailBuilderConfig,
 ) {
-  const premiumDashboardUrl = `${config.appUrl.replace(/\/$/, "")}/dashboard/export`;
+  const appTransactionsUrl =
+    params.appTransactionsUrl ?? config.appTransactionsUrl;
   const attachmentLines = renderAttachmentLines(params.attachmentResults);
   const transactionLines = renderTransactionLines(params.transactions);
   const content = renderContent(
     params,
-    premiumDashboardUrl,
+    appTransactionsUrl,
     attachmentLines,
     transactionLines,
   );
-  const retentionFooter = resolveRetentionFooter(params.retainedOriginals);
-  const text = buildTextEmail(
-    params,
-    config,
-    premiumDashboardUrl,
-    retentionFooter,
-  );
+  const footerReason =
+    "Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored.";
+  const text = buildTextEmail(params, config, appTransactionsUrl, footerReason);
 
   return {
     subject: sanitizeSubject("Your Moneko import is complete"),
     html: baseTemplate(
       content,
       renderFooter({
-        customReason: retentionFooter,
+        customReason: footerReason,
       }),
     ),
     text,
@@ -71,63 +67,28 @@ function buildFollowupEmail(
 
 function renderContent(
   params: FollowupEmailParams,
-  premiumDashboardUrl: string,
-  attachmentLines: string,
-  transactionLines: string,
-): string {
-  if (params.retainedOriginals) {
-    return renderPremiumContent(
-      params,
-      premiumDashboardUrl,
-      attachmentLines,
-      transactionLines,
-    );
-  }
-  return renderStandardContent(params, attachmentLines, transactionLines);
-}
-
-function resolveRetentionFooter(retainedOriginals: boolean): string {
-  if (retainedOriginals) {
-    return "Your original forwarded files are available from your Moneko Premium dashboard. Replies are not monitored.";
-  }
-  return "Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored.";
-}
-
-function renderPremiumContent(
-  params: FollowupEmailParams,
-  premiumDashboardUrl: string,
+  appTransactionsUrl: string,
   attachmentLines: string,
   transactionLines: string,
 ): string {
   return `
     <h1 class="title">Your Moneko import is complete</h1>
     <p class="subtitle">We finished processing the files forwarded from ${escapeHtml(params.senderEmail)}.</p>
-    <p>Your original forwarded files have been saved in private storage for your Premium account. You can review and download them from your Moneko dashboard.</p>
-    <p>
-      <a href="${escapeHtml(premiumDashboardUrl)}" style="display:inline-block;background-color:#111827;color:#ffffff !important;padding:12px 20px;border-radius:8px;font-weight:600;font-size:15px;text-decoration:none;margin:8px 0 20px 0;">
-        Open Premium Dashboard
-      </a>
-    </p>
+    ${renderOpenTransactionsButton(appTransactionsUrl)}
     ${renderImportSummary(params)}
-    <p><strong>Original files saved:</strong> ${params.retainedAttachmentCount}</p>
     <p><strong>Attachment summary</strong></p>
     <ul>${attachmentLines}</ul>
     ${renderSavedTransactionsSection(transactionLines)}
   `;
 }
 
-function renderStandardContent(
-  params: FollowupEmailParams,
-  attachmentLines: string,
-  transactionLines: string,
-): string {
+function renderOpenTransactionsButton(appTransactionsUrl: string): string {
   return `
-    <h1 class="title">Your Moneko import is complete</h1>
-    <p class="subtitle">We finished processing the files forwarded from ${escapeHtml(params.senderEmail)}.</p>
-    ${renderImportSummary(params)}
-    <p><strong>Attachment summary</strong></p>
-    <ul>${attachmentLines}</ul>
-    ${renderSavedTransactionsSection(transactionLines)}
+    <p>
+      <a href="${escapeHtml(appTransactionsUrl)}" style="display:inline-block;background-color:#7458FF;color:#ffffff !important;padding:14px 24px;border-radius:8px;font-weight:600;font-size:16px;text-decoration:none !important;margin:8px 0 20px 0;">
+        Open transactions in Moneko
+      </a>
+    </p>
   `;
 }
 
@@ -228,13 +189,9 @@ function resolveTransactionDescription(item: Record<string, unknown>): string {
 function buildTextEmail(
   params: FollowupEmailParams,
   config: FollowupEmailBuilderConfig,
-  premiumDashboardUrl: string,
-  retentionFooter: string,
+  appTransactionsUrl: string,
+  footerReason: string,
 ): string {
-  const premiumText = renderPremiumText(
-    params.retainedOriginals,
-    premiumDashboardUrl,
-  );
   const failureReasons = Array.from(
     new Set(
       (params.failureReasons ?? [])
@@ -247,13 +204,5 @@ function buildTextEmail(
       ? ` Failure ${pluralize(failureReasons.length, "reason")}: ${failureReasons.join("; ")}.`
       : "";
 
-  return `Moneko processed files from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} ${retentionFooter}${premiumText} Contact ${config.supportEmail} if you need help.`;
-}
-
-function renderPremiumText(
-  retainedOriginals: boolean,
-  premiumDashboardUrl: string,
-): string {
-  if (!retainedOriginals) return "";
-  return ` Open your Premium dashboard to review or download files: ${premiumDashboardUrl}.`;
+  return `Moneko processed files from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} Open transactions in Moneko: ${appTransactionsUrl}. ${footerReason} Contact ${config.supportEmail} if you need help.`;
 }

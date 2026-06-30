@@ -100,6 +100,7 @@ function PricingCard({
   price,
   period,
   comparePrice,
+  billingNote,
   description,
   features,
   isPopular,
@@ -111,6 +112,7 @@ function PricingCard({
   price: string;
   period?: string;
   comparePrice?: string;
+  billingNote?: string;
   description: string;
   features: string[];
   isPopular?: boolean;
@@ -175,6 +177,11 @@ function PricingCard({
               </AnimatePresence>
             )}
           </div>
+          {billingNote && (
+            <span className="text-muted-foreground text-sm font-medium">
+              {billingNote}
+            </span>
+          )}
         </div>
 
         <Button
@@ -262,6 +269,7 @@ export function PricingRouteComponent() {
   const pyTier = safelyGetTier(plusYearlyTier, {
     title: "Plus Yearly",
     priceMonthly: "$79.99",
+    effectiveMonthlyPrice: "$6.67",
     compareAtPriceMonthly: "$131.88",
     features: [
       "Log expenses your way (Text, Photo, Voice)",
@@ -504,12 +512,13 @@ export function PricingRouteComponent() {
               <PricingCard
                 title="Plus"
                 description="Everything Moneko offers in one simple plan."
-                price={isYearly ? pyTier.priceMonthly : pmTier.priceMonthly}
-                period={isYearly ? "/yr" : "/mo"}
+                price={isYearly ? pyTier.effectiveMonthlyPrice : pmTier.priceMonthly}
+                period="/mo"
                 comparePrice={
-                  isYearly
-                    ? pyTier.compareAtPriceMonthly
-                    : pmTier.compareAtPriceMonthly
+                  isYearly ? `${pmTier.priceMonthly}/mo` : pmTier.compareAtPriceMonthly
+                }
+                billingNote={
+                  isYearly ? `billed annually at ${pyTier.priceMonthly}` : undefined
                 }
                 features={plusChecklistFeatures}
                 isPopular={true}

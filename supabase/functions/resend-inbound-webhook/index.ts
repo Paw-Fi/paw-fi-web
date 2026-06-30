@@ -39,18 +39,13 @@ import {
 } from "../shared/email-import-event-state.ts";
 import { saveTransactionsBatchInternal } from "../save-transactions-batch/index.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
-import { getUserPremiumAccessByUserId } from "../shared/premium-access.ts";
-import {
-  buildEmailImportAttachmentPath,
-  sanitizeStorageFilename,
-  sha256Hex,
-} from "../shared/premium-storage.ts";
 import { createFollowupEmailBuilder } from "./email-templates/import-followup-email.ts";
 
 const APP_URL = Deno.env.get("APP_URL") || "https://moneko.io";
 const DEFAULT_IMPORT_INBOX_EMAIL = "files@inbound.moneko.io";
 const SUPPORT_EMAIL = "hello@moneko.io";
 const EMAIL_FROM = "Moneko <no-reply@moneko.io>";
+const APP_TRANSACTIONS_URL = "moneko://home";
 const MAX_SUPPORTED_ATTACHMENTS = 5;
 const MAX_SUPPORTED_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
@@ -110,13 +105,6 @@ interface AttachmentProcessingResult {
   itemCount: number;
   error?: string;
   items?: Array<Record<string, unknown>>;
-  retainedAttachmentId?: string;
-}
-
-interface StoredEmailAttachment {
-  id: string;
-  storagePath: string;
-  sha256: string;
 }
 
 type InboundEventStatus =
@@ -193,7 +181,7 @@ const IMPORT_INBOX_EMAILS = resolveImportInboxEmails();
 const PRIMARY_IMPORT_INBOX_EMAIL =
   IMPORT_INBOX_EMAILS[0] || DEFAULT_IMPORT_INBOX_EMAIL;
 const buildFollowupEmail = createFollowupEmailBuilder({
-  appUrl: APP_URL,
+  appTransactionsUrl: APP_TRANSACTIONS_URL,
   importInboxEmail: PRIMARY_IMPORT_INBOX_EMAIL,
   supportEmail: SUPPORT_EMAIL,
 });
@@ -800,84 +788,6 @@ async function resolveOwnerBySender(params: {
   };
 }
 
-async function storePremiumEmailImportAttachment(params: {
-  supabase: any;
-  userId: string;
-  emailImportEventId: string;
-  providerEmailId: string;
-  senderEmail: string;
-  subjectLine: string;
-  recipients: string[];
-  receivedAt: string | null;
-  attachmentIndex: number;
-  filename: string;
-  contentType: string;
-  sizeBytes: number;
-  bytes: Uint8Array;
-}): Promise<StoredEmailAttachment | null> {
-  const sha = await sha256Hex(params.bytes);
-  const storagePath = buildEmailImportAttachmentPath({
-    userId: params.userId,
-    emailId: params.providerEmailId,
-    attachmentIndex: params.attachmentIndex,
-    sha256: sha,
-    filename: params.filename,
-  });
-  const safeFilename = sanitizeStorageFilename(params.filename);
-
-  const { error: uploadError } = await params.supabase.storage
-    .from("email-import-attachments")
-    .upload(storagePath, params.bytes, {
-      contentType: params.contentType || "application/octet-stream",
-      upsert: true,
-    });
-
-  if (uploadError) {
-    throw new Error(`EMAIL_ATTACHMENT_UPLOAD_FAILED:${uploadError.message}`);
-  }
-
-  const { data, error } = await params.supabase
-    .from("email_import_attachments")
-    .upsert(
-      {
-        user_id: params.userId,
-        email_import_event_id: params.emailImportEventId,
-        provider: "resend",
-        provider_email_id: params.providerEmailId,
-        storage_bucket: "email-import-attachments",
-        storage_path: storagePath,
-        filename: safeFilename,
-        content_type: params.contentType || null,
-        size_bytes: params.sizeBytes,
-        sha256: sha,
-        status: "stored",
-        metadata: {
-          sourceFilename: params.filename,
-          attachmentIndex: params.attachmentIndex,
-          senderEmail: params.senderEmail,
-          subjectLine: params.subjectLine,
-          recipients: params.recipients,
-          receivedAt: params.receivedAt,
-          providerEmailId: params.providerEmailId,
-        },
-      },
-      { onConflict: "user_id,email_import_event_id,sha256" },
-    )
-    .select("id, storage_path, sha256")
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`EMAIL_ATTACHMENT_METADATA_FAILED:${error.message}`);
-  }
-
-  if (!data?.id) return null;
-  return {
-    id: String(data.id),
-    storagePath: String(data.storage_path ?? storagePath),
-    sha256: String(data.sha256 ?? sha),
-  };
-}
-
 function hasVerifiedSender(headers?: Record<string, string>): boolean {
   if (!headers) return false;
 
@@ -1095,6 +1005,24 @@ function sortImportedTransactions(
   });
 }
 
+function buildImportFollowupAppUrl(
+  saveResults: Array<{ id?: string; success?: boolean; duplicate?: boolean }>,
+): string {
+  const savedResults = saveResults.filter(
+    (item) =>
+      item.success === true &&
+      item.duplicate !== true &&
+      typeof item.id === "string" &&
+      item.id.trim().length > 0,
+  );
+
+  if (savedResults.length === 1) {
+    return `moneko://expense/${encodeURIComponent(savedResults[0].id!.trim())}`;
+  }
+
+  return APP_TRANSACTIONS_URL;
+}
+
 async function getFcmAccessToken(): Promise<string | null> {
   if (!FIREBASE_SERVICE_ACCOUNT_JSON) {
     return null;
@@ -1258,7 +1186,7 @@ async function sendFcmV1Notification(params: {
                   deep_link: data.deep_link || "moneko://home",
                 },
                 fcm_options: {
-                  link: `${APP_URL}/dashboard`,
+                  link: APP_URL,
                 },
               },
             }
@@ -1602,16 +1530,6 @@ export async function handleResendInboundWebhook(
         return jsonResponse({ success: true, ignored: true });
       }
 
-      setStage("premium_retention_lookup_start");
-      const premiumAccess = await getUserPremiumAccessByUserId(
-        supabase,
-        owner.userId,
-      );
-      const shouldRetainOriginalAttachments = premiumAccess.hasPremiumAccess;
-      setStage("premium_retention_lookup_complete", {
-        retainedOriginals: shouldRetainOriginalAttachments,
-      });
-
       setStage("initial_heartbeat_start");
       await heartbeatInboundEvent({
         supabase,
@@ -1740,8 +1658,6 @@ export async function handleResendInboundWebhook(
 
       const attachmentResults: AttachmentProcessingResult[] = [];
       const analyzedItems: Array<Record<string, unknown>> = [];
-      let retainedAttachmentCount = 0;
-      const retentionErrors: Array<Record<string, unknown>> = [];
 
       for (
         let attachmentIndex = 0;
@@ -1841,46 +1757,6 @@ export async function handleResendInboundWebhook(
                 "Attachment is too large. The current limit is 20 MB per file.",
             });
             continue;
-          }
-          let storedAttachment: StoredEmailAttachment | null = null;
-          if (shouldRetainOriginalAttachments) {
-            try {
-              storedAttachment = await storePremiumEmailImportAttachment({
-                supabase,
-                userId: owner.userId,
-                emailImportEventId: leaseOwner.rowId,
-                providerEmailId: emailData.email_id,
-                senderEmail,
-                subjectLine: emailData.subject || "",
-                recipients: Array.isArray(emailData.to) ? emailData.to : [],
-                receivedAt: emailData.created_at || event.created_at || null,
-                attachmentIndex,
-                filename: attachment.filename,
-                contentType: attachment.contentType,
-                sizeBytes: bytes.length,
-                bytes,
-              });
-              if (storedAttachment) {
-                retainedAttachmentCount += 1;
-              }
-            } catch (retentionError) {
-              const message =
-                retentionError instanceof Error
-                  ? retentionError.message
-                  : String(retentionError);
-              retentionErrors.push({
-                filename: attachment.filename,
-                error: message,
-              });
-              console.error(
-                "[resend-inbound-webhook] premium attachment retention failed",
-                {
-                  emailId: emailData.email_id,
-                  filename: attachment.filename,
-                  error: message,
-                },
-              );
-            }
           }
           const analyzeBody: AnalyzeRequestBody = {
             userId: owner.userId,
@@ -2001,9 +1877,6 @@ export async function handleResendInboundWebhook(
             success: true,
             itemCount: mappedItems.length,
             items: mappedItems,
-            ...(storedAttachment
-              ? { retainedAttachmentId: storedAttachment.id }
-              : {}),
           });
           setStage("attachment_complete", {
             filename: attachment.filename,
@@ -2039,8 +1912,6 @@ export async function handleResendInboundWebhook(
       setStage("aggregate_analyze_complete", {
         analyzedItemCount: analyzedItems.length,
         attachmentResultCount: attachmentResults.length,
-        retainedAttachmentCount,
-        retentionErrorCount: retentionErrors.length,
       });
       console.log("[resend-inbound-webhook] aggregate analyze summary", {
         emailId: emailData.email_id,
@@ -2061,10 +1932,7 @@ export async function handleResendInboundWebhook(
           success: item.success,
           itemCount: item.itemCount,
           error: item.error ?? null,
-          retainedAttachmentId: item.retainedAttachmentId ?? null,
         })),
-        retainedAttachmentCount,
-        retentionErrorCount: retentionErrors.length,
       });
 
       if (analyzedItems.length === 0) {
@@ -2076,8 +1944,6 @@ export async function handleResendInboundWebhook(
           failedCount: attachmentResults.length,
           transactions: [],
           attachmentResults,
-          retainedAttachmentCount,
-          retainedOriginals: shouldRetainOriginalAttachments,
         });
         await updateInboundEvent({
           supabase,
@@ -2094,9 +1960,6 @@ export async function handleResendInboundWebhook(
               receivedAt: emailData.created_at || event.created_at || null,
             },
             attachmentResults,
-            retainedAttachmentCount,
-            retainedOriginals: shouldRetainOriginalAttachments,
-            retentionErrors,
           },
         });
         try {
@@ -2202,6 +2065,7 @@ export async function handleResendInboundWebhook(
         .filter((item) => item.success === true)
         .map((item) => sortedAnalyzedItems[item.index])
         .filter((item): item is Record<string, unknown> => item != null);
+      const appTransactionsUrl = buildImportFollowupAppUrl(saveResult.results);
 
       const followup = buildFollowupEmail({
         senderEmail,
@@ -2212,8 +2076,7 @@ export async function handleResendInboundWebhook(
         failureReasons,
         transactions: savedTransactions,
         attachmentResults,
-        retainedAttachmentCount,
-        retainedOriginals: shouldRetainOriginalAttachments,
+        appTransactionsUrl,
       });
       setStage("finalize_processed_start", {
         savedCount,
@@ -2238,9 +2101,6 @@ export async function handleResendInboundWebhook(
           failedCount,
           failureReasons,
           attachmentResults,
-          retainedAttachmentCount,
-          retainedOriginals: shouldRetainOriginalAttachments,
-          retentionErrors,
         },
       });
       setStage("finalize_processed_complete", {

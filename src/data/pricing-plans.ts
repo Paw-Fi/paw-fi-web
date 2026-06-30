@@ -154,6 +154,7 @@ export interface PricingTier {
   subtitle: string;
   priceMonthly: string;
   priceYearly?: string;
+  effectiveMonthlyPrice?: string;
   compareAtPriceMonthly?: string;
   compareAtPriceYearly?: string;
   annualTotal?: number;
@@ -402,6 +403,7 @@ export function getPricingTiers(): PricingTier[] {
     title: planData.plus.title + " Yearly",
     subtitle: "Best value — annual subscription to Moneko Plus",
     priceMonthly: "$79.99",
+    effectiveMonthlyPrice: "$6.67",
     compareAtPriceMonthly: "$131.88",
     priceFrequencyText: "/year",
     description: planData.plus.description,
