@@ -80,11 +80,22 @@ const itemVariants: Variants = {
   },
 };
 
+type CheckoutPlan = "plus" | "lifetime";
+
+function parseCheckoutPlan(plan: string | undefined): CheckoutPlan {
+  return plan === "lifetime" ? "lifetime" : "plus";
+}
+
+function formatPlanName(plan: CheckoutPlan): string {
+  return plan.charAt(0).toUpperCase() + plan.slice(1);
+}
+
 function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false }) as CheckoutSearchParams;
   const {
+    plan,
     billing,
     promo,
     status,
@@ -97,7 +108,9 @@ function CheckoutPage() {
     userId,
   } = searchParams;
 
-  const selectedPlan = "plus";
+  const selectedPlan = parseCheckoutPlan(plan);
+  const selectedPlanLabel = formatPlanName(selectedPlan);
+  const isLifetimePlan = selectedPlan === "lifetime";
   const selectedBilling = billing === "yearly" ? "yearly" : "monthly";
 
   // Intentionally no verbose client logging here: search params may include tokens.
@@ -293,7 +306,15 @@ function CheckoutPage() {
     if (status) {
       return;
     }
-  }, [session_id, status, navigate, isMobileCheckout, redirectUrl]);
+  }, [
+    session_id,
+    status,
+    navigate,
+    isMobileCheckout,
+    redirectUrl,
+    selectedPlan,
+    v,
+  ]);
 
   // Initialize Stripe when loaded
   useEffect(() => {
@@ -337,7 +358,7 @@ function CheckoutPage() {
           // Build redirect URL preserving all query parameters
           const redirectParams = new URLSearchParams();
           redirectParams.set("plan", selectedPlan);
-          if (selectedBilling) redirectParams.set("billing", selectedBilling);
+          if (!isLifetimePlan) redirectParams.set("billing", selectedBilling);
           if (promo) redirectParams.set("promo", promo);
 
           navigate({
@@ -345,6 +366,7 @@ function CheckoutPage() {
             search: {
               redirect: `/checkout?${redirectParams.toString()}`,
               code: undefined,
+              trial: false,
             },
           });
           throw new Error("User authentication required to make a purchase");
@@ -356,13 +378,6 @@ function CheckoutPage() {
             ? window.location.origin
             : "http://localhost:3000";
 
-        // Build success and cancel URLs with proper parameters
-        const baseSuccessUrl =
-          isMobileCheckout && redirectUrl ? redirectUrl : `${origin}/checkout`;
-
-        const baseCancelUrl =
-          isMobileCheckout && redirectUrl ? redirectUrl : `${origin}/checkout`;
-
         // Add status parameters to URLs
         const successUrl =
           isMobileCheckout && redirectUrl
@@ -372,7 +387,7 @@ function CheckoutPage() {
                 params.set("status", "success");
                 // DO NOT encode the Stripe placeholder; append it raw at the end
                 params.set("plan", selectedPlan);
-                if (selectedBilling) params.set("billing", selectedBilling);
+                if (!isLifetimePlan) params.set("billing", selectedBilling);
                 if (promo) params.set("promo", promo);
                 if (source) params.set("source", source);
                 if (redirectUrl) params.set("redirectUrl", redirectUrl);
@@ -387,7 +402,7 @@ function CheckoutPage() {
                 params.set("status", "canceled");
                 // DO NOT encode the Stripe placeholder; append it raw at the end
                 params.set("plan", selectedPlan);
-                if (selectedBilling) params.set("billing", selectedBilling);
+                if (!isLifetimePlan) params.set("billing", selectedBilling);
                 if (promo) params.set("promo", promo);
                 if (source) params.set("source", source);
                 return `${origin}/checkout?${params.toString()}&session_id={CHECKOUT_SESSION_ID}`;
@@ -416,7 +431,9 @@ function CheckoutPage() {
           userId: validatedUserId,
           // NOTE: Trial eligibility is determined by backend based on subscription history
         };
-        checkoutBody.billingInterval = selectedBilling;
+        if (!isLifetimePlan) {
+          checkoutBody.billingInterval = selectedBilling;
+        }
 
         // Get the current session for auth header
         const { data: sessionData } = await supabase.auth.getSession();
@@ -566,6 +583,7 @@ function CheckoutPage() {
     stripeLoaded,
     selectedPlan,
     selectedBilling,
+    isLifetimePlan,
     navigate,
     validatedUserId,
     status,
@@ -592,9 +610,9 @@ function CheckoutPage() {
             Payment Successful
           </h3>
           <p className="text-muted-foreground-color">
-            Thank you for subscribing to Moneko{" "}
-            {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}. Your
-            Plus features are now active.
+            Thank you for choosing Moneko {selectedPlanLabel}. Your{" "}
+            {isLifetimePlan ? "lifetime access is" : "Plus features are"} now
+            active.
           </p>
         </div>
       </div>
@@ -741,9 +759,9 @@ function CheckoutPage() {
                   Secure Checkout
                 </h1>
                 <p className="text-muted-foreground-color mx-auto max-w-2xl text-xl">
-                  Subscribe to Moneko{" "}
-                  {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}{" "}
-                  and unlock Plus features
+                  {isLifetimePlan
+                    ? "Complete your Moneko Lifetime purchase"
+                    : `Subscribe to Moneko ${selectedPlanLabel} and unlock Plus features`}
                 </p>
               </div>
             </motion.div>

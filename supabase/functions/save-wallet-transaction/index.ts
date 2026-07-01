@@ -223,7 +223,10 @@ function buildWalletCaptureRequestLogContext(
           amount: typeof tx.amount === "number" ? tx.amount : null,
           currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
           accountCurrency: truncateForLog(tx.accountCurrency ?? null, 12),
-          currencyEvidenceRaw: truncateForLog(tx.currencyEvidenceRaw ?? null, 32),
+          currencyEvidenceRaw: truncateForLog(
+            tx.currencyEvidenceRaw ?? null,
+            32,
+          ),
           currencyEvidenceType: truncateForLog(
             tx.currencyEvidenceType ?? null,
             32,
@@ -1427,7 +1430,9 @@ async function claimAndroidWalletCaptureEvent(params: {
 
   if (
     error?.code === "PGRST202" ||
-    String(error?.message || "").includes("claim_android_wallet_capture_event_v2")
+    String(error?.message || "").includes(
+      "claim_android_wallet_capture_event_v2",
+    )
   ) {
     const fallback = await params.supabase.rpc(
       "claim_android_wallet_capture_event",
@@ -2089,6 +2094,26 @@ Deno.serve(async (req: Request) => {
     }
 
     const payloadCurrency = resolveWalletTransactionCurrency(tx);
+    const normalizedPayloadCurrency = (payloadCurrency ?? "")
+      .trim()
+      .toUpperCase();
+
+    if (
+      captureSource === "ios_wallet_shortcut" &&
+      normalizedPayloadCurrency &&
+      validateCurrency(normalizedPayloadCurrency) !== normalizedPayloadCurrency
+    ) {
+      logWalletCaptureValidationFailure(
+        "invalid_explicit_currency",
+        requestDebugContext,
+        { payloadCurrency },
+      );
+      return errorResponse(
+        "Currency must be a supported 3-letter currency code",
+        400,
+        "VALIDATION_ERROR",
+      );
+    }
 
     if (!payloadCurrency && !preferredCurrency) {
       await reportEdgeFunctionError({
