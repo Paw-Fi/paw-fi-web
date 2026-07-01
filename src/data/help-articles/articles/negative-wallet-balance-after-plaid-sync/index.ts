@@ -2,12 +2,12 @@ import type { HelpArticle } from "../../types";
 
 export const negativeWalletBalanceAfterPlaidSyncArticle: HelpArticle = {
   id: "negative-wallet-balance-after-plaid-sync",
-  number: "3.5",
+  number: "4.1",
   slug: "negative-wallet-balance-after-plaid-sync",
   title: "Why Is My Wallet Balance Negative After Plaid Sync?",
   description:
     "Understand why a wallet can show a negative balance after connecting to Plaid and how to fix it by setting the correct opening balance.",
-  categoryId: "budgeting-pockets",
+  categoryId: "bank-sync",
   readTime: 3,
   keywords: [
     "negative wallet balance",

@@ -26,6 +26,14 @@ export const helpCategories: HelpCategory[] = [
     iconName: "wallet",
   },
   {
+    id: "bank-sync",
+    title: "Bank Sync",
+    eyebrow: "Connect accounts",
+    description:
+      "Troubleshoot bank connections, Plaid imports, opening balances, and synced wallet balances.",
+    iconName: "wallet",
+  },
+  {
     id: "automation-planning",
     title: "Automation & Planning",
     eyebrow: "Plan ahead",
