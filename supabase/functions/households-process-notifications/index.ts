@@ -16,6 +16,8 @@ const firebaseProjectId = Deno.env.get("FIREBASE_PROJECT_ID");
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 const firebaseProjectIdEnv = firebaseProjectId || "";
+const androidNotificationChannelId = "household_updates";
+const androidNotificationClickAction = "FLUTTER_NOTIFICATION_CLICK";
 
 function redact(v?: string) {
   if (!v) return v;
@@ -187,6 +189,10 @@ async function sendFCMv1Notification(
         android: {
           priority: "high",
           notification: {
+            channel_id: androidNotificationChannelId,
+            click_action: androidNotificationClickAction,
+            notification_priority: "PRIORITY_HIGH",
+            proxy: "DENY",
             sound: "default",
           },
         },
@@ -197,12 +203,13 @@ async function sendFCMv1Notification(
             "apns-priority": "10",
           },
           payload: {
+            ...data,
+            deep_link: deepLink,
             aps: {
               sound: "default",
               ...(imageUrl ? { ["mutable-content"]: 1 } : {}),
               badge: 1,
             },
-            deep_link: deepLink,
           },
         },
         ...(isWeb && deepLink
