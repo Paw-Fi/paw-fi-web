@@ -37,6 +37,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { solutionCategories } from "@/data/solutions";
 
 const features = [
   {
@@ -93,6 +94,27 @@ const resources = [
     description: "Guides, tutorials, and support resources.",
     icon: LifeBuoy,
   },
+  {
+    title: "Changelog",
+    href: "/changelog",
+    description: "See the latest product updates and releases.",
+    icon: History,
+  },
+];
+
+const solutions = [
+  {
+    title: "Solutions Hub",
+    href: "/solutions",
+    description: "Browse all budgeting solution guides.",
+    icon: BookOpen,
+  },
+  ...solutionCategories.map((category) => ({
+    title: category.title,
+    href: `/solutions/${category.slug}`,
+    description: category.description,
+    icon: BookOpen,
+  })),
 ];
 
 type PreservedSearchParams = Record<
@@ -189,6 +211,9 @@ export const HomeHeader = () => {
     [pathname],
   );
   const isFeaturesActive = features.some((item) => isPathActive(item.href));
+  const isSolutionsActive =
+    solutions.some((item) => isPathActive(item.href)) ||
+    isPathActive("/solutions");
   const isResourcesActive =
     resources.some((item) => isPathActive(item.href)) || isPathActive("/blogs");
 
@@ -247,19 +272,31 @@ export const HomeHeader = () => {
               </NavigationMenuItem>
 
               <NavigationMenuItem>
-                <Link
-                  to="/changelog"
-                  href={buildPreservedPath("/changelog")}
+                <NavigationMenuTrigger
                   className={cn(
-                    navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
-                    isPathActive("/changelog")
+                    isSolutionsActive
                       ? "text-foreground"
                       : "text-muted-foreground",
                   )}
                 >
-                  Changelog
-                </Link>
+                  Solutions
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <ul className="bg-background/95 border-border grid w-[400px] gap-3 rounded-xl border p-4 shadow-2xl md:w-[500px] md:grid-cols-2 lg:w-[600px] lg:backdrop-blur-3xl">
+                    {solutions.map((solution) => (
+                      <ListItem
+                        key={solution.title}
+                        title={solution.title}
+                        href={buildPreservedPath(solution.href)}
+                        icon={solution.icon}
+                        isActive={isPathActive(solution.href)}
+                      >
+                        {solution.description}
+                      </ListItem>
+                    ))}
+                  </ul>
+                </NavigationMenuContent>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
@@ -402,6 +439,40 @@ export const HomeHeader = () => {
                     </div>
                   </AccordionContent>
                 </AccordionItem>
+                <AccordionItem value="solutions" className="border-b-0">
+                  <AccordionTrigger
+                    className={cn(
+                      "px-2 py-3 text-base font-medium hover:no-underline",
+                      isSolutionsActive && "text-primary",
+                    )}
+                  >
+                    Solutions
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex flex-col space-y-1 pl-2">
+                      {solutions.map((item) => (
+                        <MobileLink
+                          key={item.href}
+                          href={buildPreservedPath(item.href)}
+                          setIsOpen={setIsOpen}
+                          className={cn(
+                            isPathActive(item.href) && "bg-accent text-primary",
+                          )}
+                        >
+                          <item.icon
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              isPathActive(item.href)
+                                ? "text-primary"
+                                : "text-muted-foreground",
+                            )}
+                          />
+                          {item.title}
+                        </MobileLink>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
                 <AccordionItem value="resources" className="border-b-0">
                   <AccordionTrigger
                     className={cn(
@@ -413,7 +484,7 @@ export const HomeHeader = () => {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="flex flex-col space-y-1 pl-2">
-                      {resources.map((item) => (
+                      {resources.slice(1).map((item) => (
                         <MobileLink
                           key={item.href}
                           href={buildPreservedPath(item.href)}
@@ -458,16 +529,6 @@ export const HomeHeader = () => {
                 )}
               >
                 How it Works
-              </MobileLink>
-              <MobileLink
-                href={buildPreservedPath("/changelog")}
-                setIsOpen={setIsOpen}
-                className={cn(
-                  "px-2 py-3 text-base",
-                  isPathActive("/changelog") && "bg-accent text-primary",
-                )}
-              >              
-                Changelog
               </MobileLink>
               <MobileLink
                 href={buildPreservedPath("/pricing")}
@@ -545,14 +606,12 @@ export const HomeHeader = () => {
                   navigate({ href: buildPreservedPath("/dashboard") })
                 }
                 className="ring-background cursor-pointer ring-2 transition-transform hover:scale-105"
-              />            
+              />
             </div>
           ) : (
-            <div className="flex items-center gap-3">              
+            <div className="flex items-center gap-3">
               <Button
-                onClick={() =>
-                  navigate({ href: registerTrialPath })
-                }
+                onClick={() => navigate({ href: registerTrialPath })}
                 className="rounded-full px-5 font-medium dark:text-white"
               >
                 Try it Free — No Credit Card

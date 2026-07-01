@@ -57,6 +57,132 @@
     <priority>0.8</priority>
   </url>
 <url>
+    <loc>https://moneko.io/solutions</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/how-to-start-budgeting</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/financial-goals-for-individuals</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/the-50-30-20-budget-rule</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/zero-based-budgeting</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/how-to-track-expenses</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/how-to-stop-overspending</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/building-an-emergency-fund</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-individuals/how-to-create-a-monthly-budget</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/how-to-split-bills-fairly</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/joint-vs-separate-bank-accounts</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/financial-goals-for-couples</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/wedding-budget-guide</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/shared-credit-cards</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/moving-in-together</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/budgeting-after-having-a-baby</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/saving-for-your-childrens-education</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/building-an-emergency-fund</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/solutions/budgeting-for-couples/household-expenses</loc>
+    <lastmod>2026-07-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
     <loc>https://moneko.io/blogs/generative-engine-optimization-geo-guide</loc>
     <lastmod>2025-09-17</lastmod>
     <changefreq>weekly</changefreq>

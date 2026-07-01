@@ -14,6 +14,8 @@ Allow: /email-based-budgeting
 Allow: /ai-budgeting-app
 Allow: /expense-tracker-for-couples
 Allow: /shared-expense-tracker
+Allow: /solutions
+Allow: /solutions/
 Allow: /help/
 Allow: /early-access
 Allow: /referral$

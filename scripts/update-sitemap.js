@@ -252,6 +252,153 @@ function mergeFixedPublicUrls(xmlContent) {
 
   const fixedPages = [
     {
+      url: "https://moneko.io/solutions",
+      page: {
+        changefreq: "weekly",
+        priority: "0.9",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals",
+      page: {
+        changefreq: "weekly",
+        priority: "0.9",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples",
+      page: {
+        changefreq: "weekly",
+        priority: "0.9",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/how-to-start-budgeting",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/financial-goals-for-individuals",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/the-50-30-20-budget-rule",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/zero-based-budgeting",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/how-to-track-expenses",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/how-to-stop-overspending",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/building-an-emergency-fund",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-individuals/how-to-create-a-monthly-budget",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/how-to-split-bills-fairly",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/joint-vs-separate-bank-accounts",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/financial-goals-for-couples",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/wedding-budget-guide",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/shared-credit-cards",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/moving-in-together",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/budgeting-after-having-a-baby",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/saving-for-your-childrens-education",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/building-an-emergency-fund",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/solutions/budgeting-for-couples/household-expenses",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
       url: "https://moneko.io/guides",
       page: {
         changefreq: "weekly",
