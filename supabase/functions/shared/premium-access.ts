@@ -9,7 +9,7 @@ export interface PremiumAccessResult {
   reason?: string;
 }
 
-const PREMIUM_PLANS = new Set(["premium", "lifetime"]);
+const PREMIUM_PLANS = new Set(["plus", "premium", "lifetime"]);
 const ACTIVE_STATUS_SET = new Set(ACTIVE_STATUSES);
 
 interface SupabasePremiumClient {

@@ -13,15 +13,22 @@ export function PremiumAccessGate({ children, fallback }: PremiumAccessGateProps
   const { subscription, isLoading } = useSubscription(user?.id);
 
   if (isLoading) {
-    // Optionally return a dashboard skeleton here
     return (
-      <div className="flex flex-col gap-6 p-8 animate-pulse">
-        <div className="h-8 w-64 bg-slate-200 rounded"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="h-32 bg-slate-200 rounded-xl"></div>
-          <div className="h-32 bg-slate-200 rounded-xl"></div>
-          <div className="h-32 bg-slate-200 rounded-xl"></div>
-          <div className="h-32 bg-slate-200 rounded-xl"></div>
+      <div className="min-h-screen bg-[#f5f5f7] px-4 py-6 text-neutral-950 dark:bg-[#050505] dark:text-white sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl animate-pulse space-y-6">
+          <div className="space-y-3">
+            <div className="h-4 w-36 rounded-full bg-neutral-200 dark:bg-white/10" />
+            <div className="h-12 w-full max-w-2xl rounded-lg bg-neutral-200 dark:bg-white/10" />
+            <div className="h-5 w-full max-w-lg rounded-lg bg-neutral-200/80 dark:bg-white/10" />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-36 rounded-lg border border-neutral-200/80 bg-white/80 shadow-sm dark:border-white/10 dark:bg-white/[0.06]"
+              />
+            ))}
+          </div>
         </div>
       </div>
     );

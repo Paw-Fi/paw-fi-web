@@ -34,6 +34,12 @@ export interface PremiumDashboardSummary {
     spentCents: number;
     remainingCents: number;
     currency: string;
+    displayAllocatedCents: number;
+    displaySpentCents: number;
+    displayRemainingCents: number;
+    icon: string | null;
+    color: string | null;
+    category: string | null;
   }>;
   topCategories: Array<{
     category: string;
@@ -41,6 +47,43 @@ export interface PremiumDashboardSummary {
     transactionCount: number;
     currency: string;
   }>;
+  recurring: {
+    incomeCents: number;
+    expenseCents: number;
+    netCents: number;
+    displayCurrency: string;
+    totalCount: number;
+    upcoming: Array<{
+      id: string;
+      type: "income" | "expense";
+      date: string;
+      amountCents: number;
+      displayAmountCents: number;
+      currency: string;
+      displayCurrency: string;
+      category: string;
+      description: string | null;
+      merchant: string | null;
+      accountId: string | null;
+      accountName: string | null;
+      recurrenceRule: Record<string, unknown> | null;
+    }>;
+  };
+  wallets: {
+    netWorthCents: number;
+    displayCurrency: string;
+    wallets: Array<{
+      id: string;
+      name: string;
+      currency: string;
+      balanceCents: number;
+      displayBalanceCents: number;
+      incomeCents: number;
+      expenseCents: number;
+      isDefault: boolean;
+      isSystem: boolean;
+    }>;
+  };
   recentTransactions: Array<{
     id: string;
     type: "income" | "expense";
