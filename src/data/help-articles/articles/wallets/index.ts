@@ -81,6 +81,11 @@ export const walletsArticle: HelpArticle = {
       question: "What is the difference between Wallets and Pockets?",
       answer: "Wallets track where your money is. Pockets track what you spend on.",
     },
+    {
+      question: "Why is my wallet showing a negative balance after syncing with Plaid?",
+      answer:
+        "Plaid can only import up to the past 24 months of transactions. If your account had money before that period, Moneko does not know the starting balance. Set the wallet's opening balance to the account balance from before the imported period started.",
+    },
   ],
   howToSteps: [
     {
@@ -214,6 +219,13 @@ Make sure you are in the correct Space. Wallets live inside Spaces, so a wallet 
 
 ### My Wallet Balance Looks Wrong
 Check whether the transaction was logged to the correct wallet, the initial balance was entered correctly, and transfers were saved correctly.
+
+### My Wallet Shows a Negative Balance After Syncing
+A negative wallet balance after syncing is usually because Moneko calculates the balance from the transactions Plaid imported, not from your full lifetime bank history.
+
+Plaid can only provide transaction history for up to the past 24 months. If there was already money in the account before that imported period, Moneko does not automatically know that starting balance. So if the imported expenses are higher than the imported income, the wallet can appear negative.
+
+To fix it, set the wallet's opening balance to the account balance from before the imported Plaid transaction period started.
 
 ### My Shared Space Wallets Are Visible to Other People
 This is expected. If you share a Space, you also share the wallets inside it.

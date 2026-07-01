@@ -8,6 +8,7 @@ import { envelopeBudgetingArticle } from "./envelope-budgeting";
 import { importExportDataArticle } from "./import-export-data";
 import { iosWidgetsArticle } from "./ios-widgets";
 import { logExpenseArticle } from "./log-expense";
+import { negativeWalletBalanceAfterPlaidSyncArticle } from "./negative-wallet-balance-after-plaid-sync";
 import { pocketsArticle } from "./pockets";
 import { quickActionsSiriArticle } from "./quick-actions-siri";
 import { recurringExpensesIncomeArticle } from "./recurring-expenses-income";
@@ -33,6 +34,7 @@ export const helpArticles: HelpArticle[] = [
   pocketsArticle,
   categoriesArticle,
   walletsArticle,
+  negativeWalletBalanceAfterPlaidSyncArticle,
   recurringExpensesIncomeArticle,
   aiScenarioPlanningArticle,
 ];
