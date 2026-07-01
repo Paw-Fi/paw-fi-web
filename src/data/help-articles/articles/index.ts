@@ -1,12 +1,14 @@
 import type { HelpArticle } from "../types";
 import { aiScenarioPlanningArticle } from "./ai-scenario-planning";
 import { applePayTrackingArticle } from "./apple-pay-tracking";
+import { bankSyncSecurityArticle } from "./bank-sync-security";
 import { categoriesArticle } from "./categories";
 import { createFirstSpaceArticle } from "./create-first-space";
 import { emailReceiptsArticle } from "./email-receipts";
 import { envelopeBudgetingArticle } from "./envelope-budgeting";
 import { importExportDataArticle } from "./import-export-data";
 import { iosWidgetsArticle } from "./ios-widgets";
+import { connectBankFeatureAvailabilityArticle } from "./connect-bank-feature-availability";
 import { logExpenseArticle } from "./log-expense";
 import { negativeWalletBalanceAfterPlaidSyncArticle } from "./negative-wallet-balance-after-plaid-sync";
 import { pocketsArticle } from "./pockets";
@@ -34,6 +36,8 @@ export const helpArticles: HelpArticle[] = [
   pocketsArticle,
   categoriesArticle,
   walletsArticle,
+  bankSyncSecurityArticle,
+  connectBankFeatureAvailabilityArticle,
   negativeWalletBalanceAfterPlaidSyncArticle,
   recurringExpensesIncomeArticle,
   aiScenarioPlanningArticle,

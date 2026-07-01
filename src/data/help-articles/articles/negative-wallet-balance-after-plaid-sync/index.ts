@@ -2,7 +2,7 @@ import type { HelpArticle } from "../../types";
 
 export const negativeWalletBalanceAfterPlaidSyncArticle: HelpArticle = {
   id: "negative-wallet-balance-after-plaid-sync",
-  number: "4.1",
+  number: "4.3",
   slug: "negative-wallet-balance-after-plaid-sync",
   title: "Why Is My Wallet Balance Negative After Plaid Sync?",
   description:
