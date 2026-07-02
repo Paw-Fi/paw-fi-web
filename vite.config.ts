@@ -1,4 +1,5 @@
-import { defineConfig } from "vite";
+import { readFile } from "fs/promises";
+import { defineConfig, type Plugin } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { nitro } from "nitro/vite";
@@ -10,6 +11,66 @@ import tailwindcss from "@tailwindcss/vite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+function devJsonSourceImportPlugin(): Plugin {
+  const srcRoot = resolve(__dirname, "src");
+
+  return {
+    name: "moneko-dev-json-source-imports",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url || (req.method !== "GET" && req.method !== "HEAD")) {
+          next();
+          return;
+        }
+
+        const url = new URL(req.url, "http://localhost");
+        const isJsonSourceRequest =
+          url.pathname.startsWith("/src/") && url.pathname.endsWith(".json");
+        const isModuleRequest =
+          url.searchParams.has("import") ||
+          url.searchParams.has("raw") ||
+          url.searchParams.has("url");
+
+        if (!isJsonSourceRequest || !isModuleRequest) {
+          next();
+          return;
+        }
+
+        const relativePath = decodeURIComponent(url.pathname.slice(1));
+        const filePath = resolve(__dirname, relativePath);
+
+        if (filePath !== srcRoot && !filePath.startsWith(`${srcRoot}/`)) {
+          res.statusCode = 403;
+          res.end();
+          return;
+        }
+
+        try {
+          const json = await readFile(filePath, "utf8");
+          const body = url.searchParams.has("raw")
+            ? `export default ${JSON.stringify(json)};\n`
+            : url.searchParams.has("url")
+              ? `export default ${JSON.stringify(url.pathname)};\n`
+              : `export default ${JSON.stringify(JSON.parse(json))};\n`;
+
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/javascript");
+          res.setHeader("Cache-Control", "no-cache");
+          res.end(req.method === "HEAD" ? undefined : body);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+            next();
+            return;
+          }
+
+          next(error);
+        }
+      });
+    },
+  };
+}
 
 export default defineConfig(({ command, isSsrBuild }) => {
   const isClientBuild = !isSsrBuild;
@@ -65,10 +126,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
                   return "vendor-diagrams";
                 }
 
-                if (
-                  id.includes("framer-motion") ||
-                  id.includes("/motion/")
-                ) {
+                if (id.includes("framer-motion") || id.includes("/motion/")) {
                   return "vendor-animation";
                 }
 
@@ -111,6 +169,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
       ],
     },
     plugins: [
+      devJsonSourceImportPlugin(),
       tsConfigPaths({
         projects: ["./tsconfig.json"],
       }),

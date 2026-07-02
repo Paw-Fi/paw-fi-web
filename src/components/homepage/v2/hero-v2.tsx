@@ -11,7 +11,7 @@ export function HeroV2() {
       <div className="relative z-10 container mx-auto px-4 md:px-6">
         <div className="flex flex-col items-center gap-12 text-center lg:gap-16">
           <div className="mx-auto flex max-w-4xl flex-col items-center space-y-8">
-            <div className="inline-flex items-center justify-center gap-2 rounded-full border bg-background/50 px-4 py-1.5 text-sm text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-background/80">
+            <div className="bg-background/50 text-muted-foreground hover:bg-background/80 inline-flex items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-sm shadow-sm backdrop-blur-sm transition-colors">
               <span>Join our community on</span>
               <a
                 href="https://discord.gg/M2Dgujvtze"
@@ -34,7 +34,9 @@ export function HeroV2() {
 
             <h1 className="from-foreground to-foreground/80 bg-linear-to-br bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-6xl xl:text-[4.5rem] xl:leading-[1.1]">
               The AI budgeting app <br className="hidden sm:block" />
-              <span className="bg-linear-to-r from-primary to-primary/80 bg-clip-text text-transparent">built for everyday spending.</span>
+              <span className="from-primary to-primary/80 bg-linear-to-r bg-clip-text text-transparent">
+                built for everyday spending.
+              </span>
             </h1>
 
             <p className="text-muted-foreground mx-auto max-w-[42rem] text-lg leading-relaxed sm:text-xl sm:leading-8">
@@ -48,11 +50,9 @@ export function HeroV2() {
                 <AppleDownloadButton className="w-auto" />
                 <AndroidDownloadButton className="w-auto" />
               </div>
-              
+
               <div className="flex items-center justify-center">
-                <CompareWithChatGptButton
-                  className="rounded-full border-primary/20 bg-primary/5 hover:bg-primary/10 text-foreground group shadow-[0_0_20px_rgba(var(--primary),0.1)] transition-all duration-300"
-                />
+                <CompareWithChatGptButton className="border-primary/20 bg-primary/5 hover:bg-primary/10 text-foreground group rounded-full shadow-[0_0_20px_rgba(var(--primary),0.1)] transition-all duration-300" />
               </div>
             </div>
 
@@ -107,9 +107,9 @@ export function HeroV2() {
                   ></rect>
                   <path
                     fill="url(#paint0_linear_533_2162)"
-                    fill-rule="evenodd"
+                    fillRule="evenodd"
                     d="M80.8652 80.859C93.3548 68.3611 110.324 61.333 128.001 61.333C145.678 61.333 162.646 68.3611 175.136 80.859C187.636 93.357 194.667 110.326 194.667 128C194.667 145.674 187.636 162.642 175.136 175.14C162.646 187.638 145.678 194.666 128.001 194.666C110.324 194.666 93.3548 187.638 80.8652 175.14C68.3652 162.642 61.334 145.674 61.334 128C61.3374 110.318 68.3628 93.3619 80.8652 80.859ZM130.385 110.547C123.906 113.244 110.948 118.827 91.5104 127.293C88.3541 128.549 86.6979 129.777 86.552 130.977C86.2955 133.004 88.8343 133.803 92.2839 134.89C92.7571 135.039 93.2474 135.193 93.7499 135.357C97.1562 136.463 101.74 137.758 104.115 137.809C106.281 137.856 108.687 136.965 111.344 135.138C129.51 122.881 138.875 116.685 139.469 116.552C139.885 116.458 140.458 116.339 140.844 116.686C141.24 117.032 141.198 117.688 141.156 117.864C140.91 118.935 130.975 128.172 125.805 132.979C124.18 134.49 123.026 135.563 122.792 135.807C122.268 136.35 121.735 136.865 121.222 137.359C118.061 140.406 115.689 142.692 121.354 146.425C124.101 148.234 126.293 149.727 128.484 151.22C130.839 152.823 133.192 154.426 136.229 156.418C137.01 156.93 137.756 157.462 138.483 157.98C141.244 159.948 143.724 161.716 146.792 161.434C148.573 161.27 150.417 159.595 151.344 154.6C153.552 142.792 157.896 117.211 158.896 106.669C158.99 105.746 158.875 104.564 158.792 104.045C158.698 103.526 158.51 102.787 157.844 102.24C157.042 101.591 155.812 101.455 155.26 101.464C152.75 101.509 148.906 102.846 130.385 110.547Z"
-                    clip-rule="evenodd"
+                    clipRule="evenodd"
                   ></path>
                   <defs>
                     <linearGradient
@@ -120,8 +120,8 @@ export function HeroV2() {
                       y2="194.666"
                       gradientUnits="userSpaceOnUse"
                     >
-                      <stop stop-color="#2AABEE"></stop>
-                      <stop offset="1" stop-color="#229ED9"></stop>
+                      <stop stopColor="#2AABEE"></stop>
+                      <stop offset="1" stopColor="#229ED9"></stop>
                     </linearGradient>
                   </defs>
                 </svg>
@@ -140,60 +140,60 @@ export function HeroV2() {
                   ></path>
                   <path
                     fill="#fff"
-                    fill-rule="evenodd"
+                    fillRule="evenodd"
                     d="M24,30H96a6.01764,6.01764,0,0,1,6,6V70a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V36A6.01764,6.01764,0,0,1,24,30Z"
                   ></path>
                   <path
                     fill="#d9d6cc"
-                    fill-rule="evenodd"
+                    fillRule="evenodd"
                     d="M22,26H98a8.02352,8.02352,0,0,1,8,8V86a8.02352,8.02352,0,0,1-8,8H22a8.02352,8.02352,0,0,1-8-8V34A8.02352,8.02352,0,0,1,22,26Z"
                   ></path>
                   <path
                     fill="#3b99c9"
-                    fill-rule="evenodd"
+                    fillRule="evenodd"
                     d="M24,30H96a6.01764,6.01764,0,0,1,6,6V70a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V36A6.01764,6.01764,0,0,1,24,30Z"
                   ></path>
                   <g>
                     <path
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M24,37H96a6.01764,6.01764,0,0,1,6,6V55a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V43A6.01764,6.01764,0,0,1,24,37Z"
                     ></path>
                     <path
                       fill="#ffb003"
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M24,37H96a6.01764,6.01764,0,0,1,6,6V55a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V43A6.01764,6.01764,0,0,1,24,37Z"
                     ></path>
                   </g>
                   <g>
                     <path
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M24,44H96a6.01764,6.01764,0,0,1,6,6V62a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V50A6.01764,6.01764,0,0,1,24,44Z"
                     ></path>
                     <path
                       fill="#50be3d"
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M24,44H96a6.01764,6.01764,0,0,1,6,6V62a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V50A6.01764,6.01764,0,0,1,24,44Z"
                     ></path>
                   </g>
                   <g>
                     <path
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M24,51H96a6.01764,6.01764,0,0,1,6,6V69a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V57A6.01764,6.01764,0,0,1,24,51Z"
                     ></path>
                     <path
                       fill="#f26d5f"
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M24,51H96a6.01764,6.01764,0,0,1,6,6V69a6.01764,6.01764,0,0,1-6,6H24a6.01764,6.01764,0,0,1-6-6V57A6.01764,6.01764,0,0,1,24,51Z"
                     ></path>
                   </g>
                   <g>
                     <path
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M14,58h92V86a8.02352,8.02352,0,0,1-8,8H22a8.02352,8.02352,0,0,1-8-8Zm27,0c9,0,10,11.5,19,11.5S70,58,79,58Z"
                     ></path>
                     <path
                       fill="#d9d6cc"
-                      fill-rule="evenodd"
+                      fillRule="evenodd"
                       d="M14,58h92V86a8.02352,8.02352,0,0,1-8,8H22a8.02352,8.02352,0,0,1-8-8Zm27,0c9,0,10,11.5,19,11.5S70,58,79,58Z"
                     ></path>
                   </g>
@@ -237,13 +237,9 @@ export function HeroV2() {
               </div>
               <p>Built for chat-based expense tracking</p>
             </div>
-
-           
           </div>
 
           <div className="relative mx-auto flex w-full max-w-[350px] justify-center lg:max-w-[400px]">
-            
-
             {/* Decorative background elements */}
             <div
               className={
