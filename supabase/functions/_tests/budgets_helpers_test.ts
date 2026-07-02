@@ -1,6 +1,9 @@
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
-import { resolvePocketPercentageForUpsert } from "../shared/budgets-helpers.ts";
+import {
+  calculatePocketRolloverBreakdownCents,
+  resolvePocketPercentageForUpsert,
+} from "../shared/budgets-helpers.ts";
 
 Deno.test(
   "resolvePocketPercentageForUpsert keeps existing percentage when omitted",
@@ -58,3 +61,69 @@ Deno.test(
     assertEquals(resolved.usedExistingPercentage, false);
   },
 );
+
+Deno.test("calculatePocketRolloverBreakdownCents leaves disabled budgets unchanged", () => {
+  const breakdown = calculatePocketRolloverBreakdownCents({
+    baseBudgetCents: 40000,
+    incomingRolloverCents: 12500,
+    openingRolloverCents: 0,
+    spentCents: 12000,
+    rolloverEnabled: false,
+    rolloverNegative: false,
+    rolloverCapCents: null,
+  });
+
+  assertEquals(breakdown.rolloverFromPreviousCents, 0);
+  assertEquals(breakdown.availableBudgetCents, 40000);
+  assertEquals(breakdown.remainingCents, 28000);
+  assertEquals(breakdown.carryToNextPeriodCents, 0);
+});
+
+Deno.test("calculatePocketRolloverBreakdownCents chains positive rollover", () => {
+  const january = calculatePocketRolloverBreakdownCents({
+    baseBudgetCents: 40000,
+    incomingRolloverCents: 0,
+    openingRolloverCents: 0,
+    spentCents: 35000,
+    rolloverEnabled: true,
+    rolloverNegative: false,
+    rolloverCapCents: null,
+  });
+  const february = calculatePocketRolloverBreakdownCents({
+    baseBudgetCents: 40000,
+    incomingRolloverCents: january.carryToNextPeriodCents,
+    openingRolloverCents: 0,
+    spentCents: 30000,
+    rolloverEnabled: true,
+    rolloverNegative: false,
+    rolloverCapCents: null,
+  });
+
+  assertEquals(january.carryToNextPeriodCents, 5000);
+  assertEquals(february.availableBudgetCents, 45000);
+  assertEquals(february.carryToNextPeriodCents, 15000);
+});
+
+Deno.test("calculatePocketRolloverBreakdownCents carries overspending only when enabled", () => {
+  const ignored = calculatePocketRolloverBreakdownCents({
+    baseBudgetCents: 40000,
+    incomingRolloverCents: 0,
+    openingRolloverCents: 0,
+    spentCents: 45000,
+    rolloverEnabled: true,
+    rolloverNegative: false,
+    rolloverCapCents: null,
+  });
+  const carried = calculatePocketRolloverBreakdownCents({
+    baseBudgetCents: 40000,
+    incomingRolloverCents: 0,
+    openingRolloverCents: 0,
+    spentCents: 45000,
+    rolloverEnabled: true,
+    rolloverNegative: true,
+    rolloverCapCents: null,
+  });
+
+  assertEquals(ignored.carryToNextPeriodCents, 0);
+  assertEquals(carried.carryToNextPeriodCents, -5000);
+});

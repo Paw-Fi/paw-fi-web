@@ -12,26 +12,113 @@ export type ResolvePocketPercentageResult = {
   error: string | null;
 };
 
+export type PocketRolloverBreakdownCents = {
+  baseBudgetCents: number;
+  rolloverFromPreviousCents: number;
+  openingRolloverCents: number;
+  availableBudgetCents: number;
+  spentCents: number;
+  remainingCents: number;
+  carryToNextPeriodCents: number;
+};
+
+function isMissingRolloverColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as Record<string, unknown>;
+  const message =
+    `${record.code ?? ""} ${record.message ?? ""} ${record.details ?? ""} ${record.hint ?? ""}`.toLowerCase();
+  const mentionsRolloverColumn =
+    message.includes("rollover_group_id") ||
+    message.includes("rollover_enabled") ||
+    message.includes("rollover_negative") ||
+    message.includes("rollover_cap_cents") ||
+    message.includes("opening_rollover_cents");
+  return (
+    mentionsRolloverColumn &&
+    (record.code === "42703" || record.code === "PGRST204")
+  );
+}
+
+export function calculatePocketRolloverBreakdownCents({
+  baseBudgetCents,
+  incomingRolloverCents,
+  openingRolloverCents,
+  spentCents,
+  rolloverEnabled,
+  rolloverNegative,
+  rolloverCapCents,
+}: {
+  baseBudgetCents: number;
+  incomingRolloverCents: number;
+  openingRolloverCents: number;
+  spentCents: number;
+  rolloverEnabled: boolean;
+  rolloverNegative: boolean;
+  rolloverCapCents: number | null;
+}): PocketRolloverBreakdownCents {
+  const sanitizedBase = Math.max(0, Math.round(baseBudgetCents || 0));
+  const sanitizedSpent = Math.max(0, Math.round(spentCents || 0));
+  const sanitizedOpening = rolloverEnabled
+    ? Math.round(openingRolloverCents || 0)
+    : 0;
+  const positiveCap =
+    rolloverCapCents == null
+      ? null
+      : Math.max(0, Math.round(rolloverCapCents || 0));
+  const capPositive = (value: number) => {
+    if (positiveCap == null || value <= 0) return value;
+    return Math.min(value, positiveCap);
+  };
+
+  if (!rolloverEnabled) {
+    const remaining = Math.max(sanitizedBase - sanitizedSpent, 0);
+    return {
+      baseBudgetCents: sanitizedBase,
+      rolloverFromPreviousCents: 0,
+      openingRolloverCents: 0,
+      availableBudgetCents: sanitizedBase,
+      spentCents: sanitizedSpent,
+      remainingCents: remaining,
+      carryToNextPeriodCents: 0,
+    };
+  }
+
+  const incoming = capPositive(Math.round(incomingRolloverCents || 0));
+  const available = sanitizedBase + incoming + sanitizedOpening;
+  const remaining = available - sanitizedSpent;
+  const carry = remaining < 0 && !rolloverNegative ? 0 : capPositive(remaining);
+
+  return {
+    baseBudgetCents: sanitizedBase,
+    rolloverFromPreviousCents: incoming,
+    openingRolloverCents: sanitizedOpening,
+    availableBudgetCents: available,
+    spentCents: sanitizedSpent,
+    remainingCents: remaining,
+    carryToNextPeriodCents: carry,
+  };
+}
+
 function parseMonthRangeUtc(periodMonth: string | undefined | null): {
   monthStartStr: string;
   nextMonthStr: string;
 } {
   const now = new Date();
-  const fallback = `${now.getUTCFullYear()}-${
-    (now.getUTCMonth() + 1)
-      .toString()
-      .padStart(2, "0")
-  }`;
+  const fallback = `${now.getUTCFullYear()}-${(now.getUTCMonth() + 1)
+    .toString()
+    .padStart(2, "0")}`;
   const raw = (periodMonth || fallback).slice(0, 7);
   const parts = raw.split("-");
   const year = Number(parts[0] || "0");
   const month = Number(parts[1] || "1");
-  const safeYear = Number.isInteger(year) && year >= 1970 && year <= 9999
-    ? year
-    : now.getUTCFullYear();
-  const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12
-    ? month
-    : now.getUTCMonth() + 1;
+  const safeYear =
+    Number.isInteger(year) && year >= 1970 && year <= 9999
+      ? year
+      : now.getUTCFullYear();
+  const safeMonth =
+    Number.isInteger(month) && month >= 1 && month <= 12
+      ? month
+      : now.getUTCMonth() + 1;
 
   const start = new Date(Date.UTC(safeYear, safeMonth - 1, 1));
   const next = new Date(Date.UTC(safeYear, safeMonth, 1));
@@ -128,8 +215,8 @@ export async function createOrUpdateBudget(
     return query;
   };
 
-  const { data: existing, error: existingErr } = await buildExistingQuery()
-    .maybeSingle();
+  const { data: existing, error: existingErr } =
+    await buildExistingQuery().maybeSingle();
   if (existingErr) {
     return { data: null, error: existingErr } as const;
   }
@@ -154,8 +241,8 @@ export async function createOrUpdateBudget(
   }
 
   // Concurrent insert won the race. Re-read and update target row.
-  const { data: winner, error: winnerErr } = await buildExistingQuery()
-    .maybeSingle();
+  const { data: winner, error: winnerErr } =
+    await buildExistingQuery().maybeSingle();
   if (winnerErr || !winner?.id) {
     return { data: null, error: winnerErr ?? insertRes.error } as const;
   }
@@ -193,6 +280,40 @@ export async function upsertEnvelope(
     typeof options.icon === "string" && options.icon.trim()
       ? options.icon.trim()
       : undefined;
+  const normalizedName = name.trim().toLowerCase();
+  const normalizedCurrency = currency.trim().toUpperCase() || "USD";
+  let rolloverPayload: Record<string, unknown> = {};
+
+  let lineageQuery = supabase
+    .from("budget_envelopes")
+    .select(
+      "name,rollover_group_id,rollover_enabled,rollover_negative,rollover_cap_cents",
+    )
+    .eq("user_id", userId)
+    .ilike("currency", normalizedCurrency)
+    .order("updated_at", { ascending: false })
+    .limit(50);
+  lineageQuery =
+    householdId == null
+      ? lineageQuery.is("household_id", null)
+      : lineageQuery.eq("household_id", householdId);
+  const { data: lineageCandidates, error: lineageError } = await lineageQuery;
+  if (!lineageError || isMissingRolloverColumnError(lineageError)) {
+    const lineage = (lineageCandidates ?? []).find(
+      (row) =>
+        typeof row.name === "string" &&
+        row.name.trim().toLowerCase() === normalizedName,
+    );
+    if (lineage?.rollover_group_id) {
+      rolloverPayload = {
+        rollover_group_id: lineage.rollover_group_id,
+        rollover_enabled: lineage.rollover_enabled === true,
+        rollover_negative: lineage.rollover_negative === true,
+        rollover_cap_cents: lineage.rollover_cap_cents ?? null,
+        opening_rollover_cents: 0,
+      };
+    }
+  }
 
   const payload: any = {
     budget_id: budgetId,
@@ -204,6 +325,7 @@ export async function upsertEnvelope(
     updated_at: new Date().toISOString(),
     ...(color ? { color } : {}),
     ...(icon ? { icon } : {}),
+    ...rolloverPayload,
     // Only include budget_amount_cents if we have a valid value
     ...(budgetAmountCents !== undefined
       ? { budget_amount_cents: budgetAmountCents }
@@ -290,7 +412,9 @@ export async function getBudgetStatusDirect(
 
   const { data: envelopes, error: envErr } = await supabase
     .from("budget_envelopes")
-    .select("id, name, budget_percentage, budget_amount_cents, currency")
+    .select(
+      "id, name, budget_percentage, budget_amount_cents, currency, rollover_group_id, rollover_enabled, rollover_negative, rollover_cap_cents, opening_rollover_cents",
+    )
     .eq("budget_id", budget.id);
   if (envErr) return { error: envErr };
 
@@ -298,20 +422,20 @@ export async function getBudgetStatusDirect(
 
   const { data: allocs, error: allocErr } = envIds.length
     ? await supabase
-      .from("envelope_allocations")
-      .select("envelope_id, amount_cents, period_month")
-      .in("envelope_id", envIds)
-      .gte("period_month", monthStartStr)
-      .lt("period_month", nextMonthStr)
+        .from("envelope_allocations")
+        .select("envelope_id, amount_cents, period_month")
+        .in("envelope_id", envIds)
+        .gte("period_month", monthStartStr)
+        .lt("period_month", nextMonthStr)
     : { data: [], error: null };
   if (allocErr) return { error: allocErr };
 
   // Fetch category links for envelopes to calculate spend per pocket
   const { data: links, error: linksErr } = envIds.length
     ? await supabase
-      .from("envelope_category_links")
-      .select("envelope_id, category")
-      .in("envelope_id", envIds)
+        .from("envelope_category_links")
+        .select("envelope_id, category")
+        .in("envelope_id", envIds)
     : { data: [], error: null };
   if (linksErr) return { error: linksErr };
   const categoryToEnvelope: Record<string, string[]> = {};
@@ -373,43 +497,105 @@ export async function getBudgetStatusDirect(
     allocMap[envId] = Number((a as any).amount_cents) || 0;
   }
 
-  const envelopeStatus = (envelopes || []).map((e: any) => {
-    // Read precedence: allocation(period_month) → budget_amount_cents → derived from percentage
-    const alloc = allocMap[e.id] != null
-      ? allocMap[e.id]
-      : e.budget_amount_cents != null
-      ? Number(e.budget_amount_cents)
-      : Math.round(
-        ((e.budget_percentage || 0) / 100) *
-          (budget.total_budget_cents || 0),
-      );
+  const rolloverScope = householdId
+    ? isPortfolio
+      ? "portfolio"
+      : "household"
+    : "personal";
+  const envelopeStatus: any[] = [];
+  for (const e of envelopes || []) {
+    // Read precedence: allocation(period_month) -> budget_amount_cents -> derived from percentage
+    const alloc =
+      allocMap[e.id] != null
+        ? allocMap[e.id]
+        : e.budget_amount_cents != null
+          ? Number(e.budget_amount_cents)
+          : Math.round(
+              ((e.budget_percentage || 0) / 100) *
+                (budget.total_budget_cents || 0),
+            );
     const spent = spentMap[e.id] != null ? spentMap[e.id] : 0;
-    return {
+    let incomingRolloverCents = 0;
+
+    if (e.rollover_enabled === true) {
+      const { data: rolloverData, error: rolloverErr } = await supabase.rpc(
+        "calculate_pocket_rollover_carry_v1",
+        {
+          p_user_id: userId,
+          p_scope: rolloverScope,
+          p_household_id: householdId,
+          p_currency: currency,
+          p_envelope_name: e.name ?? "",
+          p_rollover_group_id: e.rollover_group_id ?? null,
+          p_period_month: monthStartStr,
+        },
+      );
+
+      if (!rolloverErr) {
+        incomingRolloverCents = Number(rolloverData) || 0;
+      } else {
+        console.error("[budgets] Failed to calculate pocket rollover", {
+          envelopeId: e.id,
+          rolloverGroupId: e.rollover_group_id ?? null,
+          periodMonth: monthStartStr,
+          error: rolloverErr,
+        });
+        return { error: rolloverErr };
+      }
+    }
+
+    const rollover = calculatePocketRolloverBreakdownCents({
+      baseBudgetCents: alloc,
+      incomingRolloverCents,
+      openingRolloverCents: Number(e.opening_rollover_cents) || 0,
+      spentCents: spent,
+      rolloverEnabled: e.rollover_enabled === true,
+      rolloverNegative: e.rollover_negative === true,
+      rolloverCapCents:
+        e.rollover_cap_cents == null ? null : Number(e.rollover_cap_cents),
+    });
+    envelopeStatus.push({
       id: e.id,
       name: e.name,
+      rollover_group_id: e.rollover_group_id ?? null,
       allocated_cents: alloc,
+      base_budget_cents: alloc,
+      rollover_from_previous_cents: rollover.rolloverFromPreviousCents,
+      opening_rollover_cents: rollover.openingRolloverCents,
+      available_budget_cents: rollover.availableBudgetCents,
       spent_cents: spent,
-      remaining_cents: Math.max(alloc - spent, 0),
-    };
-  });
+      remaining_cents: rollover.remainingCents,
+      rollover_enabled: e.rollover_enabled === true,
+      rollover_negative: e.rollover_negative === true,
+      rollover_cap_cents:
+        e.rollover_cap_cents == null ? null : Number(e.rollover_cap_cents),
+    });
+  }
 
   const totalAllocated = envelopeStatus.reduce(
     (s: number, e: any) => s + (e.allocated_cents || 0),
     0,
   );
   const totalSpentAll = totalSpent;
+  const totalAvailableBudget = envelopeStatus.reduce(
+    (s: number, e: any) => s + (e.available_budget_cents || 0),
+    0,
+  );
+  const hasRolloverEnabled = envelopeStatus.some(
+    (e: any) => e.rollover_enabled === true,
+  );
+  const displayBudgetCents = hasRolloverEnabled
+    ? totalAvailableBudget || budget.total_budget_cents || 0
+    : budget.total_budget_cents || 0;
 
   return {
     budget,
     envelopes: envelopeStatus,
     totals: {
-      budget_cents: budget.total_budget_cents || 0,
+      budget_cents: displayBudgetCents,
       allocated_cents: totalAllocated,
       spent_cents: totalSpentAll,
-      remaining_cents: Math.max(
-        (budget.total_budget_cents || 0) - totalSpentAll,
-        0,
-      ),
+      remaining_cents: Math.max(displayBudgetCents - totalSpentAll, 0),
     },
     chart: buildBudgetGauge(
       budget.total_budget_cents || 0,
