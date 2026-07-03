@@ -22,13 +22,64 @@ export type PocketRolloverBreakdownCents = {
   carryToNextPeriodCents: number;
 };
 
+export type PocketRolloverLedgerMonthInput = {
+  periodMonth: string;
+  baseBudgetCents: number;
+  spentCents: number;
+  rolloverEnabled: boolean;
+  rolloverNegative: boolean;
+  rolloverCapCents: number | null;
+  openingRolloverCents: number;
+};
+
+export type PocketRolloverLedgerContribution = {
+  sourceType:
+    | "opening"
+    | "month_surplus"
+    | "month_deficit"
+    | "cap_adjustment"
+    | "negative_dropped"
+    | "reset";
+  sourcePeriodMonth: string | null;
+  label: string;
+  amountCents: number;
+  remainingCentsAfterAdjustment: number;
+  isCarried: boolean;
+  reason: string | null;
+};
+
+export type PocketRolloverLedgerMonth = {
+  periodMonth: string;
+  baseBudgetCents: number;
+  incomingRolloverCents: number;
+  openingRolloverCents: number;
+  availableBudgetCents: number;
+  spentCents: number;
+  remainingCents: number;
+  carryToNextCents: number;
+  rolloverEnabled: boolean;
+  rolloverNegative: boolean;
+  rolloverCapCents: number | null;
+  capAppliedCents: number;
+  negativeDroppedCents: number;
+};
+
+export type PocketRolloverLedgerResult = {
+  totalIncomingRolloverCents: number;
+  contributions: PocketRolloverLedgerContribution[];
+  monthlyHistory: PocketRolloverLedgerMonth[];
+  warnings: string[];
+};
+
+type MutableRolloverComponent = PocketRolloverLedgerContribution;
+
 function isMissingRolloverSchemaError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const record = error as Record<string, unknown>;
-  const message =
-    `${record.code ?? ""} ${record.message ?? ""} ${record.details ?? ""} ${record.hint ?? ""}`.toLowerCase();
-  const mentionsRolloverColumn =
-    message.includes("rollover_group_id") ||
+  const message = `${record.code ?? ""} ${record.message ?? ""} ${
+    record.details ?? ""
+  } ${record.hint ?? ""}`.toLowerCase();
+  const mentionsRolloverColumn = message.includes("rollover_group_id") ||
     message.includes("rollover_enabled") ||
     message.includes("rollover_negative") ||
     message.includes("rollover_cap_cents") ||
@@ -79,10 +130,9 @@ export function calculatePocketRolloverBreakdownCents({
   const sanitizedOpening = rolloverEnabled
     ? Math.round(openingRolloverCents || 0)
     : 0;
-  const positiveCap =
-    rolloverCapCents == null
-      ? null
-      : Math.max(0, Math.round(rolloverCapCents || 0));
+  const positiveCap = rolloverCapCents == null
+    ? null
+    : Math.max(0, Math.round(rolloverCapCents || 0));
   const capPositive = (value: number) => {
     if (positiveCap == null || value <= 0) return value;
     return Math.min(value, positiveCap);
@@ -117,26 +167,353 @@ export function calculatePocketRolloverBreakdownCents({
   };
 }
 
+function sumRolloverComponents(
+  components: Array<Pick<MutableRolloverComponent, "amountCents">>,
+): number {
+  return components.reduce((sum, component) => sum + component.amountCents, 0);
+}
+
+function normalizeLedgerCents(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.round(parsed);
+}
+
+function normalizeLedgerPeriod(value: string): string {
+  return value.slice(0, 10);
+}
+
+function buildLedgerLabel(
+  sourceType: string,
+  periodMonth: string | null,
+): string {
+  if (sourceType === "opening") return "Opening balance";
+  if (!periodMonth) return sourceType;
+  const date = new Date(`${periodMonth.slice(0, 7)}-01T00:00:00.000Z`);
+  const month = date.toLocaleString("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  });
+  if (sourceType === "month_deficit") return `${month} overspend`;
+  if (sourceType === "cap_adjustment") return `${month} cap adjustment`;
+  if (sourceType === "negative_dropped") {
+    return `${month} overspend not carried`;
+  }
+  if (sourceType === "reset") return `${month} rollover reset`;
+  return `${month} leftover`;
+}
+
+function addLedgerContribution(
+  components: MutableRolloverComponent[],
+  sourceType: PocketRolloverLedgerContribution["sourceType"],
+  sourcePeriodMonth: string | null,
+  amountCents: number,
+  isCarried: boolean,
+  reason: string | null = null,
+): PocketRolloverLedgerContribution {
+  const contribution = {
+    sourceType,
+    sourcePeriodMonth,
+    label: buildLedgerLabel(sourceType, sourcePeriodMonth),
+    amountCents,
+    remainingCentsAfterAdjustment: sumRolloverComponents(components) +
+      amountCents,
+    isCarried,
+    reason,
+  } satisfies PocketRolloverLedgerContribution;
+  if (isCarried && amountCents !== 0) {
+    components.push(contribution);
+  }
+  return contribution;
+}
+
+function depletePositiveComponentsFifo(
+  components: MutableRolloverComponent[],
+  amountCents: number,
+): number {
+  let remainingSpend = Math.max(0, amountCents);
+  for (const component of components) {
+    if (remainingSpend <= 0) break;
+    if (component.amountCents <= 0) continue;
+    const consumed = Math.min(component.amountCents, remainingSpend);
+    component.amountCents -= consumed;
+    remainingSpend -= consumed;
+  }
+  return remainingSpend;
+}
+
+function offsetNegativeComponentsFifo(
+  components: MutableRolloverComponent[],
+  amountCents: number,
+): number {
+  let remainingSurplus = Math.max(0, amountCents);
+  for (const component of components) {
+    if (remainingSurplus <= 0) break;
+    if (component.amountCents >= 0) continue;
+    const offset = Math.min(-component.amountCents, remainingSurplus);
+    component.amountCents += offset;
+    remainingSurplus -= offset;
+  }
+  return remainingSurplus;
+}
+
+function trimPositiveComponentsNewestFirst(
+  components: MutableRolloverComponent[],
+  targetCents: number,
+): number {
+  let excess = sumRolloverComponents(components) - targetCents;
+  let trimmed = 0;
+  for (let index = components.length - 1; index >= 0 && excess > 0; index--) {
+    const component = components[index];
+    if (component.amountCents <= 0) continue;
+    const reduction = Math.min(component.amountCents, excess);
+    component.amountCents -= reduction;
+    excess -= reduction;
+    trimmed += reduction;
+  }
+  return trimmed;
+}
+
+function compactCarriedComponents(
+  components: MutableRolloverComponent[],
+): MutableRolloverComponent[] {
+  return components
+    .filter((component) => component.amountCents !== 0)
+    .map((component) => ({
+      ...component,
+      remainingCentsAfterAdjustment: 0,
+    }));
+}
+
+export function calculatePocketRolloverContributionLedger({
+  months,
+  selectedPeriodMonth,
+}: {
+  months: PocketRolloverLedgerMonthInput[];
+  selectedPeriodMonth: string;
+}): PocketRolloverLedgerResult {
+  const selected = normalizeLedgerPeriod(selectedPeriodMonth);
+  const sortedMonths = [...months]
+    .map((month) => ({
+      ...month,
+      periodMonth: normalizeLedgerPeriod(month.periodMonth),
+    }))
+    .filter((month) => month.periodMonth <= selected)
+    .sort((left, right) => left.periodMonth.localeCompare(right.periodMonth));
+  const warnings: string[] = [];
+  let components: MutableRolloverComponent[] = [];
+  let selectedStartComponents: MutableRolloverComponent[] | null = null;
+  const adjustments: PocketRolloverLedgerContribution[] = [];
+  const monthlyHistory: PocketRolloverLedgerMonth[] = [];
+  let previousMonth: string | null = null;
+
+  for (const month of sortedMonths) {
+    const periodMonth = month.periodMonth;
+    if (previousMonth != null) {
+      const expected = new Date(
+        `${previousMonth.slice(0, 7)}-01T00:00:00.000Z`,
+      );
+      expected.setUTCMonth(expected.getUTCMonth() + 1);
+      const expectedMonth = expected.toISOString().slice(0, 10);
+      if (expectedMonth !== periodMonth) {
+        warnings.push(
+          `Missing rollover month between ${previousMonth} and ${periodMonth}`,
+        );
+      }
+    }
+    previousMonth = periodMonth;
+
+    const baseBudgetCents = Math.max(
+      0,
+      normalizeLedgerCents(month.baseBudgetCents),
+    );
+    const spentCents = Math.max(0, normalizeLedgerCents(month.spentCents));
+    const openingRolloverCents = month.rolloverEnabled
+      ? normalizeLedgerCents(month.openingRolloverCents)
+      : 0;
+    const capCents = month.rolloverCapCents == null
+      ? null
+      : Math.max(0, normalizeLedgerCents(month.rolloverCapCents));
+    const incomingRolloverCents = month.rolloverEnabled
+      ? sumRolloverComponents(components)
+      : 0;
+
+    if (!month.rolloverEnabled) {
+      if (components.length > 0) {
+        const reset = addLedgerContribution(
+          [],
+          "reset",
+          periodMonth,
+          -sumRolloverComponents(components),
+          false,
+          "Rollover was disabled for this month.",
+        );
+        adjustments.push(reset);
+      }
+      components = [];
+      monthlyHistory.push({
+        periodMonth,
+        baseBudgetCents,
+        incomingRolloverCents: 0,
+        openingRolloverCents: 0,
+        availableBudgetCents: baseBudgetCents,
+        spentCents,
+        remainingCents: baseBudgetCents - spentCents,
+        carryToNextCents: 0,
+        rolloverEnabled: false,
+        rolloverNegative: month.rolloverNegative,
+        rolloverCapCents: capCents,
+        capAppliedCents: 0,
+        negativeDroppedCents: 0,
+      });
+      continue;
+    }
+
+    if (openingRolloverCents !== 0) {
+      addLedgerContribution(
+        components,
+        "opening",
+        periodMonth,
+        openingRolloverCents,
+        true,
+        "Manual opening rollover for this envelope month.",
+      );
+    }
+
+    if (periodMonth === selected) {
+      selectedStartComponents = compactCarriedComponents(components);
+    }
+
+    let remainingSpend = depletePositiveComponentsFifo(components, spentCents);
+    const baseSpent = Math.min(baseBudgetCents, remainingSpend);
+    remainingSpend -= baseSpent;
+    let baseRemaining = baseBudgetCents - baseSpent;
+    baseRemaining = offsetNegativeComponentsFifo(components, baseRemaining);
+
+    if (remainingSpend > 0) {
+      addLedgerContribution(
+        components,
+        "month_deficit",
+        periodMonth,
+        -remainingSpend,
+        true,
+        "Overspending exceeded available rollover and base budget.",
+      );
+    } else if (baseRemaining > 0) {
+      addLedgerContribution(
+        components,
+        "month_surplus",
+        periodMonth,
+        baseRemaining,
+        true,
+        "Unused base budget carried forward.",
+      );
+    }
+
+    let negativeDroppedCents = 0;
+    if (!month.rolloverNegative && sumRolloverComponents(components) < 0) {
+      negativeDroppedCents = -sumRolloverComponents(components);
+      components = [];
+      adjustments.push(
+        addLedgerContribution(
+          [],
+          "negative_dropped",
+          periodMonth,
+          -negativeDroppedCents,
+          false,
+          "Overspending is not carried into the next month.",
+        ),
+      );
+    }
+
+    let capAppliedCents = 0;
+    if (capCents != null && sumRolloverComponents(components) > capCents) {
+      capAppliedCents = trimPositiveComponentsNewestFirst(components, capCents);
+      adjustments.push(
+        addLedgerContribution(
+          [],
+          "cap_adjustment",
+          periodMonth,
+          -capAppliedCents,
+          false,
+          "Rollover cap trimmed the newest positive carryover first.",
+        ),
+      );
+    }
+
+    const carryToNextCents = sumRolloverComponents(components);
+    monthlyHistory.push({
+      periodMonth,
+      baseBudgetCents,
+      incomingRolloverCents,
+      openingRolloverCents,
+      availableBudgetCents: baseBudgetCents + incomingRolloverCents +
+        openingRolloverCents,
+      spentCents,
+      remainingCents: baseBudgetCents +
+        incomingRolloverCents +
+        openingRolloverCents -
+        spentCents,
+      carryToNextCents,
+      rolloverEnabled: true,
+      rolloverNegative: month.rolloverNegative,
+      rolloverCapCents: capCents,
+      capAppliedCents,
+      negativeDroppedCents,
+    });
+
+    components = compactCarriedComponents(components);
+  }
+
+  const selectedHistoryIndex = monthlyHistory.findIndex(
+    (month) => month.periodMonth === selected,
+  );
+  const selectedIncoming = selectedHistoryIndex >= 0
+    ? monthlyHistory[selectedHistoryIndex].incomingRolloverCents
+    : sumRolloverComponents(components);
+  const visibleComponents = selectedStartComponents ?? components;
+
+  return {
+    totalIncomingRolloverCents: selectedIncoming,
+    contributions: [...visibleComponents, ...adjustments]
+      .filter(
+        (component) =>
+          component.isCarried ||
+          component.sourceType === "cap_adjustment" ||
+          component.sourceType === "negative_dropped" ||
+          component.sourceType === "reset",
+      )
+      .map((component) => ({
+        ...component,
+        remainingCentsAfterAdjustment: component.isCarried
+          ? sumRolloverComponents(visibleComponents)
+          : component.remainingCentsAfterAdjustment,
+      })),
+    monthlyHistory,
+    warnings,
+  };
+}
+
 function parseMonthRangeUtc(periodMonth: string | undefined | null): {
   monthStartStr: string;
   nextMonthStr: string;
 } {
   const now = new Date();
-  const fallback = `${now.getUTCFullYear()}-${(now.getUTCMonth() + 1)
-    .toString()
-    .padStart(2, "0")}`;
+  const fallback = `${now.getUTCFullYear()}-${
+    (now.getUTCMonth() + 1)
+      .toString()
+      .padStart(2, "0")
+  }`;
   const raw = (periodMonth || fallback).slice(0, 7);
   const parts = raw.split("-");
   const year = Number(parts[0] || "0");
   const month = Number(parts[1] || "1");
-  const safeYear =
-    Number.isInteger(year) && year >= 1970 && year <= 9999
-      ? year
-      : now.getUTCFullYear();
-  const safeMonth =
-    Number.isInteger(month) && month >= 1 && month <= 12
-      ? month
-      : now.getUTCMonth() + 1;
+  const safeYear = Number.isInteger(year) && year >= 1970 && year <= 9999
+    ? year
+    : now.getUTCFullYear();
+  const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12
+    ? month
+    : now.getUTCMonth() + 1;
 
   const start = new Date(Date.UTC(safeYear, safeMonth - 1, 1));
   const next = new Date(Date.UTC(safeYear, safeMonth, 1));
@@ -233,8 +610,8 @@ export async function createOrUpdateBudget(
     return query;
   };
 
-  const { data: existing, error: existingErr } =
-    await buildExistingQuery().maybeSingle();
+  const { data: existing, error: existingErr } = await buildExistingQuery()
+    .maybeSingle();
   if (existingErr) {
     return { data: null, error: existingErr } as const;
   }
@@ -259,8 +636,8 @@ export async function createOrUpdateBudget(
   }
 
   // Concurrent insert won the race. Re-read and update target row.
-  const { data: winner, error: winnerErr } =
-    await buildExistingQuery().maybeSingle();
+  const { data: winner, error: winnerErr } = await buildExistingQuery()
+    .maybeSingle();
   if (winnerErr || !winner?.id) {
     return { data: null, error: winnerErr ?? insertRes.error } as const;
   }
@@ -290,14 +667,12 @@ export async function upsertEnvelope(
     totalBudgetCents != null && Number.isFinite(totalBudgetCents)
       ? Math.round((percentage / 100) * totalBudgetCents)
       : undefined;
-  const color =
-    typeof options.color === "string" && options.color.trim()
-      ? options.color.trim()
-      : undefined;
-  const icon =
-    typeof options.icon === "string" && options.icon.trim()
-      ? options.icon.trim()
-      : undefined;
+  const color = typeof options.color === "string" && options.color.trim()
+    ? options.color.trim()
+    : undefined;
+  const icon = typeof options.icon === "string" && options.icon.trim()
+    ? options.icon.trim()
+    : undefined;
   const normalizedName = name.trim().toLowerCase();
   const normalizedCurrency = currency.trim().toUpperCase() || "USD";
   let rolloverPayload: Record<string, unknown> = {};
@@ -325,10 +700,9 @@ export async function upsertEnvelope(
       .eq("user_id", userId)
       .ilike("currency", normalizedCurrency)
       .order("updated_at", { ascending: false });
-    lineageQuery =
-      householdId == null
-        ? lineageQuery.is("household_id", null)
-        : lineageQuery.eq("household_id", householdId);
+    lineageQuery = householdId == null
+      ? lineageQuery.is("household_id", null)
+      : lineageQuery.eq("household_id", householdId);
     const { data: lineageCandidates, error: lineageError } = await lineageQuery;
     if (!lineageError) {
       const lineage = (lineageCandidates ?? []).find(
@@ -449,20 +823,20 @@ export async function getBudgetStatusDirect(
 
   const { data: allocs, error: allocErr } = envIds.length
     ? await supabase
-        .from("envelope_allocations")
-        .select("envelope_id, amount_cents, period_month")
-        .in("envelope_id", envIds)
-        .gte("period_month", monthStartStr)
-        .lt("period_month", nextMonthStr)
+      .from("envelope_allocations")
+      .select("envelope_id, amount_cents, period_month")
+      .in("envelope_id", envIds)
+      .gte("period_month", monthStartStr)
+      .lt("period_month", nextMonthStr)
     : { data: [], error: null };
   if (allocErr) return { error: allocErr };
 
   // Fetch category links for envelopes to calculate spend per pocket
   const { data: links, error: linksErr } = envIds.length
     ? await supabase
-        .from("envelope_category_links")
-        .select("envelope_id, category")
-        .in("envelope_id", envIds)
+      .from("envelope_category_links")
+      .select("envelope_id, category")
+      .in("envelope_id", envIds)
     : { data: [], error: null };
   if (linksErr) return { error: linksErr };
   const categoryToEnvelope: Record<string, string[]> = {};
@@ -525,22 +899,19 @@ export async function getBudgetStatusDirect(
   }
 
   const rolloverScope = householdId
-    ? isPortfolio
-      ? "portfolio"
-      : "household"
+    ? isPortfolio ? "portfolio" : "household"
     : "personal";
   const envelopeStatus: any[] = [];
   for (const e of envelopes || []) {
     // Read precedence: allocation(period_month) -> budget_amount_cents -> derived from percentage
-    const alloc =
-      allocMap[e.id] != null
-        ? allocMap[e.id]
-        : e.budget_amount_cents != null
-          ? Number(e.budget_amount_cents)
-          : Math.round(
-              ((e.budget_percentage || 0) / 100) *
-                (budget.total_budget_cents || 0),
-            );
+    const alloc = allocMap[e.id] != null
+      ? allocMap[e.id]
+      : e.budget_amount_cents != null
+      ? Number(e.budget_amount_cents)
+      : Math.round(
+        ((e.budget_percentage || 0) / 100) *
+          (budget.total_budget_cents || 0),
+      );
     const spent = spentMap[e.id] != null ? spentMap[e.id] : 0;
     let incomingRolloverCents = 0;
 
@@ -578,8 +949,9 @@ export async function getBudgetStatusDirect(
       spentCents: spent,
       rolloverEnabled: e.rollover_enabled === true,
       rolloverNegative: e.rollover_negative === true,
-      rolloverCapCents:
-        e.rollover_cap_cents == null ? null : Number(e.rollover_cap_cents),
+      rolloverCapCents: e.rollover_cap_cents == null
+        ? null
+        : Number(e.rollover_cap_cents),
     });
     envelopeStatus.push({
       id: e.id,
@@ -594,8 +966,9 @@ export async function getBudgetStatusDirect(
       remaining_cents: rollover.remainingCents,
       rollover_enabled: e.rollover_enabled === true,
       rollover_negative: e.rollover_negative === true,
-      rollover_cap_cents:
-        e.rollover_cap_cents == null ? null : Number(e.rollover_cap_cents),
+      rollover_cap_cents: e.rollover_cap_cents == null
+        ? null
+        : Number(e.rollover_cap_cents),
     });
   }
 

@@ -4,9 +4,30 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   calculatePocketRolloverBreakdownCents,
+  calculatePocketRolloverContributionLedger,
   resolvePocketPercentageForUpsert,
   upsertEnvelope,
 } from "../shared/budgets-helpers.ts";
+
+function rolloverMonth(
+  periodMonth: string,
+  overrides: Partial<
+    Parameters<
+      typeof calculatePocketRolloverContributionLedger
+    >[0]["months"][number]
+  > = {},
+) {
+  return {
+    periodMonth,
+    baseBudgetCents: 10000,
+    spentCents: 0,
+    rolloverEnabled: true,
+    rolloverNegative: false,
+    rolloverCapCents: null,
+    openingRolloverCents: 0,
+    ...overrides,
+  };
+}
 
 Deno.test(
   "resolvePocketPercentageForUpsert keeps existing percentage when omitted",
@@ -166,7 +187,9 @@ Deno.test(
     const lineageRows = [
       ...Array.from({ length: 50 }, (_, index) => ({
         name: `Other ${index}`,
-        rollover_group_id: `00000000-0000-0000-0000-${index.toString().padStart(12, "0")}`,
+        rollover_group_id: `00000000-0000-0000-0000-${
+          index.toString().padStart(12, "0")
+        }`,
         rollover_enabled: false,
         rollover_negative: false,
         rollover_cap_cents: null,
@@ -203,10 +226,9 @@ Deno.test(
       },
       then(resolve: (value: unknown) => void) {
         resolve({
-          data:
-            this._limit == null
-              ? lineageRows
-              : lineageRows.slice(0, this._limit),
+          data: this._limit == null
+            ? lineageRows
+            : lineageRows.slice(0, this._limit),
           error: null,
         });
       },
@@ -267,3 +289,166 @@ Deno.test(
     assertEquals(payload["rollover_cap_cents"], 50000);
   },
 );
+
+Deno.test("rollover contribution ledger explains a one-month carry", () => {
+  const breakdown = calculatePocketRolloverContributionLedger({
+    selectedPeriodMonth: "2026-02-01",
+    months: [
+      rolloverMonth("2026-01-01", { spentCents: 7600 }),
+      rolloverMonth("2026-02-01", { spentCents: 0 }),
+    ],
+  });
+
+  assertEquals(breakdown.totalIncomingRolloverCents, 2400);
+  assertEquals(breakdown.contributions[0].sourceType, "month_surplus");
+  assertEquals(breakdown.contributions[0].sourcePeriodMonth, "2026-01-01");
+  assertEquals(breakdown.contributions[0].amountCents, 2400);
+  assertEquals(breakdown.monthlyHistory[1].incomingRolloverCents, 2400);
+});
+
+Deno.test(
+  "rollover contribution ledger keeps long lifetime carry provenance",
+  () => {
+    const months = Array.from({ length: 61 }, (_, index) => {
+      const date = new Date(Date.UTC(2021, index, 1));
+      return rolloverMonth(date.toISOString().slice(0, 10), {
+        baseBudgetCents: 100,
+        spentCents: 0,
+      });
+    });
+
+    const breakdown = calculatePocketRolloverContributionLedger({
+      selectedPeriodMonth: months[60].periodMonth,
+      months,
+    });
+
+    assertEquals(breakdown.totalIncomingRolloverCents, 6000);
+    assertEquals(breakdown.contributions[0].sourcePeriodMonth, "2021-01-01");
+    assertEquals(breakdown.contributions[0].amountCents, 100);
+    assertEquals(breakdown.contributions.length, 60);
+  },
+);
+
+Deno.test(
+  "rollover contribution ledger includes opening rollover and monthly leftovers",
+  () => {
+    const breakdown = calculatePocketRolloverContributionLedger({
+      selectedPeriodMonth: "2026-04-01",
+      months: [
+        rolloverMonth("2026-01-01", {
+          baseBudgetCents: 0,
+          openingRolloverCents: 10000,
+        }),
+        rolloverMonth("2026-02-01", { baseBudgetCents: 2400 }),
+        rolloverMonth("2026-03-01", { baseBudgetCents: 30000 }),
+        rolloverMonth("2026-04-01", { baseBudgetCents: 10000 }),
+      ],
+    });
+
+    assertEquals(breakdown.totalIncomingRolloverCents, 42400);
+    assertEquals(
+      breakdown.contributions.map((contribution) => contribution.amountCents),
+      [10000, 2400, 30000],
+    );
+    assertEquals(breakdown.contributions[0].sourceType, "opening");
+  },
+);
+
+Deno.test("rollover contribution ledger records cap trimming", () => {
+  const breakdown = calculatePocketRolloverContributionLedger({
+    selectedPeriodMonth: "2026-02-01",
+    months: [
+      rolloverMonth("2026-01-01", {
+        baseBudgetCents: 10000,
+        rolloverCapCents: 5000,
+      }),
+      rolloverMonth("2026-02-01"),
+    ],
+  });
+
+  assertEquals(breakdown.totalIncomingRolloverCents, 5000);
+  assertEquals(breakdown.monthlyHistory[0].capAppliedCents, 5000);
+  assertEquals(
+    breakdown.contributions.some(
+      (row) => row.sourceType === "cap_adjustment" && row.amountCents === -5000,
+    ),
+    true,
+  );
+});
+
+Deno.test(
+  "rollover contribution ledger floors disabled negative rollover",
+  () => {
+    const breakdown = calculatePocketRolloverContributionLedger({
+      selectedPeriodMonth: "2026-02-01",
+      months: [
+        rolloverMonth("2026-01-01", { spentCents: 12500 }),
+        rolloverMonth("2026-02-01"),
+      ],
+    });
+
+    assertEquals(breakdown.totalIncomingRolloverCents, 0);
+    assertEquals(breakdown.monthlyHistory[0].negativeDroppedCents, 2500);
+    assertEquals(
+      breakdown.contributions.some(
+        (row) =>
+          row.sourceType === "negative_dropped" && row.amountCents === -2500,
+      ),
+      true,
+    );
+  },
+);
+
+Deno.test("rollover contribution ledger carries deficits when enabled", () => {
+  const breakdown = calculatePocketRolloverContributionLedger({
+    selectedPeriodMonth: "2026-02-01",
+    months: [
+      rolloverMonth("2026-01-01", {
+        spentCents: 12500,
+        rolloverNegative: true,
+      }),
+      rolloverMonth("2026-02-01", { rolloverNegative: true }),
+    ],
+  });
+
+  assertEquals(breakdown.totalIncomingRolloverCents, -2500);
+  assertEquals(breakdown.contributions[0].sourceType, "month_deficit");
+  assertEquals(breakdown.contributions[0].amountCents, -2500);
+});
+
+Deno.test(
+  "rollover contribution ledger resets when rollover is disabled",
+  () => {
+    const breakdown = calculatePocketRolloverContributionLedger({
+      selectedPeriodMonth: "2026-03-01",
+      months: [
+        rolloverMonth("2026-01-01", { baseBudgetCents: 10000 }),
+        rolloverMonth("2026-02-01", { rolloverEnabled: false }),
+        rolloverMonth("2026-03-01"),
+      ],
+    });
+
+    assertEquals(breakdown.totalIncomingRolloverCents, 0);
+    assertEquals(
+      breakdown.contributions.some((row) => row.sourceType === "reset"),
+      true,
+    );
+  },
+);
+
+Deno.test("rollover contribution ledger warns about missing months", () => {
+  const breakdown = calculatePocketRolloverContributionLedger({
+    selectedPeriodMonth: "2026-04-01",
+    months: [
+      rolloverMonth("2026-01-01"),
+      rolloverMonth("2026-03-01"),
+      rolloverMonth("2026-04-01"),
+    ],
+  });
+
+  assertEquals(breakdown.warnings.length, 1);
+  assertEquals(
+    breakdown.warnings[0],
+    "Missing rollover month between 2026-01-01 and 2026-03-01",
+  );
+});
