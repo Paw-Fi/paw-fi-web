@@ -99,6 +99,19 @@ comment on function public.resolve_budget_envelope_rollover_lineage_v1(
 ) is
   'Resolves the latest same-scope, same-currency, normalized-name pocket rollover lineage for helper-created monthly pockets.';
 
+revoke execute on function public.resolve_budget_envelope_rollover_lineage_v1(
+  uuid,
+  uuid,
+  text,
+  text
+) from PUBLIC, anon;
+grant execute on function public.resolve_budget_envelope_rollover_lineage_v1(
+  uuid,
+  uuid,
+  text,
+  text
+) to authenticated, service_role;
+
 drop function if exists public.calculate_pocket_rollover_carry_v1(
   uuid,
   text,
