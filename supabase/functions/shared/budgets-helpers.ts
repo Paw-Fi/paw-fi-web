@@ -22,7 +22,7 @@ export type PocketRolloverBreakdownCents = {
   carryToNextPeriodCents: number;
 };
 
-function isMissingRolloverColumnError(error: unknown): boolean {
+function isMissingRolloverSchemaError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const record = error as Record<string, unknown>;
   const message =
@@ -33,10 +33,28 @@ function isMissingRolloverColumnError(error: unknown): boolean {
     message.includes("rollover_negative") ||
     message.includes("rollover_cap_cents") ||
     message.includes("opening_rollover_cents");
-  return (
-    mentionsRolloverColumn &&
-    (record.code === "42703" || record.code === "PGRST204")
+  const mentionsResolver = message.includes(
+    "resolve_budget_envelope_rollover_lineage_v1",
   );
+  return (
+    (mentionsRolloverColumn &&
+      (record.code === "42703" || record.code === "PGRST204")) ||
+    (mentionsResolver &&
+      (record.code === "42883" || record.code === "PGRST202"))
+  );
+}
+
+function buildRolloverLineagePayload(
+  lineage: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  if (!lineage?.rollover_group_id) return {};
+  return {
+    rollover_group_id: lineage.rollover_group_id,
+    rollover_enabled: lineage.rollover_enabled === true,
+    rollover_negative: lineage.rollover_negative === true,
+    rollover_cap_cents: lineage.rollover_cap_cents ?? null,
+    opening_rollover_cents: 0,
+  };
 }
 
 export function calculatePocketRolloverBreakdownCents({
@@ -71,7 +89,7 @@ export function calculatePocketRolloverBreakdownCents({
   };
 
   if (!rolloverEnabled) {
-    const remaining = Math.max(sanitizedBase - sanitizedSpent, 0);
+    const remaining = sanitizedBase - sanitizedSpent;
     return {
       baseBudgetCents: sanitizedBase,
       rolloverFromPreviousCents: 0,
@@ -284,34 +302,43 @@ export async function upsertEnvelope(
   const normalizedCurrency = currency.trim().toUpperCase() || "USD";
   let rolloverPayload: Record<string, unknown> = {};
 
-  let lineageQuery = supabase
-    .from("budget_envelopes")
-    .select(
-      "name,rollover_group_id,rollover_enabled,rollover_negative,rollover_cap_cents",
-    )
-    .eq("user_id", userId)
-    .ilike("currency", normalizedCurrency)
-    .order("updated_at", { ascending: false })
-    .limit(50);
-  lineageQuery =
-    householdId == null
-      ? lineageQuery.is("household_id", null)
-      : lineageQuery.eq("household_id", householdId);
-  const { data: lineageCandidates, error: lineageError } = await lineageQuery;
-  if (!lineageError || isMissingRolloverColumnError(lineageError)) {
-    const lineage = (lineageCandidates ?? []).find(
-      (row) =>
-        typeof row.name === "string" &&
-        row.name.trim().toLowerCase() === normalizedName,
+  const { data: resolvedLineage, error: resolvedLineageError } = await supabase
+    .rpc("resolve_budget_envelope_rollover_lineage_v1", {
+      p_user_id: userId,
+      p_household_id: householdId,
+      p_currency: normalizedCurrency,
+      p_envelope_name: name,
+    })
+    .maybeSingle();
+  if (!resolvedLineageError) {
+    rolloverPayload = buildRolloverLineagePayload(
+      resolvedLineage as Record<string, unknown> | null,
     );
-    if (lineage?.rollover_group_id) {
-      rolloverPayload = {
-        rollover_group_id: lineage.rollover_group_id,
-        rollover_enabled: lineage.rollover_enabled === true,
-        rollover_negative: lineage.rollover_negative === true,
-        rollover_cap_cents: lineage.rollover_cap_cents ?? null,
-        opening_rollover_cents: 0,
-      };
+  } else if (!isMissingRolloverSchemaError(resolvedLineageError)) {
+    return { data: null, error: resolvedLineageError } as const;
+  } else if (isMissingRolloverSchemaError(resolvedLineageError)) {
+    let lineageQuery = supabase
+      .from("budget_envelopes")
+      .select(
+        "name,rollover_group_id,rollover_enabled,rollover_negative,rollover_cap_cents",
+      )
+      .eq("user_id", userId)
+      .ilike("currency", normalizedCurrency)
+      .order("updated_at", { ascending: false });
+    lineageQuery =
+      householdId == null
+        ? lineageQuery.is("household_id", null)
+        : lineageQuery.eq("household_id", householdId);
+    const { data: lineageCandidates, error: lineageError } = await lineageQuery;
+    if (!lineageError) {
+      const lineage = (lineageCandidates ?? []).find(
+        (row) =>
+          typeof row.name === "string" &&
+          row.name.trim().toLowerCase() === normalizedName,
+      );
+      rolloverPayload = buildRolloverLineagePayload(lineage);
+    } else if (!isMissingRolloverSchemaError(lineageError)) {
+      return { data: null, error: lineageError } as const;
     }
   }
 

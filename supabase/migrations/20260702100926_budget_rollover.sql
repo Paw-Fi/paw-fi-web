@@ -55,6 +55,50 @@ create index if not exists idx_budget_envelopes_rollover_name_fallback
   on public.budget_envelopes(user_id, household_id, currency, lower(name))
   where rollover_enabled = true;
 
+create or replace function public.resolve_budget_envelope_rollover_lineage_v1(
+  p_user_id uuid,
+  p_household_id uuid,
+  p_currency text,
+  p_envelope_name text
+) returns table(
+  rollover_group_id uuid,
+  rollover_enabled boolean,
+  rollover_negative boolean,
+  rollover_cap_cents bigint
+)
+language sql
+security invoker
+set search_path = public
+as $$
+  select
+    e.rollover_group_id,
+    coalesce(e.rollover_enabled, false) as rollover_enabled,
+    coalesce(e.rollover_negative, false) as rollover_negative,
+    e.rollover_cap_cents
+  from public.budget_envelopes e
+  left join public.budgets b on b.id = e.budget_id
+  where e.user_id = p_user_id
+    and e.household_id is not distinct from p_household_id
+    and upper(coalesce(nullif(trim(e.currency), ''), 'USD')) =
+      upper(coalesce(nullif(trim(p_currency), ''), 'USD'))
+    and lower(trim(coalesce(e.name, ''))) =
+      lower(trim(coalesce(p_envelope_name, '')))
+    and e.rollover_group_id is not null
+  order by
+    b.period_month desc nulls last,
+    e.updated_at desc nulls last,
+    e.created_at desc nulls last
+  limit 1;
+$$;
+
+comment on function public.resolve_budget_envelope_rollover_lineage_v1(
+  uuid,
+  uuid,
+  text,
+  text
+) is
+  'Resolves the latest same-scope, same-currency, normalized-name pocket rollover lineage for helper-created monthly pockets.';
+
 drop function if exists public.calculate_pocket_rollover_carry_v1(
   uuid,
   text,
