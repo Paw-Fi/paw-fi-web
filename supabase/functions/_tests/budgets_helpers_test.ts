@@ -181,6 +181,25 @@ Deno.test(
 );
 
 Deno.test(
+  "calculatePocketRolloverBreakdownCents caps outgoing carry, not current availability",
+  () => {
+    const breakdown = calculatePocketRolloverBreakdownCents({
+      baseBudgetCents: 40000,
+      incomingRolloverCents: 70000,
+      openingRolloverCents: 25000,
+      spentCents: 10000,
+      rolloverEnabled: true,
+      rolloverNegative: false,
+      rolloverCapCents: 50000,
+    });
+
+    assertEquals(breakdown.rolloverFromPreviousCents, 70000);
+    assertEquals(breakdown.availableBudgetCents, 135000);
+    assertEquals(breakdown.carryToNextPeriodCents, 50000);
+  },
+);
+
+Deno.test(
   "upsertEnvelope fallback preserves lineage beyond the old 50 row window",
   async () => {
     let capturedPayload: Record<string, unknown> | null = null;
@@ -188,7 +207,9 @@ Deno.test(
       ...Array.from({ length: 50 }, (_, index) => ({
         name: `Other ${index}`,
         rollover_group_id: `00000000-0000-0000-0000-${
-          index.toString().padStart(12, "0")
+          index
+            .toString()
+            .padStart(12, "0")
         }`,
         rollover_enabled: false,
         rollover_negative: false,
