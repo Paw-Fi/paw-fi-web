@@ -490,7 +490,7 @@ function buildWelcomeEmailText(
       "",
       "Yifan here, one of the co-founders at Moneko.",
       "",
-      "I saw you just started your free trial, so I wanted to reach out early.",
+      "I noticed you just joined Moneko, so I wanted to personally welcome you.",
       "",
       "If anything feels confusing, missing, or harder than it should be, just hit reply and let me know. I read every message myself.",
       "",

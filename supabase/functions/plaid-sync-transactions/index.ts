@@ -648,7 +648,7 @@ async function syncConnection(params: {
       error,
     );
     summary.status = "error";
-    summary.error = error instanceof Error ? error.message : String(error);
+    summary.error = formatUnknownErrorMessage(error);
     const errorCode = error instanceof PlaidError ? error.code || null : null;
 
     // Handle specific Plaid error codes
@@ -734,7 +734,9 @@ async function syncConnection(params: {
       status: "failed",
       error_message: summary.error,
       error_code: errorCode,
-      error_payload: error instanceof PlaidError ? error.details : null,
+      error_payload: error instanceof PlaidError
+        ? error.details
+        : serializeUnknownError(error),
       finished_at: new Date().toISOString(),
     });
     await reportEdgeFunctionError({
@@ -754,6 +756,47 @@ async function syncConnection(params: {
   }
 
   return summary;
+}
+
+function formatUnknownErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object") {
+    const map = error as Record<string, unknown>;
+    const message = map.message ?? map.error ?? map.details;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+    try {
+      return JSON.stringify(map);
+    } catch {
+      return "[unserializable error]";
+    }
+  }
+
+  return String(error);
+}
+
+function serializeUnknownError(error: unknown): Record<string, unknown> | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+    };
+  }
+  const map = error as Record<string, unknown>;
+  return {
+    code: map.code ?? null,
+    message: map.message ?? null,
+    details: map.details ?? null,
+    hint: map.hint ?? null,
+    error: map.error ?? null,
+  };
 }
 
 function shouldLogPlaidTransactionSample(): boolean {

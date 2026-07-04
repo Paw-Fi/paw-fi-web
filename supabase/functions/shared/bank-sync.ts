@@ -406,6 +406,8 @@ interface SupabaseErrorLike {
   code?: string | null;
 }
 
+const PROVIDER_TRANSACTION_LOOKUP_BATCH_SIZE = 75;
+
 function normalizeCurrency(
   record: ExpenseUpsertRecord,
   accountCurrency: string | null,
@@ -1162,18 +1164,33 @@ export async function persistPlaidTransactions(
 
   const lookupIds = Array.from(new Set([...postedIds, ...pendingIds]));
 
-  const { data: existingRows, error: selectError } = await params.supabase
-    .from("expenses")
-    .select(
-      "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, is_recurring, recurrence_rule",
-    )
-    .eq("user_id", params.userId)
-    .eq("provider", PLAID_PROVIDER)
-    .eq("bank_account_id", params.bankAccountId)
-    .in("provider_transaction_id", lookupIds);
+  const existingRows: ExistingExpenseProjectionRow[] = [];
+  for (
+    let index = 0;
+    index < lookupIds.length;
+    index += PROVIDER_TRANSACTION_LOOKUP_BATCH_SIZE
+  ) {
+    const batch = lookupIds.slice(
+      index,
+      index + PROVIDER_TRANSACTION_LOOKUP_BATCH_SIZE,
+    );
+    if (!batch.length) continue;
 
-  if (selectError) {
-    throw selectError;
+    const { data, error: selectError } = await params.supabase
+      .from("expenses")
+      .select(
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, is_recurring, recurrence_rule",
+      )
+      .eq("user_id", params.userId)
+      .eq("provider", PLAID_PROVIDER)
+      .eq("bank_account_id", params.bankAccountId)
+      .in("provider_transaction_id", batch);
+
+    if (selectError) {
+      throw selectError;
+    }
+
+    existingRows.push(...((data || []) as ExistingExpenseProjectionRow[]));
   }
 
   const providerPendingTransactionIds = new Map<string, string>();
@@ -1189,7 +1206,7 @@ export async function persistPlaidTransactions(
   const recurringByProviderTransactionId = inferPlaidRecurringRules({
     records: normalizedRecords,
     transactions: params.transactions,
-    existingRows: (existingRows || []) as ExistingExpenseProjectionRow[],
+    existingRows,
   });
   const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
     userId: params.userId,
@@ -1208,7 +1225,7 @@ export async function persistPlaidTransactions(
   const mutationPlan = buildBankExpenseMutationPlan({
     records: postedOccurrenceRecords,
     transactions: params.transactions,
-    existingRows: (existingRows || []) as ExistingExpenseProjectionRow[],
+    existingRows,
     providerPendingTransactionIds,
     cursorGeneration: params.cursorGeneration ?? 0,
   });
