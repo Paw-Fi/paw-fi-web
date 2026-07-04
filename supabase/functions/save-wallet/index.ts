@@ -10,6 +10,7 @@ interface RequestBody {
   name: string;
   icon?: string;
   color?: string;
+  logoUrl?: string | null;
   currency?: string;
   goalAmountCents?: number | null;
   openingBalanceCents?: number;
@@ -27,6 +28,46 @@ function jsonResponse(payload: unknown, status = 200) {
 function normalizeCurrency(value?: string | null): string | null {
   const normalized = (value ?? "").trim().toUpperCase();
   return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
+interface OptionalLogoUrlResult {
+  ok: boolean;
+  value: string | null;
+  error?: string;
+}
+
+function parseOptionalLogoUrl(
+  value: unknown,
+  supabaseUrl: string,
+  userId: string,
+): OptionalLogoUrlResult {
+  if (value == null) return { ok: true, value: null };
+  if (typeof value !== "string") {
+    return { ok: false, value: null, error: "Invalid logo URL" };
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return { ok: true, value: null };
+  try {
+    const url = new URL(trimmed);
+    const projectUrl = new URL(supabaseUrl);
+    const isLocalProject = ["localhost", "127.0.0.1"].includes(
+      projectUrl.hostname,
+    );
+    const hasAllowedProtocol = url.protocol === "https:" ||
+      (isLocalProject && url.protocol === "http:");
+    const expectedPrefix =
+      `/storage/v1/object/public/public/${userId}/wallet-logos/`;
+    if (
+      !hasAllowedProtocol ||
+      url.host !== projectUrl.host ||
+      !decodeURIComponent(url.pathname).startsWith(expectedPrefix)
+    ) {
+      return { ok: false, value: null, error: "Invalid logo URL" };
+    }
+    return { ok: true, value: trimmed };
+  } catch (_) {
+    return { ok: false, value: null, error: "Invalid logo URL" };
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -133,8 +174,8 @@ Deno.serve(async (req: Request) => {
 
     let currency = requestedCurrency;
     if (!currency) {
-      const { data: resolvedCurrency, error: currencyError } =
-        await supabase.rpc("resolve_account_currency", {
+      const { data: resolvedCurrency, error: currencyError } = await supabase
+        .rpc("resolve_account_currency", {
           p_user_id: userId,
           p_household_id: householdId,
         });
@@ -236,10 +277,25 @@ Deno.serve(async (req: Request) => {
     const openingBalanceCents = Number.isFinite(body.openingBalanceCents)
       ? Math.round(Number(body.openingBalanceCents))
       : 0;
-    const goalAmountCents =
-      body.goalAmountCents == null
-        ? null
-        : Math.round(Number(body.goalAmountCents));
+    const logoUrlResult = parseOptionalLogoUrl(
+      body.logoUrl,
+      SUPABASE_URL,
+      userId,
+    );
+    if (!logoUrlResult.ok) {
+      return jsonResponse(
+        {
+          success: false,
+          error: logoUrlResult.error ?? "Invalid logo URL",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+    const logoUrl = logoUrlResult.value;
+    const goalAmountCents = body.goalAmountCents == null
+      ? null
+      : Math.round(Number(body.goalAmountCents));
 
     const shouldSetDefault = body.isDefault === true;
 
@@ -350,6 +406,7 @@ Deno.serve(async (req: Request) => {
         name,
         icon: String(body.icon ?? "wallet"),
         color: String(body.color ?? "#6B7280"),
+        logo_url: logoUrl,
         currency,
         opening_balance_cents: openingBalanceCents,
         goal_amount_cents: goalAmountCents,

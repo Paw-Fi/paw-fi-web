@@ -18,6 +18,7 @@ interface WalletRow {
   name: string;
   icon: string;
   color: string;
+  logo_url: string | null;
   opening_balance_cents: number;
   goal_amount_cents: number | null;
   currency: string;
@@ -206,8 +207,9 @@ function firstOnOrAfterDayStep(
     (rangeStart.getTime() - anchor.getTime()) / 86400000,
   );
   const offsetDays = diffDays % stepDays;
-  const deltaDays =
-    offsetDays === 0 ? diffDays : diffDays + (stepDays - offsetDays);
+  const deltaDays = offsetDays === 0
+    ? diffDays
+    : diffDays + (stepDays - offsetDays);
   return new Date(anchor.getTime() + deltaDays * 86400000);
 }
 
@@ -352,8 +354,8 @@ function parseRecurringRule(value: unknown): RecurringRule | null {
   const excludedDatesRaw = Array.isArray(raw.excludedDates)
     ? raw.excludedDates
     : Array.isArray(raw.excluded_dates)
-      ? raw.excluded_dates
-      : [];
+    ? raw.excluded_dates
+    : [];
 
   return {
     frequency,
@@ -443,8 +445,9 @@ function projectRecurringTransactions(
           const monthsBetween =
             (startDay.getFullYear() - anchor.getFullYear()) * 12 +
             (startDay.getMonth() - anchor.getMonth());
-          let n =
-            monthsBetween <= 0 ? 0 : Math.floor(monthsBetween / stepMonths);
+          let n = monthsBetween <= 0
+            ? 0
+            : Math.floor(monthsBetween / stepMonths);
           let current = addMonthsFromAnchor(anchor, n * stepMonths);
           while (normalizeDate(current).getTime() < startDay.getTime()) {
             n += 1;
@@ -631,10 +634,9 @@ Deno.serve(async (req: Request) => {
       .map(parseDateOnly)
       .filter((value): value is Date => value != null)
       .map(normalizeMonthStart);
-    const requestedMonths =
-      requestedMonthStarts.length > 0
-        ? requestedMonthStarts
-        : [normalizeMonthStart(currentMonthStart)];
+    const requestedMonths = requestedMonthStarts.length > 0
+      ? requestedMonthStarts
+      : [normalizeMonthStart(currentMonthStart)];
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
@@ -671,7 +673,7 @@ Deno.serve(async (req: Request) => {
     let accountsQuery = supabase
       .from("accounts")
       .select(
-        "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived",
+        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived",
       )
       .eq("is_archived", false)
       .order("is_default", { ascending: false })
@@ -731,9 +733,11 @@ Deno.serve(async (req: Request) => {
         .in("to_account_id", accountIds);
 
       const transferOut = new Map<string, number>();
-      for (const row of (transferOutRows ?? []) as Array<
-        Record<string, unknown>
-      >) {
+      for (
+        const row of (transferOutRows ?? []) as Array<
+          Record<string, unknown>
+        >
+      ) {
         const key = `${row.from_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -746,9 +750,11 @@ Deno.serve(async (req: Request) => {
       }
 
       const transferIn = new Map<string, number>();
-      for (const row of (transferInRows ?? []) as Array<
-        Record<string, unknown>
-      >) {
+      for (
+        const row of (transferInRows ?? []) as Array<
+          Record<string, unknown>
+        >
+      ) {
         const key = `${row.to_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -764,8 +770,7 @@ Deno.serve(async (req: Request) => {
         const opening = toNumber(wallet.opening_balance_cents);
         (
           wallet as WalletRow & { current_balance_cents?: number }
-        ).current_balance_cents =
-          opening +
+        ).current_balance_cents = opening +
           (incomeIn.get(wallet.id) ?? 0) -
           (expenseOut.get(wallet.id) ?? 0) +
           (transferIn.get(wallet.id) ?? 0) -
