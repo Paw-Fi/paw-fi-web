@@ -3,6 +3,11 @@ import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
 import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
+import {
+  hasPlusEntitlement,
+  jsonSubscriptionRequired,
+  loadLatestSubscriptionForUser,
+} from "../shared/plus-entitlement.ts";
 
 interface RequestBody {
   householdId?: string;
@@ -169,6 +174,60 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(
         { success: false, error: "Forbidden scope", code: "UNAUTHORIZED" },
         403,
+      );
+    }
+
+    try {
+      const subscription = await loadLatestSubscriptionForUser(
+        supabase,
+        userId,
+      );
+      if (!hasPlusEntitlement(subscription)) {
+        let countQuery = supabase
+          .from("accounts")
+          .select("id", { count: "exact", head: true })
+          .eq("is_archived", false);
+
+        countQuery = householdId
+          ? countQuery.eq("household_id", householdId)
+          : countQuery.eq("user_id", userId).is("household_id", null);
+
+        const { count, error: countError } = await countQuery;
+        if (countError) {
+          return jsonResponse(
+            {
+              success: false,
+              error: "Failed to verify wallet limit",
+              code: "SERVER_ERROR",
+            },
+            500,
+          );
+        }
+
+        if ((count ?? 0) >= 2) {
+          const subscriptionRequired = jsonSubscriptionRequired(
+            "more than 2 wallets",
+          );
+          return jsonResponse(
+            {
+              success: false,
+              error: subscriptionRequired.error,
+              code: "WALLET_LIMIT_REACHED",
+              pricingUrl: subscriptionRequired.pricingUrl,
+            },
+            403,
+          );
+        }
+      }
+    } catch (error) {
+      console.error("[save-account] subscription verification failed", error);
+      return jsonResponse(
+        {
+          success: false,
+          error: "Failed to verify subscription",
+          code: "SERVER_ERROR",
+        },
+        500,
       );
     }
 
