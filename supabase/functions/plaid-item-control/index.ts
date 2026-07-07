@@ -12,6 +12,7 @@ import {
   PLAID_PROVIDER,
   requestPlaidTransactionsRefresh,
 } from "../shared/plaid-client.ts";
+import { fetchAndStorePlaidInstitutionLogo } from "../shared/plaid-institution-logo.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
 import {
   findMissingPlaidSelectedAccountIds,
@@ -136,7 +137,7 @@ Deno.serve(async (req) => {
     const { data: connection, error: connectionError } = await supabase
       .from("bank_connections")
       .select(
-        "id, user_id, provider, household_id, status, item_status, item_health_state, relink_state, metadata, access_token_encrypted, plaid_access_token_encrypted, last_successful_sync_at, next_manual_refresh_eligible_at, removed_at",
+        "id, user_id, provider, household_id, status, item_status, item_health_state, relink_state, metadata, country_code, access_token_encrypted, plaid_access_token_encrypted, last_successful_sync_at, next_manual_refresh_eligible_at, removed_at",
       )
       .eq("id", body.connectionId)
       .eq("provider", PLAID_PROVIDER)
@@ -233,7 +234,8 @@ Deno.serve(async (req) => {
               retryable: true,
               debugId,
               scheduledRemovalAt: removalState.scheduled_removal_at ?? null,
-              errorCode: removalState.error_code ?? "PLAID_REMOVE_RETRY_PENDING",
+              errorCode:
+                removalState.error_code ?? "PLAID_REMOVE_RETRY_PENDING",
               message:
                 "Bank disconnect is queued. Plaid removal is usually immediate once accepted; if cleanup is still pending, Moneko retries about every 15 minutes.",
             }),
@@ -360,6 +362,62 @@ Deno.serve(async (req) => {
         connection.metadata && typeof connection.metadata === "object"
           ? (connection.metadata as Record<string, unknown>)
           : {};
+      let institutionLogoUrl =
+        typeof metadata.institution_logo_url === "string"
+          ? metadata.institution_logo_url.trim() || null
+          : null;
+      let institutionPrimaryColor =
+        typeof metadata.institution_primary_color === "string"
+          ? metadata.institution_primary_color.trim() || null
+          : null;
+      const metadataInstitutionId =
+        typeof metadata.institution_id === "string"
+          ? metadata.institution_id.trim() || null
+          : null;
+      const resolvedInstitutionId =
+        body.institutionId?.trim() || metadataInstitutionId;
+      if (
+        (!institutionLogoUrl || !institutionPrimaryColor) &&
+        resolvedInstitutionId
+      ) {
+        try {
+          const storedLogo = await fetchAndStorePlaidInstitutionLogo({
+            supabase,
+            userId: authResult.userId,
+            institutionId: resolvedInstitutionId,
+            countryCode: connection.country_code,
+          });
+          institutionLogoUrl = storedLogo?.publicUrl ?? null;
+          institutionPrimaryColor =
+            storedLogo?.primaryColor ?? institutionPrimaryColor;
+        } catch (logoError) {
+          console.warn(
+            "[plaid-item-control] Failed to fetch/store institution logo",
+            JSON.stringify({
+              connectionId: connection.id,
+              institutionId: resolvedInstitutionId,
+              error:
+                logoError instanceof Error
+                  ? logoError.message
+                  : String(logoError),
+            }),
+          );
+          await reportEdgeFunctionError({
+            functionName: "plaid-item-control",
+            error: logoError,
+            context: {
+              stage: "institution_logo_fetch_store",
+              debug_id: debugId,
+              action: body.action ?? null,
+              connection_id: connection.id,
+              institution_id: resolvedInstitutionId,
+              country_code: connection.country_code ?? null,
+              link_request_id: body.linkRequestId || null,
+              link_session_id: body.linkSessionId || null,
+            },
+          });
+        }
+      }
       let effectiveSelectedAccountIds = selectedAccountIds;
       if (
         !requiresAccountSelection &&
@@ -527,9 +585,15 @@ Deno.serve(async (req) => {
         plaid_last_link_session_id: body.linkSessionId || null,
         plaid_selected_account_ids: effectiveSelectedAccountIds,
         plaid_disabled_account_ids: accountIdsToDisable,
-        institution_id: body.institutionId || metadata.institution_id || null,
+        institution_id: resolvedInstitutionId,
         institution_name:
           body.institutionName || metadata.institution_name || null,
+        ...(institutionLogoUrl
+          ? { institution_logo_url: institutionLogoUrl }
+          : {}),
+        ...(institutionPrimaryColor
+          ? { institution_primary_color: institutionPrimaryColor }
+          : {}),
       };
       const { error: updateError } = await supabase
         .from("bank_connections")
@@ -594,6 +658,8 @@ Deno.serve(async (req) => {
           targetHouseholdId: connectionHouseholdId,
           accounts: upsertAccountsResult.records.map((record) => ({
             ...record,
+            institutionLogoUrl,
+            institutionPrimaryColor,
             linkedWallet: linkedWallets.get(record.id) || null,
           })),
           initialSyncQueued: enqueueResult.enqueued || enqueueResult.duplicate,

@@ -226,6 +226,19 @@ export interface PlaidAccount {
   };
 }
 
+export interface PlaidInstitution {
+  institution_id: string;
+  name: string;
+  logo?: string | null;
+  primary_color?: string | null;
+  url?: string | null;
+}
+
+interface InstitutionGetByIdResponse {
+  institution: PlaidInstitution;
+  request_id?: string;
+}
+
 interface AccountsGetResponse {
   accounts: PlaidAccount[];
   request_id?: string;
@@ -238,6 +251,21 @@ export async function getPlaidAccounts(
     access_token: accessToken,
   });
   return response.accounts || [];
+}
+
+export async function getPlaidInstitutionById(params: {
+  institutionId: string;
+  countryCodes: string[];
+}): Promise<PlaidInstitution> {
+  const response = await plaidRequest<InstitutionGetByIdResponse>(
+    "/institutions/get_by_id",
+    {
+      institution_id: params.institutionId,
+      country_codes: params.countryCodes,
+      options: { include_optional_metadata: true },
+    },
+  );
+  return response.institution;
 }
 
 export interface PlaidPersonalFinanceCategory {

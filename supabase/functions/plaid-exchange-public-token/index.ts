@@ -13,6 +13,7 @@ import {
   PLAID_PROVIDER,
   removePlaidItem,
 } from "../shared/plaid-client.ts";
+import { fetchAndStorePlaidInstitutionLogo } from "../shared/plaid-institution-logo.ts";
 import {
   buildPlaidDuplicateGroupKey,
   normalizePlaidSelectedAccountIds,
@@ -410,8 +411,43 @@ Deno.serve(async (req) => {
     let isNewConnection = false;
     let responseAccounts: Array<Record<string, unknown>> = [];
     let initialSyncQueued = false;
+    let institutionLogoUrl: string | null = null;
+    let institutionPrimaryColor: string | null = null;
 
     try {
+      try {
+        const storedLogo = await fetchAndStorePlaidInstitutionLogo({
+          supabase,
+          userId: authResult.userId,
+          institutionId: body.institutionId,
+          countryCode: body.countryCode,
+        });
+        institutionLogoUrl = storedLogo?.publicUrl ?? null;
+        institutionPrimaryColor = storedLogo?.primaryColor ?? null;
+      } catch (logoError) {
+        console.warn(
+          "[plaid-exchange] Failed to fetch/store institution logo",
+          JSON.stringify({
+            institutionId: body.institutionId || null,
+            error:
+              logoError instanceof Error
+                ? logoError.message
+                : String(logoError),
+          }),
+        );
+        await reportEdgeFunctionError({
+          functionName: "plaid-exchange-public-token",
+          error: logoError,
+          context: {
+            stage: "institution_logo_fetch_store",
+            institution_id: body.institutionId || null,
+            country_code: body.countryCode || null,
+            link_request_id: body.linkRequestId || null,
+            link_session_id: body.linkSessionId || null,
+          },
+        });
+      }
+
       const upsertResult = await upsertBankConnection({
         supabase,
         userId: authResult.userId,
@@ -428,6 +464,12 @@ Deno.serve(async (req) => {
           institution_id: body.institutionId || null,
           institution_name: body.institutionName || null,
           institution_logo: body.institutionLogo || null,
+          ...(institutionLogoUrl
+            ? { institution_logo_url: institutionLogoUrl }
+            : {}),
+          ...(institutionPrimaryColor
+            ? { institution_primary_color: institutionPrimaryColor }
+            : {}),
           plaid_duplicate_group_key: duplicateGroupKey,
           plaid_last_link_request_id: body.linkRequestId || null,
           plaid_last_link_session_id: body.linkSessionId || null,
@@ -538,6 +580,8 @@ Deno.serve(async (req) => {
 
       responseAccounts = upsertAccountsResult.records.map((record) => ({
         ...record,
+        institutionLogoUrl,
+        institutionPrimaryColor,
         linkedWallet: linkedWallets.get(record.id) || null,
       }));
 

@@ -901,7 +901,7 @@ function buildInviteeSubscriptionBindingEmail(data: {
   const content = `
     <h1 class="title">Your ${escapeHtml(data.planName)} access is ready</h1>
     <p class="subtitle">Hi ${escapeHtml(data.inviteeName)}, your subscription access is now bound to ${escapeHtml(data.grantOwnerName)}'s ${escapeHtml(data.planName)} plan through ${escapeHtml(data.householdName)}.</p>
-    <p>Enjoy your Plus benefits in the Moneko app, including premium planning tools, richer insights, and the features included with this shared plan.</p>
+    <p>Enjoy your Plus benefits in the Moneko app, including WhatsApp and Telegram integrations, email receipt capture, Apple Pay and Android notification capture, and bank sync for US and Canada banks.</p>
     ${mobileDownloadCtasHtml()}
     <p>If you have any questions, just reply to this email and our support team will help.</p>
     <p>The Moneko Team</p>

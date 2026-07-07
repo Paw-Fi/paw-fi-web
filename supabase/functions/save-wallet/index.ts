@@ -3,6 +3,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
 import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   hasPlusEntitlement,
   jsonSubscriptionRequired,
@@ -27,6 +28,17 @@ function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function reportSaveWalletServerError(
+  error: unknown,
+  context: Record<string, unknown>,
+) {
+  await reportEdgeFunctionError({
+    functionName: "save-wallet",
+    error,
+    context,
   });
 }
 
@@ -58,10 +70,9 @@ function parseOptionalLogoUrl(
     const isLocalProject = ["localhost", "127.0.0.1"].includes(
       projectUrl.hostname,
     );
-    const hasAllowedProtocol = url.protocol === "https:" ||
-      (isLocalProject && url.protocol === "http:");
-    const expectedPrefix =
-      `/storage/v1/object/public/public/${userId}/wallet-logos/`;
+    const hasAllowedProtocol =
+      url.protocol === "https:" || (isLocalProject && url.protocol === "http:");
+    const expectedPrefix = `/storage/v1/object/public/public/${userId}/wallet-logos/`;
     if (
       !hasAllowedProtocol ||
       url.host !== projectUrl.host ||
@@ -100,8 +111,11 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  let requestBodyForAlert: Partial<RequestBody> = {};
+
   try {
     const body = (await req.json()) as RequestBody;
+    requestBodyForAlert = body;
     const householdId = sanitizeUuid(body.householdId ?? null);
     if (body.householdId && !householdId) {
       return jsonResponse(
@@ -194,6 +208,11 @@ Deno.serve(async (req: Request) => {
 
         const { count, error: countError } = await countQuery;
         if (countError) {
+          await reportSaveWalletServerError(countError, {
+            stage: "wallet_limit_count",
+            household_id: householdId,
+            linked_bank_account_id: body.linkedBankAccountId ?? null,
+          });
           return jsonResponse(
             {
               success: false,
@@ -221,6 +240,11 @@ Deno.serve(async (req: Request) => {
       }
     } catch (error) {
       console.error("[save-account] subscription verification failed", error);
+      await reportSaveWalletServerError(error, {
+        stage: "subscription_verification",
+        household_id: householdId,
+        linked_bank_account_id: body.linkedBankAccountId ?? null,
+      });
       return jsonResponse(
         {
           success: false,
@@ -233,12 +257,17 @@ Deno.serve(async (req: Request) => {
 
     let currency = requestedCurrency;
     if (!currency) {
-      const { data: resolvedCurrency, error: currencyError } = await supabase
-        .rpc("resolve_account_currency", {
+      const { data: resolvedCurrency, error: currencyError } =
+        await supabase.rpc("resolve_account_currency", {
           p_user_id: userId,
           p_household_id: householdId,
         });
       if (currencyError) {
+        await reportSaveWalletServerError(currencyError, {
+          stage: "resolve_account_currency",
+          household_id: householdId,
+          linked_bank_account_id: body.linkedBankAccountId ?? null,
+        });
         return jsonResponse(
           {
             success: false,
@@ -253,6 +282,7 @@ Deno.serve(async (req: Request) => {
 
     const linkedBankAccountId = sanitizeUuid(body.linkedBankAccountId ?? null);
     let linkedBankProvider: string | null = null;
+    let linkedBankInstitutionLogoUrl: string | null = null;
     if (linkedBankAccountId != null) {
       const { data: bankAccount, error: bankAccountError } = await supabase
         .from("bank_accounts")
@@ -261,6 +291,11 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (bankAccountError) {
+        await reportSaveWalletServerError(bankAccountError, {
+          stage: "load_linked_bank_account",
+          household_id: householdId,
+          linked_bank_account_id: linkedBankAccountId,
+        });
         return jsonResponse(
           {
             success: false,
@@ -299,11 +334,18 @@ Deno.serve(async (req: Request) => {
       const { data: bankConnection, error: bankConnectionError } =
         await supabase
           .from("bank_connections")
-          .select("id, user_id, household_id, provider, removed_at, status")
+          .select(
+            "id, user_id, household_id, provider, removed_at, status, metadata",
+          )
           .eq("id", bankAccount.bank_connection_id)
           .maybeSingle();
 
       if (bankConnectionError) {
+        await reportSaveWalletServerError(bankConnectionError, {
+          stage: "load_bank_connection",
+          household_id: householdId,
+          linked_bank_account_id: linkedBankAccountId,
+        });
         return jsonResponse(
           {
             success: false,
@@ -332,15 +374,26 @@ Deno.serve(async (req: Request) => {
         );
       }
       linkedBankProvider = String(bankConnection.provider || "plaid");
+      const metadata = bankConnection.metadata as Record<
+        string,
+        unknown
+      > | null;
+      const metadataLogoResult = parseOptionalLogoUrl(
+        metadata?.institution_logo_url,
+        SUPABASE_URL,
+        userId,
+      );
+      if (metadataLogoResult.ok) {
+        linkedBankInstitutionLogoUrl = metadataLogoResult.value;
+      }
     }
     const openingBalanceCents = Number.isFinite(body.openingBalanceCents)
       ? Math.round(Number(body.openingBalanceCents))
       : 0;
-    const logoUrlResult = parseOptionalLogoUrl(
-      body.logoUrl,
-      SUPABASE_URL,
-      userId,
-    );
+    const logoUrlResult =
+      "logoUrl" in body
+        ? parseOptionalLogoUrl(body.logoUrl, SUPABASE_URL, userId)
+        : { ok: true, value: linkedBankInstitutionLogoUrl };
     if (!logoUrlResult.ok) {
       return jsonResponse(
         {
@@ -352,9 +405,10 @@ Deno.serve(async (req: Request) => {
       );
     }
     const logoUrl = logoUrlResult.value;
-    const goalAmountCents = body.goalAmountCents == null
-      ? null
-      : Math.round(Number(body.goalAmountCents));
+    const goalAmountCents =
+      body.goalAmountCents == null
+        ? null
+        : Math.round(Number(body.goalAmountCents));
 
     const shouldSetDefault = body.isDefault === true;
 
@@ -381,6 +435,11 @@ Deno.serve(async (req: Request) => {
         await existingLinkedQuery.maybeSingle();
 
       if (existingLinkedError) {
+        await reportSaveWalletServerError(existingLinkedError, {
+          stage: "load_existing_linked_wallet",
+          household_id: householdId,
+          linked_bank_account_id: linkedBankAccountId,
+        });
         return jsonResponse(
           {
             success: false,
@@ -427,6 +486,38 @@ Deno.serve(async (req: Request) => {
             }),
           );
         }
+        if (!existingLinkedWallet.logo_url && logoUrl) {
+          const { data: updatedLinkedWallet, error: linkedLogoError } =
+            await supabase
+              .from("accounts")
+              .update({
+                logo_url: logoUrl,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingLinkedWallet.id)
+              .select()
+              .single();
+
+          if (linkedLogoError) {
+            await reportSaveWalletServerError(linkedLogoError, {
+              stage: "update_existing_linked_wallet_logo",
+              household_id: householdId,
+              linked_bank_account_id: linkedBankAccountId,
+              wallet_id: existingLinkedWallet.id,
+            });
+            return jsonResponse(
+              {
+                success: false,
+                error: "Failed to update linked wallet logo",
+                code: "SERVER_ERROR",
+              },
+              500,
+            );
+          }
+
+          return jsonResponse({ success: true, data: updatedLinkedWallet });
+        }
+
         return jsonResponse({ success: true, data: existingLinkedWallet });
       }
     }
@@ -446,6 +537,12 @@ Deno.serve(async (req: Request) => {
 
       const { error: resetError } = await resetQuery;
       if (resetError) {
+        await reportSaveWalletServerError(resetError, {
+          stage: "reset_default_wallet",
+          household_id: householdId,
+          linked_bank_account_id: linkedBankAccountId,
+          currency,
+        });
         return jsonResponse(
           {
             success: false,
@@ -477,6 +574,15 @@ Deno.serve(async (req: Request) => {
 
     if (error || !data) {
       console.error("[save-account]", error);
+      await reportSaveWalletServerError(
+        error ?? "Account insert returned no data",
+        {
+          stage: "create_wallet",
+          household_id: householdId,
+          linked_bank_account_id: linkedBankAccountId,
+          currency,
+        },
+      );
       return jsonResponse(
         {
           success: false,
@@ -535,6 +641,12 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true, data });
   } catch (error) {
     console.error("[save-account]", error);
+    await reportSaveWalletServerError(error, {
+      stage: "unexpected_create_wallet_failure",
+      household_id: requestBodyForAlert.householdId ?? null,
+      linked_bank_account_id: requestBodyForAlert.linkedBankAccountId ?? null,
+      currency: requestBodyForAlert.currency ?? null,
+    });
     return jsonResponse(
       {
         success: false,
