@@ -7,7 +7,7 @@ export const applePayTrackingArticle: HelpArticle = {
   title: "How to Automatically Track Apple Pay Transactions in Moneko",
   description:
     "Learn how to automatically track Apple Pay transactions in Moneko using iOS Shortcuts. Set up Wallet automation, map the amount and merchant, and log purchases automatically.",
-  categoryId: "logging-expenses",
+  categoryId: "automation-planning",
   readTime: 6,
   keywords: [
     "automatically track Apple Pay transactions in Moneko",

@@ -41,4 +41,12 @@ export const helpCategories: HelpCategory[] = [
       "Automate recurring activity and test spending decisions with AI scenario planning.",
     iconName: "sparkles",
   },
+  {
+    id: "security-privacy",
+    title: "Security & Privacy",
+    eyebrow: "Protect your data",
+    description:
+      "Learn how Moneko keeps your financial data safe with encryption, biometrics, and local processing.",
+    iconName: "lock",
+  },
 ];

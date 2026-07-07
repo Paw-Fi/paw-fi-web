@@ -1,4 +1,10 @@
 import type { HelpArticle } from "../types";
+import { androidNotificationCaptureArticle } from "./android-notification-capture";
+import { householdsArticle } from "./households";
+import { multiCurrencyArticle } from "./multi-currency";
+import { monekoPlusArticle } from "./moneko-plus";
+import { appLockArticle } from "./app-lock";
+import { privacySecurityArticle } from "./privacy-security";
 import { aiScenarioPlanningArticle } from "./ai-scenario-planning";
 import { applePayTrackingArticle } from "./apple-pay-tracking";
 import { bankSyncSecurityArticle } from "./bank-sync-security";
@@ -23,6 +29,7 @@ import { whatIsMonekoArticle } from "./what-is-moneko";
 export const helpArticles: HelpArticle[] = [
   whatIsMonekoArticle,
   sharedExpenseTrackerGuideArticle,
+  monekoPlusArticle,
   createFirstSpaceArticle,
   importExportDataArticle,
   iosWidgetsArticle,
@@ -30,15 +37,20 @@ export const helpArticles: HelpArticle[] = [
   splitExpensesArticle,
   whatsappTelegramArticle,
   applePayTrackingArticle,
+  androidNotificationCaptureArticle,
   emailReceiptsArticle,
   quickActionsSiriArticle,
   envelopeBudgetingArticle,
   pocketsArticle,
   categoriesArticle,
   walletsArticle,
+  householdsArticle,
+  multiCurrencyArticle,
   bankSyncSecurityArticle,
   connectBankFeatureAvailabilityArticle,
   negativeWalletBalanceAfterPlaidSyncArticle,
   recurringExpensesIncomeArticle,
+  appLockArticle,
+  privacySecurityArticle,
   aiScenarioPlanningArticle,
 ];

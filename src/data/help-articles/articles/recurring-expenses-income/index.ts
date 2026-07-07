@@ -7,7 +7,7 @@ export const recurringExpensesIncomeArticle: HelpArticle = {
   title: "How to Set Up Recurring Expenses and Income in Moneko",
   description:
     "Learn how to set up recurring expenses and income in Moneko, automate regular transactions, update budgets, use reminders, and edit recurring items anytime.",
-  categoryId: "automation-planning",
+  categoryId: "logging-expenses",
   readTime: 5,
   keywords: [
     "recurring expenses and income in Moneko",

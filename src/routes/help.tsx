@@ -16,6 +16,7 @@ import {
   Sparkles,
   WalletCards,
   ChevronRight,
+  Lock,
 } from "lucide-react";
 import {
   Accordion,
@@ -500,6 +501,8 @@ function getCategoryIcon(iconName: string, className = "h-7 w-7") {
       return <WalletCards className={className} />;
     case "sparkles":
       return <Sparkles className={className} />;
+    case "lock":
+      return <Lock className={className} />;
     default:
       return <Rocket className={className} />;
   }

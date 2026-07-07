@@ -7,7 +7,7 @@ export const emailReceiptsArticle: HelpArticle = {
   title: "How to Track Email Receipts and Online Purchases",
   description:
     "Turn online purchase receipts into clean Moneko expense records automatically by forwarding them to your dedicated Moneko inbound email.",
-  categoryId: "logging-expenses",
+  categoryId: "automation-planning",
   readTime: 4,
   keywords: [
     "email receipts",

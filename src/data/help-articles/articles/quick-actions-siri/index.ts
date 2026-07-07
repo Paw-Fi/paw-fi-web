@@ -7,7 +7,7 @@ export const quickActionsSiriArticle: HelpArticle = {
   title: "How to Use Quick Actions and Siri Shortcuts in Moneko",
   description:
     "Learn how to log expenses faster in Moneko using Press & Hold Quick Action and Siri Shortcuts. Open voice, receipt photo, or quick text logging with fewer steps.",
-  categoryId: "logging-expenses",
+  categoryId: "automation-planning",
   readTime: 3,
   keywords: [
     "Moneko quick actions and Siri Shortcuts",

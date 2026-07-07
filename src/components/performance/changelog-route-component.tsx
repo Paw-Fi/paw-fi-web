@@ -20,20 +20,20 @@ interface InProgressItem {
 
 const inProgressItems: InProgressItem[] = [
   {
-    title: "Multi-Currency Intelligence",
+    title: "Custom Wallet & Pocket Logos",
     description:
-      "Convert and view transactions in multiple currencies at once. Perfect for frequent travelers and global accounts.",
-    icon: Coins,
+      "Personalize your wallets and pockets with custom icons and logos for better visual organization and quick identification.",
+    icon: Layers,
     status: "In Development",
-    color: "from-amber-500/20 to-orange-500/20",
+    color: "from-purple-500/20 to-pink-500/20",
   },
   {
-    title: "North America Bank Sync",
+    title: "Pocket Budget Rollover",
     description:
-      "Secure automatic transaction imports for supported US and Canadian banks via Plaid, without manual file uploads.",
-    icon: Landmark,
-    status: "Rolling Out",
-    color: "from-blue-500/20 to-indigo-500/20",
+      "Automatically roll over unused budget from each pocket to the next period, ensuring no savings go to waste.",
+    icon: Coins,
+    status: "In Development",
+    color: "from-green-500/20 to-emerald-500/20",
   },
 ];
 
@@ -57,6 +57,7 @@ const changelogs: ChangelogEntry[] = [
     items: [
       "Enable premium Plaid bank sync for supported US and Canadian banks",
       "Launch AppLock feature with secure biometric and passcode authentication",
+      "Add multi-currency display support for viewing transactions in multiple currencies simultaneously",
       "Fix wallet transfer display issues and improve Android notification handling",
       "Enhance dark theme styling",
       "Resolve transaction display problems after saving receipts",
@@ -743,7 +744,7 @@ export function ChangelogRouteComponent() {
           </motion.div>
 
           {/* In Progress Section — temporarily hidden */}
-          {false && (
+          {inProgressItems.length>0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
