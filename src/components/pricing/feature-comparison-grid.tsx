@@ -4,16 +4,18 @@ import { planComparisonFeatures, planData } from "@/data/pricing-plans";
 
 interface FeatureComparisonGridProps {
   prefersReducedMotion?: boolean;
+  plusPriceLabel: string;
 }
 
 export function FeatureComparisonGrid({
   prefersReducedMotion,
+  plusPriceLabel,
 }: FeatureComparisonGridProps) {
   void prefersReducedMotion;
-  const plans = [planData.plus];
+  const plans = [{ id: "free", title: "Free" }, planData.plus];
 
   return (
-    <div className="bg-card mt-20 overflow-hidden rounded-xl shadow-sm">
+    <div className="bg-card overflow-hidden rounded-xl shadow-sm">
       <div className="bg-muted/30 border-border/50 rounded-t-xl border-b px-8 py-6">
         <h3 className="text-foreground text-xl font-bold">
           Plan Features at a Glance
@@ -41,6 +43,24 @@ export function FeatureComparisonGrid({
             </tr>
           </thead>
           <tbody>
+            <tr className="hover:bg-muted/30 border-border/20 border-b transition-colors duration-150">
+              <td className="px-8 py-4">
+                <div className="text-foreground text-sm font-medium">
+                  Plan price
+                </div>
+                <div className="text-muted-foreground mt-1 text-xs">
+                  Based on the selected billing period
+                </div>
+              </td>
+              <td className="px-6 py-4 text-center">
+                <span className="text-primary text-xs font-semibold">Free</span>
+              </td>
+              <td className="px-6 py-4 text-center">
+                <span className="text-primary text-xs font-semibold">
+                  {plusPriceLabel}
+                </span>
+              </td>
+            </tr>
             {planComparisonFeatures.map((feature) => (
               <tr
                 key={feature.category}

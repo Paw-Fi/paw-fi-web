@@ -43,78 +43,122 @@ export interface PlanComparisonFeature {
 
 export const plusChecklistFeatures = [
   "AI expense capture",
-  "Telegram and WhatsApp capture",
+  "Health report details",
+  "AI scenarios",
+  "WhatsApp + Telegram",
   "Email receipt import",
-  "Shared budgets",
-  "Bank sync for supported US and Canadian banks, secured by Plaid",
+  "Unlimited Space Creation",
+  "Unlimited Wallets",
+  "Bank Sync powered by Plaid (US & Canada banks)",
   "Multiple currencies",
   "Currency converter",
   "Live exchange rates",
+  "App Lock",
   "Priority support",
 ];
 
 export const planComparisonFeatures: PlanComparisonFeature[] = [
   {
-    category: "AI Expense Capture",
-    description: "Log expenses with AI-assisted capture workflows",
+    category: "AI expense capture",
+    description: "Log expenses with Moneko's AI-assisted capture workflow",
     values: {
+      free: { included: true },
       plus: { included: true },
     },
   },
   {
-    category: "Messaging App Capture",
-    description: "Capture spending from Telegram and WhatsApp workflows",
+    category: "Health report details",
+    description: "See deeper financial health report insights",
     values: {
+      free: { included: false },
       plus: { included: true },
     },
   },
   {
-    category: "Email Receipt Import",
+    category: "AI scenarios",
+    description: "Run what-if planning with AI-assisted scenarios",
+    values: {
+      free: { included: false },
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Space Creation",
+    description: "Create personal or shared budgeting spaces",
+    values: {
+      free: { included: null, label: "2" },
+      plus: { included: null, label: "Unlimited" },
+    },
+  },
+  {
+    category: "Wallets",
+    description: "Create wallets to organize balances and transaction sources",
+    values: {
+      free: { included: null, label: "2" },
+      plus: { included: null, label: "Unlimited" },
+    },
+  },
+  {
+    category: "WhatsApp + Telegram",
+    description: "Capture spending from messaging app workflows",
+    values: {
+      free: { included: false },
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Email receipt import",
     description: "Forward receipts and import expenses automatically",
     values: {
+      free: { included: false },
       plus: { included: true },
     },
   },
   {
-    category: "Shared Budgets",
-    description: "Plan budgets across personal and shared finances",
+    category: "Bank Sync powered by Plaid (US & Canada banks)",
+    description: "Connect supported US and Canadian bank accounts securely",
     values: {
+      free: { included: false },
       plus: { included: true },
     },
   },
   {
-    category: "Bank Sync",
-    description:
-      "Connect supported US and Canadian bank accounts securely through Plaid",
-    values: {
-      plus: { included: true },
-    },
-  },
-  {
-    category: "Multiple Currencies",
+    category: "Multiple currencies",
     description: "Track and analyze finances across currencies",
     values: {
+      free: { included: false },
       plus: { included: true },
     },
   },
   {
-    category: "Currency Converter",
+    category: "Currency converter",
     description: "Convert between supported currencies inside Moneko",
     values: {
+      free: { included: false },
       plus: { included: true },
     },
   },
   {
-    category: "Live Exchange Rates",
+    category: "Live exchange rates",
     description: "Use up-to-date rates for currency-aware insights",
     values: {
+      free: { included: false },
       plus: { included: true },
     },
   },
   {
-    category: "Customer Support",
+    category: "App Lock",
+    description: "Protect Moneko with an extra app-level lock",
+    values: {
+      free: { included: false },
+      plus: { included: true },
+    },
+  },
+  {
+    category: "Support",
     description: "Get help when you need support",
     values: {
+      free: { included: null, label: "Standard" },
       plus: { included: null, label: "Priority" },
     },
   },

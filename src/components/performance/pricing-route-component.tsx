@@ -14,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Check,
   Rocket,
@@ -33,7 +32,7 @@ import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-g
 import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
-import { getPricingTiers, plusChecklistFeatures } from "@/data/pricing-plans";
+import { getPricingTiers } from "@/data/pricing-plans";
 
 // Added new pro-max components
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
@@ -237,7 +236,7 @@ export function PricingRouteComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isYearly, setIsYearly] = useState(true);
 
-  type PlanType = "plus_monthly" | "plus_yearly";
+  type PlanType = "plus_monthly" | "plus_yearly" | "plus_lifetime";
 
   useEffect(() => {
     setIsLoading(false);
@@ -330,13 +329,17 @@ export function PricingRouteComponent() {
       setIsLoading(false);
 
       const selectedPlan =
-        planId === "plus_monthly"
-          ? { plan: "plus", billing: "monthly" }
-          : { plan: "plus", billing: "yearly" };
+        planId === "plus_lifetime"
+          ? { plan: "lifetime", billing: undefined }
+          : planId === "plus_monthly"
+            ? { plan: "plus", billing: "monthly" }
+            : { plan: "plus", billing: "yearly" };
 
       navigate({
         to: "/checkout",
-        search: { plan: selectedPlan.plan, billing: selectedPlan.billing },
+        search: selectedPlan.billing
+          ? { plan: selectedPlan.plan, billing: selectedPlan.billing }
+          : { plan: selectedPlan.plan },
       });
     } catch (err) {
       console.error("Error handling subscription:", err);
@@ -504,29 +507,60 @@ export function PricingRouteComponent() {
               <BillingToggle isYearly={isYearly} onChange={setIsYearly} />
             </motion.div>
 
+            <motion.div
+              variants={itemVariants}
+              className="mx-auto mt-12 w-full max-w-7xl"
+            >
+              <FeatureComparisonGrid
+                prefersReducedMotion={prefersReducedMotion}
+                plusPriceLabel={
+                  isYearly
+                    ? `${pyTier.effectiveMonthlyPrice}/mo billed yearly`
+                    : `${pmTier.priceMonthly}/mo`
+                }
+              />
+            </motion.div>
+
             {/* Pricing Cards Grid */}
             <motion.div
               variants={itemVariants}
-              className="mx-auto mt-16 grid w-full max-w-xl items-stretch gap-8"
+              className="mx-auto mt-16 grid w-full max-w-7xl items-stretch gap-8 lg:grid-cols-3"
             >
               <PricingCard
-                title="Plus"
-                description="Everything Moneko offers in one simple plan."
-                price={isYearly ? pyTier.effectiveMonthlyPrice : pmTier.priceMonthly}
+                title="Monthly"
+                description="Flexible Plus access with monthly billing."
+                price={pmTier.priceMonthly}
                 period="/mo"
-                comparePrice={
-                  isYearly ? `${pmTier.priceMonthly}/mo` : pmTier.compareAtPriceMonthly
-                }
-                billingNote={
-                  isYearly ? `billed annually at ${pyTier.priceMonthly}` : undefined
-                }
-                features={plusChecklistFeatures}
-                isPopular={true}
-                showPopularBadge={isYearly}
+                billingNote="billed monthly"
+                features={[]}
+                isPopular={false}
                 buttonText="Get Plus"
-                onSubscribe={() =>
-                  handleSubscribe(isYearly ? "plus_yearly" : "plus_monthly")
-                }
+                onSubscribe={() => handleSubscribe("plus_monthly")}
+              />
+
+              <PricingCard
+                title="Yearly"
+                description="Best value for Plus with lower effective monthly pricing."
+                price={pyTier.effectiveMonthlyPrice}
+                period="/mo"
+                comparePrice={`${pmTier.priceMonthly}/mo`}
+                billingNote={`billed annually at ${pyTier.priceMonthly}`}
+                features={[]}
+                isPopular={true}
+                buttonText="Get Yearly Plus"
+                onSubscribe={() => handleSubscribe("plus_yearly")}
+              />
+
+              <PricingCard
+                title="Lifetime"
+                description="Pay once and keep access to Plus without recurring billing."
+                price="$149.99"
+                period="one-time"
+                billingNote="lifetime access"
+                features={[]}
+                isPopular={false}
+                buttonText="Get Lifetime Plus"
+                onSubscribe={() => handleSubscribe("plus_lifetime")}
               />
             </motion.div>
           </motion.div>
@@ -565,25 +599,6 @@ export function PricingRouteComponent() {
               ))}
             </BentoGrid>
           </div>
-        </motion.div>
-
-        {/* Deep Dive Feature Comparison */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={containerVariants}
-          className="mx-auto mt-20 max-w-7xl px-4 md:mt-32"
-        >
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-extrabold tracking-tight md:text-4xl">
-              Plus Includes Everything
-            </h2>
-            <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-              A quick look at every feature included in the Plus plan.
-            </p>
-          </div>
-          <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
         </motion.div>
 
         {/* FAQs */}

@@ -2,6 +2,7 @@
  * Sample checkout URLs:
  * - Monthly + MONEKO-3:    /checkout?plan=plus&billing=monthly&promo=MONEKO-3
  * - Yearly + MONEKO100:  /checkout?plan=plus&billing=yearly&promo=MONEKO100
+ * - Lifetime: /checkout?plan=lifetime
  */
 
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/pricing")({
       title:
         "Moneko Plus Pricing | AI Budgeting App for Individuals & Households",
       description:
-        "Moneko Plus includes every current feature for AI budgeting, WhatsApp expense tracking, Pockets, multi-currency tools, bank sync, and shared household budgets.",
+        "Moneko Plus includes monthly, yearly, and lifetime access to AI expense capture, health reports, AI scenarios, WhatsApp and Telegram tracking, email receipts, wallets, Spaces, bank sync, multi-currency tools, App Lock, and priority support.",
       keywords:
         "moneko pricing, moneko plus, AI budgeting app pricing, budgeting app subscription, envelope budgeting app, household budgeting app, WhatsApp expense tracker, personal finance app subscription",
       image: "https://moneko.io/og-img.png",

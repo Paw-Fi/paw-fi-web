@@ -23,7 +23,7 @@ export const Route = createFileRoute("/support")({
 
 function SupportPage() {
   return (
-    <div className="relative flex min-h-screen flex-col bg-background font-sans selection:bg-primary/20">
+    <div className="relative flex pt-24 min-h-screen flex-col bg-background font-sans selection:bg-primary/20">
       <AmbientHalo />
       <HomeHeader />
 
