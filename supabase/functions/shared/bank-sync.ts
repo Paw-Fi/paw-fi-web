@@ -42,6 +42,41 @@ export interface BankAccountRecord {
   subtype?: string | null;
 }
 
+interface BankAccountRecordWithStatus extends BankAccountRecord {
+  status?: string | null;
+}
+
+async function loadDisabledProviderAccountIds(params: {
+  supabase: SupabaseClient;
+  bankConnectionId: string;
+  provider: string;
+}): Promise<Set<string>> {
+  const { data, error } = await params.supabase
+    .from("bank_accounts")
+    .select("provider_account_id")
+    .eq("bank_connection_id", params.bankConnectionId)
+    .eq("provider", params.provider)
+    .eq("status", "disabled");
+
+  if (error) {
+    throw error;
+  }
+
+  return new Set(
+    ((data || []) as Array<{ provider_account_id?: string | null }>)
+      .map((row) => row.provider_account_id?.trim())
+      .filter((value): value is string => Boolean(value)),
+  );
+}
+
+function activeBankAccountRecords(
+  rows: BankAccountRecordWithStatus[],
+): BankAccountRecord[] {
+  return rows
+    .filter((row) => (row.status ?? "active") === "active")
+    .map(({ status: _status, ...record }) => record);
+}
+
 export interface LinkedWalletRecord {
   id: string;
   household_id: string | null;
@@ -1006,6 +1041,12 @@ export async function upsertPlaidAccounts(
     return { records: [] };
   }
 
+  const disabledProviderAccountIds = await loadDisabledProviderAccountIds({
+    supabase: params.supabase,
+    bankConnectionId: params.bankConnectionId,
+    provider: PLAID_PROVIDER,
+  });
+
   const payload = params.accounts.map((account) => ({
     user_id: params.userId,
     bank_connection_id: params.bankConnectionId,
@@ -1021,7 +1062,9 @@ export async function upsertPlaidAccounts(
       "USD",
     type: account.type || null,
     subtype: account.subtype || null,
-    status: "active",
+    status: disabledProviderAccountIds.has(account.account_id)
+      ? "disabled"
+      : "active",
     raw_provider_payload: account,
   }));
 
@@ -1031,14 +1074,14 @@ export async function upsertPlaidAccounts(
       onConflict: "bank_connection_id,provider,provider_account_id",
     })
     .select(
-      "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype",
+      "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype, status",
     );
 
   if (error) {
     throw error;
   }
 
-  return { records: data || [] };
+  return { records: activeBankAccountRecords(data || []) };
 }
 
 export interface StageTransactionsParams {
@@ -1273,27 +1316,36 @@ export async function upsertTinkAccounts(
     return { records: [] };
   }
 
-  const payload = params.accounts.map((account) => ({
-    user_id: params.userId,
-    bank_connection_id: params.bankConnectionId,
+  const disabledProviderAccountIds = await loadDisabledProviderAccountIds({
+    supabase: params.supabase,
+    bankConnectionId: params.bankConnectionId,
     provider: TINK_PROVIDER,
-    plaid_account_id: account.id?.startsWith("tink_")
+  });
+
+  const payload = params.accounts.map((account) => {
+    const providerAccountId = account.id?.startsWith("tink_")
       ? account.id
-      : `tink_${account.id}`,
-    provider_account_id: account.id?.startsWith("tink_")
-      ? account.id
-      : `tink_${account.id}`,
-    name: account.name || `Account ${account.id}`,
-    official_name: null,
-    mask: account.accountNumber?.iban || null,
-    currency: account.balances?.booked?.currencyCode ||
-      account.balances?.available?.currencyCode ||
-      "USD",
-    type: account.type?.name || null,
-    subtype: null,
-    status: "active",
-    raw_provider_payload: account,
-  }));
+      : `tink_${account.id}`;
+    return {
+      user_id: params.userId,
+      bank_connection_id: params.bankConnectionId,
+      provider: TINK_PROVIDER,
+      plaid_account_id: providerAccountId,
+      provider_account_id: providerAccountId,
+      name: account.name || `Account ${account.id}`,
+      official_name: null,
+      mask: account.accountNumber?.iban || null,
+      currency: account.balances?.booked?.currencyCode ||
+        account.balances?.available?.currencyCode ||
+        "USD",
+      type: account.type?.name || null,
+      subtype: null,
+      status: disabledProviderAccountIds.has(providerAccountId)
+        ? "disabled"
+        : "active",
+      raw_provider_payload: account,
+    };
+  });
 
   const { data, error } = await params.supabase
     .from("bank_accounts")
@@ -1301,14 +1353,14 @@ export async function upsertTinkAccounts(
       onConflict: "bank_connection_id,provider,provider_account_id",
     })
     .select(
-      "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype",
+      "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype, status",
     );
 
   if (error) {
     throw error;
   }
 
-  return { records: data || [] };
+  return { records: activeBankAccountRecords(data || []) };
 }
 
 export async function persistTinkTransactions(

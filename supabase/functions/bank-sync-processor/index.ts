@@ -6,6 +6,7 @@ import {
   resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
 import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   canUsePlaidBankSync,
   loadPlaidUserAccessState,
@@ -75,6 +76,11 @@ Deno.serve(async (req) => {
     console.error(
       "[bank-sync-processor] Internal invoke secret not configured",
     );
+    await reportEdgeFunctionError({
+      functionName: "bank-sync-processor",
+      error: new Error("Internal invoke secret not configured"),
+      context: { phase: "configuration" },
+    });
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),
       {
@@ -142,6 +148,11 @@ Deno.serve(async (req) => {
         "[bank-sync-processor] Failed to release stuck jobs:",
         releaseError,
       );
+      await reportEdgeFunctionError({
+        functionName: "bank-sync-processor",
+        error: releaseError,
+        context: { phase: "release_stuck_sync_jobs" },
+      });
     } else if (releasedCount > 0) {
       console.log(`[bank-sync-processor] Released ${releasedCount} stuck jobs`);
     }
@@ -159,6 +170,11 @@ Deno.serve(async (req) => {
 
     if (jobsError) {
       console.error("[bank-sync-processor] Failed to claim jobs", jobsError);
+      await reportEdgeFunctionError({
+        functionName: "bank-sync-processor",
+        error: jobsError,
+        context: { phase: "claim_pending_sync_jobs" },
+      });
       return new Response(JSON.stringify({ error: "Failed to claim jobs" }), {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },
@@ -346,10 +362,36 @@ Deno.serve(async (req) => {
             `[bank-sync-processor] Failed to update retry state for job ${job.id}`,
             failureUpdateError,
           );
+          await reportEdgeFunctionError({
+            functionName: "bank-sync-processor",
+            error: failureUpdateError,
+            context: {
+              phase: "update_job_retry_state",
+              job_id: job.id,
+              bank_connection_id: job.bank_connection_id,
+              provider: job.provider,
+            },
+          });
         } else if (!failedRows?.length) {
           console.warn(
             `[bank-sync-processor] Skipped retry update for job ${job.id}; processor ownership was lost`,
           );
+        }
+
+        if (failureUpdate.status === "failed") {
+          await reportEdgeFunctionError({
+            functionName: "bank-sync-processor",
+            error,
+            context: {
+              phase: "bank_sync_job_exhausted",
+              job_id: job.id,
+              bank_connection_id: job.bank_connection_id,
+              provider: job.provider,
+              trigger_source: job.trigger_source,
+              attempt_count: failureUpdate.attempt_count,
+              last_error_code: failureUpdate.last_error_code,
+            },
+          });
         }
 
         results.failed++;
@@ -365,6 +407,11 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("[bank-sync-processor] Unexpected error", error);
+    await reportEdgeFunctionError({
+      functionName: "bank-sync-processor",
+      error,
+      context: { phase: "unexpected" },
+    });
     return new Response(
       JSON.stringify({
         error: "Failed to process jobs",

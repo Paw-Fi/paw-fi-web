@@ -638,6 +638,18 @@ Deno.serve(async (req) => {
             console.error(
               `[plaid-exchange] Immediate bank-sync-processor trigger failed for connection ${connectionId}: ${processorResponse.status} ${processorError}`,
             );
+            await reportEdgeFunctionError({
+              functionName: "plaid-exchange-public-token",
+              error: new Error(
+                `Immediate bank-sync-processor trigger failed: ${processorResponse.status} ${processorError}`,
+              ),
+              context: {
+                stage: "trigger_bank_sync_processor",
+                connection_id: connectionId,
+                processor_status: processorResponse.status,
+                link_session_id: body.linkSessionId || null,
+              },
+            });
           } else {
             const processorPayload = await processorResponse
               .json()
@@ -655,6 +667,15 @@ Deno.serve(async (req) => {
             `[plaid-exchange] Immediate bank-sync-processor trigger threw for connection ${connectionId}`,
             processorError,
           );
+          await reportEdgeFunctionError({
+            functionName: "plaid-exchange-public-token",
+            error: processorError,
+            context: {
+              stage: "trigger_bank_sync_processor",
+              connection_id: connectionId,
+              link_session_id: body.linkSessionId || null,
+            },
+          });
         }
       } else if (!INTERNAL_SERVICE_SECRET) {
         console.warn(

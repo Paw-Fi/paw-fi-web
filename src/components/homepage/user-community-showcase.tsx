@@ -62,7 +62,7 @@ const StarRating: React.FC<StarRatingProps> = ({
 // App Store and Play Store URLs
 const APP_STORE_URL = "https://apps.apple.com/app/moneko/id6753925279";
 const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.moneko.app";
+  "https://play.google.com/store/apps/details?id=com.moneko.mobile";
 const INITIAL_REVIEW_ID = "review-021";
 const REVIEW_ROW_DURATIONS = [
   "[--duration:70s]",

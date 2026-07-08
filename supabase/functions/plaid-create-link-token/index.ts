@@ -213,6 +213,15 @@ Deno.serve(async (req) => {
           "[plaid-create-link-token] Failed to load connection",
           connectionError,
         );
+        await reportEdgeFunctionError({
+          functionName: "plaid-create-link-token",
+          error: connectionError,
+          context: {
+            phase: "load_existing_connection",
+            connection_id: resolvedConnectionId,
+            user_id: authResult.userId,
+          },
+        });
         return new Response(
           JSON.stringify({ error: "Failed to load connection" }),
           {

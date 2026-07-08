@@ -149,6 +149,15 @@ Deno.serve(async (req) => {
 
       if (accountError) {
         console.error("[plaid-sync] Failed to load bank account", accountError);
+        await reportEdgeFunctionError({
+          functionName: "plaid-sync-transactions",
+          error: accountError,
+          context: {
+            phase: "load_bank_account",
+            bank_account_id: body.bankAccountId,
+            user_id: authResult.userId,
+          },
+        });
         return new Response(
           JSON.stringify({ error: "Failed to load bank account" }),
           {
@@ -193,6 +202,15 @@ Deno.serve(async (req) => {
         "[plaid-sync] Failed to load connections",
         connectionsError,
       );
+      await reportEdgeFunctionError({
+        functionName: "plaid-sync-transactions",
+        error: connectionsError,
+        context: {
+          phase: "load_bank_connections",
+          connection_id: body.connectionId || null,
+          user_id: authResult.userId,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to load connections" }),
         {
@@ -253,6 +271,15 @@ Deno.serve(async (req) => {
         "[plaid-sync] Failed to load bank accounts",
         bankAccountError,
       );
+      await reportEdgeFunctionError({
+        functionName: "plaid-sync-transactions",
+        error: bankAccountError,
+        context: {
+          phase: "load_bank_accounts",
+          connection_ids: connectionIds,
+          user_id: authResult.userId,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to load accounts" }),
         {
