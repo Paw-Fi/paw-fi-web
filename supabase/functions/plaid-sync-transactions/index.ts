@@ -4,6 +4,10 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  canUsePlaidBankSync,
+  loadPlaidUserAccessState,
+} from "../shared/plaid-access.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   getPlaidAccounts,
@@ -115,6 +119,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    const accessState = await loadPlaidUserAccessState(
+      supabase,
+      authResult.userId,
+    );
+    if (!canUsePlaidBankSync(accessState)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Bank sync is available during an active trial or with an active paid plan.",
+          errorCode: "plaid_subscription_required",
+        }),
+        {
+          status: 403,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const enforceManualCooldown = !authResult.isInternalService;
 
     let accountFilter: BankAccountRow | null = null;
@@ -127,6 +149,15 @@ Deno.serve(async (req) => {
 
       if (accountError) {
         console.error("[plaid-sync] Failed to load bank account", accountError);
+        await reportEdgeFunctionError({
+          functionName: "plaid-sync-transactions",
+          error: accountError,
+          context: {
+            phase: "load_bank_account",
+            bank_account_id: body.bankAccountId,
+            user_id: authResult.userId,
+          },
+        });
         return new Response(
           JSON.stringify({ error: "Failed to load bank account" }),
           {
@@ -171,6 +202,15 @@ Deno.serve(async (req) => {
         "[plaid-sync] Failed to load connections",
         connectionsError,
       );
+      await reportEdgeFunctionError({
+        functionName: "plaid-sync-transactions",
+        error: connectionsError,
+        context: {
+          phase: "load_bank_connections",
+          connection_id: body.connectionId || null,
+          user_id: authResult.userId,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to load connections" }),
         {
@@ -231,6 +271,15 @@ Deno.serve(async (req) => {
         "[plaid-sync] Failed to load bank accounts",
         bankAccountError,
       );
+      await reportEdgeFunctionError({
+        functionName: "plaid-sync-transactions",
+        error: bankAccountError,
+        context: {
+          phase: "load_bank_accounts",
+          connection_ids: connectionIds,
+          user_id: authResult.userId,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to load accounts" }),
         {
@@ -734,9 +783,10 @@ async function syncConnection(params: {
       status: "failed",
       error_message: summary.error,
       error_code: errorCode,
-      error_payload: error instanceof PlaidError
-        ? error.details
-        : serializeUnknownError(error),
+      error_payload:
+        error instanceof PlaidError
+          ? error.details
+          : serializeUnknownError(error),
       finished_at: new Date().toISOString(),
     });
     await reportEdgeFunctionError({

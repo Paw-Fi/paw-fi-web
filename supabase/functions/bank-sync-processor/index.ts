@@ -6,7 +6,13 @@ import {
   resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
 import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  canUsePlaidBankSync,
+  loadPlaidUserAccessState,
+} from "../shared/plaid-access.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import { removePlaidConnection } from "../shared/plaid-remove.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
@@ -15,8 +21,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const INTERNAL_FUNCTION_KEY = Deno.env.get(
   "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
 );
-const RESOLVED_INTERNAL_FUNCTION_KEY = INTERNAL_FUNCTION_KEY ||
-  resolveAnyInternalFunctionKey();
+const RESOLVED_INTERNAL_FUNCTION_KEY =
+  INTERNAL_FUNCTION_KEY || resolveAnyInternalFunctionKey();
 const AUTO_BANK_SYNC_ENABLED =
   Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() !== "false";
 
@@ -45,6 +51,8 @@ interface BankConnection {
   user_id: string;
   provider: string;
   needs_resync?: boolean;
+  access_token_encrypted?: string | null;
+  plaid_access_token_encrypted?: string | null;
   removed_at?: string | null;
   status?: string | null;
   item_status?: string | null;
@@ -68,6 +76,11 @@ Deno.serve(async (req) => {
     console.error(
       "[bank-sync-processor] Internal invoke secret not configured",
     );
+    await reportEdgeFunctionError({
+      functionName: "bank-sync-processor",
+      error: new Error("Internal invoke secret not configured"),
+      context: { phase: "configuration" },
+    });
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),
       {
@@ -135,6 +148,11 @@ Deno.serve(async (req) => {
         "[bank-sync-processor] Failed to release stuck jobs:",
         releaseError,
       );
+      await reportEdgeFunctionError({
+        functionName: "bank-sync-processor",
+        error: releaseError,
+        context: { phase: "release_stuck_sync_jobs" },
+      });
     } else if (releasedCount > 0) {
       console.log(`[bank-sync-processor] Released ${releasedCount} stuck jobs`);
     }
@@ -152,6 +170,11 @@ Deno.serve(async (req) => {
 
     if (jobsError) {
       console.error("[bank-sync-processor] Failed to claim jobs", jobsError);
+      await reportEdgeFunctionError({
+        functionName: "bank-sync-processor",
+        error: jobsError,
+        context: { phase: "claim_pending_sync_jobs" },
+      });
       return new Response(JSON.stringify({ error: "Failed to claim jobs" }), {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },
@@ -186,12 +209,11 @@ Deno.serve(async (req) => {
     for (const job of jobs as BankSyncJob[]) {
       try {
         // Jobs are already marked as processing by the RPC call
-
         // Load bank connection
         const { data: connection, error: connectionError } = await supabase
           .from("bank_connections")
           .select(
-            "id, user_id, provider, needs_resync, removed_at, status, item_status",
+            "id, user_id, provider, needs_resync, access_token_encrypted, plaid_access_token_encrypted, removed_at, status, item_status",
           )
           .eq("id", job.bank_connection_id)
           .maybeSingle();
@@ -247,11 +269,29 @@ Deno.serve(async (req) => {
             connection as BankConnection,
           );
         } else if (connection.provider === PLAID_PROVIDER) {
-          await processPlaidJob(
+          const accessState = await loadPlaidUserAccessState(
             supabase as any,
-            job,
-            connection as BankConnection,
+            connection.user_id,
           );
+          if (!canUsePlaidBankSync(accessState)) {
+            console.log(
+              `[bank-sync-processor] Removing Plaid item without active entitlement for job ${job.id}`,
+            );
+            await removePlaidConnection({
+              supabase,
+              connection: connection as BankConnection,
+              removalReason: "subscription_entitlement_expired",
+            });
+            results.succeeded++;
+            results.processed++;
+            continue;
+          } else {
+            await processPlaidJob(
+              supabase as any,
+              job,
+              connection as BankConnection,
+            );
+          }
         } else {
           throw new Error(`Unknown provider: ${connection.provider}`);
         }
@@ -302,9 +342,8 @@ Deno.serve(async (req) => {
         results.succeeded++;
       } catch (error) {
         console.error(`[bank-sync-processor] Job ${job.id} failed`, error);
-        const errorMessage = error instanceof Error
-          ? error.message
-          : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         const failureUpdate = buildBankSyncJobFailureUpdate({
           attemptCount: job.attempt_count ?? 0,
           errorMessage,
@@ -323,10 +362,36 @@ Deno.serve(async (req) => {
             `[bank-sync-processor] Failed to update retry state for job ${job.id}`,
             failureUpdateError,
           );
+          await reportEdgeFunctionError({
+            functionName: "bank-sync-processor",
+            error: failureUpdateError,
+            context: {
+              phase: "update_job_retry_state",
+              job_id: job.id,
+              bank_connection_id: job.bank_connection_id,
+              provider: job.provider,
+            },
+          });
         } else if (!failedRows?.length) {
           console.warn(
             `[bank-sync-processor] Skipped retry update for job ${job.id}; processor ownership was lost`,
           );
+        }
+
+        if (failureUpdate.status === "failed") {
+          await reportEdgeFunctionError({
+            functionName: "bank-sync-processor",
+            error,
+            context: {
+              phase: "bank_sync_job_exhausted",
+              job_id: job.id,
+              bank_connection_id: job.bank_connection_id,
+              provider: job.provider,
+              trigger_source: job.trigger_source,
+              attempt_count: failureUpdate.attempt_count,
+              last_error_code: failureUpdate.last_error_code,
+            },
+          });
         }
 
         results.failed++;
@@ -342,6 +407,11 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("[bank-sync-processor] Unexpected error", error);
+    await reportEdgeFunctionError({
+      functionName: "bank-sync-processor",
+      error,
+      context: { phase: "unexpected" },
+    });
     return new Response(
       JSON.stringify({
         error: "Failed to process jobs",

@@ -40,6 +40,11 @@ import {
 import { saveTransactionsBatchInternal } from "../save-transactions-batch/index.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { createFollowupEmailBuilder } from "./email-templates/import-followup-email.ts";
+import {
+  buildSubscriptionRequiredMessage,
+  hasPlusEntitlement,
+  loadLatestSubscriptionForUser,
+} from "../shared/plus-entitlement.ts";
 
 const APP_URL = Deno.env.get("APP_URL") || "https://moneko.io";
 const DEFAULT_IMPORT_INBOX_EMAIL = "files@inbound.moneko.io";
@@ -129,18 +134,18 @@ interface ExistingInboundEvent {
 
 type ClaimInboundEventResult =
   | {
-      kind: "claimed";
-      owner: InboundEventLeaseOwner;
-      recovered: boolean;
-    }
+    kind: "claimed";
+    owner: InboundEventLeaseOwner;
+    recovered: boolean;
+  }
   | {
-      kind: "duplicate";
-      rowId: string | null;
-      status: InboundEventStatus | null;
-      processedAt: string | null;
-      inProgress: boolean;
-      reason: string;
-    };
+    kind: "duplicate";
+    rowId: string | null;
+    status: InboundEventStatus | null;
+    processedAt: string | null;
+    inProgress: boolean;
+    reason: string;
+  };
 
 function validPositiveInt(value: number, fallback: number): number {
   if (!Number.isFinite(value) || value <= 0) return fallback;
@@ -178,8 +183,8 @@ function resolveImportInboxEmails(): string[] {
 }
 
 const IMPORT_INBOX_EMAILS = resolveImportInboxEmails();
-const PRIMARY_IMPORT_INBOX_EMAIL =
-  IMPORT_INBOX_EMAILS[0] || DEFAULT_IMPORT_INBOX_EMAIL;
+const PRIMARY_IMPORT_INBOX_EMAIL = IMPORT_INBOX_EMAILS[0] ||
+  DEFAULT_IMPORT_INBOX_EMAIL;
 const buildFollowupEmail = createFollowupEmailBuilder({
   appTransactionsUrl: APP_TRANSACTIONS_URL,
   importInboxEmail: PRIMARY_IMPORT_INBOX_EMAIL,
@@ -190,7 +195,7 @@ function shouldProcessInboundToConfiguredInboxes(
   recipients?: string[] | null,
 ): boolean {
   return IMPORT_INBOX_EMAILS.some((inbox) =>
-    shouldProcessInboundRecipients(recipients ?? undefined, inbox),
+    shouldProcessInboundRecipients(recipients ?? undefined, inbox)
   );
 }
 
@@ -202,9 +207,10 @@ function ensureSoftDeadline(startedAtMs: number, stage: string): void {
 }
 
 function matchesRetryableFailurePattern(message: string): boolean {
-  return /(SOFT_DEADLINE_EXCEEDED|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i.test(
-    message,
-  );
+  return /(SOFT_DEADLINE_EXCEEDED|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i
+    .test(
+      message,
+    );
 }
 
 function isRetryableAnalyzeFailure(result: {
@@ -301,9 +307,10 @@ function errorResponse(message: string, status = 400, code?: string) {
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    trimmed,
-  )
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(
+        trimmed,
+      )
     ? trimmed
     : null;
 }
@@ -360,10 +367,9 @@ async function claimInboundEvent(params: {
       kind: "claimed",
       owner: {
         rowId: data.id as string,
-        attemptCount:
-          typeof data.processing_attempt_count === "number"
-            ? data.processing_attempt_count
-            : 1,
+        attemptCount: typeof data.processing_attempt_count === "number"
+          ? data.processing_attempt_count
+          : 1,
       },
       recovered: false,
     };
@@ -479,14 +485,13 @@ async function claimInboundEvent(params: {
 
 function mapInboundEventRow(row: any): ExistingInboundEvent | null {
   const statusCandidate = typeof row?.status === "string" ? row.status : null;
-  const status: InboundEventStatus | null =
-    statusCandidate === "received" ||
-    statusCandidate === "processing" ||
-    statusCandidate === "ignored" ||
-    statusCandidate === "processed" ||
-    statusCandidate === "failed"
-      ? statusCandidate
-      : null;
+  const status: InboundEventStatus | null = statusCandidate === "received" ||
+      statusCandidate === "processing" ||
+      statusCandidate === "ignored" ||
+      statusCandidate === "processed" ||
+      statusCandidate === "failed"
+    ? statusCandidate
+    : null;
 
   if (!row?.id || !status) return null;
 
@@ -495,21 +500,22 @@ function mapInboundEventRow(row: any): ExistingInboundEvent | null {
     status,
     user_id: typeof row.user_id === "string" ? row.user_id : null,
     error_text: typeof row.error_text === "string" ? row.error_text : null,
-    processed_at:
-      typeof row.processed_at === "string" ? row.processed_at : null,
+    processed_at: typeof row.processed_at === "string"
+      ? row.processed_at
+      : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
-    processing_attempt_count:
-      typeof row.processing_attempt_count === "number"
-        ? Math.max(0, Math.trunc(row.processing_attempt_count))
-        : 0,
-    lock_expires_at:
-      typeof row.lock_expires_at === "string" ? row.lock_expires_at : null,
-    last_svix_id:
-      typeof row.last_svix_id === "string" ? row.last_svix_id : null,
-    last_svix_timestamp:
-      typeof row.last_svix_timestamp === "string"
-        ? row.last_svix_timestamp
-        : null,
+    processing_attempt_count: typeof row.processing_attempt_count === "number"
+      ? Math.max(0, Math.trunc(row.processing_attempt_count))
+      : 0,
+    lock_expires_at: typeof row.lock_expires_at === "string"
+      ? row.lock_expires_at
+      : null,
+    last_svix_id: typeof row.last_svix_id === "string"
+      ? row.last_svix_id
+      : null,
+    last_svix_timestamp: typeof row.last_svix_timestamp === "string"
+      ? row.last_svix_timestamp
+      : null,
   };
 }
 
@@ -708,27 +714,27 @@ async function resolveOwnerBySender(params: {
   const candidates = [
     ...(Array.isArray(matchingUsers)
       ? matchingUsers.map((row: any) => ({
-          userId: String(row.id),
-          normalizedSenderEmail,
-          createdAt: typeof row.created_at === "string" ? row.created_at : null,
-          source: "default" as const,
-        }))
+        userId: String(row.id),
+        normalizedSenderEmail,
+        createdAt: typeof row.created_at === "string" ? row.created_at : null,
+        source: "default" as const,
+      }))
       : []),
     ...(Array.isArray(whitelistRows)
       ? whitelistRows.map((row: any) => ({
-          userId: String(row.user_id),
-          normalizedSenderEmail,
-          createdAt: typeof row.created_at === "string" ? row.created_at : null,
-          source: "whitelist" as const,
-        }))
+        userId: String(row.user_id),
+        normalizedSenderEmail,
+        createdAt: typeof row.created_at === "string" ? row.created_at : null,
+        source: "whitelist" as const,
+      }))
       : []),
   ];
 
   const resolved = resolveNewestSenderOwner(candidates);
   if (!resolved) return null;
 
-  const [{ data: user }, { data: contact, error: contactError }] =
-    await Promise.all([
+  const [{ data: user }, { data: contact, error: contactError }] = await Promise
+    .all([
       supabase
         .from("users")
         .select("email, full_name")
@@ -756,8 +762,8 @@ async function resolveOwnerBySender(params: {
     });
   }
 
-  const defaultEmail =
-    normalizeEmailAddress(user?.email) || normalizedSenderEmail;
+  const defaultEmail = normalizeEmailAddress(user?.email) ||
+    normalizedSenderEmail;
   const accountId = sanitizeUuid(contact?.email_import_account_id ?? null);
   let accountCurrency: string | null = null;
   if (accountId) {
@@ -776,11 +782,10 @@ async function resolveOwnerBySender(params: {
     fullName: typeof user?.full_name === "string" ? user.full_name : null,
     defaultEmail,
     enabled: contact?.email_import_enabled === true,
-    preferredCurrency:
-      typeof contact?.preferred_currency === "string" &&
-      contact.preferred_currency.trim().length > 0
-        ? contact.preferred_currency.trim().toUpperCase()
-        : "USD",
+    preferredCurrency: typeof contact?.preferred_currency === "string" &&
+        contact.preferred_currency.trim().length > 0
+      ? contact.preferred_currency.trim().toUpperCase()
+      : "USD",
     householdId: sanitizeUuid(contact?.email_import_household_id ?? null),
     isPortfolio: contact?.email_import_is_portfolio === true,
     accountId,
@@ -797,7 +802,7 @@ function hasVerifiedSender(headers?: Record<string, string>): boolean {
         "authentication-results",
         "arc-authentication-results",
         "received-spf",
-      ].includes(entry[0].toLowerCase()),
+      ].includes(entry[0].toLowerCase())
     )
     .map((entry) => entry[1].toLowerCase())
     .join(" ");
@@ -947,16 +952,22 @@ function buildUnavailableEmail(params: {
   const { senderEmail, reason } = params;
   const content = `
     <h1 class="title">Email import not processed</h1>
-    <p class="subtitle">We couldn't process the files sent from ${escapeHtml(
+    <p class="subtitle">We couldn't process the files sent from ${
+    escapeHtml(
       senderEmail,
-    )}.</p>
+    )
+  }.</p>
     <p>${escapeHtml(reason)}</p>
-    <p>To import files, forward supported attachments to <strong>${escapeHtml(
+    <p>To import files, forward supported attachments to <strong>${
+    escapeHtml(
       PRIMARY_IMPORT_INBOX_EMAIL,
-    )}</strong>.</p>
-    <p>This address does not monitor replies. If you need help, contact <a href="mailto:${escapeHtml(
+    )
+  }</strong>.</p>
+    <p>This address does not monitor replies. If you need help, contact <a href="mailto:${
+    escapeHtml(
       SUPPORT_EMAIL,
-    )}" style="color:#7458FF;">${escapeHtml(SUPPORT_EMAIL)}</a>.</p>
+    )
+  }" style="color:#7458FF;">${escapeHtml(SUPPORT_EMAIL)}</a>.</p>
     <p>Open Moneko, go to Settings, and configure Email File Import to allow this sender.</p>
     <p><a href="${APP_URL}" style="color:#7458FF;">Open Moneko</a></p>
   `;
@@ -966,10 +977,12 @@ function buildUnavailableEmail(params: {
     html: baseTemplate(
       content,
       renderFooter({
-        customReason: `You're receiving this email because someone sent files to ${PRIMARY_IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help.`,
+        customReason:
+          `You're receiving this email because someone sent files to ${PRIMARY_IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help.`,
       }),
     ),
-    text: `Moneko could not process the files sent from ${senderEmail}. ${reason} To import files, forward them to ${PRIMARY_IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help. Open Moneko settings to configure Email File Import: ${APP_URL}`,
+    text:
+      `Moneko could not process the files sent from ${senderEmail}. ${reason} To import files, forward them to ${PRIMARY_IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help. Open Moneko settings to configure Email File Import: ${APP_URL}`,
   };
 }
 
@@ -989,18 +1002,16 @@ function sortImportedTransactions(
     const rightAmount = Number(right.amount ?? 0);
     if (leftAmount !== rightAmount) return leftAmount - rightAmount;
 
-    const leftDescription =
-      typeof left.description === "string"
-        ? left.description
-        : typeof left.merchant === "string"
-          ? left.merchant
-          : "";
-    const rightDescription =
-      typeof right.description === "string"
-        ? right.description
-        : typeof right.merchant === "string"
-          ? right.merchant
-          : "";
+    const leftDescription = typeof left.description === "string"
+      ? left.description
+      : typeof left.merchant === "string"
+      ? left.merchant
+      : "";
+    const rightDescription = typeof right.description === "string"
+      ? right.description
+      : typeof right.merchant === "string"
+      ? right.merchant
+      : "";
     return leftDescription.localeCompare(rightDescription);
   });
 }
@@ -1145,8 +1156,7 @@ async function sendFcmV1Notification(params: {
   if (!FIREBASE_PROJECT_ID) return false;
 
   try {
-    const isWeb =
-      typeof platform === "string" &&
+    const isWeb = typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
     const message = {
       message: {
@@ -1180,16 +1190,16 @@ async function sendFcmV1Notification(params: {
         },
         ...(isWeb
           ? {
-              webpush: {
-                data: {
-                  ...data,
-                  deep_link: data.deep_link || "moneko://home",
-                },
-                fcm_options: {
-                  link: APP_URL,
-                },
+            webpush: {
+              data: {
+                ...data,
+                deep_link: data.deep_link || "moneko://home",
               },
-            }
+              fcm_options: {
+                link: APP_URL,
+              },
+            },
+          }
           : {}),
       },
     };
@@ -1240,10 +1250,12 @@ async function sendImportProcessedNotification(params: {
   if (!accessToken) return;
 
   const title = `Your files are ready!`;
-  const body = `${savedCount} ${pluralize(
-    savedCount,
-    "transaction",
-  )} have been added to your account`;
+  const body = `${savedCount} ${
+    pluralize(
+      savedCount,
+      "transaction",
+    )
+  } have been added to your account`;
   const data = {
     event_type: "email_import_processed",
     notification_type: "email_import_processed",
@@ -1262,7 +1274,7 @@ async function sendImportProcessedNotification(params: {
         data,
         accessToken,
         platform: device.platform ?? undefined,
-      }),
+      })
     ),
   );
 }
@@ -1530,6 +1542,61 @@ export async function handleResendInboundWebhook(
         return jsonResponse({ success: true, ignored: true });
       }
 
+      try {
+        const subscription = await loadLatestSubscriptionForUser(
+          supabase,
+          owner.userId,
+        );
+        if (!hasPlusEntitlement(subscription)) {
+          const unavailable = buildUnavailableEmail({
+            senderEmail,
+            reason: buildSubscriptionRequiredMessage("Email File Import"),
+          });
+          await updateInboundEvent({
+            supabase,
+            owner: leaseOwner,
+            userId: owner.userId,
+            status: "ignored",
+            errorText: "SUBSCRIPTION_REQUIRED",
+          });
+          try {
+            await sendEmail({
+              to: senderEmail,
+              from: EMAIL_FROM,
+              subject: unavailable.subject,
+              html: unavailable.html,
+              text: unavailable.text,
+            });
+          } catch (sideEffectError) {
+            console.error(
+              "[resend-inbound-webhook] subscription email failed after finalization",
+              sideEffectError,
+            );
+          }
+          return jsonResponse({ success: true, ignored: true });
+        }
+      } catch (subscriptionError) {
+        await reportEdgeFunctionError({
+          functionName: "resend-inbound-webhook",
+          error: subscriptionError,
+          context: {
+            operation: "subscriptions.select_entitlement",
+            userId: owner.userId,
+          },
+        });
+        await updateInboundEvent({
+          supabase,
+          owner: leaseOwner,
+          userId: owner.userId,
+          status: "failed",
+          errorText: "SUBSCRIPTION_CHECK_FAILED",
+        });
+        return jsonResponse(
+          { success: false, error: "Failed to verify subscription" },
+          500,
+        );
+      }
+
       setStage("initial_heartbeat_start");
       await heartbeatInboundEvent({
         supabase,
@@ -1555,7 +1622,7 @@ export async function handleResendInboundWebhook(
         emailId: emailData.email_id,
         hasText:
           typeof (emailContentResult as { text?: string | null })?.text ===
-          "string",
+            "string",
         attachmentFetchFailed: attachmentListResponse.error != null,
       });
 
@@ -1724,8 +1791,8 @@ export async function handleResendInboundWebhook(
               `Failed to download attachment (${response.status})`,
             );
           }
-          const contentLengthHeader =
-            response.headers.get("content-length") || "";
+          const contentLengthHeader = response.headers.get("content-length") ||
+            "";
           const contentLength = Number.parseInt(contentLengthHeader, 10);
           if (
             Number.isFinite(contentLength) &&
@@ -1806,16 +1873,16 @@ export async function handleResendInboundWebhook(
           });
           const resultCurrencies = Array.isArray(result.items)
             ? Array.from(
-                new Set(
-                  result.items
-                    .map((item) =>
-                      typeof item?.currency === "string"
-                        ? item.currency.trim().toUpperCase()
-                        : "",
-                    )
-                    .filter((currency) => currency.length > 0),
-                ),
-              )
+              new Set(
+                result.items
+                  .map((item) =>
+                    typeof item?.currency === "string"
+                      ? item.currency.trim().toUpperCase()
+                      : ""
+                  )
+                  .filter((currency) => currency.length > 0),
+              ),
+            )
             : [];
           console.log("[resend-inbound-webhook] analyze result", {
             emailId: emailData.email_id,
@@ -1856,11 +1923,11 @@ export async function handleResendInboundWebhook(
             currency: item.currency,
             date: item.date,
             ...(typeof item.description === "string" &&
-            item.description.trim().length > 0
+                item.description.trim().length > 0
               ? { description: item.description.trim() }
               : {}),
             ...(typeof item.merchant === "string" &&
-            item.merchant.trim().length > 0
+                item.merchant.trim().length > 0
               ? { merchant: item.merchant.trim() }
               : {}),
             ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
@@ -1922,7 +1989,7 @@ export async function handleResendInboundWebhook(
               .map((item) =>
                 typeof item.currency === "string"
                   ? item.currency.trim().toUpperCase()
-                  : "",
+                  : ""
               )
               .filter((currency) => currency.length > 0),
           ),
@@ -2122,10 +2189,9 @@ export async function handleResendInboundWebhook(
         setStage("send_followup_email_complete");
       } catch (sideEffectError) {
         setStage("send_followup_email_error", {
-          error:
-            sideEffectError instanceof Error
-              ? sideEffectError.message
-              : String(sideEffectError),
+          error: sideEffectError instanceof Error
+            ? sideEffectError.message
+            : String(sideEffectError),
         });
         console.error(
           "[resend-inbound-webhook] follow-up email failed after finalization",
@@ -2145,10 +2211,9 @@ export async function handleResendInboundWebhook(
         setStage("push_notification_complete");
       } catch (sideEffectError) {
         setStage("push_notification_error", {
-          error:
-            sideEffectError instanceof Error
-              ? sideEffectError.message
-              : String(sideEffectError),
+          error: sideEffectError instanceof Error
+            ? sideEffectError.message
+            : String(sideEffectError),
         });
         console.error(
           "[resend-inbound-webhook] push notification failed after finalization",

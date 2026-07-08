@@ -9,6 +9,7 @@ interface RequestBody {
   name?: string;
   icon?: string;
   color?: string;
+  logoUrl?: string | null;
   currency?: string;
   openingBalanceCents?: number;
   goalAmountCents?: number | null;
@@ -25,6 +26,46 @@ function jsonResponse(payload: unknown, status = 200) {
 function normalizeCurrency(value?: string | null): string | null {
   const normalized = (value ?? "").trim().toUpperCase();
   return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
+interface OptionalLogoUrlResult {
+  ok: boolean;
+  value: string | null;
+  error?: string;
+}
+
+function parseOptionalLogoUrl(
+  value: unknown,
+  supabaseUrl: string,
+  userId: string,
+): OptionalLogoUrlResult {
+  if (value == null) return { ok: true, value: null };
+  if (typeof value !== "string") {
+    return { ok: false, value: null, error: "Invalid logo URL" };
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return { ok: true, value: null };
+  try {
+    const url = new URL(trimmed);
+    const projectUrl = new URL(supabaseUrl);
+    const isLocalProject = ["localhost", "127.0.0.1"].includes(
+      projectUrl.hostname,
+    );
+    const hasAllowedProtocol = url.protocol === "https:" ||
+      (isLocalProject && url.protocol === "http:");
+    const expectedPrefix =
+      `/storage/v1/object/public/public/${userId}/wallet-logos/`;
+    if (
+      !hasAllowedProtocol ||
+      url.host !== projectUrl.host ||
+      !decodeURIComponent(url.pathname).startsWith(expectedPrefix)
+    ) {
+      return { ok: false, value: null, error: "Invalid logo URL" };
+    }
+    return { ok: true, value: trimmed };
+  } catch (_) {
+    return { ok: false, value: null, error: "Invalid logo URL" };
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -145,6 +186,24 @@ Deno.serve(async (req: Request) => {
     if (typeof body.color === "string" && body.color.trim().length > 0) {
       updates.color = body.color.trim();
     }
+    if ("logoUrl" in body) {
+      const logoUrlResult = parseOptionalLogoUrl(
+        body.logoUrl,
+        SUPABASE_URL,
+        userId,
+      );
+      if (!logoUrlResult.ok) {
+        return jsonResponse(
+          {
+            success: false,
+            error: logoUrlResult.error ?? "Invalid logo URL",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
+      updates.logo_url = logoUrlResult.value;
+    }
     if (body.currency != null) {
       const currency = normalizeCurrency(body.currency);
       if (!currency) {
@@ -179,10 +238,9 @@ Deno.serve(async (req: Request) => {
       body.goalAmountCents === null ||
       Number.isFinite(body.goalAmountCents)
     ) {
-      updates.goal_amount_cents =
-        body.goalAmountCents == null
-          ? null
-          : Math.round(Number(body.goalAmountCents));
+      updates.goal_amount_cents = body.goalAmountCents == null
+        ? null
+        : Math.round(Number(body.goalAmountCents));
     }
     if (typeof body.isDefault === "boolean") {
       updates.is_default = body.isDefault;
@@ -235,10 +293,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(
         {
           success: false,
-          error:
-            error == null
-              ? "Failed to update account"
-              : "Wallet update is not allowed for the current state",
+          error: error == null
+            ? "Failed to update account"
+            : "Wallet update is not allowed for the current state",
           code: error == null ? "SERVER_ERROR" : "VALIDATION_ERROR",
         },
         error == null ? 500 : 400,

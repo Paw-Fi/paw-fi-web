@@ -4,6 +4,11 @@ import { corsHeaders } from "../shared/cors.ts";
 import { assertAccountInScope } from "../shared/accounts.ts";
 import { normalizeEmailAddress } from "../shared/email-import.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  hasPlusEntitlement,
+  jsonSubscriptionRequired,
+  loadLatestSubscriptionForUser,
+} from "../shared/plus-entitlement.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -234,6 +239,32 @@ Deno.serve(async (req: Request) => {
         400,
         "VALIDATION_ERROR",
       );
+    }
+
+    if (payload.enabled) {
+      try {
+        const subscription = await loadLatestSubscriptionForUser(
+          supabase,
+          userId,
+        );
+        if (!hasPlusEntitlement(subscription)) {
+          return jsonResponse(
+            jsonSubscriptionRequired("Email File Import"),
+            403,
+          );
+        }
+      } catch (error) {
+        await reportEdgeFunctionError({
+          functionName: "email-import-settings",
+          error,
+          context: { operation: "subscriptions.select_entitlement", userId },
+        });
+        return errorResponse(
+          "Failed to verify subscription",
+          500,
+          "SERVER_ERROR",
+        );
+      }
     }
 
     const householdId = sanitizeUuid(payload.householdId ?? null);

@@ -55,6 +55,7 @@ interface SubscriptionRow {
   plan: string | null;
   status: string | null;
   current_period_end?: string | null;
+  trial_end?: string | null;
   ended_at?: string | null;
   created_at: string | null;
 }
@@ -152,7 +153,12 @@ function pickLatestSubscriptions(rows: SubscriptionRow[]) {
 function getSubscriptionGraceAnchor(
   subscription: SubscriptionRow | undefined,
 ): string | null {
-  return subscription?.current_period_end ?? subscription?.ended_at ?? null;
+  return (
+    subscription?.current_period_end ??
+    subscription?.trial_end ??
+    subscription?.ended_at ??
+    null
+  );
 }
 
 function getSubscriptionGraceDeadline(params: {
@@ -345,7 +351,7 @@ async function enforceLifecyclePolicies(
     ? await supabase
         .from("subscriptions")
         .select(
-          "user_id, plan, status, current_period_end, ended_at, created_at",
+          "user_id, plan, status, current_period_end, trial_end, ended_at, created_at",
         )
         .in("user_id", userIds)
     : { data: [], error: null };

@@ -107,7 +107,7 @@ export async function getAccountOrNull(
   const { data, error } = await supabase
     .from("accounts")
     .select(
-      "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id",
+      "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id",
     )
     .eq("id", accountId)
     .maybeSingle();

@@ -103,8 +103,7 @@ Deno.serve(async (req: Request) => {
       );
     }
     const selectedCurrency = normalizeCurrency(body.currency);
-    const selectedCurrencies =
-      normalizeCurrencies(body.currencies) ??
+    const selectedCurrencies = normalizeCurrencies(body.currencies) ??
       (selectedCurrency ? [selectedCurrency] : null);
     if (body.currency && !selectedCurrency) {
       return jsonResponse(
@@ -120,10 +119,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(
         {
           success: false,
-          error:
-            body.currencies.length > 20
-              ? "Too many currencies"
-              : "Invalid currencies",
+          error: body.currencies.length > 20
+            ? "Too many currencies"
+            : "Invalid currencies",
           code: "VALIDATION_ERROR",
         },
         400,
@@ -193,7 +191,7 @@ Deno.serve(async (req: Request) => {
     let accountsQuery = supabase
       .from("accounts")
       .select(
-        "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
+        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
       )
       .order("is_default", { ascending: false })
       .order("is_system", { ascending: false })
@@ -283,8 +281,8 @@ Deno.serve(async (req: Request) => {
         .trim()
         .toUpperCase();
       if (walletCurrency && rowCurrency !== walletCurrency) continue;
-      transferOut[key] =
-        (transferOut[key] ?? 0) + Number(row.amount_cents || 0);
+      transferOut[key] = (transferOut[key] ?? 0) +
+        Number(row.amount_cents || 0);
     }
 
     const transferIn: Record<string, number> = {};
@@ -301,8 +299,7 @@ Deno.serve(async (req: Request) => {
     const payload = (accounts ?? []).map((row: any) => {
       const accountId = row.id as string;
       const opening = Number(row.opening_balance_cents || 0);
-      const fallbackBalanceCents =
-        opening +
+      const fallbackBalanceCents = opening +
         (incomeIn[accountId] ?? 0) -
         (expenseOut[accountId] ?? 0) +
         (transferIn[accountId] ?? 0) -

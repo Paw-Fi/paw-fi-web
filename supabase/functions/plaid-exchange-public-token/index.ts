@@ -3,7 +3,10 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { assertScopeAccess } from "../shared/accounts.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
-import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
+import {
+  canUsePlaidBankSync,
+  loadPlaidUserAccessState,
+} from "../shared/plaid-access.ts";
 import { canReusePlaidExchangeSnapshot } from "../shared/plaid-exchange-idempotency.ts";
 import { computePlaidBillingWindow } from "../shared/plaid-lifecycle.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
@@ -13,6 +16,7 @@ import {
   PLAID_PROVIDER,
   removePlaidItem,
 } from "../shared/plaid-client.ts";
+import { fetchAndStorePlaidInstitutionLogo } from "../shared/plaid-institution-logo.ts";
 import {
   buildPlaidDuplicateGroupKey,
   normalizePlaidSelectedAccountIds,
@@ -140,6 +144,21 @@ Deno.serve(async (req) => {
       supabase,
       authResult.userId,
     );
+
+    if (!canUsePlaidBankSync(accessState)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Bank sync is available during an active trial or with an active paid plan.",
+          errorCode: "plaid_subscription_required",
+        }),
+        {
+          status: 403,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const selectedAccounts = normalizePlaidSelectedAccounts(
       body.selectedAccounts,
     );
@@ -410,8 +429,43 @@ Deno.serve(async (req) => {
     let isNewConnection = false;
     let responseAccounts: Array<Record<string, unknown>> = [];
     let initialSyncQueued = false;
+    let institutionLogoUrl: string | null = null;
+    let institutionPrimaryColor: string | null = null;
 
     try {
+      try {
+        const storedLogo = await fetchAndStorePlaidInstitutionLogo({
+          supabase,
+          userId: authResult.userId,
+          institutionId: body.institutionId,
+          countryCode: body.countryCode,
+        });
+        institutionLogoUrl = storedLogo?.publicUrl ?? null;
+        institutionPrimaryColor = storedLogo?.primaryColor ?? null;
+      } catch (logoError) {
+        console.warn(
+          "[plaid-exchange] Failed to fetch/store institution logo",
+          JSON.stringify({
+            institutionId: body.institutionId || null,
+            error:
+              logoError instanceof Error
+                ? logoError.message
+                : String(logoError),
+          }),
+        );
+        await reportEdgeFunctionError({
+          functionName: "plaid-exchange-public-token",
+          error: logoError,
+          context: {
+            stage: "institution_logo_fetch_store",
+            institution_id: body.institutionId || null,
+            country_code: body.countryCode || null,
+            link_request_id: body.linkRequestId || null,
+            link_session_id: body.linkSessionId || null,
+          },
+        });
+      }
+
       const upsertResult = await upsertBankConnection({
         supabase,
         userId: authResult.userId,
@@ -428,6 +482,12 @@ Deno.serve(async (req) => {
           institution_id: body.institutionId || null,
           institution_name: body.institutionName || null,
           institution_logo: body.institutionLogo || null,
+          ...(institutionLogoUrl
+            ? { institution_logo_url: institutionLogoUrl }
+            : {}),
+          ...(institutionPrimaryColor
+            ? { institution_primary_color: institutionPrimaryColor }
+            : {}),
           plaid_duplicate_group_key: duplicateGroupKey,
           plaid_last_link_request_id: body.linkRequestId || null,
           plaid_last_link_session_id: body.linkSessionId || null,
@@ -538,6 +598,8 @@ Deno.serve(async (req) => {
 
       responseAccounts = upsertAccountsResult.records.map((record) => ({
         ...record,
+        institutionLogoUrl,
+        institutionPrimaryColor,
         linkedWallet: linkedWallets.get(record.id) || null,
       }));
 
@@ -576,6 +638,18 @@ Deno.serve(async (req) => {
             console.error(
               `[plaid-exchange] Immediate bank-sync-processor trigger failed for connection ${connectionId}: ${processorResponse.status} ${processorError}`,
             );
+            await reportEdgeFunctionError({
+              functionName: "plaid-exchange-public-token",
+              error: new Error(
+                `Immediate bank-sync-processor trigger failed: ${processorResponse.status} ${processorError}`,
+              ),
+              context: {
+                stage: "trigger_bank_sync_processor",
+                connection_id: connectionId,
+                processor_status: processorResponse.status,
+                link_session_id: body.linkSessionId || null,
+              },
+            });
           } else {
             const processorPayload = await processorResponse
               .json()
@@ -593,6 +667,15 @@ Deno.serve(async (req) => {
             `[plaid-exchange] Immediate bank-sync-processor trigger threw for connection ${connectionId}`,
             processorError,
           );
+          await reportEdgeFunctionError({
+            functionName: "plaid-exchange-public-token",
+            error: processorError,
+            context: {
+              stage: "trigger_bank_sync_processor",
+              connection_id: connectionId,
+              link_session_id: body.linkSessionId || null,
+            },
+          });
         }
       } else if (!INTERNAL_SERVICE_SECRET) {
         console.warn(

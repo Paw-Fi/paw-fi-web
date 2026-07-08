@@ -6,6 +6,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  hasPlusEntitlement,
+  jsonSubscriptionRequired,
+  loadLatestSubscriptionForUser,
+} from "../shared/plus-entitlement.ts";
 
 interface UpdateWalletCaptureRequest {
   enabled: boolean;
@@ -88,6 +93,25 @@ Deno.serve(async (req: Request) => {
       headers: { "X-Client-Info": "moneko-update-wallet-capture-setting" },
     },
   });
+
+  if (payload.enabled) {
+    try {
+      const subscription = await loadLatestSubscriptionForUser(
+        supabase,
+        userId,
+      );
+      if (!hasPlusEntitlement(subscription)) {
+        return jsonResponse(jsonSubscriptionRequired("wallet capture"), 403);
+      }
+    } catch (error) {
+      await reportEdgeFunctionError({
+        functionName: "update-wallet-capture-setting",
+        error,
+        context: { operation: "subscriptions.select_entitlement", userId },
+      });
+      return errorResponse("Failed to verify subscription", 500);
+    }
+  }
 
   // Find the user's existing contact row (most recent, in case of duplicates).
   const { data: existing, error: selectErr } = await supabase

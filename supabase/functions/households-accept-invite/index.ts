@@ -2,6 +2,18 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { sendEmail } from "../shared/email-service.ts";
+import { htmlToText } from "../shared/email-html-to-text.ts";
+import {
+  baseTemplate,
+  mobileDownloadCtasHtml,
+  renderFooter,
+} from "../shared/email-layout.ts";
+import { escapeHtml, sanitizeSubject } from "../shared/email-utils.ts";
+import {
+  hasReachedHouseholdSubscriptionGrantLimit,
+  HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT,
+} from "../shared/household-subscription-sharing.ts";
 import { fetchLatestUserContact } from "../shared/user-contacts.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -18,6 +30,13 @@ interface AcceptInviteResponse {
   household_id?: string;
   member_id?: string;
   error?: string;
+}
+
+interface SubscriptionBindingEmailContext {
+  plan: string;
+  grantOwnerUserId: string;
+  grantedUserCount: number;
+  remainingGrantCount: number;
 }
 
 serve(async (req) => {
@@ -298,6 +317,9 @@ serve(async (req) => {
       );
     }
 
+    let subscriptionBindingEmailContext: SubscriptionBindingEmailContext | null =
+      null;
+
     // 3. Bind user to household owner's subscription if applicable
     console.log(
       `[accept-invite] Attempting to bind user ${user.id} to household ${invite.household_id} subscription`,
@@ -323,7 +345,7 @@ serve(async (req) => {
         const { data: ownerSub, error: ownerSubError } = await supabase
           .from("subscriptions")
           .select(
-            "plan, status, user_id, stripe_customer_id, billing_interval, current_period_end, trial_start, trial_end",
+            "plan, status, user_id, bound_to_user_id, stripe_customer_id, billing_interval, current_period_end, trial_start, trial_end",
           )
           .eq("user_id", household.owner_id)
           .order("created_at", { ascending: false })
@@ -345,80 +367,157 @@ serve(async (req) => {
             status: ownerSub.status,
             billing_interval: ownerSub.billing_interval,
             stripe_customer_id: ownerSub.stripe_customer_id,
+            bound_to_user_id: ownerSub.bound_to_user_id,
             trial_start: ownerSub.trial_start,
             trial_end: ownerSub.trial_end,
             current_period_end: ownerSub.current_period_end,
           });
 
           // Check if owner has active subscription
-          const ownerHasActiveSubscription =
-            (ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
-            ownerSub.status === "trialing" ||
-            (ownerSub.status === "active" && ownerSub.plan !== "free");
+          const ownerHasActiveSubscription = hasShareableSubscription(ownerSub);
 
           if (ownerHasActiveSubscription) {
             console.log(
               "[accept-invite] Owner has active subscription - binding new member",
             );
 
-            // Call RPC to bind
-            const { data: bindResult, error: bindError } = await supabase.rpc(
-              "bind_user_to_household_subscription",
-              {
-                p_user_id: user.id,
-                p_household_id: invite.household_id,
-              },
-            );
+            const subscriptionGrantOwnerId =
+              ownerSub.bound_to_user_id ?? household.owner_id;
 
-            if (bindError) {
-              console.error(
-                "[accept-invite] RPC Error binding user:",
-                bindError,
-              );
-              console.error("[accept-invite] Error details:", {
-                message: bindError.message,
-                code: bindError.code,
-                details: bindError.details,
-                hint: bindError.hint,
-              });
-            } else if (bindResult) {
-              console.log(
-                `✅ [accept-invite] User ${user.id} successfully bound to household subscription`,
-              );
-
-              // Verify the binding by checking if subscription was created
-              const { data: newSubCheck } = await supabase
+            const { count: grantedUserCount, error: grantCountError } =
+              await supabase
                 .from("subscriptions")
-                .select(
-                  "plan, status, bound_to_user_id, bound_to_household_id, stripe_customer_id, billing_interval, current_period_end, trial_start, trial_end",
-                )
+                .select("id", { count: "exact", head: true })
+                .eq("bound_to_user_id", subscriptionGrantOwnerId)
+                .neq("user_id", user.id);
+
+            const { data: existingGrantedSub, error: existingGrantError } =
+              await supabase
+                .from("subscriptions")
+                .select("id")
                 .eq("user_id", user.id)
+                .eq("bound_to_user_id", subscriptionGrantOwnerId)
                 .maybeSingle();
 
-              if (newSubCheck) {
-                console.log(
-                  "[accept-invite] ✅ Verification - Bound subscription created:",
-                  {
-                    plan: newSubCheck.plan,
-                    status: newSubCheck.status,
-                    bound_to_user_id: newSubCheck.bound_to_user_id,
-                    bound_to_household_id: newSubCheck.bound_to_household_id,
-                    stripe_customer_id: newSubCheck.stripe_customer_id,
-                    billing_interval: newSubCheck.billing_interval,
-                    trial_start: newSubCheck.trial_start,
-                    trial_end: newSubCheck.trial_end,
-                    current_period_end: newSubCheck.current_period_end,
-                  },
+            if (grantCountError) {
+              console.error(
+                "[accept-invite] Error checking subscription grant count:",
+                grantCountError,
+              );
+            }
+
+            if (existingGrantError) {
+              console.error(
+                "[accept-invite] Error checking existing subscription grant:",
+                existingGrantError,
+              );
+            }
+
+            const shouldSkipBindingForGrantCheckError = Boolean(
+              grantCountError || existingGrantError,
+            );
+
+            const hasReachedGrantLimit =
+              !shouldSkipBindingForGrantCheckError &&
+              hasReachedHouseholdSubscriptionGrantLimit(
+                grantedUserCount ?? 0,
+                Boolean(existingGrantedSub),
+              );
+
+            if (shouldSkipBindingForGrantCheckError) {
+              console.warn(
+                "[accept-invite] Skipping subscription binding because grant limit check failed",
+              );
+            } else if (hasReachedGrantLimit) {
+              console.log(
+                `[accept-invite] Subscription grant limit reached for owner ${subscriptionGrantOwnerId}; invitee will join without shared subscription access (limit: ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT})`,
+              );
+            } else {
+              // Call RPC to bind
+              const { data: bindResult, error: bindError } = await supabase.rpc(
+                "bind_user_to_household_subscription",
+                {
+                  p_user_id: user.id,
+                  p_household_id: invite.household_id,
+                },
+              );
+
+              if (bindError) {
+                console.error(
+                  "[accept-invite] RPC Error binding user:",
+                  bindError,
                 );
+                console.error("[accept-invite] Error details:", {
+                  message: bindError.message,
+                  code: bindError.code,
+                  details: bindError.details,
+                  hint: bindError.hint,
+                });
+              } else if (bindResult) {
+                console.log(
+                  `✅ [accept-invite] User ${user.id} successfully bound to household subscription`,
+                );
+
+                // Verify the binding by checking if subscription was created
+                const { data: newSubCheck } = await supabase
+                  .from("subscriptions")
+                  .select(
+                    "plan, status, bound_to_user_id, bound_to_household_id, stripe_customer_id, billing_interval, current_period_end, trial_start, trial_end",
+                  )
+                  .eq("user_id", user.id)
+                  .maybeSingle();
+
+                if (newSubCheck) {
+                  const { count: updatedGrantedUserCount } = await supabase
+                    .from("subscriptions")
+                    .select("id", { count: "exact", head: true })
+                    .eq("bound_to_user_id", subscriptionGrantOwnerId);
+                  const safeGrantedUserCount = Math.min(
+                    updatedGrantedUserCount ?? (grantedUserCount ?? 0) + 1,
+                    HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT,
+                  );
+
+                  if (inviterUserId === subscriptionGrantOwnerId) {
+                    subscriptionBindingEmailContext = {
+                      plan: String(newSubCheck.plan ?? ownerSub.plan ?? "plus"),
+                      grantOwnerUserId: subscriptionGrantOwnerId,
+                      grantedUserCount: safeGrantedUserCount,
+                      remainingGrantCount: Math.max(
+                        HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT -
+                          safeGrantedUserCount,
+                        0,
+                      ),
+                    };
+                  } else {
+                    console.log(
+                      "[accept-invite] Skipping subscription binding emails because grant owner is not inviter",
+                    );
+                  }
+
+                  console.log(
+                    "[accept-invite] ✅ Verification - Bound subscription created:",
+                    {
+                      plan: newSubCheck.plan,
+                      status: newSubCheck.status,
+                      bound_to_user_id: newSubCheck.bound_to_user_id,
+                      bound_to_household_id: newSubCheck.bound_to_household_id,
+                      stripe_customer_id: newSubCheck.stripe_customer_id,
+                      billing_interval: newSubCheck.billing_interval,
+                      trial_start: newSubCheck.trial_start,
+                      trial_end: newSubCheck.trial_end,
+                      current_period_end: newSubCheck.current_period_end,
+                    },
+                  );
+                } else {
+                  console.warn(
+                    "[accept-invite] WARNING: RPC returned true but no subscription found!",
+                  );
+                }
               } else {
-                console.warn(
-                  "[accept-invite] WARNING: RPC returned true but no subscription found!",
+                console.log(
+                  `ℹ️  [accept-invite] RPC returned false - no binding created`,
                 );
               }
-            } else {
-              console.log(
-                `ℹ️  [accept-invite] RPC returned false - no binding created`,
-              );
             }
           } else {
             console.log(
@@ -476,6 +575,16 @@ serve(async (req) => {
     }
 
     console.log("[accept-invite] Joining member name:", memberName);
+
+    if (subscriptionBindingEmailContext) {
+      await sendSubscriptionBindingEmails({
+        inviterUserId,
+        inviteeEmail: joiningUser?.email || user.email || null,
+        inviteeName: memberName,
+        householdName: household?.name || "your household",
+        binding: subscriptionBindingEmailContext,
+      });
+    }
 
     // Get all household members for member_joined notification
     const { data: allMembers, error: membersError } = await supabase
@@ -614,3 +723,217 @@ serve(async (req) => {
     );
   }
 });
+
+function hasShareableSubscription(subscription: {
+  plan?: string | null;
+  status?: string | null;
+  current_period_end?: string | null;
+  trial_end?: string | null;
+}): boolean {
+  const plan = String(subscription.plan ?? "free").toLowerCase();
+  const status = String(subscription.status ?? "").toLowerCase();
+  const periodEnd = subscription.current_period_end ?? subscription.trial_end;
+  const hasFuturePeriod = periodEnd ? new Date(periodEnd) > new Date() : false;
+
+  if (plan === "free") return false;
+  if (plan === "lifetime" && status === "active") return true;
+  if (status === "active" || status === "trialing" || status === "past_due") {
+    return hasFuturePeriod;
+  }
+  return false;
+}
+
+async function sendSubscriptionBindingEmails(params: {
+  inviterUserId: string | null;
+  inviteeEmail: string | null;
+  inviteeName: string;
+  householdName: string;
+  binding: SubscriptionBindingEmailContext;
+}) {
+  const planName = formatPlanName(params.binding.plan);
+
+  try {
+    const [inviterProfileResult, grantOwnerProfileResult, inviterAuthResult] =
+      await Promise.all([
+        params.inviterUserId
+          ? supabase
+              .from("users")
+              .select("email, full_name")
+              .eq("id", params.inviterUserId)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from("users")
+          .select("email, full_name")
+          .eq("id", params.binding.grantOwnerUserId)
+          .maybeSingle(),
+        params.inviterUserId
+          ? supabase.auth.admin.getUserById(params.inviterUserId)
+          : Promise.resolve({ data: { user: null }, error: null }),
+      ]);
+
+    const inviterProfile = inviterProfileResult.data as {
+      email?: string | null;
+      full_name?: string | null;
+    } | null;
+    const grantOwnerProfile = grantOwnerProfileResult.data as {
+      email?: string | null;
+      full_name?: string | null;
+    } | null;
+    const inviterAuthUser = inviterAuthResult.data.user;
+    const inviterEmail =
+      inviterProfile?.email || inviterAuthUser?.email || null;
+    const inviterName = resolveUserDisplayName(
+      inviterProfile?.full_name,
+      inviterEmail,
+      "there",
+    );
+    const grantOwnerName = resolveUserDisplayName(
+      grantOwnerProfile?.full_name,
+      grantOwnerProfile?.email || null,
+      "the subscription owner",
+    );
+    const isInviterGrantOwner =
+      params.inviterUserId === params.binding.grantOwnerUserId;
+
+    if (inviterEmail) {
+      const inviterTemplate = buildInviterSubscriptionBindingEmail({
+        inviterName,
+        inviteeName: params.inviteeName,
+        householdName: params.householdName,
+        planName,
+        grantedUserCount: params.binding.grantedUserCount,
+        remainingGrantCount: params.binding.remainingGrantCount,
+        grantOwnerName,
+        isInviterGrantOwner,
+      });
+      const inviterSend = await sendEmail({
+        to: inviterEmail,
+        subject: inviterTemplate.subject,
+        html: inviterTemplate.html,
+        text: inviterTemplate.text,
+      });
+      if (!inviterSend.success) {
+        console.error(
+          "[accept-invite] Failed to send inviter subscription binding email:",
+          inviterSend.error,
+        );
+      }
+    }
+
+    if (params.inviteeEmail) {
+      const inviteeTemplate = buildInviteeSubscriptionBindingEmail({
+        inviteeName: params.inviteeName,
+        householdName: params.householdName,
+        planName,
+        grantOwnerName,
+      });
+      const inviteeSend = await sendEmail({
+        to: params.inviteeEmail,
+        subject: inviteeTemplate.subject,
+        html: inviteeTemplate.html,
+        text: inviteeTemplate.text,
+      });
+      if (!inviteeSend.success) {
+        console.error(
+          "[accept-invite] Failed to send invitee subscription binding email:",
+          inviteeSend.error,
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      "[accept-invite] Unexpected error sending subscription binding emails:",
+      error,
+    );
+  }
+}
+
+function buildInviterSubscriptionBindingEmail(data: {
+  inviterName: string;
+  inviteeName: string;
+  householdName: string;
+  planName: string;
+  grantedUserCount: number;
+  remainingGrantCount: number;
+  grantOwnerName: string;
+  isInviterGrantOwner: boolean;
+}) {
+  const ownershipText = data.isInviterGrantOwner
+    ? "your subscription"
+    : `${escapeHtml(data.grantOwnerName)}'s subscription`;
+  const remainingText =
+    data.remainingGrantCount === 1
+      ? "1 more person"
+      : `${data.remainingGrantCount} more people`;
+  const content = `
+    <h1 class="title">${escapeHtml(data.inviteeName)} joined ${escapeHtml(data.householdName)}</h1>
+    <p class="subtitle">${escapeHtml(data.inviteeName)} now has ${escapeHtml(data.planName)} access through ${ownershipText}.</p>
+    <p>Your household is using <strong>${data.grantedUserCount}/${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT}</strong> shared subscription seats.</p>
+    <p>You can still share subscription access with <strong>${escapeHtml(remainingText)}</strong> on the current plan.</p>
+    <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 28px 0;" />
+    <p><strong>FAQ: What if I invite more than ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users?</strong></p>
+    <p>You can invite unlimited people to your household, but only ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users can share subscription access with your current plan. Additional members can still join the household; they just keep their own subscription status.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because a household member joined and received shared subscription access.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject(
+      `${data.inviteeName} joined ${data.householdName} on Moneko`,
+    ),
+  };
+}
+
+function buildInviteeSubscriptionBindingEmail(data: {
+  inviteeName: string;
+  householdName: string;
+  planName: string;
+  grantOwnerName: string;
+}) {
+  const content = `
+    <h1 class="title">Your ${escapeHtml(data.planName)} access is ready</h1>
+    <p class="subtitle">Hi ${escapeHtml(data.inviteeName)}, your subscription access is now bound to ${escapeHtml(data.grantOwnerName)}'s ${escapeHtml(data.planName)} plan through ${escapeHtml(data.householdName)}.</p>
+    <p>Enjoy your Plus benefits in the Moneko app, including WhatsApp and Telegram integrations, email receipt capture, Apple Pay and Android notification capture, and bank sync for US and Canada banks.</p>
+    ${mobileDownloadCtasHtml()}
+    <p>If you have any questions, just reply to this email and our support team will help.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you joined a household with shared subscription access.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject(`Your ${data.planName} access is ready`),
+  };
+}
+
+function formatPlanName(plan: string): string {
+  const normalized = plan.trim().toLowerCase();
+  if (normalized === "lifetime") return "Moneko Lifetime";
+  if (normalized === "plus") return "Moneko Plus";
+  if (normalized === "premium") return "Moneko Premium";
+  return `Moneko ${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
+}
+
+function resolveUserDisplayName(
+  fullName: string | null | undefined,
+  email: string | null | undefined,
+  fallback: string,
+): string {
+  const trimmedName = fullName?.trim();
+  if (trimmedName) return trimmedName;
+  return email ? email.split("@")[0] : fallback;
+}

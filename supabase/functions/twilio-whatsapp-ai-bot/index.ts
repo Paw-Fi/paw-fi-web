@@ -13,7 +13,10 @@ import {
   sendWhatsAppMessage,
   sendWhatsAppTemplate,
 } from "../shared/whatsapp-helpers.ts";
-import { isFreeUser } from "../shared/is-free-user.ts";
+import {
+  buildSubscriptionRequiredMessage,
+  hasPlusEntitlement,
+} from "../shared/plus-entitlement.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits } from "../shared/expenses-helpers.ts";
@@ -128,8 +131,8 @@ import {
 } from "../shared/bot/tool-definitions.ts";
 import {
   hasExplicitTransactionCurrency,
-  resolveWalletIdInScope,
   resolveWalletForTransactionToolCall,
+  resolveWalletIdInScope,
   resolveWalletTransactionCurrency,
 } from "../shared/bot/wallet-scope.ts";
 import {
@@ -146,15 +149,15 @@ import {
 } from "../shared/bot/wallet-intent.ts";
 import { buildBotSystemInstruction } from "../shared/bot/system-instruction.ts";
 import {
-  createBotSpaceInvite,
   createBotSpace,
+  createBotSpaceInvite,
   getBotSpaceInfo,
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
 import {
   buildGenericMutationFailureText,
-  buildUnsafeMutationClaimFallback,
   buildUnsafeGenericMutationClaimFallback,
+  buildUnsafeMutationClaimFallback,
   diagnoseUnsafeTransactionMutationClaim,
   isWriteMutationToolName,
   shouldBlockUnsafeGenericMutationClaim,
@@ -174,10 +177,7 @@ import {
   resolveHouseholdSplitConfig,
   upsertBotSpaceMetaFromToolResult,
 } from "../shared/bot/household-utils.ts";
-import {
-  hasExpiredSubscriptionAccess,
-  jsonResponse,
-} from "../shared/bot/http-utils.ts";
+import { jsonResponse } from "../shared/bot/http-utils.ts";
 import {
   clearLastListedTransactions,
   type LastListedTransaction,
@@ -231,7 +231,8 @@ WHATSAPP BUDGET FLOW (WhatsApp only):
 - When the user confirms (e.g., yes/ok/sounds good), call "confirm_budget" to finalize without re-asking for amounts unless missing.
 - Only call "set_budget" directly if the user explicitly asks to set it now and the full amount is present in the same message.
 `;
-const WHATSAPP_SYSTEM_INSTRUCTION = `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
+const WHATSAPP_SYSTEM_INSTRUCTION =
+  `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
 
 const PROCESSING_ACK_DELAY_MS = 1000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
@@ -276,9 +277,11 @@ function buildTwimlMessage(message?: string | null, mediaUrl?: string | null) {
   }
 
   if (!media) {
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(
-      body,
-    )}</Message></Response>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${
+      escapeXml(
+        body,
+      )
+    }</Message></Response>`;
   }
 
   const bodyXml = body ? `<Body>${escapeXml(body)}</Body>` : "";
@@ -475,13 +478,13 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
   const rawList: any[] = Array.isArray(input)
     ? input
     : input && typeof input === "object"
-      ? Object.entries(input as Record<string, unknown>).map(
-          ([name, percentage]) => ({
-            name,
-            percentage,
-          }),
-        )
-      : [];
+    ? Object.entries(input as Record<string, unknown>).map(
+      ([name, percentage]) => ({
+        name,
+        percentage,
+      }),
+    )
+    : [];
 
   const pockets: NormalizedPocket[] = [];
   for (const entry of rawList) {
@@ -490,8 +493,7 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
     const name = typeof rawName === "string" ? rawName.trim() : "";
     if (!name) continue;
 
-    const rawPercent =
-      (entry as any).percentage ??
+    const rawPercent = (entry as any).percentage ??
       (entry as any).percent ??
       (entry as any).pct ??
       (entry as any).ratio;
@@ -500,17 +502,15 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
 
     const clamped = Math.max(0, Math.min(100, percent));
     const categories = normalizeCategories((entry as any).categories);
-    const colorRaw =
-      (entry as any).color ?? (entry as any).hex ?? (entry as any).hex_color;
+    const colorRaw = (entry as any).color ?? (entry as any).hex ??
+      (entry as any).hex_color;
     const iconRaw = (entry as any).icon ?? (entry as any).symbol;
-    const color =
-      typeof colorRaw === "string" && colorRaw.trim().length > 0
-        ? colorRaw.trim()
-        : undefined;
-    const icon =
-      typeof iconRaw === "string" && iconRaw.trim().length > 0
-        ? iconRaw.trim()
-        : undefined;
+    const color = typeof colorRaw === "string" && colorRaw.trim().length > 0
+      ? colorRaw.trim()
+      : undefined;
+    const icon = typeof iconRaw === "string" && iconRaw.trim().length > 0
+      ? iconRaw.trim()
+      : undefined;
     pockets.push({ name, percentage: clamped, categories, color, icon });
   }
   return pockets;
@@ -667,8 +667,8 @@ function decodeJwtPayloadMeta(token: string | null | undefined): {
   if (parts.length < 2) return { role: null, iss: null, projectRef: null };
   try {
     const payloadSegment = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded =
-      payloadSegment + "=".repeat((4 - (payloadSegment.length % 4)) % 4);
+    const padded = payloadSegment +
+      "=".repeat((4 - (payloadSegment.length % 4)) % 4);
     const payload = JSON.parse(atob(padded));
     const iss = typeof payload?.iss === "string" ? payload.iss : null;
     const role = typeof payload?.role === "string" ? payload.role : null;
@@ -820,9 +820,11 @@ async function buildFinancialSnapshot(
     },
   };
   const chartUrl = catData.length
-    ? `https://quickchart.io/chart?c=${encodeURIComponent(
+    ? `https://quickchart.io/chart?c=${
+      encodeURIComponent(
         JSON.stringify(chartConfig),
-      )}`
+      )
+    }`
     : undefined;
 
   return {
@@ -845,8 +847,7 @@ async function validateTwilioRequest(
   req: Request,
   authToken: string,
 ): Promise<boolean> {
-  const signatureHeader =
-    req.headers.get("X-Twilio-Signature") ||
+  const signatureHeader = req.headers.get("X-Twilio-Signature") ||
     req.headers.get("x-twilio-signature");
   if (!signatureHeader) return false;
 
@@ -941,8 +942,8 @@ Deno.serve(async (req: Request) => {
   if (WHATSAPP_DEBUG) {
     const secretSupabaseServiceRoleApiKey =
       Deno.env.get("SECRET_SUPABASE_SERVICE_ROLE_API_KEY") || "";
-    const activeInvokeJwt =
-      secretSupabaseServiceRoleApiKey || SUPABASE_SERVICE_ROLE_KEY || "";
+    const activeInvokeJwt = secretSupabaseServiceRoleApiKey ||
+      SUPABASE_SERVICE_ROLE_KEY || "";
     const serviceRoleMeta = decodeJwtPayloadMeta(activeInvokeJwt);
   }
 
@@ -955,8 +956,8 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const supabaseAuthed = SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      })
+      global: { headers: { Authorization: authHeader } },
+    })
     : null;
 
   if (isJsonApp) {
@@ -971,8 +972,8 @@ Deno.serve(async (req: Request) => {
     if (!supabaseAuthed) {
       return jsonResponse({ error: "Auth client not configured" }, 500);
     }
-    const { data: userData, error: userErr } =
-      await supabaseAuthed.auth.getUser();
+    const { data: userData, error: userErr } = await supabaseAuthed.auth
+      .getUser();
     if (userErr || !userData?.user) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
@@ -1032,8 +1033,9 @@ Deno.serve(async (req: Request) => {
         .eq("owner_id", userId);
       for (const s of ownedSpaces || []) {
         const id = (s as any)?.id;
-        const name =
-          typeof (s as any)?.name === "string" ? (s as any).name : "";
+        const name = typeof (s as any)?.name === "string"
+          ? (s as any).name
+          : "";
         if (typeof id === "string" && name) {
           const record = {
             id,
@@ -1067,8 +1069,9 @@ Deno.serve(async (req: Request) => {
           .in("id", memberIds);
         for (const s of memberSpaces || []) {
           const id = (s as any)?.id;
-          const name =
-            typeof (s as any)?.name === "string" ? (s as any).name : "";
+          const name = typeof (s as any)?.name === "string"
+            ? (s as any).name
+            : "";
           if (typeof id === "string" && name) {
             const record = {
               id,
@@ -1316,10 +1319,11 @@ Deno.serve(async (req: Request) => {
         applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
         try {
           if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
-            const hasMedia =
-              !!call.args?.media && typeof call.args.media === "object";
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
+            const hasMedia = !!call.args?.media &&
+              typeof call.args.media === "object";
 
             if (hasMedia) {
               toolResult = {
@@ -1352,8 +1356,8 @@ Deno.serve(async (req: Request) => {
                 limit: call.args.limit || 50,
                 startDate: call.args.start_date,
                 endDate: call.args.end_date,
-                householdId:
-                  call.args.space_id || call.args.household_id || null,
+                householdId: call.args.space_id || call.args.household_id ||
+                  null,
                 portfolioHouseholdIds:
                   call.args.space_id || call.args.household_id
                     ? undefined
@@ -1450,12 +1454,11 @@ Deno.serve(async (req: Request) => {
             });
             upsertBotSpaceMetaFromToolResult(toolResult, spaceMap);
           } else if (call.name === "update_transaction") {
-            const updatesArgs =
-              call.args?.updates &&
-              typeof call.args.updates === "object" &&
-              !Array.isArray(call.args.updates)
-                ? call.args.updates
-                : null;
+            const updatesArgs = call.args?.updates &&
+                typeof call.args.updates === "object" &&
+                !Array.isArray(call.args.updates)
+              ? call.args.updates
+              : null;
             if (!updatesArgs) {
               toolResult = { error: "updates is required" };
             } else {
@@ -1515,11 +1518,10 @@ Deno.serve(async (req: Request) => {
                   expenseId: resolved.candidate.id,
                   updates,
                 };
-                const hasScopeUpdate =
-                  Object.prototype.hasOwnProperty.call(
-                    updatesArgs,
-                    "household_id",
-                  ) ||
+                const hasScopeUpdate = Object.prototype.hasOwnProperty.call(
+                  updatesArgs,
+                  "household_id",
+                ) ||
                   Object.prototype.hasOwnProperty.call(
                     updatesArgs,
                     "household_name",
@@ -1531,9 +1533,9 @@ Deno.serve(async (req: Request) => {
                 const scopeResult = hasScopeUpdate
                   ? resolveBotSpaceScope(updatesArgs, spaceMap)
                   : {
-                      householdId: resolved.candidate.household_id || null,
-                      spaceMeta: undefined,
-                    };
+                    householdId: resolved.candidate.household_id || null,
+                    spaceMeta: undefined,
+                  };
                 if (hasScopeUpdate) {
                   updates.household_id = scopeResult.householdId;
                   updateRequestBody.householdId = scopeResult.householdId;
@@ -1558,12 +1560,11 @@ Deno.serve(async (req: Request) => {
                     updates.account_id = walletResolution.accountId || null;
                     const currencyResult = resolveWalletTransactionCurrency({
                       wallet: walletResolution,
-                      walletName:
-                        (updatesArgs as any).wallet_name ||
+                      walletName: (updatesArgs as any).wallet_name ||
                         (updatesArgs as any).wallet_id ||
                         (updatesArgs as any).account_id,
-                      transactionCurrency:
-                        updates.currency || resolved.candidate.currency,
+                      transactionCurrency: updates.currency ||
+                        resolved.candidate.currency,
                       fallbackCurrency: userCurrency,
                       hasExplicitCurrency: hasExplicitTransactionCurrency(
                         updatesArgs as Record<string, unknown>,
@@ -1599,8 +1600,7 @@ Deno.serve(async (req: Request) => {
                     updateRequestBody.payerUserId = splitConfig.payerUserId;
                   }
                   if (splitConfig.customSplits) {
-                    const isScopeMove =
-                      targetHouseholdId !==
+                    const isScopeMove = targetHouseholdId !==
                       (resolved.candidate.household_id || null);
                     if (isScopeMove) {
                       updateRequestBody.customSplits = splitConfig.customSplits;
@@ -1617,15 +1617,14 @@ Deno.serve(async (req: Request) => {
                     typeof updates.date === "string"
                       ? updates.date
                       : resolved.candidate.date ||
-                          formatDateInTimeZone(userTimezone),
+                        formatDateInTimeZone(userTimezone),
                   ) || {
                     frequency: "monthly",
                     interval: 1,
-                    anchor_date:
-                      typeof updates.date === "string"
-                        ? updates.date
-                        : resolved.candidate.date ||
-                          formatDateInTimeZone(userTimezone),
+                    anchor_date: typeof updates.date === "string"
+                      ? updates.date
+                      : resolved.candidate.date ||
+                        formatDateInTimeZone(userTimezone),
                   };
                 } else if (updatesArgs.is_recurring === false) {
                   updates.is_recurring = false;
@@ -1684,8 +1683,8 @@ Deno.serve(async (req: Request) => {
                       const formattedBase = error
                         ? formatInvokeError(error)
                         : typeof (data as any)?.error === "string"
-                          ? (data as any).error
-                          : "Failed to update transaction";
+                        ? (data as any).error
+                        : "Failed to update transaction";
                       const code = (data as any)?.code;
                       const formatted = code
                         ? `${formattedBase} (code: ${code})`
@@ -1748,16 +1747,14 @@ Deno.serve(async (req: Request) => {
                 userId,
                 resolved.candidate.id,
               );
-              toolResult = deleteResult.success
-                ? { success: true }
-                : {
-                    error: deleteResult.formatted,
-                  };
+              toolResult = deleteResult.success ? { success: true } : {
+                error: deleteResult.formatted,
+              };
             }
           } else if (call.name === "create_custom_category") {
             const transactionType =
               String(call.args?.transaction_type || "expense").toLowerCase() ===
-              "income"
+                  "income"
                 ? "income"
                 : "expense";
             try {
@@ -1769,15 +1766,13 @@ Deno.serve(async (req: Request) => {
                 colorArgb: Number.isFinite(Number(call.args?.color_argb))
                   ? Number(call.args?.color_argb)
                   : null,
-                iconKey:
-                  typeof call.args?.icon_key === "string"
-                    ? call.args.icon_key
-                    : null,
+                iconKey: typeof call.args?.icon_key === "string"
+                  ? call.args.icon_key
+                  : null,
               });
-              const targetList =
-                transactionType === "income"
-                  ? allowedIncomeCategories
-                  : allowedExpenseCategories;
+              const targetList = transactionType === "income"
+                ? allowedIncomeCategories
+                : allowedExpenseCategories;
               if (!targetList.includes(created.name)) {
                 targetList.push(created.name);
                 targetList.sort();
@@ -1823,16 +1818,16 @@ Deno.serve(async (req: Request) => {
               continue;
             }
             const transaction = transactionResult.transaction;
-            const canUseHouseholdSplits =
-              !!householdId && spaceMeta?.isPortfolio !== true;
+            const canUseHouseholdSplits = !!householdId &&
+              spaceMeta?.isPortfolio !== true;
             const splitConfig = canUseHouseholdSplits
               ? await resolveHouseholdSplitConfig(
-                  supabase,
-                  householdId!,
-                  userId,
-                  transaction.amount,
-                  call.args,
-                )
+                supabase,
+                householdId!,
+                userId,
+                transaction.amount,
+                call.args,
+              )
               : {};
             const requestedWallet = await resolveWalletForTransactionToolCall(
               supabase,
@@ -1864,8 +1859,7 @@ Deno.serve(async (req: Request) => {
                 category: transaction.category,
                 currency: currencyResult.currency,
                 householdId,
-                isPortfolio:
-                  spaceMeta?.isPortfolio ??
+                isPortfolio: spaceMeta?.isPortfolio ??
                   (call.args.space_type === "private_space" ||
                     call.args.is_portfolio === true),
               },
@@ -1883,22 +1877,20 @@ Deno.serve(async (req: Request) => {
                 description: transaction.description,
                 merchant: transaction.merchant,
                 householdId,
-                isPortfolio:
-                  spaceMeta?.isPortfolio ??
+                isPortfolio: spaceMeta?.isPortfolio ??
                   (call.args.space_type === "private_space" ||
                     call.args.is_portfolio === true),
                 accountId: requestedWallet.accountId ?? undefined,
                 payerUserId: splitConfig.payerUserId,
                 customSplits: splitConfig.customSplits,
                 isRecurring: call.args.is_recurring === true,
-                recurrence_rule:
-                  call.args.is_recurring === true
-                    ? buildRecurrenceRule(call.args, transaction.date!) || {
-                        frequency: "monthly",
-                        interval: 1,
-                        anchor_date: transaction.date!,
-                      }
-                    : undefined,
+                recurrence_rule: call.args.is_recurring === true
+                  ? buildRecurrenceRule(call.args, transaction.date!) || {
+                    frequency: "monthly",
+                    interval: 1,
+                    anchor_date: transaction.date!,
+                  }
+                  : undefined,
                 source: call.args.source,
                 ownerType: call.args.owner_type,
                 privacyScope: call.args.privacy_scope,
@@ -1941,8 +1933,7 @@ Deno.serve(async (req: Request) => {
               const spaceMeta = householdId
                 ? spaceMap.get(householdId)
                 : undefined;
-              const isPortfolio =
-                spaceMeta?.isPortfolio ??
+              const isPortfolio = spaceMeta?.isPortfolio ??
                 (call.args.space_type === "private_space" ||
                   call.args.is_portfolio === true);
 
@@ -2020,16 +2011,15 @@ Deno.serve(async (req: Request) => {
                   payerUserId,
                   customSplits,
                   isRecurring: tx.is_recurring === true,
-                  recurrence_rule:
-                    tx.is_recurring === true
-                      ? tx.recurrence_rule || {
-                          frequency: (tx.frequency || "monthly")
-                            .toString()
-                            .toLowerCase(),
-                          interval: 1,
-                          anchor_date: transaction.date!,
-                        }
-                      : undefined,
+                  recurrence_rule: tx.is_recurring === true
+                    ? tx.recurrence_rule || {
+                      frequency: (tx.frequency || "monthly")
+                        .toString()
+                        .toLowerCase(),
+                      interval: 1,
+                      anchor_date: transaction.date!,
+                    }
+                    : undefined,
                 });
               }
 
@@ -2070,8 +2060,7 @@ Deno.serve(async (req: Request) => {
                 };
               } else {
                 toolResult = {
-                  error:
-                    formatInvokeError(error ?? data?.error) ||
+                  error: formatInvokeError(error ?? data?.error) ||
                     "Failed to save transactions",
                 };
               }
@@ -2311,13 +2300,13 @@ Deno.serve(async (req: Request) => {
   // Map the context data to maintain backward compatibility
   let contact = contextData
     ? {
-        id: contextData.contact_id,
-        user_id: contextData.user_id,
-        verified: contextData.verified,
-        preferred_currency: contextData.preferred_currency,
-        preferred_language: contextData.preferred_language,
-        preferred_timezone: contextData.preferred_timezone,
-      }
+      id: contextData.contact_id,
+      user_id: contextData.user_id,
+      verified: contextData.verified,
+      preferred_currency: contextData.preferred_currency,
+      preferred_language: contextData.preferred_language,
+      preferred_timezone: contextData.preferred_timezone,
+    }
     : null;
   let contactError = contextError;
 
@@ -2522,50 +2511,29 @@ Deno.serve(async (req: Request) => {
   // Use subscription data from context
   const subscription = contextData
     ? {
-        plan: contextData.subscription_plan,
-        status: contextData.subscription_status,
-        currentPeriodEnd: contextData.subscription_current_period_end ?? null,
-      }
+      plan: contextData.subscription_plan,
+      status: contextData.subscription_status,
+      currentPeriodEnd: contextData.subscription_current_period_end ?? null,
+    }
     : null;
   debugLog(WHATSAPP_DEBUG, "subscription", { subscription });
 
-  if (hasExpiredSubscriptionAccess(subscription)) {
-    const expiredSubscriptionMessage =
-      "Your subscription has expired. Please subscribe at https://moneko.io/pricing to continue using Moneko.";
+  if (!hasPlusEntitlement(subscription)) {
+    const subscriptionRequiredMessage = buildSubscriptionRequiredMessage(
+      "WhatsApp capture",
+    );
     await sendWhatsAppMessage(
       twilioAccountSid,
       twilioAuthToken,
       to,
       from,
-      expiredSubscriptionMessage,
+      subscriptionRequiredMessage,
     );
     if (idempotencyKey) {
       await updateTwilioIdempotency(supabase, idempotencyKey, {
         status: "done",
         delivery: "api",
-        response_text: "subscription_expired",
-      });
-    }
-    return xmlResponse(buildTwimlMessage(null));
-  }
-
-  if (isFreeUser(subscription)) {
-    // Optional: Enforce paid-only features here if needed.
-    // For now, proceed or send warning? Original webhook sends NON_SUBSCRIBER template.
-    await sendWhatsAppTemplate(
-      twilioAccountSid,
-      twilioAuthToken,
-      to,
-      from,
-      TWILIO_TEMPLATES.NON_SUBSCRIBER,
-      undefined,
-      undefined,
-    );
-    if (idempotencyKey) {
-      await updateTwilioIdempotency(supabase, idempotencyKey, {
-        status: "done",
-        delivery: "template",
-        response_text: "non_subscriber",
+        response_text: "subscription_required",
       });
     }
     return xmlResponse(buildTwimlMessage(null));
@@ -2685,15 +2653,14 @@ Deno.serve(async (req: Request) => {
       .map((h: any) => h?.household_id)
       .filter((value: any) => typeof value === "string" && value.length > 0);
 
-    const householdContext =
-      spaces
-        ?.map(
-          (h: any) =>
-            `${h.name || "Space"}${
-              h.is_portfolio ? " (private space)" : " (shared space)"
-            }`,
-        )
-        .join("; ") || "None";
+    const householdContext = spaces
+      ?.map(
+        (h: any) =>
+          `${h.name || "Space"}${
+            h.is_portfolio ? " (private space)" : " (shared space)"
+          }`,
+      )
+      .join("; ") || "None";
 
     const spaceMap = new Map<
       string,
@@ -2790,17 +2757,15 @@ Deno.serve(async (req: Request) => {
       fallback?: PendingBudgetDraft | null,
     ) => {
       const amountCandidate = coerceNumber(args.amount);
-      const amountMajor =
-        amountCandidate != null && amountCandidate > 0
-          ? amountCandidate
-          : (fallback?.amount ?? null);
+      const amountMajor = amountCandidate != null && amountCandidate > 0
+        ? amountCandidate
+        : (fallback?.amount ?? null);
       if (!amountMajor || amountMajor <= 0) {
         return { error: "Invalid budget amount" };
       }
-      const rawDate =
-        typeof args.date === "string" && args.date.trim()
-          ? args.date.trim()
-          : fallback?.date || formatDateInTimeZone(userTimezone);
+      const rawDate = typeof args.date === "string" && args.date.trim()
+        ? args.date.trim()
+        : fallback?.date || formatDateInTimeZone(userTimezone);
       const dateStr = rawDate.slice(0, 10);
       const period_month = dateStr.slice(0, 7) + "-01";
       const { householdId, resolvedName, isPortfolio } = resolveBudgetScope(
@@ -2922,19 +2887,18 @@ Deno.serve(async (req: Request) => {
       historyParts.shift();
     }
 
-    const whatsappSystemInstruction =
-      WHATSAPP_SYSTEM_INSTRUCTION.replace(
-        "{{DATE}}",
-        formatDateInTimeZone(userTimezone),
+    const whatsappSystemInstruction = WHATSAPP_SYSTEM_INSTRUCTION.replace(
+      "{{DATE}}",
+      formatDateInTimeZone(userTimezone),
+    )
+      .replace("{{CURRENCY}}", userCurrency)
+      .replace("{{HOUSEHOLDS}}", householdContext)
+      .replace(
+        "{{WALLETS}}",
+        "Available on request for the selected space only",
       )
-        .replace("{{CURRENCY}}", userCurrency)
-        .replace("{{HOUSEHOLDS}}", householdContext)
-        .replace(
-          "{{WALLETS}}",
-          "Available on request for the selected space only",
-        )
-        .replace("{{CATEGORIES}}", categoryGuideForUser)
-        .replace("{{LANGUAGE}}", userLangLabel) +
+      .replace("{{CATEGORIES}}", categoryGuideForUser)
+      .replace("{{LANGUAGE}}", userLangLabel) +
       buildLanguageOverride(userLang);
     // Define Tools
     const tools = [
@@ -3040,13 +3004,15 @@ Deno.serve(async (req: Request) => {
           () =>
             reject(
               new Error(
-                `AI response timed out after ${Math.round(
-                  aiOuterTimeoutMs / 1000,
-                )} seconds`,
+                `AI response timed out after ${
+                  Math.round(
+                    aiOuterTimeoutMs / 1000,
+                  )
+                } seconds`,
               ),
             ),
           aiOuterTimeoutMs,
-        ),
+        )
       );
 
       const result = await Promise.race([messagePromise, timeoutPromise]);
@@ -3060,10 +3026,9 @@ Deno.serve(async (req: Request) => {
         modelName: MODEL_NAME,
         context: {
           hasAttachment: numMedia > 0,
-          message:
-            typeof userMessageContent === "string"
-              ? userMessageContent
-              : "[non-string-message]",
+          message: typeof userMessageContent === "string"
+            ? userMessageContent
+            : "[non-string-message]",
         },
       });
       finalResponseText = isRetryableGeminiError(e)
@@ -3206,8 +3171,9 @@ Deno.serve(async (req: Request) => {
         });
         try {
           if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
             const media =
               call.args?.media && typeof call.args.media === "object"
                 ? call.args.media
@@ -3250,11 +3216,11 @@ Deno.serve(async (req: Request) => {
 
               if (!mediaUrl) {
                 toolResult = {
-                  error: `Missing MediaUrl${index}. Ask the user to resend the attachment.`,
+                  error:
+                    `Missing MediaUrl${index}. Ask the user to resend the attachment.`,
                 };
               } else {
-                const accountSid =
-                  formData.get("AccountSid")?.toString() ||
+                const accountSid = formData.get("AccountSid")?.toString() ||
                   TWILIO_ACCOUNT_SID ||
                   "";
                 const token = TWILIO_AUTH_TOKEN || "";
@@ -3270,23 +3236,23 @@ Deno.serve(async (req: Request) => {
                       error: `Failed to download media (status ${res.status}).`,
                     };
                   } else {
-                    const headerContentType =
-                      res.headers.get("content-type") || mediaType || "";
+                    const headerContentType = res.headers.get("content-type") ||
+                      mediaType || "";
                     const contentType = headerContentType.split(";")[0].trim();
                     const buf = new Uint8Array(await res.arrayBuffer());
                     if (buf.byteLength > MAX_MEDIA_BYTES) {
                       toolResult = {
-                        error: `Media is too large to process (${buf.byteLength} bytes).`,
+                        error:
+                          `Media is too large to process (${buf.byteLength} bytes).`,
                       };
                     } else {
                       const base64Data = uint8ToBase64(buf);
-                      const cleanContentType =
-                        contentType ||
+                      const cleanContentType = contentType ||
                         (kind === "image"
                           ? "image/jpeg"
                           : kind === "audio"
-                            ? "audio/ogg"
-                            : "application/octet-stream");
+                          ? "audio/ogg"
+                          : "application/octet-stream");
 
                       const guessExtension = (ct: string) => {
                         const lower = ct.toLowerCase();
@@ -3378,7 +3344,7 @@ Deno.serve(async (req: Request) => {
           } else if (call.name === "create_custom_category") {
             const transactionType =
               String(call.args?.transaction_type || "expense").toLowerCase() ===
-              "income"
+                  "income"
                 ? "income"
                 : "expense";
             try {
@@ -3390,15 +3356,13 @@ Deno.serve(async (req: Request) => {
                 colorArgb: Number.isFinite(Number(call.args?.color_argb))
                   ? Number(call.args?.color_argb)
                   : null,
-                iconKey:
-                  typeof call.args?.icon_key === "string"
-                    ? call.args.icon_key
-                    : null,
+                iconKey: typeof call.args?.icon_key === "string"
+                  ? call.args.icon_key
+                  : null,
               });
-              const targetList =
-                transactionType === "income"
-                  ? allowedIncomeCategories
-                  : allowedExpenseCategories;
+              const targetList = transactionType === "income"
+                ? allowedIncomeCategories
+                : allowedExpenseCategories;
               if (!targetList.includes(created.name)) {
                 targetList.push(created.name);
                 targetList.sort();
@@ -3495,22 +3459,22 @@ Deno.serve(async (req: Request) => {
             }
             const recurrenceRule = call.args.is_recurring
               ? buildRecurrenceRule(call.args, transaction.date!) || {
-                  frequency: "monthly",
-                  interval: 1,
-                  anchor_date: transaction.date!,
-                }
+                frequency: "monthly",
+                interval: 1,
+                anchor_date: transaction.date!,
+              }
               : null;
             const type = transaction.type;
-            const canUseHouseholdSplits =
-              !!householdId && spaceMeta?.isPortfolio !== true;
+            const canUseHouseholdSplits = !!householdId &&
+              spaceMeta?.isPortfolio !== true;
             const splitConfig = canUseHouseholdSplits
               ? await resolveHouseholdSplitConfig(
-                  supabase,
-                  householdId!,
-                  userId,
-                  transaction.amount,
-                  call.args,
-                )
+                supabase,
+                householdId!,
+                userId,
+                transaction.amount,
+                call.args,
+              )
               : {};
 
             const { data, error } = await invokeTransactionSave(
@@ -3561,8 +3525,9 @@ Deno.serve(async (req: Request) => {
               });
               await reportTwilioToolInvokeFailure({
                 toolName: "add_transaction",
-                targetFunction:
-                  type === "income" ? "save-income" : "save-expense",
+                targetFunction: type === "income"
+                  ? "save-income"
+                  : "save-expense",
                 formatted,
                 error: error ?? data?.error,
                 context: {
@@ -3602,8 +3567,7 @@ Deno.serve(async (req: Request) => {
               });
               continue;
             }
-            const isPortfolio =
-              spaceMeta?.isPortfolio ??
+            const isPortfolio = spaceMeta?.isPortfolio ??
               (call.args.space_type === "private_space" ||
                 call.args.is_portfolio === true);
 
@@ -3678,16 +3642,15 @@ Deno.serve(async (req: Request) => {
                 payerUserId,
                 customSplits,
                 isRecurring: tx.is_recurring === true,
-                recurrence_rule:
-                  tx.is_recurring === true
-                    ? tx.recurrence_rule || {
-                        frequency: (tx.frequency || "monthly")
-                          .toString()
-                          .toLowerCase(),
-                        interval: 1,
-                        anchor_date: transaction.date!,
-                      }
-                    : undefined,
+                recurrence_rule: tx.is_recurring === true
+                  ? tx.recurrence_rule || {
+                    frequency: (tx.frequency || "monthly")
+                      .toString()
+                      .toLowerCase(),
+                    interval: 1,
+                    anchor_date: transaction.date!,
+                  }
+                  : undefined,
               });
             }
 
@@ -3874,12 +3837,11 @@ Deno.serve(async (req: Request) => {
             });
             upsertBotSpaceMetaFromToolResult(toolResult, spaceMap);
           } else if (call.name === "update_transaction") {
-            const updatesArgs =
-              call.args?.updates &&
-              typeof call.args.updates === "object" &&
-              !Array.isArray(call.args.updates)
-                ? call.args.updates
-                : null;
+            const updatesArgs = call.args?.updates &&
+                typeof call.args.updates === "object" &&
+                !Array.isArray(call.args.updates)
+              ? call.args.updates
+              : null;
             if (!updatesArgs) {
               toolResult = { error: "updates is required" };
             } else {
@@ -3897,8 +3859,7 @@ Deno.serve(async (req: Request) => {
 
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
 
               const resolved = await resolveBotTransactionSelection({
                 supabase,
@@ -3986,11 +3947,10 @@ Deno.serve(async (req: Request) => {
                       expenseId,
                       updates,
                     };
-                    const hasScopeUpdate =
-                      Object.prototype.hasOwnProperty.call(
-                        updatesArgs,
-                        "household_id",
-                      ) ||
+                    const hasScopeUpdate = Object.prototype.hasOwnProperty.call(
+                      updatesArgs,
+                      "household_id",
+                    ) ||
                       Object.prototype.hasOwnProperty.call(
                         updatesArgs,
                         "household_name",
@@ -4002,9 +3962,9 @@ Deno.serve(async (req: Request) => {
                     const scopeResult = hasScopeUpdate
                       ? resolveBotSpaceScope(updatesArgs, spaceMap)
                       : {
-                          householdId: resolved.candidate.household_id || null,
-                          spaceMeta: undefined,
-                        };
+                        householdId: resolved.candidate.household_id || null,
+                        spaceMeta: undefined,
+                      };
                     if (hasScopeUpdate) {
                       updates.household_id = scopeResult.householdId;
                       updateRequestBody.householdId = scopeResult.householdId;
@@ -4030,12 +3990,11 @@ Deno.serve(async (req: Request) => {
                         const currencyResult = resolveWalletTransactionCurrency(
                           {
                             wallet: walletResolution,
-                            walletName:
-                              (updatesArgs as any).wallet_name ||
+                            walletName: (updatesArgs as any).wallet_name ||
                               (updatesArgs as any).wallet_id ||
                               (updatesArgs as any).account_id,
-                            transactionCurrency:
-                              updates.currency || resolved.candidate.currency,
+                            transactionCurrency: updates.currency ||
+                              resolved.candidate.currency,
                             fallbackCurrency: userCurrency,
                             hasExplicitCurrency: hasExplicitTransactionCurrency(
                               updatesArgs as Record<string, unknown>,
@@ -4072,8 +4031,7 @@ Deno.serve(async (req: Request) => {
                         updateRequestBody.payerUserId = splitConfig.payerUserId;
                       }
                       if (splitConfig.customSplits) {
-                        const isScopeMove =
-                          targetHouseholdId !==
+                        const isScopeMove = targetHouseholdId !==
                           (resolved.candidate.household_id || null);
                         if (isScopeMove) {
                           updateRequestBody.customSplits =
@@ -4092,15 +4050,14 @@ Deno.serve(async (req: Request) => {
                         typeof updates.date === "string"
                           ? updates.date
                           : resolved.candidate.date ||
-                              formatDateInTimeZone(userTimezone),
+                            formatDateInTimeZone(userTimezone),
                       ) || {
                         frequency: "monthly",
                         interval: 1,
-                        anchor_date:
-                          typeof updates.date === "string"
-                            ? updates.date
-                            : resolved.candidate.date ||
-                              formatDateInTimeZone(userTimezone),
+                        anchor_date: typeof updates.date === "string"
+                          ? updates.date
+                          : resolved.candidate.date ||
+                            formatDateInTimeZone(userTimezone),
                       };
                     } else if ((updatesArgs as any).is_recurring === false) {
                       updates.is_recurring = false;
@@ -4130,9 +4087,9 @@ Deno.serve(async (req: Request) => {
                         resolved.candidate.description,
                         resolved.candidate.household_id
                           ? `(${
-                              spaceMap.get(resolved.candidate.household_id)
-                                ?.name || ""
-                            })`
+                            spaceMap.get(resolved.candidate.household_id)
+                              ?.name || ""
+                          })`
                           : "",
                       ]
                         .filter((v) => String(v || "").trim().length > 0)
@@ -4167,8 +4124,8 @@ Deno.serve(async (req: Request) => {
                           const formattedBase = error
                             ? formatInvokeError(error)
                             : typeof (data as any)?.error === "string"
-                              ? (data as any).error
-                              : "Failed to update transaction";
+                            ? (data as any).error
+                            : "Failed to update transaction";
                           const code = (data as any)?.code;
                           const formatted = code
                             ? `${formattedBase} (code: ${code})`
@@ -4624,11 +4581,13 @@ Deno.serve(async (req: Request) => {
               },
               options: { title: { display: true, text: call.args.title } },
             };
-            const longUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
-              JSON.stringify(chartConfig),
-            )}`;
-            const url =
-              (await createQuickChartShortUrl(chartConfig)) || longUrl;
+            const longUrl = `https://quickchart.io/chart?c=${
+              encodeURIComponent(
+                JSON.stringify(chartConfig),
+              )
+            }`;
+            const url = (await createQuickChartShortUrl(chartConfig)) ||
+              longUrl;
             toolResult = { url };
             lastGeneratedChartUrl = url;
           } else if (call.name === "manage_recurring") {
@@ -4687,16 +4646,16 @@ Deno.serve(async (req: Request) => {
                 anchor_date: transaction.date!,
               };
               const type = transaction.type;
-              const canUseHouseholdSplits =
-                !!householdId && spaceMeta?.isPortfolio !== true;
+              const canUseHouseholdSplits = !!householdId &&
+                spaceMeta?.isPortfolio !== true;
               const splitConfig = canUseHouseholdSplits
                 ? await resolveHouseholdSplitConfig(
-                    supabase,
-                    householdId!,
-                    userId,
-                    transaction.amount,
-                    call.args,
-                  )
+                  supabase,
+                  householdId!,
+                  userId,
+                  transaction.amount,
+                  call.args,
+                )
                 : {};
               const requestedWallet = await resolveWalletForTransactionToolCall(
                 supabase,
@@ -4774,8 +4733,9 @@ Deno.serve(async (req: Request) => {
                 });
                 await reportTwilioToolInvokeFailure({
                   toolName: "manage_recurring",
-                  targetFunction:
-                    type === "income" ? "save-income" : "save-expense",
+                  targetFunction: type === "income"
+                    ? "save-income"
+                    : "save-expense",
                   formatted,
                   error: error ?? data?.error,
                   context: {
@@ -4788,22 +4748,20 @@ Deno.serve(async (req: Request) => {
                 });
               }
             } else if (action === "update") {
-              const expenseIdDirect =
-                typeof call.args.expense_id === "string"
-                  ? call.args.expense_id.trim()
-                  : "";
+              const expenseIdDirect = typeof call.args.expense_id === "string"
+                ? call.args.expense_id.trim()
+                : "";
 
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
 
               const resolvedSelection = !expenseIdDirect
                 ? resolveLastListedSelection(
-                    readLastListedTransactions(sessionState).items || [],
-                    call.args,
-                    spaceNameByHouseholdId,
-                  )
+                  readLastListedTransactions(sessionState).items || [],
+                  call.args,
+                  spaceNameByHouseholdId,
+                )
                 : null;
 
               if (
@@ -4814,8 +4772,7 @@ Deno.serve(async (req: Request) => {
               } else if (resolvedSelection && "error" in resolvedSelection) {
                 toolResult = { error: resolvedSelection.error };
               } else {
-                const resolvedExpenseId =
-                  expenseIdDirect ||
+                const resolvedExpenseId = expenseIdDirect ||
                   (resolvedSelection && "candidate" in resolvedSelection
                     ? resolvedSelection.candidate.id
                     : "");
@@ -4921,26 +4878,24 @@ Deno.serve(async (req: Request) => {
                     return typeof cents === "number" ? cents / 100 : 0;
                   })();
 
-                  const splitConfig =
-                    householdId &&
-                    !spaceMeta?.isPortfolio &&
-                    (hasSplitHints || hasPayerHint)
-                      ? await resolveHouseholdSplitConfig(
-                          supabase,
-                          householdId,
-                          userId,
-                          totalForSplits,
-                          call.args,
-                        )
-                      : {};
+                  const splitConfig = householdId &&
+                      !spaceMeta?.isPortfolio &&
+                      (hasSplitHints || hasPayerHint)
+                    ? await resolveHouseholdSplitConfig(
+                      supabase,
+                      householdId,
+                      userId,
+                      totalForSplits,
+                      call.args,
+                    )
+                    : {};
 
                   if (splitConfig.payerUserId) {
                     updates.payer_user_id = splitConfig.payerUserId;
                   }
 
                   const extraBody: Record<string, unknown> = {};
-                  const hasCustomSplits =
-                    !!splitConfig.customSplits &&
+                  const hasCustomSplits = !!splitConfig.customSplits &&
                     Array.isArray(splitConfig.customSplits.memberSplits) &&
                     splitConfig.customSplits.memberSplits.length > 0;
                   if (householdId && hasCustomSplits) {
@@ -5009,28 +4964,25 @@ Deno.serve(async (req: Request) => {
                 }
               }
             } else {
-              const expenseIdDirect =
-                typeof call.args.expense_id === "string"
-                  ? call.args.expense_id.trim()
-                  : "";
+              const expenseIdDirect = typeof call.args.expense_id === "string"
+                ? call.args.expense_id.trim()
+                : "";
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
               const resolved = !expenseIdDirect
                 ? resolveLastListedSelection(
-                    readLastListedTransactions(sessionState).items || [],
-                    call.args,
-                    spaceNameByHouseholdId,
-                  )
+                  readLastListedTransactions(sessionState).items || [],
+                  call.args,
+                  spaceNameByHouseholdId,
+                )
                 : null;
               if (resolved && "needs_disambiguation" in resolved) {
                 toolResult = resolved;
               } else if (resolved && "error" in resolved) {
                 toolResult = { error: resolved.error };
               } else {
-                const expenseId =
-                  expenseIdDirect ||
+                const expenseId = expenseIdDirect ||
                   (resolved && "candidate" in resolved
                     ? resolved.candidate.id
                     : "");
@@ -5091,22 +5043,28 @@ Deno.serve(async (req: Request) => {
               const net = snap.net / 100;
               summary += `Income: ${formatAmount(income, userCurrency)}\n`;
               summary += `Spending: ${formatAmount(expense, userCurrency)}\n`;
-              summary += `Net: ${formatAmount(
-                net,
-                userCurrency,
-              )}\n\nTop categories:\n`;
-              snap.categories.forEach((c, idx) => {
-                summary += `${idx + 1}. ${c.category}: ${formatAmount(
-                  c.amount_cents / 100,
+              summary += `Net: ${
+                formatAmount(
+                  net,
                   userCurrency,
-                )}\n`;
+                )
+              }\n\nTop categories:\n`;
+              snap.categories.forEach((c, idx) => {
+                summary += `${idx + 1}. ${c.category}: ${
+                  formatAmount(
+                    c.amount_cents / 100,
+                    userCurrency,
+                  )
+                }\n`;
               });
               if (snap.budget_cents) {
                 const remain = (snap.budget_cents - snap.totalExpense) / 100;
-                summary += `\nBudget: ${formatAmount(
-                  snap.budget_cents / 100,
-                  userCurrency,
-                )} | Remaining: ${formatAmount(remain, userCurrency)}`;
+                summary += `\nBudget: ${
+                  formatAmount(
+                    snap.budget_cents / 100,
+                    userCurrency,
+                  )
+                } | Remaining: ${formatAmount(remain, userCurrency)}`;
               }
               toolResult = {
                 snapshot: snap,
@@ -5222,7 +5180,7 @@ Deno.serve(async (req: Request) => {
     }
     if (
       typeof buildMutationFailureText(lastToolCallName, lastToolResult) ===
-      "string"
+        "string"
     ) {
       finalResponseText = buildMutationFailureText(
         lastToolCallName,
@@ -5239,13 +5197,14 @@ Deno.serve(async (req: Request) => {
       finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
     }
     {
-      const shouldCheckTransactionClaim =
-        isWriteMutationToolName(lastToolCallName);
+      const shouldCheckTransactionClaim = isWriteMutationToolName(
+        lastToolCallName,
+      );
       const finalDiag = shouldCheckTransactionClaim
         ? diagnoseUnsafeTransactionMutationClaim({
-            responseText: finalResponseText,
-            writeMutationSucceeded: writeMutationSucceededAny,
-          })
+          responseText: finalResponseText,
+          writeMutationSucceeded: writeMutationSucceededAny,
+        })
         : { blocked: false, reason: "ok" as const };
       if (finalDiag.blocked) {
         console.log(
@@ -5595,7 +5554,7 @@ Deno.serve(async (req: Request) => {
     .catch((error) => ({ type: "error" as const, error }));
 
   const timeoutPromise = new Promise<{ type: "timeout" }>((resolve) =>
-    setTimeout(() => resolve({ type: "timeout" }), PROCESSING_ACK_DELAY_MS),
+    setTimeout(() => resolve({ type: "timeout" }), PROCESSING_ACK_DELAY_MS)
   );
 
   const raceResult = await Promise.race([computePromise, timeoutPromise]);
@@ -5649,10 +5608,9 @@ Deno.serve(async (req: Request) => {
         status: "failed",
         delivery: "twiml",
         response_text: "processing_failed",
-        error:
-          raceResult.error instanceof Error
-            ? raceResult.error.message
-            : String(raceResult.error),
+        error: raceResult.error instanceof Error
+          ? raceResult.error.message
+          : String(raceResult.error),
       });
     }
     return xmlResponse(
@@ -5696,10 +5654,9 @@ Deno.serve(async (req: Request) => {
               status: "failed",
               delivery: "api",
               response_text: "processing_failed",
-              error:
-                result.error instanceof Error
-                  ? result.error.message
-                  : String(result.error),
+              error: result.error instanceof Error
+                ? result.error.message
+                : String(result.error),
             });
           }
         }
