@@ -151,7 +151,7 @@ export function calculatePocketRolloverBreakdownCents({
     };
   }
 
-  const incoming = capPositive(Math.round(incomingRolloverCents || 0));
+  const incoming = Math.round(incomingRolloverCents || 0);
   const available = sanitizedBase + incoming + sanitizedOpening;
   const remaining = available - sanitizedSpent;
   const carry = remaining < 0 && !rolloverNegative ? 0 : capPositive(remaining);
