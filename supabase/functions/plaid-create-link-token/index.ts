@@ -3,7 +3,10 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { assertScopeAccess } from "../shared/accounts.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
-import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
+import {
+  canUsePlaidBankSync,
+  loadPlaidUserAccessState,
+} from "../shared/plaid-access.ts";
 import { derivePlaidLinkProducts } from "../shared/plaid-lifecycle.ts";
 import { resolvePlaidCountryCode } from "../shared/plaid-country.ts";
 import { sanitizeOptionalUuid } from "../shared/bank-sync.ts";
@@ -88,6 +91,21 @@ Deno.serve(async (req) => {
       supabase,
       authResult.userId,
     );
+
+    if (!canUsePlaidBankSync(accessState)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Bank sync is available during an active trial or with an active paid plan.",
+          errorCode: "plaid_subscription_required",
+        }),
+        {
+          status: 403,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
     if (body.targetHouseholdId && !targetHouseholdId) {
       return new Response(

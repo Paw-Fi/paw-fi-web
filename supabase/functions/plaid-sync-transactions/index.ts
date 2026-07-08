@@ -4,6 +4,10 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  canUsePlaidBankSync,
+  loadPlaidUserAccessState,
+} from "../shared/plaid-access.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   getPlaidAccounts,
@@ -110,6 +114,24 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
         {
           status: authResult.statusCode || 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const accessState = await loadPlaidUserAccessState(
+      supabase,
+      authResult.userId,
+    );
+    if (!canUsePlaidBankSync(accessState)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Bank sync is available during an active trial or with an active paid plan.",
+          errorCode: "plaid_subscription_required",
+        }),
+        {
+          status: 403,
           headers: { ...headers, "Content-Type": "application/json" },
         },
       );
@@ -734,9 +756,10 @@ async function syncConnection(params: {
       status: "failed",
       error_message: summary.error,
       error_code: errorCode,
-      error_payload: error instanceof PlaidError
-        ? error.details
-        : serializeUnknownError(error),
+      error_payload:
+        error instanceof PlaidError
+          ? error.details
+          : serializeUnknownError(error),
       finished_at: new Date().toISOString(),
     });
     await reportEdgeFunctionError({

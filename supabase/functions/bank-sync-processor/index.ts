@@ -6,7 +6,12 @@ import {
   resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
 import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
+import {
+  canUsePlaidBankSync,
+  loadPlaidUserAccessState,
+} from "../shared/plaid-access.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import { removePlaidConnection } from "../shared/plaid-remove.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
@@ -15,8 +20,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const INTERNAL_FUNCTION_KEY = Deno.env.get(
   "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
 );
-const RESOLVED_INTERNAL_FUNCTION_KEY = INTERNAL_FUNCTION_KEY ||
-  resolveAnyInternalFunctionKey();
+const RESOLVED_INTERNAL_FUNCTION_KEY =
+  INTERNAL_FUNCTION_KEY || resolveAnyInternalFunctionKey();
 const AUTO_BANK_SYNC_ENABLED =
   Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() !== "false";
 
@@ -45,6 +50,8 @@ interface BankConnection {
   user_id: string;
   provider: string;
   needs_resync?: boolean;
+  access_token_encrypted?: string | null;
+  plaid_access_token_encrypted?: string | null;
   removed_at?: string | null;
   status?: string | null;
   item_status?: string | null;
@@ -186,12 +193,11 @@ Deno.serve(async (req) => {
     for (const job of jobs as BankSyncJob[]) {
       try {
         // Jobs are already marked as processing by the RPC call
-
         // Load bank connection
         const { data: connection, error: connectionError } = await supabase
           .from("bank_connections")
           .select(
-            "id, user_id, provider, needs_resync, removed_at, status, item_status",
+            "id, user_id, provider, needs_resync, access_token_encrypted, plaid_access_token_encrypted, removed_at, status, item_status",
           )
           .eq("id", job.bank_connection_id)
           .maybeSingle();
@@ -247,11 +253,29 @@ Deno.serve(async (req) => {
             connection as BankConnection,
           );
         } else if (connection.provider === PLAID_PROVIDER) {
-          await processPlaidJob(
+          const accessState = await loadPlaidUserAccessState(
             supabase as any,
-            job,
-            connection as BankConnection,
+            connection.user_id,
           );
+          if (!canUsePlaidBankSync(accessState)) {
+            console.log(
+              `[bank-sync-processor] Removing Plaid item without active entitlement for job ${job.id}`,
+            );
+            await removePlaidConnection({
+              supabase,
+              connection: connection as BankConnection,
+              removalReason: "subscription_entitlement_expired",
+            });
+            results.succeeded++;
+            results.processed++;
+            continue;
+          } else {
+            await processPlaidJob(
+              supabase as any,
+              job,
+              connection as BankConnection,
+            );
+          }
         } else {
           throw new Error(`Unknown provider: ${connection.provider}`);
         }
@@ -302,9 +326,8 @@ Deno.serve(async (req) => {
         results.succeeded++;
       } catch (error) {
         console.error(`[bank-sync-processor] Job ${job.id} failed`, error);
-        const errorMessage = error instanceof Error
-          ? error.message
-          : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         const failureUpdate = buildBankSyncJobFailureUpdate({
           attemptCount: job.attempt_count ?? 0,
           errorMessage,

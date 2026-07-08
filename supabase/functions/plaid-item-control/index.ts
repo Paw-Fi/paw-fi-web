@@ -4,7 +4,10 @@ import { assertScopeAccess } from "../shared/accounts.ts";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
-import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
+import {
+  canUsePlaidBankSync,
+  loadPlaidUserAccessState,
+} from "../shared/plaid-access.ts";
 import { canRequestPlaidManualRefresh } from "../shared/plaid-lifecycle.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
@@ -262,6 +265,25 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "update_mode_complete") {
+      const accessState = await loadPlaidUserAccessState(
+        supabase,
+        authResult.userId,
+      );
+
+      if (!canUsePlaidBankSync(accessState)) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Bank sync is available during an active trial or with an active paid plan.",
+            errorCode: "plaid_subscription_required",
+          }),
+          {
+            status: 403,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       const updateCompletionNonce = body.updateCompletionNonce?.trim();
       if (!updateCompletionNonce) {
         return new Response(
