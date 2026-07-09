@@ -3,7 +3,14 @@ import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { getAccountOrNull, sanitizeUuid } from "../shared/accounts.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
-import { removePlaidConnection } from "../shared/plaid-remove.ts";
+import {
+  removePlaidConnection,
+  type PlaidRemovableConnection,
+} from "../shared/plaid-remove.ts";
+
+type FunctionSupabaseClient = ReturnType<
+  typeof createClient<any, "public", any>
+>;
 
 interface RequestBody {
   accountId: string;
@@ -18,6 +25,11 @@ interface BankCleanupResult {
   bankConnectionStatus: string | null;
 }
 
+const DEFAULT_WALLET_DELETE_MESSAGE =
+  "Add another wallet before deleting the default wallet";
+const SYSTEM_WALLET_DELETE_MESSAGE =
+  "This wallet is protected and cannot be deleted";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -27,6 +39,20 @@ function jsonResponse(payload: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function errorResponse(error: string, code: string, status: number) {
+  return jsonResponse(
+    {
+      success: false,
+      error,
+      message: error,
+      code,
+      errorCode: code,
+      status,
+    },
+    status,
+  );
 }
 
 function countRows<T>(rows: T[] | null): number {
@@ -40,10 +66,67 @@ function statusForCode(code: unknown): number {
     case "UNAUTHORIZED":
       return 403;
     case "VALIDATION_ERROR":
+    case "DEFAULT_WALLET_REQUIRED":
+    case "SYSTEM_WALLET_PROTECTED":
       return 400;
     default:
       return 500;
   }
+}
+
+function knownDeleteErrorResponse(error: unknown): Response | null {
+  if (!isRecord(error)) {
+    return null;
+  }
+
+  const message = typeof error.message === "string" ? error.message : "";
+  if (message.includes("System account cannot be deleted")) {
+    return errorResponse(
+      SYSTEM_WALLET_DELETE_MESSAGE,
+      "SYSTEM_WALLET_PROTECTED",
+      400,
+    );
+  }
+
+  if (message.includes(DEFAULT_WALLET_DELETE_MESSAGE)) {
+    return errorResponse(
+      DEFAULT_WALLET_DELETE_MESSAGE,
+      "DEFAULT_WALLET_REQUIRED",
+      400,
+    );
+  }
+
+  return null;
+}
+
+async function hasReplacementDefaultWallet(params: {
+  supabase: FunctionSupabaseClient;
+  accountId: string;
+  userId: string;
+  householdId: string | null;
+  currency: string;
+}): Promise<boolean> {
+  const query = params.supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", params.userId)
+    .eq("currency", params.currency)
+    .eq("is_archived", false)
+    .neq("id", params.accountId)
+    .order("is_system", { ascending: false })
+    .order("name", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(1);
+
+  const result = params.householdId
+    ? await query.eq("household_id", params.householdId)
+    : await query.is("household_id", null);
+  const { data, error } = result;
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data) && data.length > 0;
 }
 
 Deno.serve(async (req: Request) => {
@@ -127,17 +210,6 @@ Deno.serve(async (req: Request) => {
         404,
       );
     }
-    if (account.is_system) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "System wallet cannot be deleted",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-
     const householdId = account.household_id as string | null;
     if (!householdId && account.user_id !== userId) {
       return jsonResponse(
@@ -163,6 +235,31 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    if (account.is_system) {
+      return errorResponse(
+        SYSTEM_WALLET_DELETE_MESSAGE,
+        "SYSTEM_WALLET_PROTECTED",
+        400,
+      );
+    }
+
+    if (account.is_default) {
+      const hasReplacement = await hasReplacementDefaultWallet({
+        supabase,
+        accountId,
+        userId: account.user_id,
+        householdId,
+        currency: account.currency,
+      });
+      if (!hasReplacement) {
+        return errorResponse(
+          DEFAULT_WALLET_DELETE_MESSAGE,
+          "DEFAULT_WALLET_REQUIRED",
+          400,
+        );
+      }
+    }
+
     const { data: deleteResult, error: deleteError } = await supabase.rpc(
       "delete_wallet_hard",
       {
@@ -176,15 +273,34 @@ Deno.serve(async (req: Request) => {
 
     if (!isRecord(deleteResult) || deleteResult.success !== true) {
       const code = isRecord(deleteResult) ? deleteResult.code : null;
+      const status = statusForCode(code);
+      const errorMessage = isRecord(deleteResult) &&
+          typeof deleteResult.error === "string"
+        ? deleteResult.error
+        : "Failed to delete wallet";
+      const errorCode = typeof code === "string" ? code : "SERVER_ERROR";
       return jsonResponse(
         isRecord(deleteResult)
-          ? deleteResult
+          ? {
+            ...deleteResult,
+            success: false,
+            error: errorMessage,
+            message: typeof deleteResult.message === "string"
+              ? deleteResult.message
+              : errorMessage,
+            code: errorCode,
+            errorCode,
+            status,
+          }
           : {
             success: false,
             error: "Failed to delete wallet",
+            message: "Failed to delete wallet",
             code: "SERVER_ERROR",
+            errorCode: "SERVER_ERROR",
+            status,
           },
-        statusForCode(code),
+        status,
       );
     }
 
@@ -264,11 +380,19 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("[delete-wallet]", error);
+    const knownResponse = knownDeleteErrorResponse(error);
+    if (knownResponse) {
+      return knownResponse;
+    }
+
     return jsonResponse(
       {
         success: false,
         error: "Failed to delete wallet",
+        message: "Failed to delete wallet",
         code: "SERVER_ERROR",
+        errorCode: "SERVER_ERROR",
+        status: 500,
       },
       500,
     );
@@ -276,7 +400,7 @@ Deno.serve(async (req: Request) => {
 });
 
 async function cleanupWalletLogo(params: {
-  supabase: ReturnType<typeof createClient>;
+  supabase: FunctionSupabaseClient;
   supabaseUrl: string;
   accountId: string;
   userId: string;
@@ -372,8 +496,30 @@ function walletLogoStoragePath(params: {
   }
 }
 
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function toPlaidRemovableConnection(
+  connection: Record<string, unknown>,
+): PlaidRemovableConnection {
+  const id = optionalString(connection.id);
+  if (!id) {
+    throw new Error("Plaid connection id is required for removal");
+  }
+
+  return {
+    id,
+    user_id: optionalString(connection.user_id),
+    access_token_encrypted: optionalString(connection.access_token_encrypted),
+    plaid_access_token_encrypted: optionalString(
+      connection.plaid_access_token_encrypted,
+    ),
+  };
+}
+
 async function cleanupLinkedBankAccount(params: {
-  supabase: ReturnType<typeof createClient>;
+  supabase: FunctionSupabaseClient;
   accountId: string;
   linkedBankAccountId: string | null;
 }): Promise<BankCleanupResult> {
@@ -395,19 +541,24 @@ async function cleanupLinkedBankAccount(params: {
   if (bankAccountError) {
     throw bankAccountError;
   }
-  if (!bankAccount?.id) {
+  const bankAccountId = typeof bankAccount?.id === "string"
+    ? bankAccount.id
+    : null;
+  if (!bankAccountId) {
     return {
       ...emptyResult,
       linkedBankAccountId: params.linkedBankAccountId,
     };
   }
 
-  const bankConnectionId = bankAccount.bank_connection_id as string | null;
+  const bankConnectionId = typeof bankAccount?.bank_connection_id === "string"
+    ? bankAccount.bank_connection_id
+    : null;
   const { data: sharedWallets, error: sharedWalletsError } =
     await params.supabase
       .from("accounts")
       .select("id")
-      .eq("linked_bank_account_id", bankAccount.id)
+      .eq("linked_bank_account_id", bankAccountId)
       .eq("is_archived", false)
       .neq("id", params.accountId);
   if (sharedWalletsError) {
@@ -416,7 +567,7 @@ async function cleanupLinkedBankAccount(params: {
 
   if (countRows(sharedWallets as { id: string }[] | null) > 0) {
     return {
-      linkedBankAccountId: bankAccount.id,
+      linkedBankAccountId: bankAccountId,
       bankConnectionId,
       bankAccountStatus: "kept_shared_wallet",
       bankConnectionStatus: "kept_shared_wallet",
@@ -429,14 +580,14 @@ async function cleanupLinkedBankAccount(params: {
       status: "disabled",
       updated_at: new Date().toISOString(),
     })
-    .eq("id", bankAccount.id);
+    .eq("id", bankAccountId);
   if (disableBankAccountError) {
     throw disableBankAccountError;
   }
 
   if (!bankConnectionId) {
     return {
-      linkedBankAccountId: bankAccount.id,
+      linkedBankAccountId: bankAccountId,
       bankConnectionId,
       bankAccountStatus: "disabled",
       bankConnectionStatus: null,
@@ -448,7 +599,7 @@ async function cleanupLinkedBankAccount(params: {
     .from("bank_accounts")
     .select("id")
     .eq("bank_connection_id", bankConnectionId)
-    .neq("id", bankAccount.id)
+    .neq("id", bankAccountId)
     .eq("status", "active");
   if (activeSiblingsError) {
     throw activeSiblingsError;
@@ -456,7 +607,7 @@ async function cleanupLinkedBankAccount(params: {
 
   if (countRows(activeSiblings as { id: string }[] | null) > 0) {
     return {
-      linkedBankAccountId: bankAccount.id,
+      linkedBankAccountId: bankAccountId,
       bankConnectionId,
       bankAccountStatus: "disabled",
       bankConnectionStatus: "kept_shared_connection",
@@ -468,7 +619,7 @@ async function cleanupLinkedBankAccount(params: {
       .from("bank_accounts")
       .select("id")
       .eq("bank_connection_id", bankConnectionId)
-      .neq("id", bankAccount.id);
+      .neq("id", bankAccountId);
   if (siblingBankAccountsError) {
     throw siblingBankAccountsError;
   }
@@ -492,7 +643,7 @@ async function cleanupLinkedBankAccount(params: {
     }
     if (countRows(siblingWallets as { id: string }[] | null) > 0) {
       return {
-        linkedBankAccountId: bankAccount.id,
+        linkedBankAccountId: bankAccountId,
         bankConnectionId,
         bankAccountStatus: "disabled",
         bankConnectionStatus: "kept_shared_connection",
@@ -513,7 +664,7 @@ async function cleanupLinkedBankAccount(params: {
 
   if (!connection || connection.provider !== PLAID_PROVIDER) {
     return {
-      linkedBankAccountId: bankAccount.id,
+      linkedBankAccountId: bankAccountId,
       bankConnectionId,
       bankAccountStatus: "disabled",
       bankConnectionStatus: "kept_non_plaid_connection",
@@ -522,7 +673,7 @@ async function cleanupLinkedBankAccount(params: {
 
   if (connection.removed_at) {
     return {
-      linkedBankAccountId: bankAccount.id,
+      linkedBankAccountId: bankAccountId,
       bankConnectionId,
       bankAccountStatus: "disabled",
       bankConnectionStatus: "already_removed",
@@ -532,11 +683,11 @@ async function cleanupLinkedBankAccount(params: {
   try {
     await removePlaidConnection({
       supabase: params.supabase,
-      connection,
+      connection: toPlaidRemovableConnection(connection),
       removalReason: "wallet_delete",
     });
     return {
-      linkedBankAccountId: bankAccount.id,
+      linkedBankAccountId: bankAccountId,
       bankConnectionId,
       bankAccountStatus: "removed",
       bankConnectionStatus: "removed",
@@ -556,7 +707,7 @@ async function cleanupLinkedBankAccount(params: {
       removalState?.item_health_state === "removal_pending"
     ) {
       return {
-        linkedBankAccountId: bankAccount.id,
+        linkedBankAccountId: bankAccountId,
         bankConnectionId,
         bankAccountStatus: "disabled",
         bankConnectionStatus: "pending_removal",
