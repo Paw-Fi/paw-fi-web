@@ -21,6 +21,7 @@ export function normalizeEnvelopeName(value: string): string {
 
 export function normalizePeriodMonth(value: string): string {
   const trimmed = (value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
   if (trimmed.length >= 7) return `${trimmed.slice(0, 7)}-01`;
   return trimmed;
 }
@@ -95,7 +96,7 @@ export async function consolidateDuplicateEnvelopesForBudget(
     const map = new Map<string, BudgetEnvelopeRowLite>();
     for (const [norm, rows] of byNorm.entries()) {
       const chosen = rows.reduce((acc, cur) =>
-        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc,
+        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc
       );
       map.set(norm, chosen);
     }
@@ -112,9 +113,11 @@ export async function consolidateDuplicateEnvelopesForBudget(
       .in("envelope_id", ids);
     if (linksErr && debugEnabled) {
       debugNotes.push(
-        `envelope_category_links load error (${norm}): ${formatInvokeError(
-          linksErr,
-        )}`,
+        `envelope_category_links load error (${norm}): ${
+          formatInvokeError(
+            linksErr,
+          )
+        }`,
       );
     }
     const links = (linksRaw || []) as Array<{
@@ -195,9 +198,11 @@ export async function consolidateDuplicateEnvelopesForBudget(
       .in("id", dupIds);
     if (deleteEnvErr && debugEnabled) {
       debugNotes.push(
-        `duplicate envelope delete error (${norm}): ${formatInvokeError(
-          deleteEnvErr,
-        )}`,
+        `duplicate envelope delete error (${norm}): ${
+          formatInvokeError(
+            deleteEnvErr,
+          )
+        }`,
       );
     }
   }

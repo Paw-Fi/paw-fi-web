@@ -64,11 +64,10 @@ function normalizeDateInput(value?: string | null): string | null {
 
 function normalizePeriodMonth(value?: string | null): string {
   const now = new Date();
-  const fallback = `${now.getUTCFullYear()}-${
-    String(now.getUTCMonth() + 1).padStart(2, "0")
-  }`;
+  const fallback = now.toISOString().slice(0, 10);
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
   return /^\d{4}-\d{2}$/.test(trimmed) ? trimmed : fallback;
 }
 

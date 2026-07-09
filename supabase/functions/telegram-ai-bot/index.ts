@@ -25,6 +25,7 @@ import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
   getBudgetStatusDirect,
+  resolveFinancialPeriodStartForUser,
   upsertEnvelope,
   upsertEnvelopeAllocation,
   upsertEnvelopeCategoryLink,
@@ -2229,7 +2230,11 @@ Deno.serve(async (req: Request) => {
                 const dateStr = (
                   call.args.date || formatDateInTimeZone(userTimezone)
                 ).slice(0, 10);
-                const period_month = dateStr.slice(0, 7) + "-01";
+                const period_month = await resolveFinancialPeriodStartForUser(
+                  supabase,
+                  userId,
+                  dateStr,
+                );
                 let householdId = call.args.space_id ||
                   call.args.household_id || null;
                 const householdName = (

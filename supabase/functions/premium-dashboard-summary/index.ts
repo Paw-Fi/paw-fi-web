@@ -389,11 +389,11 @@ async function fetchBudgets(
   userId: string,
   filters: NormalizedFilters,
 ): Promise<BudgetRow[]> {
-  const monthStart = filters.startDate.slice(0, 7) + "-01";
+  const periodStart = filters.startDate.slice(0, 10);
   let query = supabase
     .from("budgets")
     .select("id, total_budget_cents, currency")
-    .eq("period_month", monthStart)
+    .eq("period_month", periodStart)
     .in("currency", filters.selectedCurrencies);
   query = filters.householdId
     ? query.eq("household_id", filters.householdId)

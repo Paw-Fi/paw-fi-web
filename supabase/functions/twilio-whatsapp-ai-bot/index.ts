@@ -23,6 +23,7 @@ import type { CustomSplits } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
   getBudgetStatusDirect,
+  resolveFinancialPeriodStartForUser,
   upsertEnvelope,
   upsertEnvelopeAllocation,
   upsertEnvelopeCategoryLink,
@@ -67,8 +68,6 @@ import {
 import {
   buildRecurrenceRule,
   formatDateInTimeZone,
-  formatMonthStartInTimeZone,
-  nextMonthStart,
   normalizeDateInput,
 } from "../shared/bot/date-utils.ts";
 import {
@@ -168,7 +167,6 @@ import {
   buildBudgetDoneText,
   consolidateDuplicateEnvelopesForBudget,
   normalizeEnvelopeName,
-  normalizePeriodMonth,
 } from "../shared/bot/budget-utils.ts";
 import {
   applyPreferredSpaceDefaultToToolCall,
@@ -756,8 +754,12 @@ async function buildFinancialSnapshot(
   currency: string,
   timezone?: string | null,
 ): Promise<FinancialSnapshot | { error: unknown }> {
-  const startDate = formatMonthStartInTimeZone(timezone);
   const endDate = formatDateInTimeZone(timezone);
+  const startDate = await resolveFinancialPeriodStartForUser(
+    supabase,
+    userId,
+    endDate,
+  );
 
   // Expenses and incomes
   const { data: rows, error } = await supabase
@@ -794,8 +796,7 @@ async function buildFinancialSnapshot(
     .select("total_budget_cents")
     .eq("user_id", userId)
     .eq("currency", currency)
-    .gte("period_month", startDate.slice(0, 7) + "-01")
-    .lt("period_month", nextMonthStart(startDate))
+    .eq("period_month", startDate)
     .limit(1);
   const budgetCents = budgetRows?.[0]?.total_budget_cents || null;
 
@@ -2767,7 +2768,11 @@ Deno.serve(async (req: Request) => {
         ? args.date.trim()
         : fallback?.date || formatDateInTimeZone(userTimezone);
       const dateStr = rawDate.slice(0, 10);
-      const period_month = dateStr.slice(0, 7) + "-01";
+      const period_month = await resolveFinancialPeriodStartForUser(
+        supabase,
+        userId,
+        dateStr,
+      );
       const { householdId, resolvedName, isPortfolio } = resolveBudgetScope(
         args,
         fallback,
@@ -4289,7 +4294,11 @@ Deno.serve(async (req: Request) => {
             const dateStr = (
               call.args.date || formatDateInTimeZone(userTimezone)
             ).slice(0, 10);
-            const period_month = dateStr.slice(0, 7) + "-01";
+            const period_month = await resolveFinancialPeriodStartForUser(
+              supabase,
+              userId,
+              dateStr,
+            );
             const { householdId, spaceMeta } = resolveBotSpaceScope(
               call.args,
               spaceMap,
@@ -4512,7 +4521,11 @@ Deno.serve(async (req: Request) => {
               call.args.date,
               formatDateInTimeZone(userTimezone),
             );
-            const period_month = dateStr.slice(0, 7) + "-01";
+            const period_month = await resolveFinancialPeriodStartForUser(
+              supabase,
+              userId,
+              dateStr,
+            );
             const { householdId, isPortfolio } = resolveBudgetScope(call.args);
             if (
               householdId &&

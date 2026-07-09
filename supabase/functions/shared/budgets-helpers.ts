@@ -494,34 +494,121 @@ export function calculatePocketRolloverContributionLedger({
   };
 }
 
-function parseMonthRangeUtc(periodMonth: string | undefined | null): {
+function normalizeFinancialMonthStartDay(value: unknown): number {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && /^\d+$/.test(value.trim())
+    ? Number.parseInt(value.trim(), 10)
+    : NaN;
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 31 ? parsed : 1;
+}
+
+function lastDayOfMonthUtc(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function cycleStartForYearMonthUtc(
+  year: number,
+  month: number,
+  startDay: number,
+): Date {
+  const safeDay = Math.min(startDay, lastDayOfMonthUtc(year, month));
+  return new Date(Date.UTC(year, month - 1, safeDay));
+}
+
+function financialCycleStartForDateUtc(
+  year: number,
+  month: number,
+  day: number,
+  startDay: number,
+): Date {
+  const anchor = new Date(Date.UTC(year, month - 1, day));
+  const thisMonthStart = cycleStartForYearMonthUtc(year, month, startDay);
+  if (anchor >= thisMonthStart) {
+    return thisMonthStart;
+  }
+  const previousAnchor = new Date(Date.UTC(year, month - 2, 1));
+  return cycleStartForYearMonthUtc(
+    previousAnchor.getUTCFullYear(),
+    previousAnchor.getUTCMonth() + 1,
+    startDay,
+  );
+}
+
+export function parseFinancialPeriodRangeUtc(
+  periodMonth: string | undefined | null,
+  financialMonthStartDay: unknown = 1,
+  options: { fullDateIsDateInPeriod?: boolean } = {},
+): {
   monthStartStr: string;
   nextMonthStr: string;
 } {
   const now = new Date();
-  const fallback = `${now.getUTCFullYear()}-${
-    (now.getUTCMonth() + 1)
-      .toString()
-      .padStart(2, "0")
-  }`;
-  const raw = (periodMonth || fallback).slice(0, 7);
-  const parts = raw.split("-");
-  const year = Number(parts[0] || "0");
-  const month = Number(parts[1] || "1");
+  const startDay = normalizeFinancialMonthStartDay(financialMonthStartDay);
+  const trimmed = typeof periodMonth === "string" ? periodMonth.trim() : "";
+  const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(trimmed);
+  const year = Number(match?.[1] ?? now.getUTCFullYear());
+  const month = Number(match?.[2] ?? now.getUTCMonth() + 1);
   const safeYear = Number.isInteger(year) && year >= 1970 && year <= 9999
     ? year
     : now.getUTCFullYear();
   const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12
     ? month
     : now.getUTCMonth() + 1;
+  const day = match?.[3] == null ? startDay : Math.min(
+    Math.max(Number(match[3]) || startDay, 1),
+    lastDayOfMonthUtc(safeYear, safeMonth),
+  );
 
-  const start = new Date(Date.UTC(safeYear, safeMonth - 1, 1));
-  const next = new Date(Date.UTC(safeYear, safeMonth, 1));
+  const start = match?.[3] != null && options.fullDateIsDateInPeriod
+    ? financialCycleStartForDateUtc(safeYear, safeMonth, day, startDay)
+    : new Date(Date.UTC(safeYear, safeMonth - 1, day));
+  const nextAnchor = new Date(
+    Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1),
+  );
+  const next = cycleStartForYearMonthUtc(
+    nextAnchor.getUTCFullYear(),
+    nextAnchor.getUTCMonth() + 1,
+    startDay,
+  );
 
   return {
     monthStartStr: start.toISOString().slice(0, 10),
     nextMonthStr: next.toISOString().slice(0, 10),
   };
+}
+
+async function resolveFinancialMonthStartDay(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<number> {
+  const { data } = await supabase
+    .from("user_contacts")
+    .select("financial_month_start_day")
+    .eq("user_id", userId)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return normalizeFinancialMonthStartDay(
+    (data as { financial_month_start_day?: unknown } | null)
+      ?.financial_month_start_day,
+  );
+}
+
+export async function resolveFinancialPeriodStartForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  dateInPeriod: string,
+): Promise<string> {
+  const financialMonthStartDay = await resolveFinancialMonthStartDay(
+    supabase,
+    userId,
+  );
+  return parseFinancialPeriodRangeUtc(
+    dateInPeriod,
+    financialMonthStartDay,
+    { fullDateIsDateInPeriod: true },
+  ).monthStartStr;
 }
 
 function clampPercentage(value: number): number {
@@ -581,7 +668,15 @@ export async function createOrUpdateBudget(
   total_budget_cents: number,
   _isPortfolio: boolean = false,
 ) {
-  const normalizedPeriodMonth = parseMonthRangeUtc(period_month).monthStartStr;
+  const financialMonthStartDay = await resolveFinancialMonthStartDay(
+    supabase,
+    userId,
+  );
+  const normalizedPeriodMonth = parseFinancialPeriodRangeUtc(
+    period_month,
+    financialMonthStartDay,
+    { fullDateIsDateInPeriod: true },
+  ).monthStartStr;
   const updatedAt = new Date().toISOString();
   const payload: any = {
     user_id: userId,
@@ -745,7 +840,8 @@ export async function upsertEnvelopeAllocation(
   period_month: string,
   amount_cents: number,
 ) {
-  const normalizedPeriodMonth = parseMonthRangeUtc(period_month).monthStartStr;
+  const normalizedPeriodMonth = parseFinancialPeriodRangeUtc(period_month)
+    .monthStartStr;
   return supabase.from("envelope_allocations").upsert(
     {
       envelope_id: envelopeId,
@@ -788,15 +884,21 @@ export async function getBudgetStatusDirect(
   isPortfolio: boolean = false,
   contactId?: string,
 ) {
-  // Normalize to month range
-  const { monthStartStr, nextMonthStr } = parseMonthRangeUtc(period_month);
+  const financialMonthStartDay = await resolveFinancialMonthStartDay(
+    supabase,
+    userId,
+  );
+  const { monthStartStr, nextMonthStr } = parseFinancialPeriodRangeUtc(
+    period_month,
+    financialMonthStartDay,
+    { fullDateIsDateInPeriod: true },
+  );
 
   let budgetQuery = supabase
     .from("budgets")
     .select("id, total_budget_cents, currency, period_month")
     .eq("currency", currency)
-    .gte("period_month", monthStartStr)
-    .lt("period_month", nextMonthStr)
+    .eq("period_month", monthStartStr)
     .order("updated_at", { ascending: false })
     .limit(1);
 
@@ -826,8 +928,7 @@ export async function getBudgetStatusDirect(
       .from("envelope_allocations")
       .select("envelope_id, amount_cents, period_month")
       .in("envelope_id", envIds)
-      .gte("period_month", monthStartStr)
-      .lt("period_month", nextMonthStr)
+      .eq("period_month", monthStartStr)
     : { data: [], error: null };
   if (allocErr) return { error: allocErr };
 
