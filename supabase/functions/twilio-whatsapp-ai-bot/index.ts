@@ -31,8 +31,6 @@ import {
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import {
   buildCategoryChart,
-  buildCategoryGuide,
-  CATEGORY_GUIDE,
   debugLog,
   formatAmount,
   formatInvokeError,
@@ -47,14 +45,7 @@ import {
   createVertexBotChatSession,
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
-import {
-  fetchUserCategoryPreferences,
-  fetchUserCategoryRemaps,
-  fetchUserCustomCategories,
-  fetchUserHiddenCategories,
-  mergeAllowedCategories,
-  upsertUserCustomCategory,
-} from "../shared/user-categories.ts";
+import { upsertUserCustomCategory } from "../shared/user-categories.ts";
 import {
   buildLanguageOverride,
   getReplyLanguagePromptLabel,
@@ -96,7 +87,6 @@ import {
 } from "../shared/bot/preference-tools.ts";
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
-  buildTransactionMutationFailureText,
   invokeTransactionDelete,
   invokeTransactionSave,
   normalizeTransactionToolArgs,
@@ -135,17 +125,12 @@ import {
   resolveWalletTransactionCurrency,
 } from "../shared/bot/wallet-scope.ts";
 import {
-  buildWalletMutationFailureText,
   createBotWalletFromToolCall,
   createBotWalletTransferFromToolCall,
   listBotWallets,
   updateBotWalletFromToolCall,
 } from "../shared/bot/wallet-tools.ts";
-import {
-  buildUnsafeWalletMutationClaimFallback,
-  routeWalletMutationToolCall,
-  shouldBlockUnsafeWalletMutationClaim,
-} from "../shared/bot/wallet-intent.ts";
+import { routeWalletMutationToolCall } from "../shared/bot/wallet-intent.ts";
 import { buildBotSystemInstruction } from "../shared/bot/system-instruction.ts";
 import {
   createBotSpace,
@@ -154,17 +139,12 @@ import {
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
 import {
-  buildGenericMutationFailureText,
-  buildUnsafeGenericMutationClaimFallback,
   buildUnsafeMutationClaimFallback,
   diagnoseUnsafeTransactionMutationClaim,
   isWriteMutationToolName,
-  shouldBlockUnsafeGenericMutationClaim,
-  shouldBlockUnsafeTransactionMutationClaim,
   WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
 } from "../shared/bot/mutation-claim-guard.ts";
 import {
-  buildBudgetDoneText,
   consolidateDuplicateEnvelopesForBudget,
   normalizeEnvelopeName,
 } from "../shared/bot/budget-utils.ts";
@@ -176,6 +156,11 @@ import {
   upsertBotSpaceMetaFromToolResult,
 } from "../shared/bot/household-utils.ts";
 import { jsonResponse } from "../shared/bot/http-utils.ts";
+import {
+  loadBotCategoryContext,
+  loadGeminiChatHistory,
+} from "../shared/bot/conversation-context.ts";
+import { finalizeBotResponseText } from "../shared/bot/response-finalization.ts";
 import {
   clearLastListedTransactions,
   type LastListedTransaction,
@@ -624,17 +609,6 @@ async function reportTwilioToolInvokeFailure(params: {
   });
 }
 
-function buildMutationFailureText(
-  toolName: string | null,
-  toolResult: unknown,
-): string | null {
-  return (
-    buildTransactionMutationFailureText(toolName, toolResult) ||
-    buildWalletMutationFailureText(toolName, toolResult) ||
-    buildGenericMutationFailureText(toolName, toolResult)
-  );
-}
-
 function fingerprintSecret(secret: string): string {
   if (!secret) return "missing";
   let hash = 0;
@@ -999,27 +973,13 @@ Deno.serve(async (req: Request) => {
     const userLangLabel = getReplyLanguagePromptLabel(userLang);
     const userTimezone = contactRow?.preferred_timezone || "UTC";
 
-    const [
-      customCategories,
-      hiddenCategories,
+    const {
       categoryPreferences,
       categoryRemaps,
-    ] = await Promise.all([
-      fetchUserCustomCategories({ supabase, userId }),
-      fetchUserHiddenCategories({ supabase, userId }),
-      fetchUserCategoryPreferences({ supabase, userId }),
-      fetchUserCategoryRemaps({ supabase, userId }),
-    ]);
-    const { expenseCategories, incomeCategories } = mergeAllowedCategories({
-      customCategories,
-      hiddenCategories,
-    });
-    const allowedExpenseCategories = expenseCategories;
-    const allowedIncomeCategories = incomeCategories;
-    const categoryGuideForUser = buildCategoryGuide([
-      ...expenseCategories,
-      ...incomeCategories,
-    ]);
+      allowedExpenseCategories,
+      allowedIncomeCategories,
+      categoryGuideForUser,
+    } = await loadBotCategoryContext({ supabase, userId });
 
     const spaceMap = new Map<
       string,
@@ -1180,19 +1140,10 @@ Deno.serve(async (req: Request) => {
       .join("\n");
 
     // History
-    const { data: history } = await supabase
-      .from("chat_messages")
-      .select("role, content")
-      .eq("chat_session_id", session.id)
-      .order("timestamp", { ascending: false })
-      .limit(20);
-    const rawHistory = (history || []).reverse().map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
-    while (rawHistory.length > 0 && rawHistory[0].role === "model") {
-      rawHistory.shift();
-    }
+    const rawHistory = await loadGeminiChatHistory({
+      supabase,
+      sessionId: session.id,
+    });
 
     // Persist the incoming user message AFTER loading history so Gemini doesn't see it twice.
     await insertChatMessage(
@@ -2558,27 +2509,13 @@ Deno.serve(async (req: Request) => {
       debugLog(WHATSAPP_DEBUG, "preferred currency refresh failed", { error }),
   });
 
-  const [
-    customCategories,
-    hiddenCategories,
+  const {
     categoryPreferences,
     categoryRemaps,
-  ] = await Promise.all([
-    fetchUserCustomCategories({ supabase, userId }),
-    fetchUserHiddenCategories({ supabase, userId }),
-    fetchUserCategoryPreferences({ supabase, userId }),
-    fetchUserCategoryRemaps({ supabase, userId }),
-  ]);
-  const { expenseCategories, incomeCategories } = mergeAllowedCategories({
-    customCategories,
-    hiddenCategories,
-  });
-  const allowedExpenseCategories = expenseCategories;
-  const allowedIncomeCategories = incomeCategories;
-  const categoryGuideForUser = buildCategoryGuide([
-    ...expenseCategories,
-    ...incomeCategories,
-  ]);
+    allowedExpenseCategories,
+    allowedIncomeCategories,
+    categoryGuideForUser,
+  } = await loadBotCategoryContext({ supabase, userId });
 
   // 3. Session Management - use session from context or create new
   let session = contextData?.chat_session_id
@@ -2753,7 +2690,7 @@ Deno.serve(async (req: Request) => {
       return { householdId, resolvedName, isPortfolio };
     };
 
-    const buildBudgetDraftFromArgs = (
+    const buildBudgetDraftFromArgs = async (
       args: any,
       fallback?: PendingBudgetDraft | null,
     ) => {
@@ -2875,22 +2812,7 @@ Deno.serve(async (req: Request) => {
       return { budgetRow, pockets: created };
     };
 
-    const { data: history } = await supabase
-      .from("chat_messages")
-      .select("role, content")
-      .eq("chat_session_id", sessionId)
-      .order("timestamp", { ascending: false }) // Get latest first
-      .limit(20); // Last 20 messages for better context
-
-    const rawHistory = (history || []).reverse().map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
-    // Ensure history starts with user per Gemini requirement
-    const historyParts = [...rawHistory];
-    while (historyParts.length > 0 && historyParts[0].role === "model") {
-      historyParts.shift();
-    }
+    const historyParts = await loadGeminiChatHistory({ supabase, sessionId });
 
     const whatsappSystemInstruction = WHATSAPP_SYSTEM_INSTRUCTION.replace(
       "{{DATE}}",
@@ -4399,7 +4321,7 @@ Deno.serve(async (req: Request) => {
                 null;
             }
           } else if (call.name === "draft_budget") {
-            const { draft, error } = buildBudgetDraftFromArgs(call.args);
+            const { draft, error } = await buildBudgetDraftFromArgs(call.args);
             if (!draft || error) {
               toolResult = { error: error || "Invalid budget draft" };
             } else {
@@ -4427,7 +4349,7 @@ Deno.serve(async (req: Request) => {
               toolResult = { error: "Confirmation required" };
             } else {
               const pending = getPendingBudget(sessionState);
-              const { draft, error } = buildBudgetDraftFromArgs(
+              const { draft, error } = await buildBudgetDraftFromArgs(
                 call.args,
                 pending,
               );
@@ -4469,7 +4391,7 @@ Deno.serve(async (req: Request) => {
           } else if (call.name === "set_budget") {
             // Create or update budget + envelopes/pockets
             const pending = getPendingBudget(sessionState);
-            const { draft, error } = buildBudgetDraftFromArgs(
+            const { draft, error } = await buildBudgetDraftFromArgs(
               call.args,
               pending,
             );
@@ -5184,91 +5106,23 @@ Deno.serve(async (req: Request) => {
     }
 
     // 7. Finalize Response
-    if (
-      (!finalResponseText || !finalResponseText.trim()) &&
-      toolSucceededAny &&
-      lastBudgetPockets
-    ) {
-      finalResponseText = buildBudgetDoneText(lastBudgetPockets);
-    }
-    if (
-      typeof buildMutationFailureText(lastToolCallName, lastToolResult) ===
-        "string"
-    ) {
-      finalResponseText = buildMutationFailureText(
-        lastToolCallName,
-        lastToolResult,
-      )!;
-    }
-    if (
-      (!finalResponseText || !finalResponseText.trim()) &&
-      lastToolCallName === "update_transaction" &&
-      typeof lastToolResult?.error === "string" &&
-      lastToolResult.error.trim()
-    ) {
-      const errorSnippet = lastToolResult.error.trim().slice(0, 180);
-      finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
-    }
-    {
-      const shouldCheckTransactionClaim = isWriteMutationToolName(
-        lastToolCallName,
-      );
-      const finalDiag = shouldCheckTransactionClaim
-        ? diagnoseUnsafeTransactionMutationClaim({
-          responseText: finalResponseText,
-          writeMutationSucceeded: writeMutationSucceededAny,
-        })
-        : { blocked: false, reason: "ok" as const };
-      if (finalDiag.blocked) {
-        console.log(
-          "[twilio-whatsapp-ai-bot] final-response mutation-claim blocked",
-          {
-            lastToolCallName,
-            writeMutationSucceededAny,
-            reason: finalDiag.reason,
-            responseTextPreview: finalResponseText.slice(0, 200),
-          },
-        );
-        finalResponseText = buildUnsafeMutationClaimFallback();
-      }
-      if (
-        isWriteMutationToolName(lastToolCallName) &&
-        shouldBlockUnsafeWalletMutationClaim({
-          responseText: finalResponseText,
-          writeMutationSucceeded: writeMutationSucceededAny,
-        })
-      ) {
-        console.log(
-          "[twilio-whatsapp-ai-bot] final-response wallet mutation-claim blocked",
-          {
-            lastToolCallName,
-            writeMutationSucceededAny,
-            responseTextPreview: finalResponseText.slice(0, 200),
-          },
-        );
-        finalResponseText = buildUnsafeWalletMutationClaimFallback();
-      }
-      if (
-        isWriteMutationToolName(lastToolCallName) &&
-        shouldBlockUnsafeGenericMutationClaim({
-          responseText: finalResponseText,
-          writeMutationSucceeded: writeMutationSucceededAny,
-        })
-      ) {
-        console.log(
-          "[twilio-whatsapp-ai-bot] final-response generic mutation-claim blocked",
-          {
-            lastToolCallName,
-            writeMutationSucceededAny,
-            responseTextPreview: finalResponseText.slice(0, 200),
-          },
-        );
-        finalResponseText = buildUnsafeGenericMutationClaimFallback();
-      }
-    }
-    if (!finalResponseText || !finalResponseText.trim()) {
-      finalResponseText = buildProcessingFailureMessage(userLang);
-    }
+    finalResponseText = finalizeBotResponseText({
+      finalResponseText,
+      toolSucceededAny,
+      lastBudgetPockets,
+      lastToolCallName,
+      lastToolResult,
+      writeMutationSucceededAny,
+      emptyFallbackText: buildProcessingFailureMessage(userLang),
+      onMutationClaimBlocked: (kind, context) => {
+        const label = kind === "transaction"
+          ? "[twilio-whatsapp-ai-bot] final-response mutation-claim blocked"
+          : kind === "wallet"
+          ? "[twilio-whatsapp-ai-bot] final-response wallet mutation-claim blocked"
+          : "[twilio-whatsapp-ai-bot] final-response generic mutation-claim blocked";
+        console.log(label, context);
+      },
+    });
     const chartFromText = extractQuickChartUrl(finalResponseText);
     let mediaUrl: string | null = chartFromText.url || lastGeneratedChartUrl;
     let cleanedText = chartFromText.cleanedText || finalResponseText;

@@ -15,8 +15,6 @@ import {
 } from "../shared/plus-entitlement.ts";
 import {
   buildCategoryChart,
-  buildCategoryGuide,
-  CATEGORY_GUIDE,
   formatInvokeError,
   formatInvokeErrorWithResponseBody,
   normalizeExpensesForTool,
@@ -45,14 +43,7 @@ import {
   REQUIRED_TELEGRAM_TOOL_NAMES,
 } from "../shared/telegram-parity.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
-import {
-  fetchUserCategoryPreferences,
-  fetchUserCategoryRemaps,
-  fetchUserCustomCategories,
-  fetchUserHiddenCategories,
-  mergeAllowedCategories,
-  upsertUserCustomCategory,
-} from "../shared/user-categories.ts";
+import { upsertUserCustomCategory } from "../shared/user-categories.ts";
 import {
   buildLanguageOverride,
   getReplyLanguagePromptLabel,
@@ -101,7 +92,6 @@ import {
 } from "../shared/bot/preference-tools.ts";
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
-  buildTransactionMutationFailureText,
   invokeTransactionDelete,
   invokeTransactionSave,
   normalizeTransactionToolArgs,
@@ -139,17 +129,12 @@ import {
   resolveWalletTransactionCurrency,
 } from "../shared/bot/wallet-scope.ts";
 import {
-  buildWalletMutationFailureText,
   createBotWalletFromToolCall,
   createBotWalletTransferFromToolCall,
   listBotWallets,
   updateBotWalletFromToolCall,
 } from "../shared/bot/wallet-tools.ts";
-import {
-  buildUnsafeWalletMutationClaimFallback,
-  routeWalletMutationToolCall,
-  shouldBlockUnsafeWalletMutationClaim,
-} from "../shared/bot/wallet-intent.ts";
+import { routeWalletMutationToolCall } from "../shared/bot/wallet-intent.ts";
 import { buildBotSystemInstruction } from "../shared/bot/system-instruction.ts";
 import {
   createBotSpace,
@@ -158,16 +143,12 @@ import {
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
 import {
-  buildGenericMutationFailureText,
-  buildUnsafeGenericMutationClaimFallback,
   buildUnsafeMutationClaimFallback,
   diagnoseUnsafeTransactionMutationClaim,
   isWriteMutationToolName,
-  shouldBlockUnsafeGenericMutationClaim,
   WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
 } from "../shared/bot/mutation-claim-guard.ts";
 import {
-  buildBudgetDoneText,
   consolidateDuplicateEnvelopesForBudget,
   normalizeEnvelopeName,
 } from "../shared/bot/budget-utils.ts";
@@ -179,6 +160,11 @@ import {
   upsertBotSpaceMetaFromToolResult,
 } from "../shared/bot/household-utils.ts";
 import { jsonResponse } from "../shared/bot/http-utils.ts";
+import {
+  loadBotCategoryContext,
+  loadGeminiChatHistory,
+} from "../shared/bot/conversation-context.ts";
+import { finalizeBotResponseText } from "../shared/bot/response-finalization.ts";
 import {
   buildChoiceSummary,
   clearLastListedTransactions,
@@ -636,22 +622,6 @@ async function reportTelegramToolInvokeFailure(params: {
   });
 }
 
-function buildMutationFailureText(
-  toolName: string | null,
-  toolResult: unknown,
-): string | null {
-  const sharedText = buildTransactionMutationFailureText(toolName, toolResult);
-  if (sharedText) return sharedText;
-  const walletText = buildWalletMutationFailureText(toolName, toolResult);
-  if (walletText) return walletText;
-  const genericText = buildGenericMutationFailureText(toolName, toolResult);
-  if (genericText) return genericText;
-  if (toolName === "delete_transaction") {
-    return "I couldn't delete that transaction right now. Please try again in a moment.";
-  }
-  return null;
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -1014,27 +984,13 @@ Deno.serve(async (req: Request) => {
             ),
         });
 
-        const [
-          customCategories,
-          hiddenCategories,
+        const {
           categoryPreferences,
           categoryRemaps,
-        ] = await Promise.all([
-          fetchUserCustomCategories({ supabase, userId }),
-          fetchUserHiddenCategories({ supabase, userId }),
-          fetchUserCategoryPreferences({ supabase, userId }),
-          fetchUserCategoryRemaps({ supabase, userId }),
-        ]);
-        const { expenseCategories, incomeCategories } = mergeAllowedCategories({
-          customCategories,
-          hiddenCategories,
-        });
-        const allowedExpenseCategories = expenseCategories;
-        const allowedIncomeCategories = incomeCategories;
-        const categoryGuideForUser = buildCategoryGuide([
-          ...expenseCategories,
-          ...incomeCategories,
-        ]);
+          allowedExpenseCategories,
+          allowedIncomeCategories,
+          categoryGuideForUser,
+        } = await loadBotCategoryContext({ supabase, userId });
         const chatHouseholds = contextData?.households || [];
         const spaceMap = new Map<
           string,
@@ -1155,19 +1111,10 @@ Deno.serve(async (req: Request) => {
             `[User sent a file attachment.${nameNote}${mimeNote}${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "file", file_id: "${doc.file_id}" } (or telegram_file_id: "${doc.file_id}").]`;
         }
 
-        const { data: history } = await supabase
-          .from("chat_messages")
-          .select("role, content")
-          .eq("chat_session_id", sessionId)
-          .order("timestamp", { ascending: false })
-          .limit(20);
-        const rawHistory = (history || []).reverse().map((m) => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }],
-        }));
-        while (rawHistory.length > 0 && rawHistory[0].role === "model") {
-          rawHistory.shift();
-        }
+        const rawHistory = await loadGeminiChatHistory({
+          supabase,
+          sessionId,
+        });
 
         const telegramSystemInstruction = SYSTEM_INSTRUCTION.replace(
           "{{DATE}}",
@@ -3602,96 +3549,25 @@ Deno.serve(async (req: Request) => {
           finalResponseText = lastToolResult.choices_text;
         }
 
-        if (
-          (!finalResponseText || !finalResponseText.trim()) &&
-          toolSucceededAny &&
-          lastBudgetPockets
-        ) {
-          finalResponseText = buildBudgetDoneText(lastBudgetPockets);
-        }
-        if (
-          typeof buildMutationFailureText(lastToolCallName, lastToolResult) ===
-            "string"
-        ) {
-          finalResponseText = buildMutationFailureText(
-            lastToolCallName,
-            lastToolResult,
-          )!;
-        }
-        if (
-          (!finalResponseText || !finalResponseText.trim()) &&
-          lastToolCallName === "update_transaction" &&
-          typeof lastToolResult?.error === "string" &&
-          lastToolResult.error.trim()
-        ) {
-          const errorSnippet = lastToolResult.error.trim().slice(0, 180);
-          finalResponseText =
-            `I couldn't update that transaction. ${errorSnippet}`;
-        }
-        {
-          const shouldCheckTransactionClaim = isWriteMutationToolName(
-            lastToolCallName,
-          );
-          const finalDiag = shouldCheckTransactionClaim
-            ? diagnoseUnsafeTransactionMutationClaim({
-              responseText: finalResponseText,
-              writeMutationSucceeded: writeMutationSucceededAny,
-            })
-            : { blocked: false, reason: "ok" as const };
-          if (finalDiag.blocked) {
-            console.log(
-              "[telegram-ai-bot] final-response mutation-claim blocked",
-              {
-                traceId,
-                lastToolCallName,
-                writeMutationSucceededAny,
-                reason: finalDiag.reason,
-                responseTextPreview: finalResponseText.slice(0, 200),
-              },
-            );
-            finalResponseText = buildUnsafeMutationClaimFallback();
-          }
-          if (
-            isWriteMutationToolName(lastToolCallName) &&
-            shouldBlockUnsafeWalletMutationClaim({
-              responseText: finalResponseText,
-              writeMutationSucceeded: writeMutationSucceededAny,
-            })
-          ) {
-            console.log(
-              "[telegram-ai-bot] final-response wallet mutation-claim blocked",
-              {
-                traceId,
-                lastToolCallName,
-                writeMutationSucceededAny,
-                responseTextPreview: finalResponseText.slice(0, 200),
-              },
-            );
-            finalResponseText = buildUnsafeWalletMutationClaimFallback();
-          }
-          if (
-            isWriteMutationToolName(lastToolCallName) &&
-            shouldBlockUnsafeGenericMutationClaim({
-              responseText: finalResponseText,
-              writeMutationSucceeded: writeMutationSucceededAny,
-            })
-          ) {
-            console.log(
-              "[telegram-ai-bot] final-response generic mutation-claim blocked",
-              {
-                traceId,
-                lastToolCallName,
-                writeMutationSucceededAny,
-                responseTextPreview: finalResponseText.slice(0, 200),
-              },
-            );
-            finalResponseText = buildUnsafeGenericMutationClaimFallback();
-          }
-        }
-        if (!finalResponseText || !finalResponseText.trim()) {
-          finalResponseText =
-            "I couldn't generate a response right now. Please try again in a few seconds.";
-        }
+        finalResponseText = finalizeBotResponseText({
+          finalResponseText,
+          toolSucceededAny,
+          lastBudgetPockets,
+          lastToolCallName,
+          lastToolResult,
+          writeMutationSucceededAny,
+          emptyFallbackText:
+            "I couldn't generate a response right now. Please try again in a few seconds.",
+          mutationFailureOptions: { includeDeleteTransactionFallback: true },
+          onMutationClaimBlocked: (kind, context) => {
+            const label = kind === "transaction"
+              ? "[telegram-ai-bot] final-response mutation-claim blocked"
+              : kind === "wallet"
+              ? "[telegram-ai-bot] final-response wallet mutation-claim blocked"
+              : "[telegram-ai-bot] final-response generic mutation-claim blocked";
+            console.log(label, { traceId, ...context });
+          },
+        });
 
         // Persist the incoming user message AFTER Gemini/tool flow so history doesn't echo it.
         const chartFromText = extractQuickChartUrl(finalResponseText);
