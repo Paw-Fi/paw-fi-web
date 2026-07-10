@@ -1,6 +1,4 @@
 import classNames from "classnames";
-import { faApple } from "@fortawesome/free-brands-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { trackDownloadClick } from "@/lib/download-attribution";
 
 export const AppleDownloadButton = (props: {
@@ -8,7 +6,7 @@ export const AppleDownloadButton = (props: {
   onClick?: () => void;
 }) => {
   return (
-    <div className="flex items-center justify-center">
+    <div className="flex shrink-0 items-center justify-center">
       <a
         href="https://apps.apple.com/app/moneko/id6753925279"
         target="_blank"
@@ -18,18 +16,22 @@ export const AppleDownloadButton = (props: {
           props.onClick?.();
         }}
         className={classNames(
-          "flex h-14 items-center justify-center rounded-xl bg-black px-6 text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black",
+          "inline-flex h-14 min-w-[12.25rem] shrink-0 items-center justify-center rounded-xl bg-black px-5 text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black",
           props.className,
         )}
       >
-        <div className="mr-3">
+        <div className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center">
           <svg viewBox="0 0 384 512" width="30" className="fill-current">
             <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"></path>
           </svg>
         </div>
-        <div className="text-left">
-          <div className="text-xs">Download on the</div>
-          <div className="-mt-1 font-sans text-xl font-semibold">App Store</div>
+        <div className="min-w-0 text-left leading-none">
+          <div className="text-xs leading-4 whitespace-nowrap">
+            Download on the
+          </div>
+          <div className="font-sans text-xl leading-6 font-semibold whitespace-nowrap">
+            App Store
+          </div>
         </div>
       </a>
     </div>

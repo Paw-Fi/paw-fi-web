@@ -1,5 +1,5 @@
 /* Font definitions for Hepta Slab and Poppins */
-/* Optimized with font-display: swap for good balance of performance and font loading */
+/* Keep first-visit typography stable on slow connections. */
 
 /* Hepta Slab */
 @font-face {
@@ -7,7 +7,7 @@
   src: url('../assets/fonts/Hepta_Slab/HeptaSlab-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
-  font-display: swap; /* Good balance of performance and font loading */
+  font-display: optional;
 }
 
 @font-face {
@@ -15,7 +15,7 @@
   src: url('../assets/fonts/Hepta_Slab/HeptaSlab-Medium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -23,7 +23,7 @@
   src: url('../assets/fonts/Hepta_Slab/HeptaSlab-SemiBold.ttf') format('truetype');
   font-weight: 600;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -31,7 +31,7 @@
   src: url('../assets/fonts/Hepta_Slab/HeptaSlab-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 /* Poppins */
@@ -40,7 +40,7 @@
   src: url('../assets/fonts/Poppins/Poppins-Light.ttf') format('truetype');
   font-weight: 300;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -48,7 +48,7 @@
   src: url('../assets/fonts/Poppins/Poppins-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -56,7 +56,7 @@
   src: url('../assets/fonts/Poppins/Poppins-Medium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -64,7 +64,7 @@
   src: url('../assets/fonts/Poppins/Poppins-SemiBold.ttf') format('truetype');
   font-weight: 600;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -72,7 +72,7 @@
   src: url('../assets/fonts/Poppins/Poppins-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -80,7 +80,7 @@
   src: url('../assets/fonts/Lato/Lato-Light.ttf') format('truetype');
   font-weight: 300;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -88,7 +88,7 @@
   src: url('../assets/fonts/Lato/Lato-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -96,7 +96,7 @@
   src: url('../assets/fonts/Lato/Lato-SemiBold.ttf') format('truetype');
   font-weight: 600;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 
 @font-face {
@@ -104,7 +104,5 @@
   src: url('../assets/fonts/Lato/Lato-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
-
-  

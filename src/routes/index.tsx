@@ -1,6 +1,7 @@
 "use client";
 
-import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { HomePageRouteComponent } from "@/components/performance/home-page-route-component";
 
 import {
   monekoComparisonRows,
@@ -26,10 +27,7 @@ const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 const mainLandingPage = getMainGeoLandingPage();
 
 export const Route = createFileRoute("/")({
-  component: lazyRouteComponent(
-    () => import("@/components/performance/home-page-route-component"),
-    "HomePageRouteComponent",
-  ),
+  component: HomePageRouteComponent,
   staticData: () => ({}),
   head: () => {
     const pageUrl = getCanonicalUrl("/");

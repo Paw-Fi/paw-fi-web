@@ -1,6 +1,4 @@
 import classNames from "classnames";
-import { faGooglePlay } from "@fortawesome/free-brands-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { trackDownloadClick } from "@/lib/download-attribution";
 
 export const AndroidDownloadButton = (props: {
@@ -8,7 +6,7 @@ export const AndroidDownloadButton = (props: {
   onClick?: () => void;
 }) => {
   return (
-    <div className="flex items-center justify-center">
+    <div className="flex shrink-0 items-center justify-center">
       <a
         href="https://play.google.com/store/apps/details?id=com.moneko.mobile"
         target="_blank"
@@ -18,11 +16,11 @@ export const AndroidDownloadButton = (props: {
           props.onClick?.();
         }}
         className={classNames(
-          "flex h-14 items-center justify-center rounded-lg bg-black px-4 text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black",
+          "inline-flex h-14 min-w-[12.25rem] shrink-0 items-center justify-center rounded-lg bg-black px-5 text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black",
           props.className,
         )}
       >
-        <div className="mr-3">
+        <div className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center">
           <svg viewBox="30 336.7 120.9 129.2" width="30">
             <path
               fill="#FFD400"
@@ -42,9 +40,9 @@ export const AndroidDownloadButton = (props: {
             ></path>
           </svg>
         </div>
-        <div className="text-left">
-          <div className="text-xs">GET IT ON</div>
-          <div className="-mt-1 font-sans text-xl font-semibold">
+        <div className="min-w-0 text-left leading-none">
+          <div className="text-xs leading-4 whitespace-nowrap">GET IT ON</div>
+          <div className="font-sans text-xl leading-6 font-semibold whitespace-nowrap">
             Google Play
           </div>
         </div>

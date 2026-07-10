@@ -4,7 +4,6 @@ import { Suspense, lazy, type ReactNode } from "react";
 import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
 import { useInView } from "react-intersection-observer";
-import { AnimatePresence, motion } from "framer-motion";
 import { CompareWithChatGptButton } from "@/components/homepage/compare-with-chatgpt-button";
 
 // V2 Components
@@ -79,6 +78,7 @@ export function HomePageRouteComponent({
   const { ref: heroRef, inView: heroInView } = useInView({
     threshold: 0,
     rootMargin: "-100px 0px 0px 0px", // Offset for header so it hides slightly after scrolling past
+    initialInView: true,
   });
 
   return (
@@ -93,23 +93,15 @@ export function HomePageRouteComponent({
           <HeroV2 />
         </div>
 
-        <AnimatePresence>
-          {!heroInView && (
-            <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 50, scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="fixed bottom-6 left-0 right-0 z-50 mx-auto flex w-full max-w-[90%] justify-center sm:bottom-10 sm:max-w-max"
-            >
-              <CompareWithChatGptButton
-                source="compare-with-chatgpt-sticky"
-                labelClassName="truncate"
-                className="rounded-full border-primary/20 bg-background/80 hover:bg-background/95 backdrop-blur-md text-foreground group shadow-[0_8px_30px_rgba(var(--primary),0.2)] transition-all duration-300 w-full sm:w-auto"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {!heroInView && (
+          <div className="animate-in fade-in slide-in-from-bottom-5 zoom-in-95 fixed right-0 bottom-6 left-0 z-50 mx-auto flex w-full max-w-[90%] justify-center duration-300 sm:bottom-10 sm:max-w-max">
+            <CompareWithChatGptButton
+              source="compare-with-chatgpt-sticky"
+              labelClassName="truncate"
+              className="border-primary/20 bg-background/80 hover:bg-background/95 text-foreground group w-full rounded-full shadow-[0_8px_30px_rgba(var(--primary),0.2)] backdrop-blur-md transition-all duration-300 sm:w-auto"
+            />
+          </div>
+        )}
 
         <Suspense
           fallback={
