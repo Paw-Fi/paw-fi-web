@@ -31,6 +31,23 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
 {
+  title: "Your Financial Month, Your Way",
+  date: "2026-07-13",
+  version: "2.2.5",
+  tags: ["Fix", "Wallet", "Household", "Performance", "UI"],
+  description:
+    "Choose when your financial month starts, with key fixes for settlements, wallets, and bank connections.",
+  items: [
+    "Reports, transactions, pockets, and wallets now follow your chosen month start day",
+    "Settlement balances now update correctly after expenses change",
+    "Connect Bank now appears for eligible users in the US and Canada",
+    "Wallet balances and pocket budgets are now more accurate",
+    "Logout is more reliable and no longer signs you out unexpectedly",
+    "Pending Android payment notifications sync when you return to the app",
+    "Dashboards and shared spaces refresh more smoothly",
+  ],
+},
+{
   title: "Custom Logos, Budget Rollover & Wallet Cleanup",
   date: "2026-07-08",
   version: "2.2.4",
