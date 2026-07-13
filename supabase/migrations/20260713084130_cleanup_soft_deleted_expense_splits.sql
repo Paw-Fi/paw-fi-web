@@ -243,6 +243,151 @@ as restrictive
 for select
 using (deleted_at is null);
 
+-- Settlement allocations must use the same active-expense boundary as the
+-- authoritative balance. Otherwise a new payment can be attached to a
+-- temporarily removed provider transaction and produce a misleading
+-- breakdown if that transaction is later restored.
+create or replace function public.households_allocate_settlement_event_v2(
+  p_event_id uuid,
+  p_allocation_source text default 'runtime'
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_event public.household_settlement_events%rowtype;
+  v_remaining bigint := 0;
+  v_allocated bigint := 0;
+  v_order integer := 0;
+  v_candidate record;
+begin
+  select settlement.*
+  into v_event
+  from public.household_settlement_events settlement
+  where settlement.id = p_event_id;
+
+  if not found then
+    return 0;
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(
+      v_event.household_id::text || ':' ||
+      v_event.payer_user_id::text || ':' ||
+      v_event.participant_user_id::text || ':' ||
+      upper(v_event.currency),
+      0
+    )
+  );
+
+  delete from public.household_settlement_event_allocations_v2 allocation
+  where allocation.settlement_event_id = p_event_id;
+
+  v_remaining := abs(coalesce(v_event.amount_cents, 0));
+
+  for v_candidate in
+    select
+      split_line.id as split_line_id,
+      split_group.id as split_group_id,
+      split_group.expense_id,
+      greatest(
+        abs(coalesce(split_line.amount_cents, 0)) -
+          coalesce(existing_allocations.allocated_cents, 0),
+        0
+      ) as remaining_cents
+    from public.expense_split_lines split_line
+    join public.expense_split_groups split_group
+      on split_group.id = split_line.split_group_id
+    join public.expenses expense
+      on expense.id = split_group.expense_id
+      and expense.deleted_at is null
+    left join lateral (
+      select coalesce(sum(allocation.allocated_amount_cents), 0) as allocated_cents
+      from public.household_settlement_event_allocations_v2 allocation
+      where allocation.split_line_id = split_line.id
+        and allocation.settlement_event_id <> p_event_id
+    ) existing_allocations on true
+    where split_group.household_id = v_event.household_id
+      and upper(split_group.currency) = upper(v_event.currency)
+      and split_group.payer_user_id = v_event.payer_user_id
+      and split_line.user_id = v_event.participant_user_id
+      and split_line.is_settled = false
+      and abs(coalesce(split_line.amount_cents, 0)) > 0
+    order by
+      coalesce(
+        (expense.date::timestamp at time zone 'UTC'),
+        split_group.created_at
+      ) asc,
+      split_group.created_at asc,
+      split_line.created_at asc,
+      split_line.id asc
+  loop
+    exit when v_remaining <= 0;
+
+    if v_candidate.remaining_cents <= 0 then
+      continue;
+    end if;
+
+    v_order := v_order + 1;
+
+    insert into public.household_settlement_event_allocations_v2 (
+      household_id,
+      settlement_event_id,
+      split_group_id,
+      split_line_id,
+      expense_id,
+      currency,
+      payer_user_id,
+      participant_user_id,
+      allocated_amount_cents,
+      allocation_order,
+      allocation_source
+    ) values (
+      v_event.household_id,
+      v_event.id,
+      v_candidate.split_group_id,
+      v_candidate.split_line_id,
+      v_candidate.expense_id,
+      upper(v_event.currency),
+      v_event.payer_user_id,
+      v_event.participant_user_id,
+      least(v_remaining, v_candidate.remaining_cents),
+      v_order,
+      coalesce(nullif(btrim(p_allocation_source), ''), 'runtime')
+    );
+
+    v_allocated := v_allocated +
+      least(v_remaining, v_candidate.remaining_cents);
+    v_remaining := v_remaining -
+      least(v_remaining, v_candidate.remaining_cents);
+  end loop;
+
+  insert into public.household_settlement_event_allocation_status_v2 (
+    settlement_event_id,
+    allocated_total_cents,
+    allocation_source,
+    processed_at
+  ) values (
+    v_event.id,
+    v_allocated,
+    coalesce(nullif(btrim(p_allocation_source), ''), 'runtime'),
+    now()
+  )
+  on conflict (settlement_event_id)
+  do update set
+    allocated_total_cents = excluded.allocated_total_cents,
+    allocation_source = excluded.allocation_source,
+    processed_at = excluded.processed_at;
+
+  return v_allocated;
+end;
+$$;
+
+revoke all on function public.households_allocate_settlement_event_v2(uuid, text)
+  from public, anon, authenticated;
+
 -- Keep temporarily removed provider transactions available for bank-sync
 -- restoration, but exclude them from the server-authoritative balance.
 alter function public.households_get_pairwise_settlement_balances_v2(uuid, text)
