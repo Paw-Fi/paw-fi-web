@@ -79,7 +79,8 @@ function isMissingRolloverSchemaError(error: unknown): boolean {
   const message = `${record.code ?? ""} ${record.message ?? ""} ${
     record.details ?? ""
   } ${record.hint ?? ""}`.toLowerCase();
-  const mentionsRolloverColumn = message.includes("rollover_group_id") ||
+  const mentionsRolloverColumn =
+    message.includes("rollover_group_id") ||
     message.includes("rollover_enabled") ||
     message.includes("rollover_negative") ||
     message.includes("rollover_cap_cents") ||
@@ -130,9 +131,10 @@ export function calculatePocketRolloverBreakdownCents({
   const sanitizedOpening = rolloverEnabled
     ? Math.round(openingRolloverCents || 0)
     : 0;
-  const positiveCap = rolloverCapCents == null
-    ? null
-    : Math.max(0, Math.round(rolloverCapCents || 0));
+  const positiveCap =
+    rolloverCapCents == null
+      ? null
+      : Math.max(0, Math.round(rolloverCapCents || 0));
   const capPositive = (value: number) => {
     if (positiveCap == null || value <= 0) return value;
     return Math.min(value, positiveCap);
@@ -216,8 +218,8 @@ function addLedgerContribution(
     sourcePeriodMonth,
     label: buildLedgerLabel(sourceType, sourcePeriodMonth),
     amountCents,
-    remainingCentsAfterAdjustment: sumRolloverComponents(components) +
-      amountCents,
+    remainingCentsAfterAdjustment:
+      sumRolloverComponents(components) + amountCents,
     isCarried,
     reason,
   } satisfies PocketRolloverLedgerContribution;
@@ -331,9 +333,10 @@ export function calculatePocketRolloverContributionLedger({
     const openingRolloverCents = month.rolloverEnabled
       ? normalizeLedgerCents(month.openingRolloverCents)
       : 0;
-    const capCents = month.rolloverCapCents == null
-      ? null
-      : Math.max(0, normalizeLedgerCents(month.rolloverCapCents));
+    const capCents =
+      month.rolloverCapCents == null
+        ? null
+        : Math.max(0, normalizeLedgerCents(month.rolloverCapCents));
     const incomingRolloverCents = month.rolloverEnabled
       ? sumRolloverComponents(components)
       : 0;
@@ -447,10 +450,11 @@ export function calculatePocketRolloverContributionLedger({
       baseBudgetCents,
       incomingRolloverCents,
       openingRolloverCents,
-      availableBudgetCents: baseBudgetCents + incomingRolloverCents +
-        openingRolloverCents,
+      availableBudgetCents:
+        baseBudgetCents + incomingRolloverCents + openingRolloverCents,
       spentCents,
-      remainingCents: baseBudgetCents +
+      remainingCents:
+        baseBudgetCents +
         incomingRolloverCents +
         openingRolloverCents -
         spentCents,
@@ -468,9 +472,10 @@ export function calculatePocketRolloverContributionLedger({
   const selectedHistoryIndex = monthlyHistory.findIndex(
     (month) => month.periodMonth === selected,
   );
-  const selectedIncoming = selectedHistoryIndex >= 0
-    ? monthlyHistory[selectedHistoryIndex].incomingRolloverCents
-    : sumRolloverComponents(components);
+  const selectedIncoming =
+    selectedHistoryIndex >= 0
+      ? monthlyHistory[selectedHistoryIndex].incomingRolloverCents
+      : sumRolloverComponents(components);
   const visibleComponents = selectedStartComponents ?? components;
 
   return {
@@ -495,11 +500,12 @@ export function calculatePocketRolloverContributionLedger({
 }
 
 function normalizeFinancialMonthStartDay(value: unknown): number {
-  const parsed = typeof value === "number"
-    ? value
-    : typeof value === "string" && /^\d+$/.test(value.trim())
-    ? Number.parseInt(value.trim(), 10)
-    : NaN;
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && /^\d+$/.test(value.trim())
+        ? Number.parseInt(value.trim(), 10)
+        : NaN;
   return Number.isInteger(parsed) && parsed >= 1 && parsed <= 31 ? parsed : 1;
 }
 
@@ -549,20 +555,26 @@ export function parseFinancialPeriodRangeUtc(
   const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?/.exec(trimmed);
   const year = Number(match?.[1] ?? now.getUTCFullYear());
   const month = Number(match?.[2] ?? now.getUTCMonth() + 1);
-  const safeYear = Number.isInteger(year) && year >= 1970 && year <= 9999
-    ? year
-    : now.getUTCFullYear();
-  const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12
-    ? month
-    : now.getUTCMonth() + 1;
-  const day = match?.[3] == null ? startDay : Math.min(
-    Math.max(Number(match[3]) || startDay, 1),
-    lastDayOfMonthUtc(safeYear, safeMonth),
-  );
+  const safeYear =
+    Number.isInteger(year) && year >= 1970 && year <= 9999
+      ? year
+      : now.getUTCFullYear();
+  const safeMonth =
+    Number.isInteger(month) && month >= 1 && month <= 12
+      ? month
+      : now.getUTCMonth() + 1;
+  const day =
+    match?.[3] == null
+      ? startDay
+      : Math.min(
+          Math.max(Number(match[3]) || startDay, 1),
+          lastDayOfMonthUtc(safeYear, safeMonth),
+        );
 
-  const start = match?.[3] != null && options.fullDateIsDateInPeriod
-    ? financialCycleStartForDateUtc(safeYear, safeMonth, day, startDay)
-    : new Date(Date.UTC(safeYear, safeMonth - 1, day));
+  const start =
+    match?.[3] != null && options.fullDateIsDateInPeriod
+      ? financialCycleStartForDateUtc(safeYear, safeMonth, day, startDay)
+      : new Date(Date.UTC(safeYear, safeMonth - 1, day));
   const nextAnchor = new Date(
     Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1),
   );
@@ -578,21 +590,40 @@ export function parseFinancialPeriodRangeUtc(
   };
 }
 
-async function resolveFinancialMonthStartDay(
+function budgetAnchorMonth(periodStart: string): string {
+  return `${periodStart.slice(0, 7)}-01`;
+}
+
+export async function resolveFinancialMonthStartDay(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<number> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_contacts")
     .select("financial_month_start_day")
     .eq("user_id", userId)
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   return normalizeFinancialMonthStartDay(
     (data as { financial_month_start_day?: unknown } | null)
       ?.financial_month_start_day,
   );
+}
+
+export async function resolveFinancialPeriodRangeForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  dateInPeriod: string,
+): Promise<{ monthStartStr: string; nextMonthStr: string }> {
+  const financialMonthStartDay = await resolveFinancialMonthStartDay(
+    supabase,
+    userId,
+  );
+  return parseFinancialPeriodRangeUtc(dateInPeriod, financialMonthStartDay, {
+    fullDateIsDateInPeriod: true,
+  });
 }
 
 export async function resolveFinancialPeriodStartForUser(
@@ -600,14 +631,8 @@ export async function resolveFinancialPeriodStartForUser(
   userId: string,
   dateInPeriod: string,
 ): Promise<string> {
-  const financialMonthStartDay = await resolveFinancialMonthStartDay(
-    supabase,
-    userId,
-  );
-  return parseFinancialPeriodRangeUtc(
-    dateInPeriod,
-    financialMonthStartDay,
-    { fullDateIsDateInPeriod: true },
+  return (
+    await resolveFinancialPeriodRangeForUser(supabase, userId, dateInPeriod)
   ).monthStartStr;
 }
 
@@ -672,11 +697,12 @@ export async function createOrUpdateBudget(
     supabase,
     userId,
   );
-  const normalizedPeriodMonth = parseFinancialPeriodRangeUtc(
+  const financialPeriodStart = parseFinancialPeriodRangeUtc(
     period_month,
     financialMonthStartDay,
     { fullDateIsDateInPeriod: true },
   ).monthStartStr;
+  const normalizedPeriodMonth = budgetAnchorMonth(financialPeriodStart);
   const updatedAt = new Date().toISOString();
   const payload: any = {
     user_id: userId,
@@ -687,12 +713,12 @@ export async function createOrUpdateBudget(
     updated_at: updatedAt,
   };
 
-  const buildExistingQuery = () => {
+  const buildExistingQuery = (periodMonth = normalizedPeriodMonth) => {
     let query = supabase
       .from("budgets")
       .select("id")
       .eq("currency", currency)
-      .eq("period_month", normalizedPeriodMonth)
+      .eq("period_month", periodMonth)
       .order("updated_at", { ascending: false })
       .limit(1);
 
@@ -705,16 +731,30 @@ export async function createOrUpdateBudget(
     return query;
   };
 
-  const { data: existing, error: existingErr } = await buildExistingQuery()
-    .maybeSingle();
+  let { data: existing, error: existingErr } =
+    await buildExistingQuery().maybeSingle();
   if (existingErr) {
     return { data: null, error: existingErr } as const;
+  }
+
+  if (!existing?.id && financialPeriodStart !== normalizedPeriodMonth) {
+    const legacyResult =
+      await buildExistingQuery(financialPeriodStart).maybeSingle();
+    existing = legacyResult.data;
+    existingErr = legacyResult.error;
+    if (existingErr) {
+      return { data: null, error: existingErr } as const;
+    }
   }
 
   if (existing?.id) {
     return supabase
       .from("budgets")
-      .update({ total_budget_cents, updated_at: updatedAt })
+      .update({
+        period_month: normalizedPeriodMonth,
+        total_budget_cents,
+        updated_at: updatedAt,
+      })
       .eq("id", existing.id)
       .select()
       .maybeSingle();
@@ -731,8 +771,8 @@ export async function createOrUpdateBudget(
   }
 
   // Concurrent insert won the race. Re-read and update target row.
-  const { data: winner, error: winnerErr } = await buildExistingQuery()
-    .maybeSingle();
+  const { data: winner, error: winnerErr } =
+    await buildExistingQuery().maybeSingle();
   if (winnerErr || !winner?.id) {
     return { data: null, error: winnerErr ?? insertRes.error } as const;
   }
@@ -762,12 +802,14 @@ export async function upsertEnvelope(
     totalBudgetCents != null && Number.isFinite(totalBudgetCents)
       ? Math.round((percentage / 100) * totalBudgetCents)
       : undefined;
-  const color = typeof options.color === "string" && options.color.trim()
-    ? options.color.trim()
-    : undefined;
-  const icon = typeof options.icon === "string" && options.icon.trim()
-    ? options.icon.trim()
-    : undefined;
+  const color =
+    typeof options.color === "string" && options.color.trim()
+      ? options.color.trim()
+      : undefined;
+  const icon =
+    typeof options.icon === "string" && options.icon.trim()
+      ? options.icon.trim()
+      : undefined;
   const normalizedName = name.trim().toLowerCase();
   const normalizedCurrency = currency.trim().toUpperCase() || "USD";
   let rolloverPayload: Record<string, unknown> = {};
@@ -795,9 +837,10 @@ export async function upsertEnvelope(
       .eq("user_id", userId)
       .ilike("currency", normalizedCurrency)
       .order("updated_at", { ascending: false });
-    lineageQuery = householdId == null
-      ? lineageQuery.is("household_id", null)
-      : lineageQuery.eq("household_id", householdId);
+    lineageQuery =
+      householdId == null
+        ? lineageQuery.is("household_id", null)
+        : lineageQuery.eq("household_id", householdId);
     const { data: lineageCandidates, error: lineageError } = await lineageQuery;
     if (!lineageError) {
       const lineage = (lineageCandidates ?? []).find(
@@ -840,8 +883,9 @@ export async function upsertEnvelopeAllocation(
   period_month: string,
   amount_cents: number,
 ) {
-  const normalizedPeriodMonth = parseFinancialPeriodRangeUtc(period_month)
-    .monthStartStr;
+  const normalizedPeriodMonth = budgetAnchorMonth(
+    parseFinancialPeriodRangeUtc(period_month).monthStartStr,
+  );
   return supabase.from("envelope_allocations").upsert(
     {
       envelope_id: envelopeId,
@@ -893,22 +937,33 @@ export async function getBudgetStatusDirect(
     financialMonthStartDay,
     { fullDateIsDateInPeriod: true },
   );
+  const budgetPeriodMonth = budgetAnchorMonth(monthStartStr);
 
-  let budgetQuery = supabase
-    .from("budgets")
-    .select("id, total_budget_cents, currency, period_month")
-    .eq("currency", currency)
-    .eq("period_month", monthStartStr)
-    .order("updated_at", { ascending: false })
-    .limit(1);
+  const loadBudget = async (storageMonth: string) => {
+    let query = supabase
+      .from("budgets")
+      .select("id, total_budget_cents, currency, period_month")
+      .eq("currency", currency)
+      .eq("period_month", storageMonth)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    query = householdId
+      ? query.eq("household_id", householdId)
+      : query.eq("user_id", userId).is("household_id", null);
+    return query;
+  };
 
-  if (householdId) {
-    budgetQuery = budgetQuery.eq("household_id", householdId);
-  } else {
-    budgetQuery = budgetQuery.eq("user_id", userId).is("household_id", null);
+  let { data: budgetRows, error: budgetErr } =
+    await loadBudget(budgetPeriodMonth);
+  if (
+    !budgetErr &&
+    (!budgetRows || budgetRows.length === 0) &&
+    monthStartStr !== budgetPeriodMonth
+  ) {
+    const legacyResult = await loadBudget(monthStartStr);
+    budgetRows = legacyResult.data;
+    budgetErr = legacyResult.error;
   }
-
-  const { data: budgetRows, error: budgetErr } = await budgetQuery;
   if (budgetErr) return { error: budgetErr };
   const budget = (budgetRows || [])[0];
   if (!budget) return { budget: null };
@@ -925,19 +980,19 @@ export async function getBudgetStatusDirect(
 
   const { data: allocs, error: allocErr } = envIds.length
     ? await supabase
-      .from("envelope_allocations")
-      .select("envelope_id, amount_cents, period_month")
-      .in("envelope_id", envIds)
-      .eq("period_month", monthStartStr)
+        .from("envelope_allocations")
+        .select("envelope_id, amount_cents, period_month")
+        .in("envelope_id", envIds)
+        .eq("period_month", budget.period_month)
     : { data: [], error: null };
   if (allocErr) return { error: allocErr };
 
   // Fetch category links for envelopes to calculate spend per pocket
   const { data: links, error: linksErr } = envIds.length
     ? await supabase
-      .from("envelope_category_links")
-      .select("envelope_id, category")
-      .in("envelope_id", envIds)
+        .from("envelope_category_links")
+        .select("envelope_id, category")
+        .in("envelope_id", envIds)
     : { data: [], error: null };
   if (linksErr) return { error: linksErr };
   const categoryToEnvelope: Record<string, string[]> = {};
@@ -1000,25 +1055,28 @@ export async function getBudgetStatusDirect(
   }
 
   const rolloverScope = householdId
-    ? isPortfolio ? "portfolio" : "household"
+    ? isPortfolio
+      ? "portfolio"
+      : "household"
     : "personal";
   const envelopeStatus: any[] = [];
   for (const e of envelopes || []) {
     // Read precedence: allocation(period_month) -> budget_amount_cents -> derived from percentage
-    const alloc = allocMap[e.id] != null
-      ? allocMap[e.id]
-      : e.budget_amount_cents != null
-      ? Number(e.budget_amount_cents)
-      : Math.round(
-        ((e.budget_percentage || 0) / 100) *
-          (budget.total_budget_cents || 0),
-      );
+    const alloc =
+      allocMap[e.id] != null
+        ? allocMap[e.id]
+        : e.budget_amount_cents != null
+          ? Number(e.budget_amount_cents)
+          : Math.round(
+              ((e.budget_percentage || 0) / 100) *
+                (budget.total_budget_cents || 0),
+            );
     const spent = spentMap[e.id] != null ? spentMap[e.id] : 0;
     let incomingRolloverCents = 0;
 
     if (e.rollover_enabled === true) {
-      const { data: rolloverData, error: rolloverErr } = await supabase.rpc(
-        "calculate_pocket_rollover_carry_v1",
+      let { data: rolloverData, error: rolloverErr } = await supabase.rpc(
+        "calculate_pocket_rollover_carry_v2",
         {
           p_user_id: userId,
           p_scope: rolloverScope,
@@ -1026,9 +1084,26 @@ export async function getBudgetStatusDirect(
           p_currency: currency,
           p_envelope_name: e.name ?? "",
           p_rollover_group_id: e.rollover_group_id ?? null,
-          p_period_month: monthStartStr,
+          p_budget_month: budgetPeriodMonth,
         },
       );
+
+      if (rolloverErr?.code === "42883") {
+        const fallback = await supabase.rpc(
+          "calculate_pocket_rollover_carry_v1",
+          {
+            p_user_id: userId,
+            p_scope: rolloverScope,
+            p_household_id: householdId,
+            p_currency: currency,
+            p_envelope_name: e.name ?? "",
+            p_rollover_group_id: e.rollover_group_id ?? null,
+            p_period_month: monthStartStr,
+          },
+        );
+        rolloverData = fallback.data;
+        rolloverErr = fallback.error;
+      }
 
       if (!rolloverErr) {
         incomingRolloverCents = Number(rolloverData) || 0;
@@ -1050,9 +1125,8 @@ export async function getBudgetStatusDirect(
       spentCents: spent,
       rolloverEnabled: e.rollover_enabled === true,
       rolloverNegative: e.rollover_negative === true,
-      rolloverCapCents: e.rollover_cap_cents == null
-        ? null
-        : Number(e.rollover_cap_cents),
+      rolloverCapCents:
+        e.rollover_cap_cents == null ? null : Number(e.rollover_cap_cents),
     });
     envelopeStatus.push({
       id: e.id,
@@ -1067,9 +1141,8 @@ export async function getBudgetStatusDirect(
       remaining_cents: rollover.remainingCents,
       rollover_enabled: e.rollover_enabled === true,
       rollover_negative: e.rollover_negative === true,
-      rollover_cap_cents: e.rollover_cap_cents == null
-        ? null
-        : Number(e.rollover_cap_cents),
+      rollover_cap_cents:
+        e.rollover_cap_cents == null ? null : Number(e.rollover_cap_cents),
     });
   }
 

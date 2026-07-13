@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "../budgets-helpers.ts";
 import {
   getBudgetStatusDirect,
+  resolveFinancialPeriodStartForUser,
   resolvePocketPercentageForUpsert,
   upsertEnvelope,
   upsertEnvelopeAllocation,
@@ -27,7 +28,9 @@ function normalizePocketCategories(value: unknown): string[] {
   const seen = new Set<string>();
   const categories: string[] = [];
   for (const item of value) {
-    const category = String(item || "").trim().toLowerCase();
+    const category = String(item || "")
+      .trim()
+      .toLowerCase();
     if (!category || seen.has(category)) continue;
     seen.add(category);
     categories.push(category);
@@ -91,7 +94,11 @@ export async function setBotPocketFromToolCall(params: {
   }
 
   const dateStr = normalizeDateInput(args.date, params.currentDate);
-  const periodMonth = `${dateStr.slice(0, 7)}-01`;
+  const periodMonth = await resolveFinancialPeriodStartForUser(
+    params.supabase,
+    params.userId,
+    dateStr,
+  );
   const { householdId, spaceMeta } = resolveBotSpaceScope(
     args,
     params.spaceMap,
@@ -168,8 +175,7 @@ export async function setBotPocketFromToolCall(params: {
   if (envelopeRowsError) {
     return {
       result: {
-        error:
-          formatInvokeError(envelopeRowsError) || "Failed to load pockets",
+        error: formatInvokeError(envelopeRowsError) || "Failed to load pockets",
       },
     };
   }
@@ -250,8 +256,13 @@ export async function setBotPocketFromToolCall(params: {
     amountCents,
   );
 
-  const updatedPockets: Array<{ id: string; name: string; percentage: number }> =
-    [{ id: pocketId, name: String(savedPocket?.name || nameToUse), percentage }];
+  const updatedPockets: Array<{
+    id: string;
+    name: string;
+    percentage: number;
+  }> = [
+    { id: pocketId, name: String(savedPocket?.name || nameToUse), percentage },
+  ];
   if (hasPercentageArg) {
     const others = (envelopeRows || [])
       .filter((p: any) => p.id !== pocketId)
