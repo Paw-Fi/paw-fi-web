@@ -29,7 +29,7 @@ import {
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
 import { FaqSection } from "@/components/ui/faq-section";
-import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-grid";
+import { PricingCardsGrid } from "@/components/pricing/pricing-cards-grid";
 import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
@@ -40,6 +40,7 @@ import {
   getRegionalCountryOptions,
   getRegionalPriceLabels,
   saveRegionalPricingCountry,
+  formatRegionalPrice,
 } from "@/lib/regional-pricing";
 
 // Added new pro-max components
@@ -149,141 +150,7 @@ function CountryPricingSelector({
   );
 }
 
-function PricingCard({
-  title,
-  price,
-  period,
-  comparePrice,
-  billingNote,
-  description,
-  features,
-  isPopular,
-  showPopularBadge = isPopular,
-  buttonText,
-  onSubscribe,
-}: {
-  title: string;
-  price: string;
-  period?: string;
-  comparePrice?: string;
-  billingNote?: string;
-  description: string;
-  features: string[];
-  isPopular?: boolean;
-  showPopularBadge?: boolean;
-  buttonText: string;
-  onSubscribe: () => void;
-}) {
-  return (
-    <div className="relative flex w-full flex-col">
-      {isPopular && (
-        <div className="from-primary/30 absolute inset-0 -z-10 rounded-[2rem] bg-gradient-to-br to-purple-500/30 opacity-60 blur-2xl" />
-      )}
-      <div
-        className={classNames(
-          "relative flex flex-1 flex-col rounded-[2rem] p-8 transition-all duration-300 hover:-translate-y-1 sm:p-10",
-          isPopular
-            ? "border-primary bg-card/80 border-2 shadow-2xl backdrop-blur-2xl"
-            : "border-border/50 bg-card/40 hover:bg-card/50 border-2 shadow-lg backdrop-blur-xl hover:shadow-xl",
-        )}
-      >
-        {showPopularBadge && (
-          <div className="absolute -top-4 right-0 left-0 flex justify-center">
-            <div className="bg-primary text-primary-foreground flex items-center gap-1.5 rounded-full px-4 py-1 text-xs font-bold tracking-widest uppercase shadow-lg">
-              <Sparkles className="h-3.5 w-3.5" />
-              Most Popular
-            </div>
-          </div>
-        )}
 
-        <div className="mb-8 flex min-h-[96px] flex-col justify-start">
-          <h3 className="text-foreground text-2xl font-extrabold tracking-tight">
-            {title}
-          </h3>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-            {description}
-          </p>
-        </div>
-
-        <div className="mb-8 flex min-h-[116px] flex-col justify-start gap-1">
-          <div className="flex items-baseline gap-1">
-            <span className="text-foreground text-5xl font-black tracking-tighter sm:text-6xl">
-              {price}
-            </span>
-            {period && (
-              <span className="text-muted-foreground text-base font-semibold">
-                {period}
-              </span>
-            )}
-          </div>
-
-          <div className="mt-1 h-5">
-            {comparePrice && (
-              <AnimatePresence mode="wait">
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-muted-foreground/60 text-sm font-medium line-through"
-                >
-                  Regularly {comparePrice}
-                </motion.span>
-              </AnimatePresence>
-            )}
-          </div>
-          {billingNote && (
-            <span className="text-muted-foreground text-sm font-medium">
-              {billingNote}
-            </span>
-          )}
-        </div>
-
-        <Button
-          size="lg"
-          onClick={onSubscribe}
-          variant={isPopular ? "default" : "outline"}
-          className={classNames(
-            "group relative w-full overflow-hidden rounded-full py-6 text-base font-bold transition-all",
-            isPopular
-              ? "shadow-primary/25 hover:shadow-primary/40 shadow-xl"
-              : "bg-background/50 hover:bg-muted",
-          )}
-        >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            {buttonText}
-            <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </span>
-          {isPopular && (
-            <div className="group-hover:animate-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-          )}
-        </Button>
-
-        {features.length > 0 && (
-          <div className="border-border/50 mt-8 border-t pt-6">
-            {isPopular && (
-              <p className="text-foreground mb-4 text-left text-sm font-bold">
-                Included in Plus
-              </p>
-            )}
-            <ul className="space-y-3">
-              {features.map((feature) => (
-                <li
-                  key={feature}
-                  className="flex gap-3 text-sm leading-relaxed"
-                >
-                  <Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
-                  <span className="text-muted-foreground font-medium">
-                    {feature}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export function PricingRouteComponent() {
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -294,7 +161,7 @@ export function PricingRouteComponent() {
     DEFAULT_REGIONAL_PRICING_COUNTRY,
   );
 
-  type PlanType = "plus_monthly" | "plus_yearly" | "plus_lifetime";
+  type PlanType = "free" | "plus_monthly" | "plus_yearly" | "plus_lifetime";
 
   useEffect(() => {
     setIsLoading(false);
@@ -384,6 +251,12 @@ export function PricingRouteComponent() {
       } = await supabase.auth.getUser();
       const userId = user?.id;
 
+      if (planId === "free") {
+        setIsLoading(false);
+        navigate({ to: "/register" });
+        return;
+      }
+
       if (!userId) {
         setIsLoading(false);
         toast.error("Please sign in to subscribe");
@@ -406,13 +279,9 @@ export function PricingRouteComponent() {
           ? {
               plan: selectedPlan.plan,
               billing: selectedPlan.billing,
-              country: pricingCountry,
-              currency: regionalPrices.market.currencyCode,
             }
           : {
               plan: selectedPlan.plan,
-              country: pricingCountry,
-              currency: regionalPrices.market.currencyCode,
             },
       });
     } catch (err) {
@@ -586,69 +455,28 @@ export function PricingRouteComponent() {
                 onChange={setIsYearly}
                 savingsPercent={regionalPrices.yearlySavingsPercent}
               />
-              <CountryPricingSelector
-                countryCode={pricingCountry}
-                currencyCode={regionalPrices.market.currencyCode}
-                onChange={(countryCode) => {
-                  setPricingCountry(saveRegionalPricingCountry(countryCode));
-                }}
-              />
+              {import.meta.env.DEV && (
+                <CountryPricingSelector
+                  countryCode={pricingCountry}
+                  currencyCode={regionalPrices.market.currencyCode}
+                  onChange={(countryCode) => {
+                    setPricingCountry(saveRegionalPricingCountry(countryCode));
+                  }}
+                />
+              )}
             </motion.div>
 
             <motion.div
               variants={itemVariants}
               className="mx-auto mt-12 w-full max-w-7xl"
             >
-              <FeatureComparisonGrid
-                prefersReducedMotion={prefersReducedMotion}
-                plusPriceLabel={
-                  isYearly
-                    ? `${pyTier.effectiveMonthlyPrice}/mo billed yearly`
-                    : `${pmTier.priceMonthly}/mo`
-                }
-              />
-            </motion.div>
-
-            {/* Pricing Cards Grid */}
-            <motion.div
-              variants={itemVariants}
-              className="mx-auto mt-16 grid w-full max-w-7xl items-stretch gap-8 lg:grid-cols-3"
-            >
-              <PricingCard
-                title="Monthly"
-                description="Flexible Plus access with monthly billing."
-                price={pmTier.priceMonthly}
-                period="/mo"
-                billingNote="billed monthly"
-                features={[]}
-                isPopular={false}
-                buttonText="Get Plus"
-                onSubscribe={() => handleSubscribe("plus_monthly")}
-              />
-
-              <PricingCard
-                title="Yearly"
-                description="Best value for Plus with lower effective monthly pricing."
-                price={pyTier.effectiveMonthlyPrice}
-                period="/mo"
-                comparePrice={`${pmTier.priceMonthly}/mo`}
-                billingNote={`billed annually at ${pyTier.priceMonthly}`}
-                features={[]}
-                isPopular={true}
-                buttonText="Get Yearly Plus"
-                onSubscribe={() => handleSubscribe("plus_yearly")}
-              />
-
-              <PricingCard
-                title="Lifetime"
-                description="Pay once and keep access to Plus without recurring billing."
-                price={regionalPrices.lifetime}
-                period="one-time"
-                billingNote="lifetime access"
-                features={[]}
-                isPopular={false}
-                buttonText="Get Lifetime Plus"
-                onSubscribe={() => handleSubscribe("plus_lifetime")}
+              <PricingCardsGrid
+                isYearly={isYearly}
+                pmTier={pmTier}
+                pyTier={pyTier}
+                lifetimePrice={regionalPrices.lifetime}
+                freePrice={formatRegionalPrice(regionalPrices.market, 0)}
+                onSubscribe={handleSubscribe}
               />
             </motion.div>
           </motion.div>
