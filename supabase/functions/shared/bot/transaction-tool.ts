@@ -1,4 +1,6 @@
 import { buildInternalInvokeHeaders } from "../auth.ts";
+import { normalizeCurrencyCode } from "../currency-normalize.ts";
+import { CURRENCY_SYMBOLS } from "../currency-symbols.ts";
 import { normalizeCalendarDateString } from "../date-normalization.ts";
 import { formatInvokeError } from "../formatting-helpers.ts";
 import { resolveCurrencyFromOCR } from "../ocr-currency-resolver.ts";
@@ -96,7 +98,7 @@ function resolveTransactionToolCurrency(
 
   if (!fallbackCurrency) return rawCurrency || undefined;
 
-  return resolveCurrencyFromOCR({
+  const resolution = resolveCurrencyFromOCR({
     detectedCurrencyCode: rawCurrency || null,
     detectedCurrencySymbol:
       normalizeOptionalString(input.currency_symbol) ||
@@ -104,7 +106,21 @@ function resolveTransactionToolCurrency(
       null,
     rawOcrText: collectCurrencyEvidenceText(input, fallback),
     userPreferredCurrency: fallbackCurrency,
-  }).finalCurrencyCode;
+  });
+  const normalizedRawCurrency = normalizeCurrencyCode(rawCurrency);
+
+  if (
+    resolution.reason === "fallback_user_preference" &&
+    normalizedRawCurrency &&
+    Object.prototype.hasOwnProperty.call(
+      CURRENCY_SYMBOLS,
+      normalizedRawCurrency,
+    )
+  ) {
+    return normalizedRawCurrency;
+  }
+
+  return resolution.finalCurrencyCode;
 }
 
 export function normalizeSignedTransactionAmount(
@@ -187,6 +203,22 @@ export function normalizeTransactionToolArgs(
       };
     }
     merchant = trimmedMerchant || undefined;
+  }
+
+  const rawCurrency = normalizeOptionalString(input.currency);
+  const normalizedRawCurrency = normalizeCurrencyCode(rawCurrency);
+  if (
+    rawCurrency &&
+    (!normalizedRawCurrency ||
+      !Object.prototype.hasOwnProperty.call(
+        CURRENCY_SYMBOLS,
+        normalizedRawCurrency,
+      ))
+  ) {
+    return {
+      ok: false,
+      error: "Unsupported currency. Ask the user to confirm the currency.",
+    };
   }
 
   const currency = resolveTransactionToolCurrency(input, fallback);
