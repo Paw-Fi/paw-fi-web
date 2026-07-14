@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { sendEmail } from "../shared/email-service.ts";
+import { sanitizeUrl } from "../shared/email-security.ts";
 
 interface FollowupQueueRow {
   id: string;
@@ -112,7 +113,6 @@ serve(async (req: Request) => {
     presentedTokens,
   });
 
-
   if (!authResult.authorized) {
     reportProcessSubscriptionFollowupEmailsError(
       "authorization",
@@ -142,26 +142,26 @@ serve(async (req: Request) => {
     );
 
     console.error("[process-subscription-followup-emails] unauthorized request", {
-      authPath: authResult.path,
-      hasInternalKeyHeader: internalKeyHeader.length > 0,
-      internalKeyLength: internalKeyHeader.length,
-      internalKeyKind: detectTokenKind(internalKeyHeader || null),
-      hasBearerToken: Boolean(bearerToken),
-      bearerTokenLength: bearerToken?.length ?? 0,
-      bearerTokenKind: detectTokenKind(bearerToken),
-      hasApikeyHeader: apikeyHeader.length > 0,
-      apikeyLength: apikeyHeader.length,
-      apikeyKind: detectTokenKind(apikeyHeader || null),
-      presentedTokenCount: presentedTokens.length,
+        authPath: authResult.path,
+        hasInternalKeyHeader: internalKeyHeader.length > 0,
+        internalKeyLength: internalKeyHeader.length,
+        internalKeyKind: detectTokenKind(internalKeyHeader || null),
+        hasBearerToken: Boolean(bearerToken),
+        bearerTokenLength: bearerToken?.length ?? 0,
+        bearerTokenKind: detectTokenKind(bearerToken),
+        hasApikeyHeader: apikeyHeader.length > 0,
+        apikeyLength: apikeyHeader.length,
+        apikeyKind: detectTokenKind(apikeyHeader || null),
+        presentedTokenCount: presentedTokens.length,
       presentedTokenKinds: presentedTokens.map((token) => detectTokenKind(token)),
-      acceptedKeyCount: acceptedKeys.length,
-      acceptedKeyLengths: acceptedKeys.map((key) => key.length),
-      acceptedKeyKinds: acceptedKeys.map((key) => detectTokenKind(key)),
-      hasSupabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY.length > 0,
-      hasServiceRoleKey: SERVICE_ROLE_KEY.length > 0,
+        acceptedKeyCount: acceptedKeys.length,
+        acceptedKeyLengths: acceptedKeys.map((key) => key.length),
+        acceptedKeyKinds: acceptedKeys.map((key) => detectTokenKind(key)),
+        hasSupabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY.length > 0,
+        hasServiceRoleKey: SERVICE_ROLE_KEY.length > 0,
       hasSecretSupabaseServiceRoleApiKey: SECRET_SUPABASE_SERVICE_ROLE_API_KEY.length > 0,
-      allowServiceTokenFallback: ALLOW_SERVICE_TOKEN_FALLBACK,
-      projectRefHeader: req.headers.get("x-forwarded-host") ?? null,
+        allowServiceTokenFallback: ALLOW_SERVICE_TOKEN_FALLBACK,
+        projectRefHeader: req.headers.get("x-forwarded-host") ?? null,
     });
     return jsonResponse(
       { success: false, error: "Unauthorized" },
@@ -360,7 +360,11 @@ async function markQueueRowAttemptFailed(params: {
 }
 
 function textToSimpleHtml(text: string): string {
-  return `<div>${escapeHtml(text).split("\n").join("<br />")}</div>`;
+  const escapedText = escapeHtml(text).split("\n").join("<br />");
+  return `<div>${escapedText.replace(
+    /(https:\/\/moneko\.io(?:\/[^\s<]*)?|moneko:\/\/(?:home|insights|expenses\/log|pockets|recurring))/g,
+    (url) => `<a href="${sanitizeUrl(url)}" style="color:#7458FF;">${url}</a>`,
+  )}</div>`;
 }
 
 function escapeHtml(value: string): string {

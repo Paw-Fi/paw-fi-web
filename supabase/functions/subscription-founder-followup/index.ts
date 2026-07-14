@@ -12,6 +12,7 @@ interface SubscriptionRecord {
   billing_interval?: string | null;
   canceled_at?: string | null;
   ended_at?: string | null;
+  cancel_at_period_end?: boolean | string | null;
   updated_at?: string | null;
   [key: string]: unknown;
 }
@@ -232,12 +233,8 @@ async function handleInsert(
 
   const recipientName = resolveRecipientName(user.full_name);
   const planLabel = resolvePlanLabel(subscription);
-  const text = buildWelcomeEmailText(
-    recipientName,
-    planLabel,
-    subscription.status as "trialing" | "active",
-  );
-  const subject = buildWelcomeEmailSubject(recipientName);
+  const text = buildWelcomeEmailText(recipientName);
+  const subject = buildWelcomeEmailSubject();
   const dedupeKey = buildInsertDedupeKey(subscription);
 
   const queueResult = await enqueueFounderFollowupEmail({
@@ -304,8 +301,11 @@ async function handleUpdate(
 
   const recipientName = resolveRecipientName(user.full_name);
   const planLabel = resolvePlanLabel(payload.record);
-  const text = buildCancellationEmailText(recipientName);
-  const subject = buildCancellationEmailSubject(recipientName);
+  const text = buildCancellationEmailText(
+    recipientName,
+    isDeliberateCancellation(payload.record, payload.old_record),
+  );
+  const subject = buildCancellationEmailSubject();
   const dedupeKey = buildCancellationDedupeKey(payload.record);
 
   const queueResult = await enqueueFounderFollowupEmail({
@@ -438,6 +438,22 @@ function didTransitionToCanceled(
   return false;
 }
 
+function isDeliberateCancellation(
+  nextRecord: SubscriptionRecord,
+  previousRecord: SubscriptionRecord,
+): boolean {
+  const cancelAtPeriodEnd = nextRecord.cancel_at_period_end;
+  if (cancelAtPeriodEnd === true || cancelAtPeriodEnd === "true") {
+    return true;
+  }
+
+  const nextCanceledAt = asNonEmptyString(nextRecord.canceled_at);
+  const previousCanceledAt = asNonEmptyString(previousRecord.canceled_at);
+  const endedAt = asNonEmptyString(nextRecord.ended_at);
+
+  return Boolean(nextCanceledAt && !previousCanceledAt && !endedAt);
+}
+
 function resolveRecipientName(fullName: string | null): string {
   const name = asNonEmptyString(fullName);
   if (!name) {
@@ -478,83 +494,62 @@ function resolvePlanLabel(subscription: SubscriptionRecord): string {
   return `${plan} plan`;
 }
 
-function buildWelcomeEmailText(
-  name: string,
-  planLabel: string,
-  status: "trialing" | "active",
-): string {
-  // Trialing → onboarding / friction discovery
-  if (status === "trialing") {
-    return [
-      buildGreeting(name),
-      "",
-      "Yifan here, one of the co-founders at Moneko.",
-      "",
-      "I noticed you just joined Moneko, so I wanted to personally welcome you.",
-      "",
-      "If anything feels confusing, missing, or harder than it should be, just hit reply and let me know. I read every message myself.",
-      "",
-      "I’d also love to know what made you decide to try Moneko.",
-      "",
-      "Thanks for giving it a shot.",
-      "",
-      "Yifan",
-      "Co-Founder and CTO, Moneko",
-    ].join("\n");
-  }
-
-  // Active → paid confirmation (your original tone)
+function buildWelcomeEmailText(name: string): string {
   return [
     buildGreeting(name),
     "",
-    `Really appreciate you choosing the ${planLabel}. That means a lot to us.`,
+    "Yifan here, co-founder and CTO of Moneko. Thanks for joining us—I wanted to personally welcome you.",
     "",
-    "I’m Yifan, one of the co-founders at Moneko.",
+    "A great way to get started is to log your next expense through WhatsApp. Simply send a message like \"12.50 for lunch,\" and Moneko will automatically record it for you.",
     "",
-    "We’re building Moneko closely with our early users, so feedback like yours genuinely helps shape what we improve next.",
+    "You can also set up Email Receipt Capture. Once it’s set up, simply forward any receipt email to Moneko, and we’ll automatically log the expense for you.",
     "",
-    "If anything feels confusing, missing, or not quite right, just hit reply and tell me. I read every message myself.",
+    "I’d love to know—what are you hoping Moneko will help you with?",
     "",
-    "I’d also love to know what made you decide to give Moneko a try.",
+    "If you have any questions or need help getting started, feel free to reply directly to this email. I personally read every response.",
     "",
-    "Thanks again for being here early.",
+    "Best,",
     "",
     "Yifan",
-    "Co-Founder and CTO, Moneko",
+    "Co-founder & CTO, Moneko",
   ].join("\n");
 }
 
-function buildWelcomeEmailSubject(firstName: string): string {
-  const name = asNonEmptyString(firstName) ?? "";
-  return name
-    ? `${name} — We appreciate your support`
-    : "We appreciate your support";
+function buildWelcomeEmailSubject(): string {
+  return "A quick question from Moneko’s co-founder";
 }
 
-function buildCancellationEmailSubject(firstName: string): string {
-  const name = asNonEmptyString(firstName) ?? "";
-  return name
-    ? `${name} — I’d love your feedback on Moneko`
-    : "I’d love your feedback on Moneko";
+function buildCancellationEmailSubject(): string {
+  return "Was Moneko missing something?";
 }
 
-function buildCancellationEmailText(name: string): string {
+function buildCancellationEmailText(
+  name: string,
+  deliberateCancellation: boolean,
+): string {
   return [
     buildGreeting(name),
     "",
-    "Yifan here, one of the co-founders at Moneko.",
+    "Yifan here, co-founder and CTO of Moneko.",
     "",
-    "I saw your plan was canceled and wanted to reach out.",
+    deliberateCancellation
+      ? "I noticed you recently cancelled your Moneko subscription, so I wanted to personally reach out."
+      : "I noticed your Moneko subscription recently ended, so I wanted to personally reach out.",
     "",
-    "If you don’t mind sharing, what made you decide to leave? Even a short reply helps us a lot.",
+    deliberateCancellation
+      ? "Would you mind sharing the main reason you decided to cancel?"
+      : "Would you mind sharing what prevented you from continuing with Moneko?",
     "",
-    "No hard feelings at all. If it just wasn’t the right fit, that’s completely fair.",
+    "Whether it was the price, a missing feature, or simply not the right fit, even a short and honest reply would be really helpful.",
     "",
-    "If you ever want to give it another try, I can set you up with a free year. Just let me know.",
+    "If you ran into a problem or couldn’t find a feature you needed, let me know and I’ll see whether there’s anything I can do to help.",
     "",
-    "Either way, thanks for giving Moneko a try.",
+    "Either way, thank you for giving Moneko a try.",
+    "",
+    "Best,",
     "",
     "Yifan",
+    "Co-founder & CTO, Moneko",
   ].join("\n");
 }
 

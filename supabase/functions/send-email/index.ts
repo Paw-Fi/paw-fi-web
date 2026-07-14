@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import { corsHeaders } from '../shared/cors.ts'
 import { sendEmail, sendUserEmail, EmailOptions } from '../shared/email-service.ts'
+import { LINKS } from '../shared/email-security.ts'
 import { 
   welcomeTemplate, 
   notificationTemplate,
@@ -12,6 +13,7 @@ import {
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
+const PLUS_FEATURE_SUMMARY = 'WhatsApp Capture, Email Receipt Capture, advanced budgeting tools, and Bank Sync where supported'
 
 // Supabase webhook payload structure
 interface WebhookPayload {
@@ -127,7 +129,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({ 
       success: false, 
-      error: `Server error: ${error.message}` 
+      error: `Server error: ${error instanceof Error ? error.message : String(error)}`
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -216,7 +218,7 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
           const template = welcomeTemplate({
             name: webhook.record.full_name || '',
             email: webhook.record.email,
-            dashboardUrl: 'https://moneko.io/dashboard'
+            appUrl: 'moneko://home'
           })
           
           return await sendUserEmail(webhook.record.email, webhook.record.full_name || '', template)
@@ -257,12 +259,28 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
         console.log(`Sending subscription welcome email to: ${userData.email}`)
         
         // Send welcome email for new subscriptions
+        const status = String(webhook.record.status || '').toLowerCase()
+        const plan = String(webhook.record.plan || '').toLowerCase()
+        const isLifetime = plan === 'lifetime'
+
+        if ((status !== 'active' && status !== 'trialing') || plan === 'free') {
+          return { success: true, id: 'subscription-status-not-welcome' }
+        }
+
         const template = notificationTemplate({
           name: userData.full_name || '',
-          title: 'Subscription Activated!',
-          message: `Welcome to your new ${webhook.record.plan || 'Premium'} subscription! Your subscription is now active and ready to use.`,
-          actionUrl: 'https://moneko.io/dashboard/user-settings/membership',
-          actionText: 'View Membership',
+          title: status === 'trialing'
+            ? 'Your Moneko Plus Trial Is Active'
+            : isLifetime
+              ? 'Welcome to Moneko Plus Lifetime'
+              : 'Welcome to Moneko Plus',
+          message: status === 'trialing'
+            ? `Your trial is now active. Explore ${PLUS_FEATURE_SUMMARY}.`
+            : isLifetime
+              ? `Your Moneko Plus Lifetime access is now active. Get started with ${PLUS_FEATURE_SUMMARY}.`
+              : `Your Plus access is now active. Get started with ${PLUS_FEATURE_SUMMARY}.`,
+          actionUrl: 'moneko://home',
+          actionText: status === 'trialing' ? 'Explore Moneko Plus' : 'Open Moneko',
           priority: 'high'
         })
 
@@ -286,27 +304,97 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
         console.log(`Sending subscription update email to: ${userData.email}`)
         
         // Determine what changed and create appropriate message
-        let title = 'Subscription Updated'
-        let message = 'Your subscription has been updated.'
+        let title = 'Your Moneko Subscription Is Up to Date'
+        let message = 'Your Moneko account is up to date and your current access is unchanged.'
+        let actionUrl = 'moneko://home'
+        let actionText = 'Open Moneko'
         let priority: 'low' | 'medium' | 'high' = 'medium'
         
         if (webhook.record.status !== webhook.old_record.status) {
-          title = 'Subscription Status Update'
-          message = `Your subscription status has been updated from ${webhook.old_record.status} to ${webhook.record.status}.`
-          priority = webhook.record.status === 'active' ? 'high' : 'medium'
+          const status = String(webhook.record.status || '').toLowerCase()
+          const previousStatus = String(webhook.old_record.status || '').toLowerCase()
+          const plan = String(webhook.record.plan || '').toLowerCase()
+          const periodEnd = formatSubscriptionDate(webhook.record.current_period_end)
+
+          if (status === 'active') {
+            if (plan === 'lifetime') {
+              title = 'Your Moneko Plus Lifetime Access Is Active'
+              message = `Your lifetime access is ready. You can start using ${PLUS_FEATURE_SUMMARY}.`
+            } else {
+              title = 'Your Moneko Plus Subscription Is Active'
+              message = previousStatus === 'trialing'
+                ? `Your trial has ended, and your Moneko Plus subscription is now active. You can continue using ${PLUS_FEATURE_SUMMARY}.`
+                : `Your Plus access is ready. You can start using ${PLUS_FEATURE_SUMMARY}.`
+            }
+            priority = 'high'
+          } else if (status === 'trialing') {
+            title = 'Your Moneko Plus Trial Is Active'
+            message = `Your trial is now active. Explore ${PLUS_FEATURE_SUMMARY}.`
+            priority = 'high'
+          } else if (status === 'past_due') {
+            title = 'We Couldn’t Process Your Moneko Payment'
+            message = 'Please update your payment details to keep your Moneko Plus access active.'
+            actionUrl = LINKS.membership
+            actionText = 'Update Payment Details'
+            priority = 'high'
+          } else if (status === 'canceled' || status === 'expired') {
+            const hasRemainingAccess = isFutureSubscriptionDate(webhook.record.current_period_end)
+            title = hasRemainingAccess
+              ? 'Your Moneko Plus Cancellation Is Confirmed'
+              : 'Your Moneko Plus Access Has Ended'
+            message = hasRemainingAccess && periodEnd
+              ? `You’ll continue to have access to all Moneko Plus features until ${periodEnd}.`
+              : 'Your Moneko Plus access has ended, but you can continue using Moneko Free. You can reactivate Moneko Plus whenever you’re ready.'
+            actionUrl = hasRemainingAccess ? 'moneko://home' : 'https://moneko.io/pricing'
+            actionText = hasRemainingAccess ? 'Open Moneko' : 'View Plans'
+            priority = 'medium'
+          } else {
+            return { success: true, id: 'subscription-status-unrecognized' }
+          }
         } else if (webhook.record.plan !== webhook.old_record.plan) {
-          title = 'Subscription Plan Updated'
-          message = `Your subscription plan has been updated from ${webhook.old_record.plan} to ${webhook.record.plan}.`
-          priority = 'high'
+          const plan = toUserPlanLabel(webhook.record.plan)
+          const normalizedPlan = String(webhook.record.plan || '').toLowerCase()
+          const hadPlusAccess = isPlusPlan(webhook.old_record.plan)
+          const hasPlusAccess = isPlusPlan(webhook.record.plan)
+
+          if (normalizedPlan === 'lifetime' && hadPlusAccess) {
+            title = 'Your Moneko Plus Lifetime Access Is Ready'
+            message = `Your upgrade is complete, and your Moneko Plus Lifetime access is now active. You can continue using ${PLUS_FEATURE_SUMMARY}.`
+            priority = 'high'
+          } else if (normalizedPlan === 'lifetime') {
+            title = 'Welcome to Moneko Plus Lifetime'
+            message = `Your Moneko Plus Lifetime access is now active. Get started with ${PLUS_FEATURE_SUMMARY}.`
+            priority = 'high'
+          } else if (!hadPlusAccess && hasPlusAccess) {
+            title = 'Welcome to Moneko Plus'
+            message = `Your upgrade is complete. You now have access to ${PLUS_FEATURE_SUMMARY}.`
+            actionText = 'Explore Moneko Plus'
+            priority = 'high'
+          } else if (hadPlusAccess && !hasPlusAccess) {
+            title = 'Your Moneko Plan Has Been Updated'
+            message = 'Your Moneko Plus access has ended, but you can continue tracking and managing your finances with Moneko Free.'
+            actionUrl = 'https://moneko.io/pricing'
+            actionText = 'View Plans'
+            priority = 'medium'
+          } else {
+            title = 'Your Moneko Plan Has Changed'
+            message = plan === 'Moneko Free'
+              ? 'Your plan is now Moneko Free. You can continue using all features included with the free plan.'
+              : `Your plan is now ${plan}, and your updated access is ready to use.`
+          }
         } else if (webhook.record.current_period_end !== webhook.old_record.current_period_end) {
-          title = 'Subscription Renewed'
-          message = `Your subscription has been renewed and will continue until ${new Date(webhook.record.current_period_end).toLocaleDateString()}.`
+          if (String(webhook.record.plan || '').toLowerCase() === 'lifetime') {
+            return { success: true, id: 'lifetime-renewal-no-email' }
+          }
+
+          title = 'Your Moneko Plus Subscription Has Renewed'
+          const periodEnd = formatSubscriptionDate(webhook.record.current_period_end)
+          message = periodEnd
+            ? `Your subscription renewed successfully. Your Moneko Plus access is active through ${periodEnd}.`
+            : 'Your subscription renewed successfully, and your Moneko Plus access remains active.'
           priority = 'medium'
         } else {
-          // Generic update message
-          title = 'Subscription Updated'
-          message = 'Your subscription details have been updated. Please check your membership dashboard for the latest information.'
-          priority = 'low'
+          return { success: true, id: 'subscription-update-no-email' }
         }
         
         // Send notification for subscription update
@@ -314,8 +402,8 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
           name: userData.full_name || '',
           title,
           message,
-          actionUrl: 'https://moneko.io/dashboard/user-settings/membership',
-          actionText: 'View Membership',
+          actionUrl,
+          actionText,
           priority
         })
 
@@ -329,6 +417,35 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
 
   } catch (error) {
     console.error('Error in handleWebhookEmail:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
   }
+}
+
+function isPlusPlan(plan: unknown): boolean {
+  const normalized = String(plan || '').toLowerCase()
+  return normalized === 'plus' || normalized === 'premium' || normalized === 'lifetime'
+}
+
+function toUserPlanLabel(plan: unknown): string {
+  const normalized = String(plan || '').toLowerCase()
+  if (normalized === 'lifetime') return 'Moneko Plus Lifetime'
+  if (isPlusPlan(normalized)) return 'Moneko Plus'
+  return 'Moneko Free'
+}
+
+function formatSubscriptionDate(value: unknown): string | null {
+  if (!value) return null
+  const date = new Date(String(value))
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+function isFutureSubscriptionDate(value: unknown): boolean {
+  if (!value) return false
+  const date = new Date(String(value))
+  return !Number.isNaN(date.getTime()) && date.getTime() > Date.now()
 }

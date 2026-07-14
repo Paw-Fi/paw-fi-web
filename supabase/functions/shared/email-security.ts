@@ -1,7 +1,11 @@
 // URL sanitization and security utilities
 export const LINKS = {
   moneko: 'https://moneko.io',
-  dashboard: 'https://moneko.io/dashboard',
+  pricing: 'https://moneko.io/pricing',
+  membership: 'https://moneko.io/dashboard/user-settings/membership',
+  appHome: 'moneko://home',
+  appInsights: 'moneko://insights',
+  appLogExpense: 'moneko://expenses/log',
   support: 'mailto:hello@moneko.io',
   privacy: 'https://moneko.io/privacy-policy',
   terms: 'https://moneko.io/terms-of-service',
@@ -29,7 +33,7 @@ const SUFFIX_ALLOWED_HOSTS = ['stripe.com'];
 // Enhanced URL sanitizer with allowlist and protocol validation
 export function sanitizeUrl(url: string): string {
   if (!url || typeof url !== 'string') return '#';
-  
+
   // Short-circuit for mailto: and tel: protocols with basic validation
   if (url.startsWith('mailto:')) {
     const email = url.substring(7);
@@ -39,7 +43,7 @@ export function sanitizeUrl(url: string): string {
     }
     return '#';
   }
-  
+
   if (url.startsWith('tel:')) {
     const phone = url.substring(4);
     // Basic phone validation - allow digits, +, -, (, ), and spaces
@@ -48,15 +52,20 @@ export function sanitizeUrl(url: string): string {
     }
     return '#';
   }
-  
+
+  // Allow only known Moneko app routes for mobile CTAs.
+  if (/^moneko:\/\/(home|insights|expenses\/log|pockets|recurring)$/.test(url)) {
+    return url;
+  }
+
   try {
     // Only allow https: for web URLs
     if (!url.startsWith('https://')) {
       return '#';
     }
-    
+
     const parsed = new URL(url);
-    
+
     // Check against allowlist
     const isExactAllowed = EXACT_ALLOWED_HOSTS.includes(parsed.hostname);
     const isSuffixAllowed = SUFFIX_ALLOWED_HOSTS.some(
@@ -67,7 +76,7 @@ export function sanitizeUrl(url: string): string {
     if (!isExactAllowed && !isSuffixAllowed) {
       return '#';
     }
-    
+
     return url;
   } catch (error) {
     // URL parsing failed, return safe fallback
