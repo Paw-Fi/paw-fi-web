@@ -5,6 +5,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   calculatePocketRolloverBreakdownCents,
   calculatePocketRolloverContributionLedger,
+  parseFinancialPeriodRangeUtc,
   resolvePocketPercentageForUpsert,
   upsertEnvelope,
 } from "../shared/budgets-helpers.ts";
@@ -70,6 +71,38 @@ Deno.test("resolvePocketPercentageForUpsert allows explicit zero", () => {
   assertEquals(resolved.percentage, 0);
   assertEquals(resolved.usedExistingPercentage, false);
 });
+
+Deno.test("parseFinancialPeriodRangeUtc preserves custom cycle starts", () => {
+  assertEquals(parseFinancialPeriodRangeUtc("2026-07-25", 25), {
+    monthStartStr: "2026-07-25",
+    nextMonthStr: "2026-08-25",
+  });
+});
+
+Deno.test(
+  "parseFinancialPeriodRangeUtc uses configured day after clamped short months",
+  () => {
+    assertEquals(parseFinancialPeriodRangeUtc("2026-02-28", 31), {
+      monthStartStr: "2026-02-28",
+      nextMonthStr: "2026-03-31",
+    });
+  },
+);
+
+Deno.test(
+  "parseFinancialPeriodRangeUtc can resolve a date inside a financial period",
+  () => {
+    assertEquals(
+      parseFinancialPeriodRangeUtc("2026-07-10", 25, {
+        fullDateIsDateInPeriod: true,
+      }),
+      {
+        monthStartStr: "2026-06-25",
+        nextMonthStr: "2026-07-25",
+      },
+    );
+  },
+);
 
 Deno.test(
   "resolvePocketPercentageForUpsert rejects explicit invalid percentage",

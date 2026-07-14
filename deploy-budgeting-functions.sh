@@ -129,6 +129,11 @@ supabase functions deploy update-preferred-platform --project-ref "$PROJECT_REF"
 echo "✅ update-preferred-platform deployed"
 echo ""
 
+echo "📦 [25/24] Deploying update-financial-month-start-dayfunction..."
+supabase functions deploy update-financial-month-start-day --project-ref "$PROJECT_REF"
+echo "✅ update-preferred-platform deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All budgeting functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"

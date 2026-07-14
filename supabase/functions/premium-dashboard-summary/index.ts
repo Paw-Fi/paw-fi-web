@@ -3,6 +3,7 @@ import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
 import { getUserPremiumAccessByUserId } from "../shared/premium-access.ts";
+import { resolveFinancialPeriodStartForUser } from "../shared/budgets-helpers.ts";
 
 interface DashboardSummaryRequest {
   startDate?: string;
@@ -51,6 +52,15 @@ interface EnvelopeRow {
   budget_percentage: number | null;
 }
 
+interface DashboardActionItem {
+  id: string;
+  severity: "info" | "success" | "warning";
+  title: string;
+  description: string;
+  actionLabel?: string;
+  actionHref?: string;
+}
+
 const JSON_HEADERS = { "Content-Type": "application/json" };
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_REGEX = /^[A-Z]{3}$/;
@@ -80,15 +90,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await readJsonBody(req);
-    const filters = validateFilters(body);
-    if ("error" in filters) {
-      return jsonResponse(
-        { success: false, error: filters.error },
-        400,
-        corsHeaders,
-      );
-    }
-
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -120,6 +121,21 @@ Deno.serve(async (req: Request) => {
           status: access.status,
         },
         403,
+        corsHeaders,
+      );
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const defaultStartDate = await resolveFinancialPeriodStartForUser(
+      supabase,
+      auth.userId,
+      today,
+    );
+    const filters = validateFilters(body, defaultStartDate, today);
+    if ("error" in filters) {
+      return jsonResponse(
+        { success: false, error: filters.error },
+        400,
         corsHeaders,
       );
     }
@@ -177,7 +193,7 @@ Deno.serve(async (req: Request) => {
       (row) => !hasReceiptOrAttachment(row),
     ).length;
     const uncategorizedCount = transactions.filter((row) =>
-      isUncategorized(row.category)
+      isUncategorized(row.category),
     ).length;
 
     const payload = {
@@ -193,11 +209,14 @@ Deno.serve(async (req: Request) => {
         expenseCents,
         netCashflowCents: incomeCents - expenseCents,
         profitLossCents: incomeCents - expenseCents,
-        receiptCoveragePercent: expenseRows.length === 0 ? 100 : Math.round(
-          ((expenseRows.length - missingReceiptCount) /
-            expenseRows.length) *
-            100,
-        ),
+        receiptCoveragePercent:
+          expenseRows.length === 0
+            ? 100
+            : Math.round(
+                ((expenseRows.length - missingReceiptCount) /
+                  expenseRows.length) *
+                  100,
+              ),
       },
       trends: buildTrends(displayTransactions),
       actionItems: buildActionItems({
@@ -257,13 +276,11 @@ async function readJsonBody(req: Request): Promise<DashboardSummaryRequest> {
 
 function validateFilters(
   body: DashboardSummaryRequest,
+  defaultStartDate: string,
+  defaultEndDate: string,
 ): NormalizedFilters | { error: string } {
-  const now = new Date();
-  const startDate = normalizeDate(body.startDate) ??
-    `${now.getUTCFullYear()}-${
-      String(now.getUTCMonth() + 1).padStart(2, "0")
-    }-01`;
-  const endDate = normalizeDate(body.endDate) ?? now.toISOString().slice(0, 10);
+  const startDate = normalizeDate(body.startDate) ?? defaultStartDate;
+  const endDate = normalizeDate(body.endDate) ?? defaultEndDate;
   if (
     (body.startDate && !normalizeDate(body.startDate)) ||
     (body.endDate && !normalizeDate(body.endDate))
@@ -280,13 +297,11 @@ function validateFilters(
     return { error: "Invalid selectedCurrencies" };
   }
 
-  const accountId = body.accountId == null
-    ? null
-    : sanitizeUuid(body.accountId);
+  const accountId =
+    body.accountId == null ? null : sanitizeUuid(body.accountId);
   if (body.accountId && !accountId) return { error: "Invalid accountId" };
-  const householdId = body.householdId == null
-    ? null
-    : sanitizeUuid(body.householdId);
+  const householdId =
+    body.householdId == null ? null : sanitizeUuid(body.householdId);
   if (body.householdId && !householdId) return { error: "Invalid householdId" };
 
   return {
@@ -335,9 +350,9 @@ async function fetchTransactions(
   if (filters.category) query = query.ilike("category", filters.category);
   if (filters.search) {
     query = query.or(
-      `raw_text.ilike.%${escapeIlike(filters.search)}%,merchant.ilike.%${
-        escapeIlike(filters.search)
-      }%,category.ilike.%${escapeIlike(filters.search)}%`,
+      `raw_text.ilike.%${escapeIlike(filters.search)}%,merchant.ilike.%${escapeIlike(
+        filters.search,
+      )}%,category.ilike.%${escapeIlike(filters.search)}%`,
     );
   }
 
@@ -389,11 +404,16 @@ async function fetchBudgets(
   userId: string,
   filters: NormalizedFilters,
 ): Promise<BudgetRow[]> {
-  const monthStart = filters.startDate.slice(0, 7) + "-01";
+  const financialPeriodStart = await resolveFinancialPeriodStartForUser(
+    supabase,
+    userId,
+    filters.startDate,
+  );
+  const periodStart = `${financialPeriodStart.slice(0, 7)}-01`;
   let query = supabase
     .from("budgets")
     .select("id, total_budget_cents, currency")
-    .eq("period_month", monthStart)
+    .eq("period_month", periodStart)
     .in("currency", filters.selectedCurrencies);
   query = filters.householdId
     ? query.eq("household_id", filters.householdId)
@@ -455,7 +475,7 @@ function computeCashOnHand(
   const accountIds = new Set(displayAccounts.map((account) => account.id));
   const opening = sumAbs(
     displayAccounts.map((account) =>
-      Number(account.opening_balance_cents ?? 0)
+      Number(account.opening_balance_cents ?? 0),
     ),
   );
   let transactionNet = 0;
@@ -465,9 +485,8 @@ function computeCashOnHand(
       continue;
     }
     const amount = Math.abs(Number(transaction.amount_cents ?? 0));
-    transactionNet += normalizeType(transaction.type) === "income"
-      ? amount
-      : -amount;
+    transactionNet +=
+      normalizeType(transaction.type) === "income" ? amount : -amount;
   }
   return opening + transactionNet;
 }
@@ -500,7 +519,7 @@ function buildActionItems(params: {
   recurringCount: number;
   emailAttachmentCount: number;
 }) {
-  const items = [];
+  const items: DashboardActionItem[] = [];
   if (params.missingReceiptCount > 0) {
     items.push({
       id: "missing-receipts",
@@ -561,7 +580,8 @@ function buildBudgetProgress(params: {
     .slice(0, 12)
     .map((envelope) => {
       const budget = budgetById.get(envelope.budget_id);
-      const allocated = Number(envelope.budget_amount_cents ?? 0) ||
+      const allocated =
+        Number(envelope.budget_amount_cents ?? 0) ||
         Math.round(
           (Number(budget?.total_budget_cents ?? 0) *
             Number(envelope.budget_percentage ?? 0)) /
@@ -572,7 +592,7 @@ function buildBudgetProgress(params: {
           .filter(
             (row) =>
               normalizeCategory(row.category) ===
-                normalizeCategory(envelope.name),
+              normalizeCategory(envelope.name),
           )
           .map((row) => row.amount_cents),
       );

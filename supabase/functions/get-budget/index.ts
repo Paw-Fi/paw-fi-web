@@ -6,8 +6,8 @@ import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
-import { clampDayToMonth, getDaysInMonth } from "../shared/date-utils.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { parseFinancialPeriodRangeUtc } from "../shared/budgets-helpers.ts";
 
 interface GetBudgetRequest {
   phone?: string;
@@ -84,12 +84,6 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid date format", 400);
   }
   const targetDateIso = targetDate.toISOString().slice(0, 10);
-  const monthStartIso = new Date(
-    Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1),
-  )
-    .toISOString()
-    .slice(0, 10);
-
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
@@ -135,7 +129,7 @@ Deno.serve(async (req: Request) => {
   if (!contactId && phone) {
     const result = await supabase
       .from("user_contacts")
-      .select("id, user_id, preferred_currency")
+      .select("id, user_id, preferred_currency, financial_month_start_day")
       .eq("phone_e164", phone)
       .order("id", { ascending: false })
       .limit(1);
@@ -146,7 +140,9 @@ Deno.serve(async (req: Request) => {
   } else if (!contactId && resolvedUserId) {
     const result = await supabase
       .from("user_contacts")
-      .select("id, user_id, preferred_currency, phone_e164")
+      .select(
+        "id, user_id, preferred_currency, phone_e164, financial_month_start_day",
+      )
       .eq("user_id", resolvedUserId)
       .order("id", { ascending: false })
       .limit(1);
@@ -158,7 +154,9 @@ Deno.serve(async (req: Request) => {
   if (!contactRecord && contactId) {
     const { data: fetchedContact, error: contactFetchErr } = await supabase
       .from("user_contacts")
-      .select("id, user_id, preferred_currency, phone_e164")
+      .select(
+        "id, user_id, preferred_currency, phone_e164, financial_month_start_day",
+      )
       .eq("id", contactId)
       .single();
     if (!contactFetchErr) {
@@ -195,8 +193,8 @@ Deno.serve(async (req: Request) => {
   const preferredCurrency = contactRecord?.preferred_currency
     ? validateCurrency(contactRecord.preferred_currency)
     : null;
-  const targetCurrency = validateCurrency(inputCurrency) || preferredCurrency ||
-    "USD";
+  const targetCurrency =
+    validateCurrency(inputCurrency) || preferredCurrency || "USD";
 
   const { data: budgetRows, error: budgetErr } = await supabase
     .from("daily_budgets")
@@ -228,10 +226,32 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: false, message, meta: identityMeta });
   }
 
-  const daysInMonth = getDaysInMonth(targetDate);
-  const targetDay = clampDayToMonth(
-    targetDate,
-    typeof requestedDay === "number" ? requestedDay : targetDate.getUTCDate(),
+  const { monthStartStr: monthStartIso, nextMonthStr } =
+    parseFinancialPeriodRangeUtc(
+      targetDateIso,
+      contactRecord?.financial_month_start_day,
+      { fullDateIsDateInPeriod: true },
+    );
+  const periodStart = new Date(`${monthStartIso}T00:00:00Z`);
+  const periodEndExclusive = new Date(`${nextMonthStr}T00:00:00Z`);
+  const daysInMonth = Math.max(
+    1,
+    Math.round(
+      (periodEndExclusive.getTime() - periodStart.getTime()) / 86_400_000,
+    ),
+  );
+  const elapsedDay = Math.max(
+    1,
+    Math.round((targetDate.getTime() - periodStart.getTime()) / 86_400_000) + 1,
+  );
+  const targetDay = Math.min(
+    daysInMonth,
+    Math.max(
+      1,
+      typeof requestedDay === "number" && Number.isFinite(requestedDay)
+        ? Math.trunc(requestedDay)
+        : elapsedDay,
+    ),
   );
 
   const dailyBudgetCents = budgetRow.amount_cents ?? 0;
@@ -283,13 +303,15 @@ Deno.serve(async (req: Request) => {
 
   const messageLines = [
     `Daily budget: ${formatMoney(dailyBudgetCents, targetCurrency)}.`,
-    `Budget to day ${targetDay} (${daysInMonth}-day month): ${
-      formatMoney(budgetToDateCents, targetCurrency)
-    }.`,
+    `Budget to day ${targetDay} (${daysInMonth}-day month): ${formatMoney(
+      budgetToDateCents,
+      targetCurrency,
+    )}.`,
     `Spent to date: ${formatMoney(spentToDateCents, targetCurrency)}.`,
-    `Remaining for period: ${
-      formatMoney(remainingToDateCents, targetCurrency)
-    }.`,
+    `Remaining for period: ${formatMoney(
+      remainingToDateCents,
+      targetCurrency,
+    )}.`,
   ];
 
   if (detection.isGpt) {

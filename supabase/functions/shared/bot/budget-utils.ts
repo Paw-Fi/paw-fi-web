@@ -21,6 +21,9 @@ export function normalizeEnvelopeName(value: string): string {
 
 export function normalizePeriodMonth(value: string): string {
   const trimmed = (value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed.slice(0, 7)}-01`;
+  }
   if (trimmed.length >= 7) return `${trimmed.slice(0, 7)}-01`;
   return trimmed;
 }
