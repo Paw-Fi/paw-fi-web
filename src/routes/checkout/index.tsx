@@ -31,6 +31,8 @@ type CheckoutSearchParams = {
   accessToken?: string;
   refreshToken?: string;
   userId?: string;
+  country?: string;
+  currency?: string;
   // NOTE: Trial eligibility is determined by backend based on subscription history
 };
 
@@ -106,6 +108,8 @@ function CheckoutPage() {
     accessToken,
     refreshToken,
     userId,
+    country,
+    currency,
   } = searchParams;
 
   const selectedPlan = parseCheckoutPlan(plan);
@@ -360,6 +364,8 @@ function CheckoutPage() {
           redirectParams.set("plan", selectedPlan);
           if (!isLifetimePlan) redirectParams.set("billing", selectedBilling);
           if (promo) redirectParams.set("promo", promo);
+          if (country) redirectParams.set("country", country);
+          if (currency) redirectParams.set("currency", currency);
 
           navigate({
             to: "/register",
@@ -391,6 +397,8 @@ function CheckoutPage() {
                 if (promo) params.set("promo", promo);
                 if (source) params.set("source", source);
                 if (redirectUrl) params.set("redirectUrl", redirectUrl);
+                if (country) params.set("country", country);
+                if (currency) params.set("currency", currency);
                 return `${origin}/checkout?${params.toString()}&session_id={CHECKOUT_SESSION_ID}`;
               })();
 
@@ -405,6 +413,8 @@ function CheckoutPage() {
                 if (!isLifetimePlan) params.set("billing", selectedBilling);
                 if (promo) params.set("promo", promo);
                 if (source) params.set("source", source);
+                if (country) params.set("country", country);
+                if (currency) params.set("currency", currency);
                 return `${origin}/checkout?${params.toString()}&session_id={CHECKOUT_SESSION_ID}`;
               })();
 
@@ -429,6 +439,8 @@ function CheckoutPage() {
           cancelUrl,
           // Pass the validated user ID to the server (either from auth or validated param)
           userId: validatedUserId,
+          country,
+          currency,
           // NOTE: Trial eligibility is determined by backend based on subscription history
         };
         if (!isLifetimePlan) {
@@ -593,6 +605,8 @@ function CheckoutPage() {
     redirectUrl,
     source,
     promo,
+    country,
+    currency,
   ]);
 
   // Render success state

@@ -1,0 +1,745 @@
+{
+  "catalogVersion": 1,
+  "defaultMarket": "usd",
+  "markets": {
+    "aed": {
+      "currencyCode": "AED",
+      "locale": "ar-AE",
+      "minorUnits": 2,
+      "monthly": 1499,
+      "yearly": 9999,
+      "lifetime": 34999,
+      "compareAtMonthly": 2399,
+      "compareAtYearly": 15999,
+      "countries": [
+        "AE"
+      ]
+    },
+    "aud": {
+      "currencyCode": "AUD",
+      "locale": "en-AU",
+      "minorUnits": 2,
+      "monthly": 599,
+      "yearly": 3999,
+      "lifetime": 14999,
+      "compareAtMonthly": 959,
+      "compareAtYearly": 6399,
+      "countries": [
+        "AU"
+      ]
+    },
+    "brl": {
+      "currencyCode": "BRL",
+      "locale": "pt-BR",
+      "minorUnits": 2,
+      "monthly": 2490,
+      "yearly": 14990,
+      "lifetime": 59990,
+      "compareAtMonthly": 3984,
+      "compareAtYearly": 23984,
+      "countries": [
+        "BR"
+      ]
+    },
+    "cad": {
+      "currencyCode": "CAD",
+      "locale": "en-CA",
+      "minorUnits": 2,
+      "monthly": 1499,
+      "yearly": 9999,
+      "lifetime": 19999,
+      "compareAtMonthly": 2399,
+      "compareAtYearly": 15999,
+      "countries": [
+        "CA"
+      ]
+    },
+    "chf": {
+      "currencyCode": "CHF",
+      "locale": "de-CH",
+      "minorUnits": 2,
+      "monthly": 300,
+      "yearly": 2000,
+      "lifetime": 8000,
+      "compareAtMonthly": 480,
+      "compareAtYearly": 3200,
+      "countries": [
+        "CH"
+      ]
+    },
+    "clp": {
+      "currencyCode": "CLP",
+      "locale": "es-CL",
+      "minorUnits": 0,
+      "monthly": 4990,
+      "yearly": 29990,
+      "lifetime": 99990,
+      "compareAtMonthly": 7984,
+      "compareAtYearly": 47984,
+      "countries": [
+        "CL"
+      ]
+    },
+    "cny": {
+      "currencyCode": "CNY",
+      "locale": "zh-CN",
+      "minorUnits": 2,
+      "monthly": 2800,
+      "yearly": 16800,
+      "lifetime": 59800,
+      "compareAtMonthly": 4480,
+      "compareAtYearly": 26880,
+      "countries": [
+        "CN"
+      ]
+    },
+    "cop": {
+      "currencyCode": "COP",
+      "locale": "es-CO",
+      "minorUnits": 0,
+      "monthly": 19900,
+      "yearly": 119900,
+      "lifetime": 399900,
+      "compareAtMonthly": 31840,
+      "compareAtYearly": 191840,
+      "countries": [
+        "CO"
+      ]
+    },
+    "czk": {
+      "currencyCode": "CZK",
+      "locale": "cs-CZ",
+      "minorUnits": 2,
+      "monthly": 9900,
+      "yearly": 69900,
+      "lifetime": 249000,
+      "compareAtMonthly": 15840,
+      "compareAtYearly": 111840,
+      "countries": [
+        "CZ"
+      ]
+    },
+    "dkk": {
+      "currencyCode": "DKK",
+      "locale": "da-DK",
+      "minorUnits": 2,
+      "monthly": 3900,
+      "yearly": 19900,
+      "lifetime": 79900,
+      "compareAtMonthly": 6240,
+      "compareAtYearly": 31840,
+      "countries": [
+        "DK"
+      ]
+    },
+    "egp": {
+      "currencyCode": "EGP",
+      "locale": "ar-EG",
+      "minorUnits": 2,
+      "monthly": 19999,
+      "yearly": 129999,
+      "lifetime": 499999,
+      "compareAtMonthly": 31999,
+      "compareAtYearly": 207999,
+      "countries": [
+        "EG"
+      ]
+    },
+    "eur": {
+      "currencyCode": "EUR",
+      "locale": "en-IE",
+      "minorUnits": 2,
+      "monthly": 499,
+      "yearly": 2999,
+      "lifetime": 9999,
+      "compareAtMonthly": 799,
+      "compareAtYearly": 4799,
+      "countries": [
+        "ME"
+      ]
+    },
+    "eur_2": {
+      "currencyCode": "EUR",
+      "locale": "en-IE",
+      "minorUnits": 2,
+      "monthly": 499,
+      "yearly": 2999,
+      "lifetime": 9999,
+      "compareAtMonthly": 799,
+      "compareAtYearly": 4799,
+      "countries": [
+        "AT",
+        "BA",
+        "BE",
+        "BG",
+        "CY",
+        "DE",
+        "EE",
+        "ES",
+        "FI",
+        "FR",
+        "GR",
+        "HR",
+        "IE",
+        "IT",
+        "LT",
+        "LU",
+        "LV",
+        "MT",
+        "NL",
+        "PT",
+        "RS",
+        "SI",
+        "SK",
+        "XK"
+      ]
+    },
+    "gbp": {
+      "currencyCode": "GBP",
+      "locale": "en-GB",
+      "minorUnits": 2,
+      "monthly": 399,
+      "yearly": 2499,
+      "lifetime": 8999,
+      "compareAtMonthly": 639,
+      "compareAtYearly": 3999,
+      "countries": [
+        "GB"
+      ]
+    },
+    "hkd": {
+      "currencyCode": "HKD",
+      "locale": "zh-HK",
+      "minorUnits": 2,
+      "monthly": 3200,
+      "yearly": 18800,
+      "lifetime": 68800,
+      "compareAtMonthly": 5120,
+      "compareAtYearly": 30080,
+      "countries": [
+        "HK"
+      ]
+    },
+    "huf": {
+      "currencyCode": "HUF",
+      "locale": "hu-HU",
+      "minorUnits": 0,
+      "monthly": 1790,
+      "yearly": 9990,
+      "lifetime": 39990,
+      "compareAtMonthly": 2864,
+      "compareAtYearly": 15984,
+      "countries": [
+        "HU"
+      ]
+    },
+    "idr": {
+      "currencyCode": "IDR",
+      "locale": "id-ID",
+      "minorUnits": 0,
+      "monthly": 69000,
+      "yearly": 399000,
+      "lifetime": 1499000,
+      "compareAtMonthly": 110400,
+      "compareAtYearly": 638400,
+      "countries": [
+        "ID"
+      ]
+    },
+    "ils": {
+      "currencyCode": "ILS",
+      "locale": "he-IL",
+      "minorUnits": 2,
+      "monthly": 1490,
+      "yearly": 8990,
+      "lifetime": 29990,
+      "compareAtMonthly": 2384,
+      "compareAtYearly": 14384,
+      "countries": [
+        "IL"
+      ]
+    },
+    "inr": {
+      "currencyCode": "INR",
+      "locale": "en-IN",
+      "minorUnits": 2,
+      "monthly": 39900,
+      "yearly": 249900,
+      "lifetime": 990000,
+      "compareAtMonthly": 63840,
+      "compareAtYearly": 399840,
+      "countries": [
+        "IN"
+      ]
+    },
+    "jpy": {
+      "currencyCode": "JPY",
+      "locale": "ja-JP",
+      "minorUnits": 0,
+      "monthly": 600,
+      "yearly": 4000,
+      "lifetime": 15000,
+      "compareAtMonthly": 960,
+      "compareAtYearly": 6400,
+      "countries": [
+        "JP"
+      ]
+    },
+    "krw": {
+      "currencyCode": "KRW",
+      "locale": "ko-KR",
+      "minorUnits": 0,
+      "monthly": 6600,
+      "yearly": 44000,
+      "lifetime": 149000,
+      "compareAtMonthly": 10560,
+      "compareAtYearly": 70400,
+      "countries": [
+        "KR"
+      ]
+    },
+    "kzt": {
+      "currencyCode": "KZT",
+      "locale": "kk-KZ",
+      "minorUnits": 2,
+      "monthly": 249000,
+      "yearly": 1499000,
+      "lifetime": 4999000,
+      "compareAtMonthly": 398400,
+      "compareAtYearly": 2398400,
+      "countries": [
+        "KZ"
+      ]
+    },
+    "mxn": {
+      "currencyCode": "MXN",
+      "locale": "es-MX",
+      "minorUnits": 2,
+      "monthly": 8900,
+      "yearly": 49900,
+      "lifetime": 199900,
+      "compareAtMonthly": 14240,
+      "compareAtYearly": 79840,
+      "countries": [
+        "MX"
+      ]
+    },
+    "myr": {
+      "currencyCode": "MYR",
+      "locale": "ms-MY",
+      "minorUnits": 2,
+      "monthly": 1990,
+      "yearly": 11990,
+      "lifetime": 39990,
+      "compareAtMonthly": 3184,
+      "compareAtYearly": 19184,
+      "countries": [
+        "MY"
+      ]
+    },
+    "ngn": {
+      "currencyCode": "NGN",
+      "locale": "en-NG",
+      "minorUnits": 2,
+      "monthly": 690000,
+      "yearly": 3990000,
+      "lifetime": 14990000,
+      "compareAtMonthly": 1104000,
+      "compareAtYearly": 6384000,
+      "countries": [
+        "NG"
+      ]
+    },
+    "nok": {
+      "currencyCode": "NOK",
+      "locale": "nb-NO",
+      "minorUnits": 2,
+      "monthly": 4900,
+      "yearly": 29900,
+      "lifetime": 99900,
+      "compareAtMonthly": 7840,
+      "compareAtYearly": 47840,
+      "countries": [
+        "NO"
+      ]
+    },
+    "nzd": {
+      "currencyCode": "NZD",
+      "locale": "en-NZ",
+      "minorUnits": 2,
+      "monthly": 699,
+      "yearly": 4999,
+      "lifetime": 14999,
+      "compareAtMonthly": 1119,
+      "compareAtYearly": 7999,
+      "countries": [
+        "NZ"
+      ]
+    },
+    "pen": {
+      "currencyCode": "PEN",
+      "locale": "es-PE",
+      "minorUnits": 2,
+      "monthly": 1790,
+      "yearly": 9990,
+      "lifetime": 39990,
+      "compareAtMonthly": 2864,
+      "compareAtYearly": 15984,
+      "countries": [
+        "PE"
+      ]
+    },
+    "php": {
+      "currencyCode": "PHP",
+      "locale": "en-PH",
+      "minorUnits": 2,
+      "monthly": 24900,
+      "yearly": 149000,
+      "lifetime": 599000,
+      "compareAtMonthly": 39840,
+      "compareAtYearly": 238400,
+      "countries": [
+        "PH"
+      ]
+    },
+    "pkr": {
+      "currencyCode": "PKR",
+      "locale": "en-PK",
+      "minorUnits": 2,
+      "monthly": 110000,
+      "yearly": 690000,
+      "lifetime": 2490000,
+      "compareAtMonthly": 176000,
+      "compareAtYearly": 1104000,
+      "countries": [
+        "PK"
+      ]
+    },
+    "pln": {
+      "currencyCode": "PLN",
+      "locale": "pl-PL",
+      "minorUnits": 2,
+      "monthly": 1999,
+      "yearly": 9999,
+      "lifetime": 39999,
+      "compareAtMonthly": 3199,
+      "compareAtYearly": 15999,
+      "countries": [
+        "PL"
+      ]
+    },
+    "qar": {
+      "currencyCode": "QAR",
+      "locale": "ar-QA",
+      "minorUnits": 2,
+      "monthly": 1499,
+      "yearly": 9999,
+      "lifetime": 29999,
+      "compareAtMonthly": 2399,
+      "compareAtYearly": 15999,
+      "countries": [
+        "QA"
+      ]
+    },
+    "ron": {
+      "currencyCode": "RON",
+      "locale": "ro-RO",
+      "minorUnits": 2,
+      "monthly": 1999,
+      "yearly": 12999,
+      "lifetime": 49999,
+      "compareAtMonthly": 3199,
+      "compareAtYearly": 20799,
+      "countries": [
+        "RO"
+      ]
+    },
+    "rub": {
+      "currencyCode": "RUB",
+      "locale": "ru-RU",
+      "minorUnits": 2,
+      "monthly": 34900,
+      "yearly": 229000,
+      "lifetime": 799000,
+      "compareAtMonthly": 55840,
+      "compareAtYearly": 366400,
+      "countries": [
+        "RU"
+      ]
+    },
+    "sar": {
+      "currencyCode": "SAR",
+      "locale": "ar-SA",
+      "minorUnits": 2,
+      "monthly": 1799,
+      "yearly": 9999,
+      "lifetime": 39999,
+      "compareAtMonthly": 2879,
+      "compareAtYearly": 15999,
+      "countries": [
+        "SA"
+      ]
+    },
+    "sek": {
+      "currencyCode": "SEK",
+      "locale": "sv-SE",
+      "minorUnits": 2,
+      "monthly": 4900,
+      "yearly": 29900,
+      "lifetime": 119500,
+      "compareAtMonthly": 7840,
+      "compareAtYearly": 47840,
+      "countries": [
+        "SE"
+      ]
+    },
+    "sgd": {
+      "currencyCode": "SGD",
+      "locale": "en-SG",
+      "minorUnits": 2,
+      "monthly": 598,
+      "yearly": 3498,
+      "lifetime": 12998,
+      "compareAtMonthly": 957,
+      "compareAtYearly": 5597,
+      "countries": [
+        "SG"
+      ]
+    },
+    "thb": {
+      "currencyCode": "THB",
+      "locale": "th-TH",
+      "minorUnits": 2,
+      "monthly": 14900,
+      "yearly": 99900,
+      "lifetime": 299000,
+      "compareAtMonthly": 23840,
+      "compareAtYearly": 159840,
+      "countries": [
+        "TH"
+      ]
+    },
+    "try": {
+      "currencyCode": "TRY",
+      "locale": "tr-TR",
+      "minorUnits": 2,
+      "monthly": 19999,
+      "yearly": 129999,
+      "lifetime": 499999,
+      "compareAtMonthly": 31999,
+      "compareAtYearly": 207999,
+      "countries": [
+        "TR"
+      ]
+    },
+    "twd": {
+      "currencyCode": "TWD",
+      "locale": "zh-TW",
+      "minorUnits": 2,
+      "monthly": 12000,
+      "yearly": 79000,
+      "lifetime": 299000,
+      "compareAtMonthly": 19200,
+      "compareAtYearly": 126400,
+      "countries": [
+        "TW"
+      ]
+    },
+    "tzs": {
+      "currencyCode": "TZS",
+      "locale": "sw-TZ",
+      "minorUnits": 2,
+      "monthly": 1190000,
+      "yearly": 6990000,
+      "lifetime": 24990000,
+      "compareAtMonthly": 1904000,
+      "compareAtYearly": 11184000,
+      "countries": [
+        "TZ"
+      ]
+    },
+    "usd": {
+      "currencyCode": "USD",
+      "locale": "en-US",
+      "minorUnits": 2,
+      "monthly": 1099,
+      "yearly": 7999,
+      "lifetime": 14999,
+      "compareAtMonthly": 1759,
+      "compareAtYearly": 12799,
+      "countries": [
+        "US"
+      ]
+    },
+    "usd_2": {
+      "currencyCode": "USD",
+      "locale": "en-US",
+      "minorUnits": 2,
+      "monthly": 1099,
+      "yearly": 7999,
+      "lifetime": 14999,
+      "compareAtMonthly": 1759,
+      "compareAtYearly": 12799,
+      "countries": [
+        "AF",
+        "AG",
+        "AI",
+        "AO",
+        "AR",
+        "BF",
+        "BM",
+        "BN",
+        "BO",
+        "BT",
+        "BW",
+        "BZ",
+        "CD",
+        "CG",
+        "CR",
+        "CV",
+        "DM",
+        "DO",
+        "DZ",
+        "EC",
+        "FJ",
+        "FM",
+        "GA",
+        "GD",
+        "GM",
+        "GT",
+        "GW",
+        "GY",
+        "HN",
+        "IQ",
+        "JM",
+        "JO",
+        "KN",
+        "KW",
+        "KY",
+        "LB",
+        "LC",
+        "LK",
+        "LR",
+        "LY",
+        "MA",
+        "MG",
+        "MK",
+        "ML",
+        "MM",
+        "MN",
+        "MO",
+        "MR",
+        "MS",
+        "MV",
+        "MW",
+        "MZ",
+        "NA",
+        "NE",
+        "NI",
+        "NR",
+        "OM",
+        "PA",
+        "PG",
+        "PW",
+        "PY",
+        "RW",
+        "SB",
+        "SC",
+        "SL",
+        "ST",
+        "SV",
+        "SZ",
+        "TC",
+        "TD",
+        "TM",
+        "TN",
+        "TO",
+        "TT",
+        "UY",
+        "VC",
+        "VE",
+        "VG",
+        "VU",
+        "YE"
+      ]
+    },
+    "usd_3": {
+      "currencyCode": "USD",
+      "locale": "en-US",
+      "minorUnits": 2,
+      "monthly": 1099,
+      "yearly": 7999,
+      "lifetime": 14999,
+      "compareAtMonthly": 1759,
+      "compareAtYearly": 12799,
+      "countries": [
+        "BH",
+        "BS",
+        "KG",
+        "KH",
+        "LA",
+        "SR",
+        "TJ",
+        "UZ"
+      ]
+    },
+    "usd_4": {
+      "currencyCode": "USD",
+      "locale": "en-US",
+      "minorUnits": 2,
+      "monthly": 1099,
+      "yearly": 7999,
+      "lifetime": 14999,
+      "compareAtMonthly": 1759,
+      "compareAtYearly": 12799,
+      "countries": [
+        "AL",
+        "AM",
+        "AZ",
+        "BB",
+        "BJ",
+        "BY",
+        "CI",
+        "CM",
+        "GE",
+        "GH",
+        "IS",
+        "KE",
+        "MD",
+        "MU",
+        "NP",
+        "SN",
+        "UA",
+        "UG",
+        "ZM",
+        "ZW"
+      ]
+    },
+    "vnd": {
+      "currencyCode": "VND",
+      "locale": "vi-VN",
+      "minorUnits": 0,
+      "monthly": 119000,
+      "yearly": 799000,
+      "lifetime": 2999000,
+      "compareAtMonthly": 190400,
+      "compareAtYearly": 1278400,
+      "countries": [
+        "VN"
+      ]
+    },
+    "zar": {
+      "currencyCode": "ZAR",
+      "locale": "en-ZA",
+      "minorUnits": 2,
+      "monthly": 7999,
+      "yearly": 49999,
+      "lifetime": 199999,
+      "compareAtMonthly": 12799,
+      "compareAtYearly": 79999,
+      "countries": [
+        "ZA"
+      ]
+    }
+  }
+}

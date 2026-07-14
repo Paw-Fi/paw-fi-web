@@ -422,12 +422,17 @@ export function getPlanOptions(): PlanOption[] {
 }
 
 // Helper function to get pricing tiers for PricingPage
-export function getPricingTiers(): PricingTier[] {
+export function getPricingTiers(prices?: {
+  monthly: string;
+  yearly: string;
+  effectiveMonthly: string;
+  compareAtYearly: string;
+}): PricingTier[] {
   // Plus Monthly
   const plusMonthly: PricingTier = {
     title: planData.plus.title,
     subtitle: "Monthly subscription to Moneko Plus",
-    priceMonthly: "$10.99",
+    priceMonthly: prices?.monthly ?? "$10.99",
     priceFrequencyText: "/month",
     description: planData.plus.description,
     features: planData.plus.featureItems,
@@ -446,9 +451,9 @@ export function getPricingTiers(): PricingTier[] {
   const plusYearly: PricingTier = {
     title: planData.plus.title + " Yearly",
     subtitle: "Best value — annual subscription to Moneko Plus",
-    priceMonthly: "$79.99",
-    effectiveMonthlyPrice: "$6.67",
-    compareAtPriceMonthly: "$131.88",
+    priceMonthly: prices?.yearly ?? "$79.99",
+    effectiveMonthlyPrice: prices?.effectiveMonthly ?? "$6.67",
+    compareAtPriceMonthly: prices?.compareAtYearly ?? "$131.88",
     priceFrequencyText: "/year",
     description: planData.plus.description,
     features: planData.plus.featureItems,

@@ -1,7 +1,7 @@
 import { Variants, motion, AnimatePresence } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
@@ -24,6 +24,7 @@ import {
   Sparkles,
   ShieldCheck,
   ChevronRight,
+  Globe2,
 } from "lucide-react";
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
@@ -33,6 +34,13 @@ import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
 import { getPricingTiers } from "@/data/pricing-plans";
+import {
+  DEFAULT_REGIONAL_PRICING_COUNTRY,
+  detectRegionalPricingCountry,
+  getRegionalCountryOptions,
+  getRegionalPriceLabels,
+  saveRegionalPricingCountry,
+} from "@/lib/regional-pricing";
 
 // Added new pro-max components
 import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
@@ -45,9 +53,11 @@ export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 function BillingToggle({
   isYearly,
   onChange,
+  savingsPercent,
 }: {
   isYearly: boolean;
   onChange: (yearly: boolean) => void;
+  savingsPercent: number;
 }) {
   return (
     <div className="border-border/40 bg-card/50 mx-auto flex w-fit items-center rounded-full border p-1.5 shadow-sm backdrop-blur-md">
@@ -87,9 +97,54 @@ function BillingToggle({
         )}
         <span className="relative z-10">Yearly</span>
         <span className="bg-primary/10 text-primary relative z-10 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase">
-          Save 40%
+          Save {savingsPercent}%
         </span>
       </button>
+    </div>
+  );
+}
+
+function CountryPricingSelector({
+  countryCode,
+  currencyCode,
+  onChange,
+}: {
+  countryCode: string;
+  currencyCode: string;
+  onChange: (countryCode: string) => void;
+}) {
+  const countryOptions = useMemo(
+    () =>
+      getRegionalCountryOptions(
+        typeof navigator === "undefined" ? "en" : navigator.language,
+      ),
+    [],
+  );
+
+  return (
+    <div className="border-border/40 bg-card/50 mx-auto flex min-h-11 items-center gap-2 rounded-full border px-4 shadow-sm backdrop-blur-md">
+      <Globe2 className="text-muted-foreground h-4 w-4 shrink-0" />
+      <label htmlFor="pricing-country" className="sr-only">
+        Pricing country or region
+      </label>
+      <select
+        id="pricing-country"
+        value={countryCode}
+        onChange={(event) => onChange(event.target.value)}
+        className="text-foreground focus-visible:ring-primary min-h-11 cursor-pointer bg-transparent pr-1 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      >
+        {countryOptions.map((country) => (
+          <option key={country.code} value={country.code}>
+            {country.name}
+          </option>
+        ))}
+      </select>
+      <span
+        className="text-muted-foreground border-border border-l pl-2 text-xs font-bold tracking-wide"
+        aria-live="polite"
+      >
+        {currencyCode}
+      </span>
     </div>
   );
 }
@@ -235,14 +290,24 @@ export function PricingRouteComponent() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isYearly, setIsYearly] = useState(true);
+  const [pricingCountry, setPricingCountry] = useState(
+    DEFAULT_REGIONAL_PRICING_COUNTRY,
+  );
 
   type PlanType = "plus_monthly" | "plus_yearly" | "plus_lifetime";
 
   useEffect(() => {
     setIsLoading(false);
+    setPricingCountry(detectRegionalPricingCountry());
   }, []);
 
-  const pricingTiers = getPricingTiers();
+  const regionalPrices = getRegionalPriceLabels(pricingCountry);
+  const pricingTiers = getPricingTiers({
+    monthly: regionalPrices.monthly,
+    yearly: regionalPrices.yearly,
+    effectiveMonthly: regionalPrices.effectiveMonthly,
+    compareAtYearly: regionalPrices.compareAtYearly,
+  });
 
   const plusMonthlyTier = pricingTiers.find(
     (t) =>
@@ -257,7 +322,7 @@ export function PricingRouteComponent() {
 
   const pmTier = safelyGetTier(plusMonthlyTier, {
     title: "Plus Monthly",
-    priceMonthly: "$10.99",
+    priceMonthly: regionalPrices.monthly,
     features: [
       "Log expenses your way (Text, Photo, Voice)",
       "Stay in control with Pockets",
@@ -267,9 +332,9 @@ export function PricingRouteComponent() {
   });
   const pyTier = safelyGetTier(plusYearlyTier, {
     title: "Plus Yearly",
-    priceMonthly: "$79.99",
-    effectiveMonthlyPrice: "$6.67",
-    compareAtPriceMonthly: "$131.88",
+    priceMonthly: regionalPrices.yearly,
+    effectiveMonthlyPrice: regionalPrices.effectiveMonthly,
+    compareAtPriceMonthly: regionalPrices.compareAtYearly,
     features: [
       "Log expenses your way (Text, Photo, Voice)",
       "Stay in control with Pockets",
@@ -338,8 +403,17 @@ export function PricingRouteComponent() {
       navigate({
         to: "/checkout",
         search: selectedPlan.billing
-          ? { plan: selectedPlan.plan, billing: selectedPlan.billing }
-          : { plan: selectedPlan.plan },
+          ? {
+              plan: selectedPlan.plan,
+              billing: selectedPlan.billing,
+              country: pricingCountry,
+              currency: regionalPrices.market.currencyCode,
+            }
+          : {
+              plan: selectedPlan.plan,
+              country: pricingCountry,
+              currency: regionalPrices.market.currencyCode,
+            },
       });
     } catch (err) {
       console.error("Error handling subscription:", err);
@@ -503,8 +577,22 @@ export function PricingRouteComponent() {
               of zero-based budgeting.
             </motion.p>
 
-            <motion.div variants={itemVariants} className="w-full">
-              <BillingToggle isYearly={isYearly} onChange={setIsYearly} />
+            <motion.div
+              variants={itemVariants}
+              className="flex w-full flex-col items-center gap-4"
+            >
+              <BillingToggle
+                isYearly={isYearly}
+                onChange={setIsYearly}
+                savingsPercent={regionalPrices.yearlySavingsPercent}
+              />
+              <CountryPricingSelector
+                countryCode={pricingCountry}
+                currencyCode={regionalPrices.market.currencyCode}
+                onChange={(countryCode) => {
+                  setPricingCountry(saveRegionalPricingCountry(countryCode));
+                }}
+              />
             </motion.div>
 
             <motion.div
@@ -554,7 +642,7 @@ export function PricingRouteComponent() {
               <PricingCard
                 title="Lifetime"
                 description="Pay once and keep access to Plus without recurring billing."
-                price="$149.99"
+                price={regionalPrices.lifetime}
                 period="one-time"
                 billingNote="lifetime access"
                 features={[]}

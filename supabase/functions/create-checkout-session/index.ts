@@ -34,6 +34,14 @@ import {
   isValidPlan,
   PlanType,
 } from "../shared/subscription-constants.ts";
+import {
+  DEFAULT_REGIONAL_PRICING_MARKET_ID,
+  getRegionalPricingMarket,
+  getRegionalStripePriceLookupKey,
+  isSupportedRegionalCurrency,
+  isSupportedRegionalPricingCountry,
+  type RegionalPricingMarket,
+} from "../shared/regional-pricing.generated.ts";
 import { buildCheckoutRedirectUrls } from "../shared/checkout-redirect.ts";
 import {
   checkoutVerificationPersistenceErrorResponse,
@@ -63,6 +71,63 @@ const stripe = new Stripe(env.stripeSecretKey, {
   // Use account's default API version for maximum compatibility
   httpClient: Stripe.createFetchHttpClient(),
 });
+
+const regionalPriceIdCache = new Map<string, string>();
+
+async function resolveRegionalPriceId(
+  plan: PlanType,
+  billingInterval: BillingInterval | undefined,
+  market: RegionalPricingMarket,
+): Promise<string> {
+  const planTarget =
+    plan === "lifetime"
+      ? "lifetime"
+      : billingInterval === "yearly"
+        ? "plus_yearly"
+        : "plus_monthly";
+  const lookupKey = getRegionalStripePriceLookupKey(planTarget);
+  const cached = regionalPriceIdCache.get(lookupKey);
+  if (cached) return cached;
+
+  const matches = await stripe.prices.list({
+    lookup_keys: [lookupKey],
+    active: true,
+    expand: ["data.currency_options"],
+    limit: 2,
+  });
+  if (matches.data.length > 1) {
+    throw new Error(`Multiple Stripe Prices found for ${lookupKey}`);
+  }
+  const regionalPrice = matches.data[0];
+  if (regionalPrice) {
+    const currency = market.currencyCode.toLowerCase();
+    const expectedAmount =
+      plan === "lifetime"
+        ? market.lifetime
+        : billingInterval === "yearly"
+          ? market.yearly
+          : market.monthly;
+    const actualAmount =
+      regionalPrice.currency === currency
+        ? regionalPrice.unit_amount
+        : regionalPrice.currency_options?.[currency]?.unit_amount;
+    if (actualAmount !== expectedAmount) {
+      throw new Error(`Stripe Price amount mismatch for ${lookupKey}`);
+    }
+    regionalPriceIdCache.set(lookupKey, regionalPrice.id);
+    return regionalPrice.id;
+  }
+
+  // Keep the original USD checkout available until the first catalog sync.
+  if (market.id === DEFAULT_REGIONAL_PRICING_MARKET_ID) {
+    return plan === "lifetime"
+      ? getPriceId(plan)
+      : getPriceId(plan, billingInterval);
+  }
+  throw new Error(
+    `Regional Stripe Price not found for ${market.id}. Run pricing:stripe:sync.`,
+  );
+}
 
 // Initialize Supabase client
 const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
@@ -147,8 +212,61 @@ serve(async (req: Request) => {
     // Parse the request body (plan, billingInterval, successUrl, cancelUrl, promoCode)
     // NOTE: isTrial is determined by backend based on subscription history (security)
     // NOTE: billingInterval is optional for Lifetime (one-time payment)
-    const { plan, billingInterval, successUrl, cancelUrl, promoCode } =
-      await req.json();
+    const {
+      plan,
+      billingInterval,
+      successUrl,
+      cancelUrl,
+      promoCode,
+      country,
+      currency,
+    } = await req.json();
+
+    const requestedCountry =
+      typeof country === "string" ? country.trim().toUpperCase() : null;
+
+    if (
+      requestedCountry !== null &&
+      !isSupportedRegionalPricingCountry(requestedCountry)
+    ) {
+      return new Response(
+        JSON.stringify({ error: "Unsupported checkout country" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const regionalMarket = getRegionalPricingMarket(requestedCountry);
+    const requestedCurrency =
+      typeof currency === "string"
+        ? currency.trim().toUpperCase()
+        : regionalMarket.currencyCode;
+
+    if (!isSupportedRegionalCurrency(requestedCurrency)) {
+      return new Response(
+        JSON.stringify({ error: "Unsupported checkout currency" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (requestedCurrency !== regionalMarket.currencyCode) {
+      return new Response(
+        JSON.stringify({
+          error: "Checkout currency does not match the selected country",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const checkoutCurrency = requestedCurrency.toLowerCase();
 
     // Validate plan
     if (!plan || !isValidPlan(plan)) {
@@ -187,9 +305,11 @@ serve(async (req: Request) => {
     let priceId: string;
     try {
       // Lifetime doesn't use billing interval
-      priceId = plan === "lifetime"
-        ? getPriceId(plan as PlanType)
-        : getPriceId(plan as PlanType, billingInterval as BillingInterval);
+      priceId = await resolveRegionalPriceId(
+        plan as PlanType,
+        billingInterval as BillingInterval | undefined,
+        regionalMarket,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Error getting price ID:", message);
@@ -217,6 +337,8 @@ serve(async (req: Request) => {
       billingInterval,
       priceId,
       promoCode,
+      requestedCountry,
+      checkoutCurrency,
     });
 
     // SECURITY: Check if user is bound to a household subscription
@@ -255,7 +377,8 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription = !!ownerSub &&
+      const ownerHasActiveSubscription =
+        !!ownerSub &&
         !ownerSub.bound_to_user_id &&
         ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
           ownerSub.status === "trialing" ||
@@ -463,8 +586,7 @@ serve(async (req: Request) => {
               return new Response(
                 JSON.stringify({
                   error: "Invalid promotion code",
-                  details:
-                    `The promotion code '${promoCode}' is not valid or has expired.`,
+                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
                 }),
                 {
                   status: 400,
@@ -493,6 +615,7 @@ serve(async (req: Request) => {
         const sessionConfig: Stripe.Checkout.SessionCreateParams = {
           customer: customerId, // CRITICAL: Always attach customer (email is already on customer)
           client_reference_id: userId, // CRITICAL: User ID for verification after checkout
+          currency: checkoutCurrency,
           payment_method_types: ["card"],
           line_items: [
             {
@@ -517,6 +640,8 @@ serve(async (req: Request) => {
               user_id: userId,
               plan: plan,
               checkout_type: "lifetime",
+              pricing_country: requestedCountry ?? "US",
+              presentment_currency: requestedCurrency,
             },
             receipt_email: userData.email, // CRITICAL: Stripe sends receipt email
           },
@@ -525,6 +650,8 @@ serve(async (req: Request) => {
             user_id: userId,
             plan: plan,
             checkout_type: "lifetime",
+            pricing_country: requestedCountry ?? "US",
+            presentment_currency: requestedCurrency,
           },
         };
 
@@ -656,8 +783,7 @@ serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
-                details:
-                  `The promotion code '${promoCode}' is not valid or has expired.`,
+                details: `The promotion code '${promoCode}' is not valid or has expired.`,
               }),
               {
                 status: 400,
@@ -684,6 +810,7 @@ serve(async (req: Request) => {
       const sessionConfig: Stripe.Checkout.SessionCreateParams = {
         customer: customerId, // CRITICAL: Always attach customer
         client_reference_id: userId, // CRITICAL: User ID for verification after checkout
+        currency: checkoutCurrency,
         payment_method_types: ["card"],
         line_items: [
           {
@@ -704,12 +831,16 @@ serve(async (req: Request) => {
             user_id: userId, // Use snake_case for Stripe metadata
             plan: plan,
             billing_interval: billingInterval,
+            pricing_country: requestedCountry ?? "US",
+            presentment_currency: requestedCurrency,
           },
         },
         // Session metadata - for tracking checkout process only
         metadata: {
           user_id: userId,
           checkout_type: "subscription",
+          pricing_country: requestedCountry ?? "US",
+          presentment_currency: requestedCurrency,
         },
       };
 
