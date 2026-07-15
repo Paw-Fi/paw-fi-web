@@ -5,6 +5,7 @@ import {
 
 import {
   buildHouseholdSplitRecords,
+  createHouseholdAutoSplitForTransaction,
   type CustomSplits,
   type HouseholdAutoSplitSettings,
   resolveEffectiveSplit,
@@ -256,5 +257,100 @@ Deno.test(
     if (result.ok) throw new Error("expected validation failure");
     assertEquals(result.code, "MEMBER_MISMATCH");
     assertExists(result.error);
+  },
+);
+
+Deno.test(
+  "createHouseholdAutoSplitForTransaction removes the group when line insertion fails",
+  async () => {
+    const deletedGroupIds: string[] = [];
+    const supabase = {
+      from(table: string) {
+        if (table === "expense_split_groups") {
+          return {
+            insert: async () => ({ error: null }),
+            delete: () => ({
+              eq: async (_column: string, id: string) => {
+                deletedGroupIds.push(id);
+                return { error: null };
+              },
+            }),
+          };
+        }
+        if (table === "expense_split_lines") {
+          return {
+            insert: async () => ({ error: new Error("line insert failed") }),
+          };
+        }
+        throw new Error(`Unexpected table: ${table}`);
+      },
+    };
+
+    const result = await createHouseholdAutoSplitForTransaction({
+      supabase,
+      householdId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      transaction: {
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        amount_cents: 1000,
+        currency: "USD",
+      },
+      actorUserId: members[0].user_id,
+      members,
+      settings: { autoSplitEnabled: true, defaultConfig: null },
+    });
+
+    assertEquals(result.kind, "failed");
+    assertEquals(deletedGroupIds.length, 1);
+  },
+);
+
+Deno.test(
+  "createHouseholdAutoSplitForTransaction removes the group when expense update fails",
+  async () => {
+    const deletedGroupIds: string[] = [];
+    const supabase = {
+      from(table: string) {
+        if (table === "expense_split_groups") {
+          return {
+            insert: async () => ({ error: null }),
+            delete: () => ({
+              eq: async (_column: string, id: string) => {
+                deletedGroupIds.push(id);
+                return { error: null };
+              },
+            }),
+          };
+        }
+        if (table === "expense_split_lines") {
+          return { insert: async () => ({ error: null }) };
+        }
+        if (table === "expenses") {
+          return {
+            update: () => ({
+              eq: () => ({
+                is: async () => ({ error: new Error("expense update failed") }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`Unexpected table: ${table}`);
+      },
+    };
+
+    const result = await createHouseholdAutoSplitForTransaction({
+      supabase,
+      householdId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      transaction: {
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        amount_cents: 1000,
+        currency: "USD",
+      },
+      actorUserId: members[0].user_id,
+      members,
+      settings: { autoSplitEnabled: true, defaultConfig: null },
+    });
+
+    assertEquals(result.kind, "failed");
+    assertEquals(deletedGroupIds.length, 1);
   },
 );

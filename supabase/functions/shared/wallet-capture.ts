@@ -18,6 +18,13 @@ export interface WalletTransactionLike {
   currencyEvidenceRaw?: string | null;
   currencyEvidenceType?: string | null;
   currencyAmbiguous?: boolean | null;
+  isRecurring?: boolean | null;
+  recurrenceRule?: {
+    frequency?: string | null;
+    anchor_date?: string | null;
+    end_date?: string | null;
+    interval?: number | null;
+  } | null;
 }
 
 export interface WalletCaptureScopeResolution {
@@ -93,8 +100,8 @@ export function resolveWalletCaptureCurrency(params: {
   const detectedCurrencySymbol = detectedCurrencyCode
     ? params.tx.currencyEvidenceRaw || null
     : params.tx.currencyEvidenceRaw || normalizedPayloadCurrency || null;
-  const fallbackCurrency =
-    accountCurrency || preferredCurrency || payloadCurrency || "USD";
+  const fallbackCurrency = accountCurrency || preferredCurrency ||
+    payloadCurrency || "USD";
 
   return resolveCurrencyFromOCR({
     detectedCurrencyCode,
@@ -219,6 +226,37 @@ export function getLocalYyyyMmDdInTimeZone(
   return date.toISOString().slice(0, 10);
 }
 
+export async function ensureWalletCaptureSpendingAccount(
+  supabase: {
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
+  },
+  params: {
+    userId: string;
+    householdId: string | null;
+    currency: string;
+  },
+): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    "ensure_spending_account_for_currency",
+    {
+      p_user_id: params.userId,
+      p_household_id: params.householdId,
+      p_currency: params.currency,
+    },
+  );
+  if (error || typeof data !== "string" || !data) {
+    throw new Error(
+      `SPENDING_ACCOUNT_RESOLUTION_FAILED:${
+        error?.message ?? "missing account"
+      }`,
+    );
+  }
+  return data;
+}
+
 export function buildWalletCaptureIdempotencyKey(params: {
   explicitKey?: string | null;
   captureSource: string;
@@ -240,8 +278,9 @@ export function buildWalletCaptureIdempotencyKey(params: {
   const scopeKey = params.householdId
     ? `${params.householdId}:${params.isPortfolio ? "portfolio" : "household"}`
     : "personal";
-  const normalizedTransactionType =
-    params.transactionType === "income" ? "income" : "expense";
+  const normalizedTransactionType = params.transactionType === "income"
+    ? "income"
+    : "expense";
   const normalizedMerchant = normalizeMerchantForDedup(params.merchantName);
   const normalizedCard = (params.cardLabel ?? "").trim().toLowerCase();
   const normalizedPackage = (params.packageName ?? "").trim().toLowerCase();
@@ -272,10 +311,9 @@ export function isWalletCaptureIdempotencyClaimStale(
 ): boolean {
   if (!createdAt) return true;
 
-  const createdAtMs =
-    createdAt instanceof Date
-      ? createdAt.getTime()
-      : new Date(createdAt).getTime();
+  const createdAtMs = createdAt instanceof Date
+    ? createdAt.getTime()
+    : new Date(createdAt).getTime();
 
   if (!Number.isFinite(createdAtMs)) return true;
   return nowMs - createdAtMs >= staleMs;
@@ -312,5 +350,42 @@ export function resolveWalletCaptureScope(params: {
   return {
     householdId: params.requestedHouseholdId,
     requiresHouseholdSplit: true,
+  };
+}
+
+export function normalizeWalletCaptureRecurrenceRule(
+  tx: WalletTransactionLike,
+  fallbackDate: string,
+): Record<string, unknown> | null {
+  if (tx.isRecurring !== true || !tx.recurrenceRule) return null;
+  const frequency = String(tx.recurrenceRule.frequency ?? "")
+    .trim()
+    .toLowerCase();
+  if (
+    !["daily", "weekly", "biweekly", "monthly", "yearly", "custom"].includes(
+      frequency,
+    )
+  ) {
+    return null;
+  }
+  const normalizeDate = (value: string | null | undefined): string | null => {
+    const raw = String(value ?? "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+    const parsed = new Date(`${raw}T00:00:00.000Z`);
+    return Number.isNaN(parsed.getTime()) ? null : raw;
+  };
+  const anchorDate = normalizeDate(
+    tx.recurrenceRule.anchor_date ?? fallbackDate,
+  );
+  if (!anchorDate) return null;
+  const endDate = normalizeDate(tx.recurrenceRule.end_date);
+  const interval = Number(tx.recurrenceRule.interval);
+  return {
+    frequency,
+    anchor_date: anchorDate,
+    ...(endDate ? { end_date: endDate } : {}),
+    ...(Number.isInteger(interval) && interval > 1 && interval <= 365
+      ? { interval }
+      : {}),
   };
 }

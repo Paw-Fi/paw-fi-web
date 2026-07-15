@@ -69,10 +69,10 @@ export type CreateAutoSplitResult =
   | { kind: "not_applicable"; transaction: Record<string, unknown> }
   | { kind: "skipped"; transaction: Record<string, unknown> }
   | {
-    kind: "created";
-    splitGroupId: string;
-    transaction: Record<string, unknown>;
-  }
+      kind: "created";
+      splitGroupId: string;
+      transaction: Record<string, unknown>;
+    }
   | { kind: "invalid"; code: string; error: string }
   | { kind: "failed"; error: unknown };
 
@@ -136,9 +136,8 @@ function isSemanticallyEqualSplit(customSplits: CustomSplits): boolean {
 function coerceCustomSplits(raw: unknown): CustomSplits | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
-  const rawType = typeof obj.splitType === "string"
-    ? obj.splitType.trim().toLowerCase()
-    : "";
+  const rawType =
+    typeof obj.splitType === "string" ? obj.splitType.trim().toLowerCase() : "";
   if (!ALLOWED_SPLIT_TYPES.has(rawType)) return null;
   if (rawType === "equal") return null;
 
@@ -177,9 +176,8 @@ function coerceCustomSplits(raw: unknown): CustomSplits | null {
 export function hasExplicitCustomSplits(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const obj = raw as Record<string, unknown>;
-  const rawType = typeof obj.splitType === "string"
-    ? obj.splitType.trim().toLowerCase()
-    : "";
+  const rawType =
+    typeof obj.splitType === "string" ? obj.splitType.trim().toLowerCase() : "";
   if (!ALLOWED_SPLIT_TYPES.has(rawType) || rawType === "equal") return false;
   const rawMembers = Array.isArray(obj.memberSplits) ? obj.memberSplits : null;
   return !!rawMembers && rawMembers.length > 0;
@@ -208,9 +206,10 @@ export async function fetchHouseholdAutoSplitSettings(
     return { autoSplitEnabled: false, defaultConfig: null };
   }
 
-  const autoSplitEnabled = typeof data?.ai_use_default_split === "boolean"
-    ? data.ai_use_default_split
-    : true;
+  const autoSplitEnabled =
+    typeof data?.ai_use_default_split === "boolean"
+      ? data.ai_use_default_split
+      : true;
   const defaultConfig = coerceCustomSplits(data?.ai_default_split_config);
   console.log("[household-auto-split] Resolved settings:", {
     householdId,
@@ -285,8 +284,8 @@ function allocateCentsByWeights(
 
   const raw = normalized.map((weight) => (totalCents * weight) / totalWeight);
   const floorValues = raw.map((value) => Math.floor(value));
-  let remainder = totalCents -
-    floorValues.reduce((sum, value) => sum + value, 0);
+  let remainder =
+    totalCents - floorValues.reduce((sum, value) => sum + value, 0);
   const order = raw
     .map((value, index) => ({
       index,
@@ -304,7 +303,7 @@ function allocateCentsByWeights(
 function memberIdsFromRows(members: HouseholdMemberRow[]): string[] {
   return members
     .map((member) =>
-      typeof member.user_id === "string" ? member.user_id.trim() : ""
+      typeof member.user_id === "string" ? member.user_id.trim() : "",
     )
     .filter((userId) => userId.length > 0);
 }
@@ -472,7 +471,7 @@ export function buildHouseholdSplitRecords({
     }));
   } else if (splitType === "amount") {
     const cents = reconciledCustomSplits.memberSplits.map((split) =>
-      Math.max(0, Math.round((normalizeAmount(split.amount) || 0) * 100))
+      Math.max(0, Math.round((normalizeAmount(split.amount) || 0) * 100)),
     );
     const sumCents = cents.reduce((sum, value) => sum + value, 0);
     const diff = amountCents - sumCents;
@@ -585,15 +584,14 @@ export async function createHouseholdAutoSplitForTransaction({
   explicitCustomSplits?: unknown;
   payerUserId?: string | null;
 }): Promise<CreateAutoSplitResult> {
-  const transactionId = typeof transaction.id === "string"
-    ? transaction.id
-    : "";
-  const amountCents = typeof transaction.amount_cents === "number"
-    ? transaction.amount_cents
-    : Number(transaction.amount_cents ?? 0);
-  const currency = typeof transaction.currency === "string"
-    ? transaction.currency
-    : "";
+  const transactionId =
+    typeof transaction.id === "string" ? transaction.id : "";
+  const amountCents =
+    typeof transaction.amount_cents === "number"
+      ? transaction.amount_cents
+      : Number(transaction.amount_cents ?? 0);
+  const currency =
+    typeof transaction.currency === "string" ? transaction.currency : "";
 
   if (!householdId || !transactionId || amountCents <= 0 || !currency) {
     return { kind: "not_applicable", transaction };
@@ -621,9 +619,8 @@ export async function createHouseholdAutoSplitForTransaction({
     payerUserId: payerUserId || actorUserId,
     amountCents,
     currency,
-    description: typeof transaction.raw_text === "string"
-      ? transaction.raw_text
-      : null,
+    description:
+      typeof transaction.raw_text === "string" ? transaction.raw_text : null,
     members,
     customSplits: effective.customSplits,
   });
@@ -647,7 +644,16 @@ export async function createHouseholdAutoSplitForTransaction({
     .from("expense_split_lines")
     .insert(buildResult.lines);
   if (splitLinesError) {
-    return { kind: "failed", error: splitLinesError };
+    const { error: cleanupError } = await supabase
+      .from("expense_split_groups")
+      .delete()
+      .eq("id", buildResult.group.id);
+    return {
+      kind: "failed",
+      error: cleanupError
+        ? { cause: splitLinesError, cleanupError }
+        : splitLinesError,
+    };
   }
 
   const { error: updateError } = await supabase
@@ -659,7 +665,14 @@ export async function createHouseholdAutoSplitForTransaction({
     .eq("id", transactionId)
     .is("deleted_at", null);
   if (updateError) {
-    return { kind: "failed", error: updateError };
+    const { error: cleanupError } = await supabase
+      .from("expense_split_groups")
+      .delete()
+      .eq("id", buildResult.group.id);
+    return {
+      kind: "failed",
+      error: cleanupError ? { cause: updateError, cleanupError } : updateError,
+    };
   }
 
   return {

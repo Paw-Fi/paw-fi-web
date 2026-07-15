@@ -72,3 +72,28 @@ Deno.test(
     assertEquals(result, "coffee & tea");
   },
 );
+
+Deno.test(
+  "Android classifier hints pass through the final category remap",
+  () => {
+    const result = resolveCategory({
+      initialGuess: "dining",
+      description: "Cafe Bloom lunch",
+      transactionType: "expense",
+      ctx: makeContext({
+        allowedExpenseSet: new Set(["restaurants", "other"]),
+        remaps: [
+          {
+            transaction_type: "expense",
+            from_category_name: "dining",
+            to_category_name: "restaurants",
+            use_count: 1,
+            last_used_at: null,
+          },
+        ],
+      }),
+    });
+
+    assertEquals(result, "restaurants");
+  },
+);

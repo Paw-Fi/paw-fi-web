@@ -60,7 +60,10 @@ if [[ "$ENV_NAME" == "PRODUCTION" ]]; then
   echo ""
 fi
 
-# Transaction capture endpoint (JWT verified — called by iOS Shortcuts / Android NotificationListenerService)
+# Android notification classifier (JWT verified — called by Android NotificationListenerService)
+deploy_function "classify-notification-capture"
+
+# Transaction capture endpoint (JWT verified — called by iOS Shortcuts / notification classifier)
 deploy_function "save-wallet-transaction"
 
 # Settings toggle endpoint (JWT verified — called by Flutter app)
@@ -71,6 +74,7 @@ echo "  Apple Pay Integration functions deployed successfully"
 echo ""
 echo "  Deployment summary:"
 echo "     App/API (JWT verified):"
+echo "       - classify-notification-capture"
 echo "       - save-wallet-transaction"
 echo "       - update-wallet-capture-setting"
 echo ""

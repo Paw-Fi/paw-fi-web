@@ -21,17 +21,17 @@ export const androidNotificationCaptureArticle: HelpArticle = {
     {
       question: "How does Android Notification Capture work?",
       answer:
-        "Moneko monitors notifications from your selected banking and payment apps. When a transaction notification arrives, Moneko automatically extracts the amount, merchant, and currency, then logs it to your chosen Space and Wallet.",
+        "Moneko monitors visible notifications from the Android apps you explicitly select, including Gmail if you enable it. Financially plausible previews are securely analyzed by AI. Completed expenses, income, refunds, and recurring payments can be logged to your chosen Space and Wallet; promotions and uncertain messages are ignored.",
     },
     {
       question: "Is it secure to let Moneko read my notifications?",
       answer:
-        "Yes. Moneko only reads notifications from apps you explicitly enable. The content is processed locally to extract transaction details and then synced to your secure Moneko account. Your data is never sold or shared.",
+        "Moneko only considers notifications from apps you explicitly enable. Ordinary messages without monetary details and security-code notifications stay on your device. Financial candidates are sent securely to Moneko's AI for classification, and ignored notification text is not retained. Your data is never sold.",
     },
     {
       question: "Which apps can I track with this feature?",
       answer:
-        "Moneko detects recent notifications from banking, credit card, and payment apps (like Venmo, Cash App, or your bank's app). You can toggle specific apps on or off in the feature settings.",
+        "Moneko detects recent notifications from installed apps. You can enable banking, credit card, payment, shopping, or email apps such as Gmail individually. Moneko reads only their visible Android notification previews, not your mailbox or app account.",
     },
     {
       question: "Do I need to leave Moneko open for this to work?",
@@ -41,43 +41,48 @@ export const androidNotificationCaptureArticle: HelpArticle = {
     {
       question: "Why aren't my transactions showing up?",
       answer:
-        "Ensure that: 1. Auto Capture is enabled in Settings. 2. Notification Access is granted in Android system settings. 3. The specific app is toggled on in the Supported Apps list. 4. Your bank app actually sends notifications with transaction amounts.",
+        "Ensure that: 1. Auto Capture is enabled in Settings. 2. Notification Access is granted in Android system settings. 3. The specific app is toggled on in the Supported Apps list. 4. The notification visibly includes enough evidence of a completed transaction, including an amount and currency. Moneko intentionally ignores promotions, pending or declined payments, reminders, unresolved transfers, and uncertain messages.",
     },
   ],
   howToSteps: [
     {
       name: "Enable Auto Capture",
-      text: "Open Moneko Settings, tap 'Auto Transaction Capture', and toggle 'Enable Auto Capture' on.",
+      text:
+        "Open Moneko Settings, tap 'Auto Transaction Capture', and toggle 'Enable Auto Capture' on.",
     },
     {
       name: "Grant Notification Access",
-      text: "If prompted, follow the steps to grant Moneko 'Notification Access' in your Android system settings. This allows the app to read incoming notifications in the background.",
+      text:
+        "If prompted, follow the steps to grant Moneko 'Notification Access' in your Android system settings. This allows the app to read incoming notifications in the background.",
     },
     {
       name: "Select Destination",
-      text: "Choose the Space and Wallet where you want captured transactions to be saved.",
+      text:
+        "Choose the Space and Wallet where you want captured transactions to be saved.",
     },
     {
       name: "Enable Supported Apps",
-      text: "In the 'Supported Apps' section, toggle on the banking or payment apps you want Moneko to monitor.",
+      text:
+        "In the 'Supported Apps' section, toggle on the banking or payment apps you want Moneko to monitor.",
     },
   ],
   content: `# How to Automatically Track Transactions via Android Notifications
 
-Moneko can automatically capture your spending by reading notifications from your bank and payment apps on Android.
+Moneko can automatically capture completed expenses, income, refunds, and recurring payments from notifications sent by Android apps you select.
 
-This feature eliminates manual entry by instantly logging transactions as soon as you receive a push notification from your bank.
+You can select banking, payment, shopping, and email apps such as Gmail. Moneko reads only the notification preview shown by Android. It does not connect to or read your mailbox.
 
 ---
 
 ## How It Works
 
-When a supported app (like your bank, Venmo, or Cash App) sends you a notification about a purchase:
+When an enabled app sends a financially plausible notification:
 
-1. **Detection**: Moneko's background service identifies the notification.
-2. **Extraction**: It securely extracts the **Merchant name**, **Amount**, and **Currency**.
-3. **Logging**: The transaction is automatically added to your designated **Space** and **Wallet**.
-4. **Categorization**: Moneko's AI organizes the transaction into the correct category for your budget.
+1. **Private candidate check**: Moneko looks for monetary evidence on your device. Ordinary messages and security-code notifications are not uploaded.
+2. **AI classification**: The visible notification preview is securely analyzed to determine whether it represents a completed expense, income, refund, recurring payment, promotion, pending event, or another message type.
+3. **Safe decision**: Only high-confidence completed transactions are saved. Promotions, pending or declined payments, reminders, unresolved transfers, and uncertain messages are ignored.
+4. **Recurring reconciliation**: A confirmed recurring payment creates a schedule only when one does not already exist. Existing schedules are not duplicated.
+5. **Notification**: Moneko tells you when a candidate was ignored or matched to an existing recurring schedule.
 
 ---
 
@@ -111,8 +116,11 @@ Moneko will show a list of "Recent Apps" that have sent notifications.
 
 We take your financial privacy seriously:
 
-- **Local Processing**: Notifications are processed on your device to extract only what's necessary (Amount, Merchant, Date).
+- **Local Privacy Gate**: Ordinary messages without monetary evidence and security-code notifications stay on your device.
+- **Secure AI Classification**: Financial candidates from enabled apps are sent securely to Moneko's AI for classification.
 - **Targeted Monitoring**: Moneko *only* looks at notifications from the apps you have explicitly enabled.
+- **No Mailbox Access**: Enabling Gmail gives Moneko access only to visible Android notification previews, not your inbox or Google account.
+- **Limited Retention**: Ignored raw notification text is not retained. Saved transactions keep only the derived transaction details needed by Moneko.
 - **No Data Selling**: Your transaction data belongs to you. We never sell or share your information with third parties.
 - **Secure Sync**: Background sync credentials are stored in your device's secure hardware enclave.
 
@@ -124,6 +132,8 @@ We take your financial privacy seriously:
 - **Check Permissions**: Go to Android Settings → Apps → Special app access → Notification access and ensure Moneko is allowed.
 - **Check App Toggles**: Ensure the bank app is enabled in Moneko's Auto Capture settings.
 - **Notification Content**: Ensure your bank app notifications actually include the transaction amount and merchant name. If the notification just says "You have a new alert," Moneko cannot extract the data.
+- **Completed Transactions Only**: Invoices, renewal notices, pending authorizations, declined payments, and promotions are not proof that money moved and will not be logged.
+- **Refunds and Income**: Clear refund, reversal credit, salary, deposit, and payment-received notifications are logged as income rather than expenses.
 - **Battery Optimization**: Some Android devices aggressively kill background tasks. Ensure Moneko is set to "Don't optimize" or "Unrestricted" in battery settings.
 
 ### Captured transactions are in the wrong Space

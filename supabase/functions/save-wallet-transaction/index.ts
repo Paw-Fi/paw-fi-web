@@ -37,10 +37,18 @@ import {
 import { normalizeCategoryForStorage } from "../shared/category-colors.ts";
 import { assertAccountInScope, getAccountOrNull } from "../shared/accounts.ts";
 import {
+  createHouseholdAutoSplitForTransaction,
+  fetchHouseholdAutoSplitSettings,
+  type HouseholdAutoSplitSettings,
+  type HouseholdMemberRow,
+} from "../shared/household-auto-split.ts";
+import {
   buildWalletCaptureIdempotencyKey,
+  ensureWalletCaptureSpendingAccount,
   getLocalYyyyMmDdInTimeZone,
   hasAmbiguousWalletCaptureCurrencyEvidence,
   isWalletCaptureIdempotencyClaimStale,
+  normalizeWalletCaptureRecurrenceRule,
   normalizeWalletCaptureSource,
   resolveStrongWalletCaptureCurrencyEvidence,
   resolveWalletCaptureCurrency,
@@ -125,6 +133,14 @@ interface TransactionPayload {
   currencyEvidenceRaw?: string | null;
   currencyEvidenceType?: string | null;
   currencyAmbiguous?: boolean | null;
+  categoryHint?: string | null;
+  isRecurring?: boolean | null;
+  recurrenceRule?: {
+    frequency?: string | null;
+    anchor_date?: string | null;
+    end_date?: string | null;
+    interval?: number | null;
+  } | null;
 }
 
 interface RequestBody {
@@ -135,6 +151,7 @@ interface RequestBody {
   accountId?: string | null;
   idempotencyKey?: string | null;
   clientCreatedAt?: string | null;
+  suppressNotification?: boolean;
   transaction: TransactionPayload;
 }
 
@@ -215,8 +232,26 @@ function buildWalletCaptureRequestLogContext(
       .filter(([, value]) => typeof value === "string" && value.length > 0),
   );
 
+  const captureSource = normalizeWalletCaptureSource(body?.captureSource);
+  if (captureSource === "android_notification_listener") {
+    return {
+      captureSource,
+      redacted: true,
+      isPortfolio: body?.isPortfolio === true,
+      headers: safeHeaders,
+      transaction: tx
+        ? {
+            type: truncateForLog(tx.type ?? null, 16),
+            currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
+            currencyAmbiguous: tx.currencyAmbiguous === true,
+            hasAccountSelection: Boolean(body.accountId),
+          }
+        : null,
+    };
+  }
+
   return {
-    captureSource: body?.captureSource ?? null,
+    captureSource: captureSource ?? body?.captureSource ?? null,
     userId: truncateForLog(body?.userId ?? null, 80),
     householdId: truncateForLog(body?.householdId ?? null, 80),
     isPortfolio: body?.isPortfolio === true,
@@ -266,7 +301,7 @@ function logWalletCaptureValidationFailure(
 ): void {
   console.warn("[save-wallet-transaction] Validation failed", {
     reason,
-    ...(details ? { details } : {}),
+    ...(details && requestContext?.redacted !== true ? { details } : {}),
     ...(requestContext ? { request: requestContext } : {}),
   });
 }
@@ -1173,6 +1208,21 @@ async function releaseWalletCaptureIdempotencyClaim(
   }
 }
 
+async function deleteIncompleteWalletCaptureExpense(params: {
+  supabase: any;
+  expenseId: string;
+  userId: string;
+  idempotencyKey: string;
+}): Promise<void> {
+  const { error } = await params.supabase
+    .from("expenses")
+    .delete()
+    .eq("id", params.expenseId)
+    .eq("user_id", params.userId)
+    .eq("wallet_capture_idempotency_key", params.idempotencyKey);
+  if (error) throw error;
+}
+
 async function claimWalletCaptureIdempotencyKey(
   supabase: any,
   key: string,
@@ -1506,26 +1556,6 @@ async function releaseAndroidWalletCaptureEvent(
   }
 }
 
-async function cleanupExpenseInsert(
-  supabase: any,
-  expenseId: string,
-): Promise<boolean> {
-  const { error } = await supabase
-    .from("expenses")
-    .delete()
-    .eq("id", expenseId);
-
-  if (error) {
-    console.error(
-      "[save-wallet-transaction] Failed to cleanup incomplete expense:",
-      error,
-    );
-    return false;
-  }
-
-  return true;
-}
-
 function requireWalletCaptureClaimId(claimId: string | null): string {
   if (!claimId) {
     throw new Error("Missing idempotency claim id");
@@ -1581,6 +1611,7 @@ async function categorizeWithAI(params: {
   note?: string | null;
   expenseCategories: string[];
   incomeCategories: string[];
+  redactFailureContext?: boolean;
 }): Promise<string> {
   try {
     const {
@@ -1731,10 +1762,14 @@ Transactions:
       modelName: GEMINI_CATEGORIZATION_MODELS[0],
       context: {
         fallbackModelName: GEMINI_CATEGORIZATION_MODELS.slice(1).join(","),
-        merchantName: params.merchantName,
         transactionType: params.transactionType,
-        amount: params.amount,
         currency: params.currency,
+        ...(params.redactFailureContext
+          ? { redacted: true }
+          : {
+              merchantName: params.merchantName,
+              amount: params.amount,
+            }),
       },
     });
 
@@ -1774,7 +1809,6 @@ Deno.serve(async (req: Request) => {
           requestId: req.headers.get("x-request-id"),
         },
         rawBodyLength: rawBodyText.length,
-        rawBodyPreview: truncateForLog(rawBodyText, 1200),
       });
       return errorResponse("Invalid JSON payload", 400, "INVALID_JSON");
     }
@@ -1843,10 +1877,10 @@ Deno.serve(async (req: Request) => {
     } else if (rawDate && rawDate.trim().startsWith("00")) {
       console.log(
         "[save-wallet-transaction] Coerced short-year transaction date",
-        {
-          rawDate,
-          normalizedDate: normalizedProvidedDate,
-        },
+        normalizeWalletCaptureSource(body.captureSource) ===
+          "android_notification_listener"
+          ? { captureSource: "android_notification_listener", redacted: true }
+          : { rawDate, normalizedDate: normalizedProvidedDate },
       );
     }
 
@@ -1972,7 +2006,11 @@ Deno.serve(async (req: Request) => {
         ? "income"
         : "expense";
 
-    let householdMembers: Array<{ user_id: string }> = [];
+    let householdMembers: HouseholdMemberRow[] = [];
+    let householdAutoSplitSettings: HouseholdAutoSplitSettings = {
+      autoSplitEnabled: true,
+      defaultConfig: null,
+    };
     let requiresHouseholdSplit = false;
     if (householdId) {
       const { data: membership, error: membershipError } = await supabase
@@ -1998,6 +2036,12 @@ Deno.serve(async (req: Request) => {
 
         householdMembers =
           membersError || !Array.isArray(members) ? [] : members;
+        if (!membersError && householdMembers.length > 0) {
+          householdAutoSplitSettings = await fetchHouseholdAutoSplitSettings(
+            supabase,
+            householdId,
+          );
+        }
       }
 
       try {
@@ -2076,10 +2120,12 @@ Deno.serve(async (req: Request) => {
       }
 
       if (contact && contact.wallet_capture_enabled === false) {
-        console.log(
-          "[save-wallet-transaction] Wallet capture disabled for user:",
-          userId,
-        );
+        console.log("[save-wallet-transaction] Wallet capture disabled", {
+          captureSource,
+          ...(captureSource === "android_notification_listener"
+            ? { redacted: true }
+            : { userId }),
+        });
         return errorResponse(
           "Wallet capture is disabled",
           403,
@@ -2100,7 +2146,9 @@ Deno.serve(async (req: Request) => {
       } else {
         console.log(
           "[save-wallet-transaction] No user_contact row found; proceeding with null contact_id.",
-          { userId },
+          captureSource === "android_notification_listener"
+            ? { captureSource, redacted: true }
+            : { userId },
         );
       }
     }
@@ -2111,7 +2159,6 @@ Deno.serve(async (req: Request) => {
       .toUpperCase();
 
     if (
-      captureSource === "ios_wallet_shortcut" &&
       normalizedPayloadCurrency &&
       validateCurrency(normalizedPayloadCurrency) !== normalizedPayloadCurrency
     ) {
@@ -2188,6 +2235,26 @@ Deno.serve(async (req: Request) => {
     });
     const currency = validateCurrency(resolvedCaptureCurrency ?? "USD");
 
+    if (!accountId) {
+      try {
+        accountId = await ensureWalletCaptureSpendingAccount(supabase, {
+          userId,
+          householdId,
+          currency,
+        });
+      } catch (error) {
+        console.error(
+          "[save-wallet-transaction] Failed to resolve Spending wallet:",
+          error,
+        );
+        return errorResponse(
+          "Failed to resolve a same-currency Spending wallet",
+          500,
+          "SERVER_ERROR",
+        );
+      }
+    }
+
     if (accountId) {
       const isAccountCurrencyInScope = await assertAccountInScope(
         supabase,
@@ -2237,23 +2304,40 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
+    const recurrenceRule = normalizeWalletCaptureRecurrenceRule(
+      tx,
+      normalizedDate,
+    );
+    const isRecurring = recurrenceRule != null;
 
-    console.log("[save-wallet-transaction] Processing:", {
-      userId,
-      captureSource,
-      transactionType,
-      merchant: merchantDisplay,
-      amount: tx.amount,
-      currency,
-      date: normalizedDate,
-      householdId,
-      isPortfolio,
-      accountId,
-      preferredTimezone,
-      usedProvidedDate: Boolean(normalizedProvidedDate),
-      usedClientCreatedAtDate:
-        !normalizedProvidedDate && Boolean(normalizedClientCreatedDate),
-    });
+    console.log(
+      "[save-wallet-transaction] Processing:",
+      captureSource === "android_notification_listener"
+        ? {
+            captureSource,
+            transactionType,
+            currency,
+            isPortfolio,
+            hasHouseholdScope: Boolean(householdId),
+            hasAccountSelection: Boolean(accountId),
+          }
+        : {
+            userId,
+            captureSource,
+            transactionType,
+            merchant: merchantDisplay,
+            amount: tx.amount,
+            currency,
+            date: normalizedDate,
+            householdId,
+            isPortfolio,
+            accountId,
+            preferredTimezone,
+            usedProvidedDate: Boolean(normalizedProvidedDate),
+            usedClientCreatedAtDate:
+              !normalizedProvidedDate && Boolean(normalizedClientCreatedDate),
+          },
+    );
 
     const requestIdempotencyKey = buildWalletCaptureIdempotencyKey({
       explicitKey:
@@ -2383,23 +2467,34 @@ Deno.serve(async (req: Request) => {
       const expenseCategoryList = Array.from(ctx.allowedExpenseSet).sort();
       const incomeCategoryList = Array.from(ctx.allowedIncomeSet).sort();
 
-      // Step 2: Call Gemini AI to categorize the transaction
-      const aiCategory = await categorizeWithAI({
-        genAI,
-        merchantName: merchantDisplay,
-        transactionType,
-        amount: tx.amount,
-        currency,
-        date: normalizedDate,
-        note: tx.note,
-        expenseCategories: expenseCategoryList,
-        incomeCategories: incomeCategoryList,
-      });
+      // Step 2: Reuse a validated classifier category when supplied; otherwise
+      // categorize parsed wallet/shortcut captures with Gemini.
+      const categoryHint =
+        typeof tx.categoryHint === "string"
+          ? tx.categoryHint.trim().toLowerCase()
+          : "";
+      const aiCategory =
+        categoryHint ||
+        (await categorizeWithAI({
+          genAI,
+          merchantName: merchantDisplay,
+          transactionType,
+          amount: tx.amount,
+          currency,
+          date: normalizedDate,
+          note: tx.note,
+          expenseCategories: expenseCategoryList,
+          incomeCategories: incomeCategoryList,
+          redactFailureContext:
+            captureSource === "android_notification_listener",
+        }));
 
-      console.log("[save-wallet-transaction] AI categorization result:", {
-        merchant: merchantDisplay,
-        aiCategory,
-      });
+      console.log(
+        "[save-wallet-transaction] AI categorization result:",
+        captureSource === "android_notification_listener"
+          ? { captureSource, aiCategory }
+          : { merchant: merchantDisplay, aiCategory },
+      );
 
       // Step 3: Run full resolution pipeline (remap → preference → remap → coerce)
       resolvedCategory = resolveCategory({
@@ -2409,17 +2504,32 @@ Deno.serve(async (req: Request) => {
         ctx,
       });
 
-      console.log("[save-wallet-transaction] Category resolution:", {
-        merchant: merchantDisplay,
-        aiCategory,
-        resolved: resolvedCategory,
-      });
+      console.log(
+        "[save-wallet-transaction] Category resolution:",
+        captureSource === "android_notification_listener"
+          ? { captureSource, aiCategory, resolved: resolvedCategory }
+          : {
+              merchant: merchantDisplay,
+              aiCategory,
+              resolved: resolvedCategory,
+            },
+      );
     } catch (catError) {
       console.error(
-        "[save-wallet-transaction] Category resolution failed (using 'other'):",
+        "[save-wallet-transaction] Category resolution failed:",
         catError,
       );
-      // Graceful degradation: proceed with "other"
+      await releaseAndroidWalletCaptureEvent(
+        supabase,
+        androidCaptureClaimId,
+        "category_resolution_failed",
+      );
+      await releaseWalletCaptureIdempotencyClaim(supabase, idempotencyClaimId);
+      return errorResponse(
+        "Failed to resolve the user's category mapping",
+        503,
+        "SERVER_ERROR",
+      );
     }
 
     // ── Save expense ──────────────────────────────────────────────────
@@ -2437,8 +2547,8 @@ Deno.serve(async (req: Request) => {
         breakdown: null,
         receipt_image_url: null,
         created_at: body.clientCreatedAt || new Date().toISOString(),
-        is_recurring: false,
-        recurrence_rule: null,
+        is_recurring: isRecurring,
+        recurrence_rule: recurrenceRule,
         household_id: householdId,
         account_id: accountId,
         wallet_capture_idempotency_key: requestIdempotencyKey,
@@ -2450,24 +2560,64 @@ Deno.serve(async (req: Request) => {
       if (expenseError.code === "23505") {
         const { data: existingExpense } = await supabase
           .from("expenses")
-          .select("id, category, amount_cents, currency")
+          .select(
+            "id, category, amount_cents, currency, raw_text, household_id, split_group_id",
+          )
           .eq("wallet_capture_idempotency_key", requestIdempotencyKey)
           .is("deleted_at", null)
           .maybeSingle();
 
         if (existingExpense) {
+          let responseExistingExpense = existingExpense;
+          if (requiresHouseholdSplit && !existingExpense.split_group_id) {
+            const splitResult = await createHouseholdAutoSplitForTransaction({
+              supabase,
+              householdId,
+              transaction: existingExpense as Record<string, unknown>,
+              actorUserId: userId,
+              members: householdMembers,
+              settings: householdAutoSplitSettings,
+              payerUserId: userId,
+            });
+            if (splitResult.kind === "created") {
+              responseExistingExpense = splitResult.transaction;
+            } else if (
+              splitResult.kind === "invalid" ||
+              splitResult.kind === "failed"
+            ) {
+              await releaseAndroidWalletCaptureEvent(
+                supabase,
+                androidCaptureClaimId,
+                "household_split_repair_failed",
+              );
+              await releaseWalletCaptureIdempotencyClaim(
+                supabase,
+                idempotencyClaimId,
+              );
+              return errorResponse(
+                splitResult.kind === "invalid"
+                  ? splitResult.error
+                  : "Failed to create household split",
+                splitResult.kind === "invalid" ? 400 : 500,
+                splitResult.kind === "invalid"
+                  ? "VALIDATION_ERROR"
+                  : "SERVER_ERROR",
+              );
+            }
+          }
           const duplicateResponse = {
             success: true,
             duplicate: true,
             data: {
-              id: existingExpense.id,
-              category: existingExpense.category ?? resolvedCategory,
-              amount_cents: existingExpense.amount_cents ?? amountCents,
-              currency: existingExpense.currency ?? currency,
+              id: responseExistingExpense.id,
+              category: responseExistingExpense.category ?? resolvedCategory,
+              amount_cents: responseExistingExpense.amount_cents ?? amountCents,
+              currency: responseExistingExpense.currency ?? currency,
             },
             meta: {
               captureSource,
-              resolvedCategory: existingExpense.category ?? resolvedCategory,
+              resolvedCategory:
+                responseExistingExpense.category ?? resolvedCategory,
               deduplicatedAt: new Date().toISOString(),
             },
           };
@@ -2475,7 +2625,7 @@ Deno.serve(async (req: Request) => {
           await finalizeAndroidWalletCaptureEvent(
             supabase,
             androidCaptureClaimId,
-            existingExpense.id,
+            responseExistingExpense.id,
             duplicateResponse,
           );
 
@@ -2503,7 +2653,9 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
     }
 
-    console.log("[save-wallet-transaction] Expense saved:", expense.id);
+    if (captureSource !== "android_notification_listener") {
+      console.log("[save-wallet-transaction] Expense saved:", expense.id);
+    }
 
     // ── Learn category preference ─────────────────────────────────────
     try {
@@ -2540,6 +2692,7 @@ Deno.serve(async (req: Request) => {
           category: resolvedCategory,
           amount_cents: amountCents,
           currency,
+          is_recurring: isRecurring,
         },
         meta: {
           captureSource,
@@ -2558,215 +2711,129 @@ Deno.serve(async (req: Request) => {
         expense.id,
         storedResponse,
       );
-      await sendWalletPocketNotificationBestEffort({
-        supabase,
-        userId,
-        householdId,
-        isPortfolio,
-        amountCents,
-        currency,
-        category: resolvedCategory,
-        dateYmd: normalizedDate,
-        expenseId: expense.id,
-      });
+      if (
+        body.suppressNotification !== true &&
+        captureSource !== "android_notification_listener"
+      ) {
+        await sendWalletPocketNotificationBestEffort({
+          supabase,
+          userId,
+          householdId,
+          isPortfolio,
+          amountCents,
+          currency,
+          category: resolvedCategory,
+          dateYmd: normalizedDate,
+          expenseId: expense.id,
+        });
+      }
       return successResponse(storedResponse);
     }
 
-    if (
-      householdId &&
-      requiresHouseholdSplit &&
-      transactionType === "expense"
-    ) {
-      console.log(
-        "[save-wallet-transaction] Creating household split for:",
+    if (householdId && requiresHouseholdSplit) {
+      const splitResult = await createHouseholdAutoSplitForTransaction({
+        supabase,
         householdId,
-      );
-
-      // Equal split (wallet captures always use equal split)
-      const { data: splitGroup, error: splitGroupError } = await supabase
-        .from("expense_split_groups")
-        .insert({
-          household_id: householdId,
-          expense_id: expense.id,
-          payer_user_id: userId,
-          split_type: "equal",
-          currency,
-          total_amount_cents: amountCents,
-          description: description || null,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (splitGroupError) {
-        console.error(
-          "[save-wallet-transaction] Error creating split group:",
-          splitGroupError,
+        transaction: expense as Record<string, unknown>,
+        actorUserId: userId,
+        members: householdMembers,
+        settings: householdAutoSplitSettings,
+        payerUserId: userId,
+      });
+      if (splitResult.kind === "created") {
+        responseExpense = splitResult.transaction;
+      } else if (splitResult.kind === "invalid") {
+        console.warn(
+          "[save-wallet-transaction] Invalid household split settings:",
+          splitResult.error,
         );
-        const didCleanupExpense = await cleanupExpenseInsert(
+        await deleteIncompleteWalletCaptureExpense({
           supabase,
-          expense.id,
+          expenseId: expense.id,
+          userId,
+          idempotencyKey: requestIdempotencyKey,
+        });
+        await releaseAndroidWalletCaptureEvent(
+          supabase,
+          androidCaptureClaimId,
+          "household_split_invalid",
         );
-        if (didCleanupExpense) {
-          await releaseAndroidWalletCaptureEvent(
-            supabase,
-            androidCaptureClaimId,
-            "split_group_insert_failed",
-          );
-          await releaseWalletCaptureIdempotencyClaim(
-            supabase,
-            idempotencyClaimId,
-          );
-        }
+        await releaseWalletCaptureIdempotencyClaim(
+          supabase,
+          idempotencyClaimId,
+        );
+        return errorResponse(splitResult.error, 400, "VALIDATION_ERROR");
+      } else if (splitResult.kind === "failed") {
+        console.error(
+          "[save-wallet-transaction] Household split creation failed:",
+          splitResult.error,
+        );
+        await deleteIncompleteWalletCaptureExpense({
+          supabase,
+          expenseId: expense.id,
+          userId,
+          idempotencyKey: requestIdempotencyKey,
+        });
+        await releaseAndroidWalletCaptureEvent(
+          supabase,
+          androidCaptureClaimId,
+          "household_split_failed",
+        );
+        await releaseWalletCaptureIdempotencyClaim(
+          supabase,
+          idempotencyClaimId,
+        );
         return errorResponse(
-          "Failed to save household split",
+          "Failed to create household split",
           500,
           "SERVER_ERROR",
         );
       }
 
-      // Create equal split lines
-      const amountPerMember = Math.floor(amountCents / householdMembers.length);
-      const remainder = amountCents - amountPerMember * householdMembers.length;
-      const splitLines = householdMembers.map(
-        (member: { user_id: string }, index: number) => ({
-          split_group_id: splitGroup.id,
-          user_id: member.user_id,
-          amount_cents: amountPerMember + (index === 0 ? remainder : 0),
-          is_settled: false,
-          settled_at: null,
-          created_at: new Date().toISOString(),
-        }),
-      );
-
-      const { error: splitLinesError } = await supabase
-        .from("expense_split_lines")
-        .insert(splitLines);
-
-      if (splitLinesError) {
-        console.error(
-          "[save-wallet-transaction] Error creating split lines:",
-          splitLinesError,
-        );
-        const didCleanupExpense = await cleanupExpenseInsert(
-          supabase,
-          expense.id,
-        );
-        if (didCleanupExpense) {
-          await releaseAndroidWalletCaptureEvent(
-            supabase,
-            androidCaptureClaimId,
-            "split_lines_insert_failed",
-          );
-          await releaseWalletCaptureIdempotencyClaim(
-            supabase,
-            idempotencyClaimId,
-          );
+      if (captureSource !== "android_notification_listener") {
+        let actorName = "Someone";
+        try {
+          const { data: appUser } = await supabase
+            .from("users")
+            .select("full_name")
+            .eq("id", userId)
+            .maybeSingle();
+          if (
+            appUser?.full_name &&
+            String(appUser.full_name).trim().length > 0
+          ) {
+            actorName = appUser.full_name as string;
+          }
+        } catch (_) {
+          /* non-critical */
         }
-        return errorResponse(
-          "Failed to save household split",
-          500,
-          "SERVER_ERROR",
-        );
-      } else {
-        console.log(
-          "[save-wallet-transaction] Split lines created for",
-          householdMembers.length,
-          "members",
-        );
-      }
 
-      // Update expense with split_group_id and household_id
-      const { error: expenseUpdateError } = await supabase
-        .from("expenses")
-        .update({
-          split_group_id: splitGroup.id,
-          household_id: householdId,
-        })
-        .eq("id", expense.id);
-
-      if (expenseUpdateError) {
-        console.error(
-          "[save-wallet-transaction] Error updating split expense:",
-          expenseUpdateError,
-        );
-        const didCleanupExpense = await cleanupExpenseInsert(
-          supabase,
-          expense.id,
-        );
-        if (didCleanupExpense) {
-          await releaseAndroidWalletCaptureEvent(
-            supabase,
-            androidCaptureClaimId,
-            "split_expense_update_failed",
-          );
-          await releaseWalletCaptureIdempotencyClaim(
-            supabase,
-            idempotencyClaimId,
-          );
-        }
-        return errorResponse(
-          "Failed to save household split",
-          500,
-          "SERVER_ERROR",
-        );
-      }
-
-      // Refresh expense data
-      const { data: refreshedExpense } = await supabase
-        .from("expenses")
-        .select("*")
-        .eq("id", expense.id)
-        .is("deleted_at", null)
-        .single();
-
-      if (refreshedExpense) {
-        responseExpense = refreshedExpense;
-      }
-
-      // Notify household members
-      let actorName = "Someone";
-      try {
-        const { data: appUser } = await supabase
-          .from("users")
-          .select("full_name")
-          .eq("id", userId)
-          .maybeSingle();
-        if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
-          actorName = appUser.full_name as string;
-        }
-      } catch (_) {
-        /* non-critical */
-      }
-
-      const { error: notifyError } = await supabase.rpc(
-        "notify_household_members_expense",
-        {
-          p_household_id: householdId,
-          p_expense_id: expense.id,
-          p_actor_user_id: userId,
-          p_event_type: "expense_added",
-          p_expense_data: {
-            actor_name: actorName,
-            amount_cents: amountCents,
-            currency,
-            category: resolvedCategory,
-            note: description,
-            is_recurring: false,
+        const { error: notifyError } = await supabase.rpc(
+          "notify_household_members_expense",
+          {
+            p_household_id: householdId,
+            p_expense_id: expense.id,
+            p_actor_user_id: userId,
+            p_event_type:
+              transactionType === "income" ? "income_added" : "expense_added",
+            p_expense_data: {
+              actor_name: actorName,
+              amount_cents: amountCents,
+              currency,
+              category: resolvedCategory,
+              note: description,
+              is_recurring: isRecurring,
+            },
           },
-        },
-      );
-
-      if (notifyError) {
-        console.error(
-          "[save-wallet-transaction] Error notifying household:",
-          notifyError,
         );
-      }
 
-      console.log(
-        "[save-wallet-transaction] Household split created successfully",
-      );
+        if (notifyError) {
+          console.error(
+            "[save-wallet-transaction] Error notifying household:",
+            notifyError,
+          );
+        }
+      }
     }
 
     // ── Success response ──────────────────────────────────────────────
@@ -2778,6 +2845,7 @@ Deno.serve(async (req: Request) => {
         category: responseExpense.category ?? resolvedCategory,
         amount_cents: amountCents,
         currency,
+        is_recurring: isRecurring,
       },
       meta: {
         captureSource,
@@ -2797,17 +2865,22 @@ Deno.serve(async (req: Request) => {
       storedResponse,
     );
 
-    await sendWalletPocketNotificationBestEffort({
-      supabase,
-      userId,
-      householdId,
-      isPortfolio,
-      amountCents,
-      currency,
-      category: resolvedCategory,
-      dateYmd: normalizedDate,
-      expenseId: responseExpense.id,
-    });
+    if (
+      body.suppressNotification !== true &&
+      captureSource !== "android_notification_listener"
+    ) {
+      await sendWalletPocketNotificationBestEffort({
+        supabase,
+        userId,
+        householdId,
+        isPortfolio,
+        amountCents,
+        currency,
+        category: resolvedCategory,
+        dateYmd: normalizedDate,
+        expenseId: responseExpense.id,
+      });
+    }
 
     return successResponse(storedResponse);
   } catch (error) {

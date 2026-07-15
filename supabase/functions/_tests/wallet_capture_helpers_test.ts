@@ -4,8 +4,10 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   buildWalletCaptureIdempotencyKey,
+  ensureWalletCaptureSpendingAccount,
   getLocalYyyyMmDdInTimeZone,
   isWalletCaptureIdempotencyClaimStale,
+  normalizeWalletCaptureRecurrenceRule,
   normalizeWalletCaptureSource,
   resolveWalletCaptureCurrency,
   resolveWalletCaptureScope,
@@ -241,3 +243,64 @@ Deno.test("wallet capture local date supports UTC offset strings", () => {
   assertEquals(getLocalYyyyMmDdInTimeZone("UTC+08:00", baseDate), "2026-04-16");
   assertEquals(getLocalYyyyMmDdInTimeZone("UTC-05:30", baseDate), "2026-04-15");
 });
+
+Deno.test("wallet capture normalizes explicit recurring schedules", () => {
+  assertEquals(
+    normalizeWalletCaptureRecurrenceRule(
+      {
+        isRecurring: true,
+        recurrenceRule: {
+          frequency: "MONTHLY",
+          anchor_date: "2026-07-15",
+          interval: 2,
+        },
+      },
+      "2026-07-15",
+    ),
+    {
+      frequency: "monthly",
+      anchor_date: "2026-07-15",
+      interval: 2,
+    },
+  );
+});
+
+Deno.test("wallet capture rejects incomplete recurring schedules", () => {
+  assertEquals(
+    normalizeWalletCaptureRecurrenceRule(
+      {
+        isRecurring: true,
+        recurrenceRule: { frequency: "sometimes" },
+      },
+      "2026-07-15",
+    ),
+    null,
+  );
+});
+
+Deno.test(
+  "wallet capture can ensure the same-currency Spending account",
+  async () => {
+    let receivedArgs: Record<string, unknown> | null = null;
+    const supabase = {
+      rpc: (name: string, args: Record<string, unknown>) => {
+        assertEquals(name, "ensure_spending_account_for_currency");
+        receivedArgs = args;
+        return Promise.resolve({ data: "wallet-eur", error: null });
+      },
+    };
+
+    const accountId = await ensureWalletCaptureSpendingAccount(supabase, {
+      userId: "user-1",
+      householdId: null,
+      currency: "EUR",
+    });
+
+    assertEquals(accountId, "wallet-eur");
+    assertEquals(receivedArgs, {
+      p_user_id: "user-1",
+      p_household_id: null,
+      p_currency: "EUR",
+    });
+  },
+);
