@@ -23,7 +23,8 @@ export const splitExpensesArticle: HelpArticle = {
   faqItems: [
     {
       question: "How does Moneko split expenses?",
-      answer: "When you log an expense in a shared Space, Moneko splits it according to your Auto Split setting in household settings. You can configure the default split type (equal, percentage, or shares) for your Space.",
+      answer:
+        "When you log an expense in a shared Space, Moneko splits it according to your Auto Split setting in household settings. You can configure the default split type (equal, percentage, or shares) for your Space.",
     },
     {
       question: "Can I split an expense unevenly?",
@@ -32,11 +33,13 @@ export const splitExpensesArticle: HelpArticle = {
     },
     {
       question: "What happens if I do not specify a split?",
-      answer: "If you do not specify a custom split while logging, Moneko applies the default split configured in your household Auto Split settings.",
+      answer:
+        "If you do not specify a custom split while logging, Moneko applies the default split configured in your household Auto Split settings.",
     },
     {
       question: "Can I edit a split after logging an expense?",
-      answer: "Yes. Tap the transaction, open details, edit the split, then save.",
+      answer:
+        "Yes. Tap the transaction, open details, edit the split, then save.",
     },
     {
       question: "Can I change who paid for an expense?",
@@ -58,7 +61,8 @@ export const splitExpensesArticle: HelpArticle = {
     },
     {
       question: "Do I need a spreadsheet to split expenses?",
-      answer: "No. Moneko lets you manage shared expenses, balances, and settlements in one place.",
+      answer:
+        "No. Moneko lets you manage shared expenses, balances, and settlements in one place.",
     },
   ],
   howToSteps: [
@@ -82,6 +86,8 @@ Splitting expenses in Moneko is simple.
 When you use a shared Space, Moneko can split expenses automatically, let you adjust the split when needed, and help you settle everything in one place.
 
 You do not need spreadsheets, manual calculations, or a separate bill-splitting app.
+
+If you are moving from Splitwise, read the [Moneko vs Splitwise comparison](/splitwise-alternative) to understand the free-plan limits, shared-ledger differences, and how Moneko connects splits to a complete household budget.
 
 ---
 

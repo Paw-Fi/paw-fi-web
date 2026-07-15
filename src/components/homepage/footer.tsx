@@ -41,6 +41,30 @@ export const Footer = () => {
             </h3>
             <ul className="space-y-2 sm:space-y-3">
               <li>
+                <a
+                  href="/budgeting-app-2026"
+                  className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
+                >
+                  Best Budgeting Apps 2026
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/free-budgeting-app"
+                  className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
+                >
+                  Best Free Budgeting Apps
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/splitwise-alternative"
+                  className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
+                >
+                  Moneko vs Splitwise
+                </a>
+              </li>
+              <li>
                 <Link
                   to="/help"
                   className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"

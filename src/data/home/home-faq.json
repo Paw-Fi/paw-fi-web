@@ -80,9 +80,9 @@
     "answer": "Yes. Moneko can process forwarded receipt emails and supported PDF, CSV, XLS, or XLSX attachments from approved sender addresses. Users choose a default space and wallet so online receipts are routed into the right budget."
   },
   {
-    "id": "free-budgeting-app-trial",
-    "question": "Is Moneko free to try?",
-    "answer": "Moneko is free to download and offers a free trial for its budgeting workflow. Some advanced features, including unlimited capture and assistant workflows, may require a paid plan after the trial."
+    "id": "free-budgeting-app",
+    "question": "Does Moneko have a free plan?",
+    "answer": "Yes. Moneko Free is a permanent plan with AI capture by text, photo, and voice, up to two Spaces, up to two Wallets, and standard support. WhatsApp, Telegram, email receipt imports, unlimited capture, bank sync, multi-currency, advanced AI features, and priority support require Plus."
   },
   {
     "id": "moneyko-misspelling",

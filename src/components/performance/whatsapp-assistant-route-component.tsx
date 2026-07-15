@@ -34,6 +34,7 @@ import {
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { HomeHeader } from "@/components/index/header";
+import { BudgetingComparisonLinks } from "@/components/geo/budgeting-comparison-links";
 
 // SEO Constants
 const META_TITLE =
@@ -276,6 +277,7 @@ export function WhatsAppAssistantRouteComponent() {
           </p>
         </section>
       </main>
+      <BudgetingComparisonLinks />
     </div>
   );
 }

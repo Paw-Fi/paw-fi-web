@@ -1,11 +1,10 @@
 "use client";
 
 import { Suspense, lazy } from "react";
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 
 import { QueryLandingPage } from "@/components/geo/query-landing-page";
 import { HomeHeader } from "@/components/index/header";
-import { HeroV2 } from "@/components/homepage/v2/hero-v2";
 import { Footer } from "@/components/homepage/footer";
 import { MobileAppPreviewCarousel } from "@/components/shared/mobile-app-preview-carousel";
 import AmbientHalo from "@/components/ui/ambient-halo";
@@ -24,6 +23,10 @@ import {
 } from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
+import {
+  APP_STORE_RATING,
+  APP_STORE_REVIEW_COUNT,
+} from "@/data/app-store-reviews";
 
 const UserCommunityShowcase = lazy(() =>
   import("@/components/homepage/user-community-showcase").then((module) => ({
@@ -39,6 +42,10 @@ const FeaturesSection = lazy(() =>
 
 export const Route = createFileRoute("/$slug")({
   loader: ({ params }) => {
+    if (params.slug === "best-budgeting-app") {
+      throw redirect({ href: "/budgeting-app-2026", statusCode: 301 });
+    }
+
     const page = getGeoLandingPage(params.slug);
 
     if (!page || params.slug === "main") {
@@ -54,6 +61,14 @@ export const Route = createFileRoute("/$slug")({
     }
 
     const pageUrl = getCanonicalUrl(`/${loaderData.slug}`);
+    const editorialComparison =
+      loaderData.pageVariant === "editorialComparison"
+        ? loaderData.editorialComparison
+        : undefined;
+    const publishedAt =
+      editorialComparison?.publishedAt ?? loaderData.sitemapLastmod;
+    const updatedAt =
+      editorialComparison?.updatedAt ?? loaderData.sitemapLastmod;
     const structuredData = {
       "@context": "https://schema.org",
       "@graph": [
@@ -83,8 +98,9 @@ export const Route = createFileRoute("/$slug")({
           description: loaderData.description,
           isPartOf: { "@id": "https://moneko.io/#website" },
           about: { "@id": "https://moneko.io/#software" },
-          datePublished: loaderData.sitemapLastmod,
-          dateModified: loaderData.sitemapLastmod,
+          breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
+          datePublished: publishedAt,
+          dateModified: updatedAt,
           inLanguage: "en-US",
         },
         {
@@ -105,6 +121,52 @@ export const Route = createFileRoute("/$slug")({
             },
           ],
         },
+        ...(editorialComparison
+          ? [
+              {
+                "@type": "Article",
+                "@id": `${pageUrl}#article`,
+                headline: loaderData.pageTitle ?? loaderData.title,
+                description:
+                  loaderData.pageDescription ?? loaderData.description,
+                datePublished: publishedAt,
+                dateModified: updatedAt,
+                mainEntityOfPage: { "@id": pageUrl },
+                author: {
+                  "@type": "Organization",
+                  name: editorialComparison.author.name,
+                  url:
+                    editorialComparison.author.url ?? "https://moneko.io/team",
+                },
+                reviewedBy: {
+                  "@type": "Organization",
+                  name: editorialComparison.reviewer.name,
+                  url:
+                    editorialComparison.reviewer.url ??
+                    "https://moneko.io/team",
+                },
+                publisher: { "@id": "https://moneko.io/#organization" },
+              },
+              {
+                "@type": "ItemList",
+                "@id": `${pageUrl}#rankings`,
+                name: loaderData.pageTitle ?? loaderData.title,
+                itemListOrder: "https://schema.org/ItemListOrderAscending",
+                numberOfItems: editorialComparison.apps.length,
+                itemListElement: editorialComparison.apps.map((app) => ({
+                  "@type": "ListItem",
+                  position: app.rank,
+                  item: {
+                    "@type": "SoftwareApplication",
+                    name: app.name,
+                    url: app.sourceUrl,
+                    applicationCategory: "FinanceApplication",
+                    description: `${app.bestFor}. ${app.verdict}`,
+                  },
+                })),
+              },
+            ]
+          : []),
         {
           "@type": "SoftwareApplication",
           "@id": "https://moneko.io/#software",
@@ -118,7 +180,7 @@ export const Route = createFileRoute("/$slug")({
           availableLanguage: monekoAvailableLanguages,
           keywords: loaderData.keywords,
           knowsAbout: monekoKnowsAbout,
-          offers: createMonekoFreeOffer(pageUrl),
+          offers: createMonekoFreeOffer("https://moneko.io/pricing"),
           aggregateRating: monekoAggregateRating,
           review: monekoFeaturedReview,
         },
@@ -199,13 +261,35 @@ function GeoLandingPageView({ page }: GeoLandingPageViewProps) {
       <HomeHeader />
 
       <main className="flex-1">
-        <HeroV2 />
+        <QueryLandingPage
+          eyebrow={page.eyebrow ?? "Moneko"}
+          title={page.pageTitle ?? page.title}
+          description={page.pageDescription ?? page.description}
+          keyTakeaways={page.keyTakeaways ?? []}
+          comparisonTitle={page.comparisonTitle ?? "Why choose Moneko?"}
+          alternativeLabel={page.alternativeLabel ?? "Alternative"}
+          comparisonRows={page.comparisonRows ?? []}
+          sections={page.sections ?? []}
+          proofCards={page.proofCards ?? []}
+          faqItems={page.faqItems}
+          resourceLinks={page.resourceLinks ?? []}
+          editorialComparison={
+            page.pageVariant === "editorialComparison"
+              ? page.editorialComparison
+              : undefined
+          }
+          ratingSummary={{
+            rating: APP_STORE_RATING,
+            reviewCount: APP_STORE_REVIEW_COUNT,
+          }}
+          showIntro
+        />
 
- <MobileAppPreviewCarousel
+        <MobileAppPreviewCarousel
           title="Try the app behind these budgeting workflows"
           description="See how Moneko turns mobile spending, WhatsApp messages, receipt scans, and shared budgets into a clearer plan."
         />
-        
+
         <Suspense
           fallback={
             <div className={`${deferredSectionFallback} min-h-[28rem]`} />
@@ -221,23 +305,6 @@ function GeoLandingPageView({ page }: GeoLandingPageViewProps) {
         >
           <UserCommunityShowcase />
         </Suspense>
-
-        <QueryLandingPage
-          eyebrow={page.eyebrow ?? "Moneko"}
-          title={page.pageTitle ?? page.title}
-          description={page.pageDescription ?? page.description}
-          keyTakeaways={page.keyTakeaways ?? []}
-          comparisonTitle={page.comparisonTitle ?? "Why choose Moneko?"}
-          alternativeLabel={page.alternativeLabel ?? "Alternative"}
-          comparisonRows={page.comparisonRows ?? []}
-          sections={page.sections ?? []}
-          proofCards={page.proofCards ?? []}
-          faqItems={page.faqItems}
-          resourceLinks={page.resourceLinks ?? []}
-          showIntro={false}
-        />
-
-       
       </main>
 
       <Footer />

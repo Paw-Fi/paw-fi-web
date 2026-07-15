@@ -1,6 +1,6 @@
 import {
   APP_STORE_RATING,
-  TOTAL_REVIEW_COUNT,
+  APP_STORE_REVIEW_COUNT,
   appStoreReviews,
 } from "@/data/app-store-reviews";
 
@@ -30,7 +30,7 @@ export const monekoKnowsAbout = [
   "email receipt capture",
   "envelope budgeting",
   "expense sharing",
-  "free budgeting app trial",
+  "free budgeting app",
   "household budgeting",
   "personal finance apps",
   "pocket budgeting",
@@ -41,8 +41,8 @@ export const monekoKnowsAbout = [
 export const monekoAggregateRating = {
   "@type": "AggregateRating",
   ratingValue: APP_STORE_RATING,
-  ratingCount: TOTAL_REVIEW_COUNT,
-  reviewCount: TOTAL_REVIEW_COUNT,
+  ratingCount: APP_STORE_REVIEW_COUNT,
+  reviewCount: APP_STORE_REVIEW_COUNT,
   bestRating: 5,
   worstRating: 1,
 };
@@ -69,8 +69,11 @@ export const monekoAvailableLanguages = "Multiple languages";
 export function createMonekoFreeOffer(url = "https://moneko.io/download") {
   return {
     "@type": "Offer",
+    name: "Moneko Free",
     price: "0",
     priceCurrency: "USD",
+    description:
+      "Permanent free plan with AI capture by text, photo, and voice, up to two Spaces, up to two Wallets, and standard support.",
     availability: "https://schema.org/InStock",
     url,
   };
@@ -78,6 +81,7 @@ export function createMonekoFreeOffer(url = "https://moneko.io/download") {
 
 export function createMonekoPricingOffers(pageUrl: string) {
   return [
+    createMonekoFreeOffer(pageUrl),
     {
       "@type": "Offer",
       name: "Moneko Plus Monthly",

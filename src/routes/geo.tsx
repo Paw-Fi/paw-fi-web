@@ -9,7 +9,7 @@ import { seo } from "@/utils/seo";
 
 const META_TITLE = "Moneko GEO Hub | Budgeting App Query Pages";
 const META_DESCRIPTION =
-  "Explore Moneko's query-specific budgeting and expense-tracking landing pages, including AI budgeting, free budgeting app trials, 2026 budgeting, email-based budgeting, WhatsApp budgeting, shared expense tracking, and more.";
+  "Explore Moneko's query-specific budgeting and expense-tracking pages, including free budgeting app comparisons, 2026 budgeting, AI capture, email receipts, WhatsApp budgeting, and shared expense tracking.";
 const META_KEYWORDS =
   "budgeting app hub, expense tracker hub, AI budgeting app, free budgeting app, budgeting app 2026, email based budgeting app, YNAB alternative, WhatsApp budgeting, shared expense tracker, Moneyko";
 

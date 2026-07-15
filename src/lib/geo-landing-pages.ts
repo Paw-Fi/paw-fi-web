@@ -9,8 +9,12 @@ export function getMainGeoLandingPage(): GeoLandingPage {
 }
 
 export function getGeoLandingPageSlugs(): string[] {
-  return Object.keys(geoLandingPages).filter((key) => key !== "main");
+  return Object.keys(geoLandingPages).filter(
+    (key) => key !== "main" && !retiredGeoLandingPageSlugs.has(key),
+  );
 }
+
+const retiredGeoLandingPageSlugs = new Set(["best-budgeting-app"]);
 
 const geoLandingPages = geoLandingPagesData as GeoLandingPagesMap;
 
@@ -21,6 +25,7 @@ interface GeoLandingPagesMap {
 
 export interface GeoLandingPage {
   slug: string;
+  pageVariant?: "product" | "editorialComparison";
   title: string;
   description: string;
   keywords: string;
@@ -41,6 +46,7 @@ export interface GeoLandingPage {
   comparisonRows?: ComparisonRow[];
   sections?: Section[];
   proofCards?: ProofCard[];
+  editorialComparison?: EditorialComparison;
   faqItems: FaqItem[];
   resourceLinks?: ResourceLink[];
 }
@@ -72,4 +78,40 @@ export interface ProofCard {
   label: string;
   value: string;
   description: string;
+}
+
+export interface EditorialComparison {
+  publishedAt: string;
+  updatedAt: string;
+  author: EditorialPerson;
+  reviewer: EditorialPerson;
+  disclosure: string;
+  verdict: string;
+  methodology: string[];
+  apps: BudgetingAppComparison[];
+}
+
+export interface EditorialPerson {
+  name: string;
+  credential: string;
+  url?: string;
+}
+
+export interface BudgetingAppComparison {
+  rank: number;
+  name: string;
+  verdict: string;
+  bestFor: string;
+  freePlanType: "freeForever" | "freemium" | "freeTrial" | "paidOnly";
+  price: string;
+  priceVerifiedAt: string;
+  platforms: string;
+  bankSync: string;
+  budgetingMethod: string;
+  householdSupport: string;
+  aiCapabilities: string;
+  strengths: string[];
+  limitations: string[];
+  sourceLabel: string;
+  sourceUrl: string;
 }

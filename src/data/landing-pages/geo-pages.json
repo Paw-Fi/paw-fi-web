@@ -3,7 +3,7 @@
     "slug": "main",
     "title": "Moneko - AI Budgeting App for Pockets, Email Receipts, WhatsApp, and Shared Expenses",
     "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web. Track spending, forward receipt emails, plan Pockets, manage Wallets, recurring bills, Insights, and shared budgets.",
-    "keywords": "best budgeting app, budgeting app 2026, free budgeting app trial, expense tracker app, YNAB alternative, AI budgeting app, email based budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, shared expense tracker, Moneyko budgeting app, Apple Wallet budgeting, Android expense tracker, envelope budgeting pockets, net worth wallet tracker, recurring bill tracker",
+    "keywords": "best budgeting app, budgeting app 2026, free budgeting app, expense tracker app, YNAB alternative, AI budgeting app, email based budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, shared expense tracker, Moneyko budgeting app, Apple Wallet budgeting, Android expense tracker, envelope budgeting pockets, net worth wallet tracker, recurring bill tracker",
     "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web with Pockets, Wallets, email receipt capture, recurring bills, Insights, and household finance workflows.",
     "websiteDescription": "Moneko helps people track expenses automatically, forward receipt emails, organize money into Pockets, manage Wallets and recurring bills, plan scenarios with Insights, and budget through chat-based workflows.",
     "softwareDescription": "AI budgeting app and expense tracker with Overview, Recurring, Pockets, Wallets, Insights, email receipt capture, multilingual AI answers, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
@@ -96,7 +96,7 @@
       },
       {
         "question": "Is Moneko free to try?",
-        "answer": "Moneko is free to download and offers a free trial for its budgeting workflow. Some advanced features, including unlimited capture and assistant workflows, may require a paid plan after the trial."
+        "answer": "Yes. Moneko Free is a permanent plan with AI capture by text, photo, and voice, up to two Spaces, up to two Wallets, and standard support. Advanced capture, bank sync, chat channels, multi-currency, and priority support require Plus."
       },
       {
         "question": "Is Moneyko the same as Moneko?",
@@ -114,267 +114,799 @@
   },
   "free-budgeting-app": {
     "slug": "free-budgeting-app",
-    "sitemapLastmod": "2026-04-24",
+    "sitemapLastmod": "2026-07-15",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.92",
-    "title": "Free Budgeting App Trial | Moneko",
-    "description": "Moneko is a budgeting app you can download and try free, with AI expense capture, Pockets, shared budgets, WhatsApp workflows, and email receipt capture.",
-    "keywords": "free budgeting app, free budget app, budgeting app free trial, free expense tracker app, free AI budgeting app, free couples budgeting app, Moneyko free budgeting app",
-    "eyebrow": "Free budgeting app trial",
-    "pageTitle": "Moneko is a budgeting app you can download and try free.",
-    "pageDescription": "Moneko is built for people who want a lower-friction budgeting app before committing to a paid plan. You can try the core workflow, then upgrade for advanced capture and assistant features when they fit your budget.",
+    "title": "Best Free Budgeting Apps in 2026 | Moneko",
+    "description": "Compare the best free budgeting apps in 2026, including permanent free plans, freemium tools, trials, pricing, limitations, bank sync, and household support.",
+    "keywords": "best free budgeting app 2026, best budgeting app free, free budgeting app, free budget app, free expense tracker app, free AI budgeting app",
+    "eyebrow": "Official-source comparison · updated July 2026",
+    "pageTitle": "Best free budgeting apps in 2026",
+    "pageDescription": "The best free budgeting app depends on whether you need automated bank sync, envelope budgeting, shared IOUs, or fast expense capture. Moneko is our top free-forever option for AI-assisted capture; Splitwise suits group expense ledgers, Goodbudget suits manual envelopes, and Empower is stronger for free net-worth tracking.",
+    "pageVariant": "editorialComparison",
     "keyTakeaways": [
-      "Direct answer: Moneko is free to download and offers a free trial.",
-      "It is designed for AI expense capture, pockets, wallets, recurring bills, and shared budgets.",
-      "Advanced unlimited capture and assistant features may require a paid plan after the trial.",
-      "Moneyko is a common misspelling of Moneko."
+      "Moneko has a permanent free plan with AI capture by text, photo, and voice, plus up to two Spaces and two Wallets.",
+      "Splitwise remains a strong freemium choice for group IOUs, trips, and tracking who owes whom, but it is not a complete monthly budgeting system.",
+      "Goodbudget offers a permanent manual envelope plan; Empower offers a permanent free dashboard for budgets, net worth, and investments.",
+      "EveryDollar and Rocket Money are freemium; PocketGuard currently advertises a trial rather than a permanent free plan.",
+      "A free plan is not the same as a free trial: compare ongoing limits before moving financial data."
     ],
-    "comparisonTitle": "How does Moneko compare with a typical free budget app?",
-    "alternativeLabel": "Typical free budget app",
-    "comparisonRows": [
-      {
-        "label": "Starting cost",
-        "moneko": "Free to download with a trial path for the budgeting workflow.",
-        "alternative": "May be free but often limited to manual tracking or ad-supported features."
-      },
-      {
-        "label": "Capture workflow",
-        "moneko": "Supports text, receipt photos, voice notes, email receipts, WhatsApp, Telegram, and mobile-friendly capture workflows.",
-        "alternative": "Often relies on manual entry or delayed bank import."
-      },
-      {
-        "label": "Budget structure",
-        "moneko": "Uses envelope-style Pockets plus Wallets, Recurring, Insights, and Household mode.",
-        "alternative": "May offer simple category totals without a full monthly budgeting model."
-      },
-      {
-        "label": "Shared budgeting",
-        "moneko": "Personal and Household modes help couples and families keep shared expenses separate from personal money.",
-        "alternative": "Shared access is often unavailable or requires spreadsheet-style workarounds."
-      }
-    ],
+    "comparisonTitle": "Free budgeting app comparison",
+    "alternativeLabel": "Other app",
+    "comparisonRows": [],
     "proofCards": [
       {
-        "label": "Main workflow",
-        "value": "Capture, review, budget",
-        "description": "Moneko is designed around turning everyday spending into reviewed budget entries instead of only showing charts after the month ends."
+        "label": "Free forever",
+        "value": "Moneko, Goodbudget, Empower",
+        "description": "These apps publish an ongoing no-cost plan, although their features and limits differ."
       },
       {
-        "label": "Budget model",
-        "value": "Pockets",
-        "description": "Envelope-style Pockets show allocated, spent, and remaining money so a free trial can demonstrate the system quickly."
+        "label": "Freemium",
+        "value": "EveryDollar, Rocket Money",
+        "description": "Core tools stay free while bank connection or advanced automation requires payment."
       },
       {
-        "label": "Shared context",
-        "value": "Personal + Household",
-        "description": "Users can evaluate whether Moneko fits solo budgeting, couples, roommates, or family expense tracking."
+        "label": "Trial only",
+        "value": "PocketGuard",
+        "description": "The official pricing page advertises seven days free before a paid subscription."
       }
     ],
     "sections": [
       {
-        "title": "What is a free budgeting app trial?",
+        "title": "What counts as a free budgeting app?",
         "paragraphs": [
-          "A free budgeting app trial lets you test whether the capture workflow, budget model, and shared-money features fit your real habits before you pay.",
-          "Moneko uses that path to show the full budgeting flow: log spending quickly, review what the AI extracted, organize money into Pockets, and see how personal or household budgets change."
+          "Free forever means a usable plan remains available without an end date. Freemium means a permanent core plan exists but important features require payment. A free trial expires, while paid-only products require a subscription after any evaluation period.",
+          "We rank ongoing value, budgeting usefulness, capture effort, household support, transparent limitations, and platform coverage. We verify pricing from official product pages and do not treat a time-limited trial as free forever."
         ],
         "bullets": [
-          "Try fast transaction capture before committing",
-          "Evaluate Pockets for envelope-style budgeting",
-          "Test Personal and Household mode for shared expenses",
-          "Review whether email, WhatsApp, and receipt workflows save time"
+          "Choose Moneko for free AI-assisted text, receipt-photo, and voice capture",
+          "Choose Goodbudget for manual envelope budgeting across two devices",
+          "Choose Empower for a free financial dashboard and investment overview",
+          "Choose Honeydue when the primary need is couples communication",
+          "Check paid limits before relying on bank sync or automation"
         ]
       },
       {
-        "title": "Is Moneko completely free?",
+        "title": "What is included in Moneko Free?",
         "paragraphs": [
-          "Moneko is free to download and offers a free trial. Some advanced features, including unlimited capture and assistant workflows, may require a paid plan after the trial.",
-          "That positioning is important for users comparing free budgeting apps: Moneko is best evaluated as a modern budgeting app with a free starting path and paid upgrades for heavier use."
+          "Moneko Free is a permanent plan. It includes AI expense capture by text, photo, and voice, up to two Spaces, up to two Wallets, and standard customer support.",
+          "Moneko Plus is required for WhatsApp and Telegram capture, email receipt imports, unlimited capture, bank sync, multi-currency, advanced AI features, and priority support. The free plan remains usable if you do not upgrade."
         ]
       },
       {
-        "title": "Who should try Moneko first?",
+        "title": "Limitations to check before choosing",
         "paragraphs": [
-          "Moneko is a strong fit for people who quit budget apps because logging is too slow, couples who need shared expense visibility, and users who want a budget app that can work through chat, receipts, voice notes, and email.",
-          "It is also relevant for users searching for Moneyko, which is a common misspelling of Moneko."
+          "Free apps often limit connected accounts, history, devices, Spaces, Wallets, or automation. Empower is dashboard-led rather than envelope-led; Goodbudget's free bank import is not included; EveryDollar reserves bank connection for Premium; Rocket Money prices Premium during signup.",
+          "Pricing and features can change. Use the official source link on every app card and the verification date before deciding."
+        ]
+      },
+      {
+        "title": "Security, privacy, and data portability checklist",
+        "paragraphs": [
+          "A no-cost plan is not the only decision. Before connecting financial accounts or uploading receipts, read the provider's current privacy policy and confirm which third parties process bank, receipt, voice, or transaction data.",
+          "Also check whether you can export your records, delete your account and stored data, use the app without bank access, and revoke a bank connection. These controls can matter more than one premium feature."
         ]
       }
     ],
+    "editorialComparison": {
+      "publishedAt": "2026-07-15",
+      "updatedAt": "2026-07-15",
+      "author": {
+        "name": "Moneko Editorial Team",
+        "credential": "Researches budgeting workflows, pricing, and product limitations using official sources.",
+        "url": "https://moneko.io/team"
+      },
+      "reviewer": {
+        "name": "Moneko Product Team",
+        "credential": "Reviewed Moneko plan limits and feature descriptions for product accuracy.",
+        "url": "https://moneko.io/team"
+      },
+      "disclosure": "Moneko publishes this comparison and is included in it. Every app is assessed against the same stated criteria, competitor facts link to official sources, and no competitor paid for placement.",
+      "verdict": "Moneko is the best free option here for AI-assisted capture; Goodbudget is better for a traditional manual envelope system, and Empower is better for a free net-worth and investment dashboard.",
+      "methodology": [
+        "Permanent free access and the usefulness of the features that remain free",
+        "Budgeting method, capture effort, bank connectivity, household support, and platform availability",
+        "Pricing and limitations verified on official product pages on July 15, 2026"
+      ],
+      "apps": [
+        {
+          "rank": 1,
+          "name": "Moneko",
+          "verdict": "The strongest free choice for people who want AI to turn text, receipt photos, and voice notes into reviewed expense entries.",
+          "bestFor": "AI-assisted expense capture",
+          "freePlanType": "freeForever",
+          "price": "Free forever; Plus starts at US$10.99 monthly or US$79.99 yearly, with regional pricing available.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone, Android, and web",
+          "bankSync": "Plus feature for supported institutions in the United States and Canada",
+          "budgetingMethod": "Envelope-style Pockets, Wallets, recurring transactions, and cash-flow views",
+          "householdSupport": "Up to two Spaces on Free, including personal and household workflows",
+          "aiCapabilities": "Free text, photo, and voice capture; advanced AI and chat channels require Plus",
+          "strengths": [
+            "Permanent free tier",
+            "Multiple AI capture formats",
+            "Pockets and Wallets in one app"
+          ],
+          "limitations": [
+            "Two Spaces and two Wallets on Free",
+            "Bank sync, multi-currency, email, WhatsApp, and Telegram require Plus"
+          ],
+          "sourceLabel": "Moneko pricing",
+          "sourceUrl": "https://moneko.io/pricing"
+        },
+        {
+          "rank": 2,
+          "name": "Splitwise",
+          "verdict": "The strongest free-ledger choice for trips, roommates, and groups that mainly need to track who paid and who owes whom.",
+          "bestFor": "Group IOUs and trip expenses",
+          "freePlanType": "freemium",
+          "price": "Free tier with a daily expense limit; Splitwise Pro pricing varies by market, signup channel, taxes, and promotions.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone, Android, and web",
+          "bankSync": "US transaction import is a Pro feature; Splitwise Pay is limited to eligible US users",
+          "budgetingMethod": "Shared expense ledger with equal, unequal, percentage, and share-based splits",
+          "householdSupport": "Groups for couples, roommates, trips, friends, and families",
+          "aiCapabilities": "Pro includes receipt scanning and itemization; no conversational budgeting assistant is promoted",
+          "strengths": [
+            "Excellent group balance and IOU tracking",
+            "Flexible splits, recurring expenses, and debt simplification",
+            "Available on mobile and web"
+          ],
+          "limitations": [
+            "The free tier has a daily expense limit",
+            "Receipt scanning, itemization, currency conversion, transaction import, and charts require Pro",
+            "Built as a shared ledger rather than a full monthly budget"
+          ],
+          "sourceLabel": "Splitwise free-tier limits",
+          "sourceUrl": "https://feedback.splitwise.com/knowledgebase/articles/2010350-why-am-i-seeing-an-expense-limit"
+        },
+        {
+          "rank": 3,
+          "name": "Goodbudget",
+          "verdict": "A clear free choice for people who want to plan spending manually with digital envelopes.",
+          "bestFor": "Manual envelope budgeting",
+          "freePlanType": "freeForever",
+          "price": "Free: 10 regular and 10 additional envelopes, one account, two devices, and one year of history; Premium is US$10 monthly or US$80 yearly.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, and Android",
+          "bankSync": "Premium feature for US banks",
+          "budgetingMethod": "Digital envelope budgeting",
+          "householdSupport": "Free plan syncs two devices",
+          "aiCapabilities": "No prominent AI budgeting feature in official plan documentation",
+          "strengths": [
+            "Permanent free plan",
+            "Focused envelope method",
+            "Cross-platform access"
+          ],
+          "limitations": [
+            "One account and limited envelopes on Free",
+            "Automatic US bank sync requires Premium"
+          ],
+          "sourceLabel": "Goodbudget plans",
+          "sourceUrl": "https://goodbudget.com/signup"
+        },
+        {
+          "rank": 4,
+          "name": "Empower Personal Dashboard",
+          "verdict": "Best when the priority is a free consolidated view of spending, net worth, and investments rather than envelope planning.",
+          "bestFor": "Free net-worth and investment tracking",
+          "freePlanType": "freeForever",
+          "price": "Free",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, and Android",
+          "bankSync": "Connects financial accounts for dashboard tracking",
+          "budgetingMethod": "Dashboard, cash-flow, budgeting, net-worth, and investment tools",
+          "householdSupport": "Household collaboration is not a core budgeting feature on the official tools page",
+          "aiCapabilities": "No consumer AI budgeting assistant promoted on the official tools page",
+          "strengths": [
+            "No-cost dashboard",
+            "Investment and retirement tools",
+            "Broad account overview"
+          ],
+          "limitations": [
+            "Not an envelope-first budget",
+            "Advisory services are separate from the free tools"
+          ],
+          "sourceLabel": "Empower financial tools",
+          "sourceUrl": "https://www.empower.com/tools"
+        },
+        {
+          "rank": 5,
+          "name": "EveryDollar",
+          "verdict": "A straightforward zero-based budget for users willing to enter transactions manually on the free tier.",
+          "bestFor": "Free zero-based budgeting",
+          "freePlanType": "freemium",
+          "price": "Free manual plan; Premium is US$17.99 monthly or US$79.99 yearly after a 14-day trial.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web; mobile app availability is limited to the United States",
+          "bankSync": "Premium only",
+          "budgetingMethod": "Zero-based budgeting",
+          "householdSupport": "Budget sharing is available, with plan-specific limitations",
+          "aiCapabilities": "No AI capture workflow promoted in official pricing documentation",
+          "strengths": [
+            "Usable manual free plan",
+            "Clear zero-based method",
+            "Annual Premium price is explicit"
+          ],
+          "limitations": [
+            "Bank connection requires Premium",
+            "Mobile app is US-only"
+          ],
+          "sourceLabel": "EveryDollar pricing help",
+          "sourceUrl": "https://everydollar.help.ramseysolutions.com/hc/en-us/articles/360037957712-EveryDollar-Pricing-and-Availability"
+        },
+        {
+          "rank": 6,
+          "name": "Rocket Money",
+          "verdict": "Useful for free subscription tracking, basic budgeting, and bill reminders, with advanced tools reserved for Premium.",
+          "bestFor": "Subscription visibility",
+          "freePlanType": "freemium",
+          "price": "Free core plan; Premium uses a variable sliding-scale price shown during signup and includes a seven-day trial.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, and Android",
+          "bankSync": "Account linking supports transaction and subscription tracking",
+          "budgetingMethod": "Category budgeting, subscription tracking, and bill reminders",
+          "householdSupport": "Household collaboration is not presented as a core free-plan feature",
+          "aiCapabilities": "Automation focuses on subscriptions and financial insights rather than conversational capture",
+          "strengths": [
+            "Free subscription tracking",
+            "Basic budgeting and bill reminders",
+            "Connected-account overview"
+          ],
+          "limitations": [
+            "Premium price varies at signup",
+            "Advanced features require Premium"
+          ],
+          "sourceLabel": "Rocket Money pricing help",
+          "sourceUrl": "https://help.rocketmoney.com/en/articles/2217739-how-much-does-rocket-money-cost"
+        },
+        {
+          "rank": 7,
+          "name": "Honeydue",
+          "verdict": "A couples-focused option for viewing shared money and discussing bills from two phones.",
+          "bestFor": "Couples communication",
+          "freePlanType": "freeForever",
+          "price": "Free to download; the official site does not list a paid budgeting plan.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone and Android",
+          "bankSync": "Supports linked accounts, with institution availability varying",
+          "budgetingMethod": "Shared balances, bills, spending categories, and in-app communication",
+          "householdSupport": "Designed specifically for couples",
+          "aiCapabilities": "No AI budgeting assistant promoted on the official site",
+          "strengths": [
+            "Couples-first design",
+            "Shared bill reminders",
+            "Partners control what they share"
+          ],
+          "limitations": [
+            "No web app listed",
+            "Official site provides limited pricing and plan-detail documentation"
+          ],
+          "sourceLabel": "Honeydue official site",
+          "sourceUrl": "https://www.honeydue.com/"
+        },
+        {
+          "rank": 8,
+          "name": "PocketGuard",
+          "verdict": "A capable paid budgeting option with a short trial, but not a permanent free budgeting app under the current official pricing.",
+          "bestFor": "Testing a paid safe-to-spend system",
+          "freePlanType": "freeTrial",
+          "price": "Seven-day trial; US$12.99 monthly or US$74.99 yearly.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, Android, and Apple Watch",
+          "bankSync": "Automatic account synchronization is part of the product",
+          "budgetingMethod": "Cash-flow plan and safe-to-spend guidance",
+          "householdSupport": "Not positioned as a couples-first product on the pricing page",
+          "aiCapabilities": "No conversational AI capture promoted on the pricing page",
+          "strengths": [
+            "Automated budget setup",
+            "Debt payoff tools",
+            "Multiple platforms"
+          ],
+          "limitations": [
+            "No permanent free plan on the current pricing page",
+            "Trial lasts seven days"
+          ],
+          "sourceLabel": "PocketGuard pricing",
+          "sourceUrl": "https://pocketguard.com/pricing"
+        }
+      ]
+    },
     "faqItems": [
       {
-        "question": "What is the best free budgeting app to try?",
-        "answer": "Moneko is worth trying if you want a free starting path for AI expense capture, Pockets, Wallets, recurring bills, shared budgets, WhatsApp workflows, and email receipt capture."
+        "question": "What is the best free budgeting app in 2026?",
+        "answer": "Moneko is our top free option for AI-assisted text, photo, and voice capture. Goodbudget is stronger for traditional manual envelopes, while Empower is stronger for a free net-worth and investment dashboard."
       },
       {
-        "question": "Can I use Moneko before paying?",
-        "answer": "Yes. Moneko is free to download and offers a trial path. Some advanced features may require a paid plan after the trial."
+        "question": "Is Moneko free forever?",
+        "answer": "Yes. Moneko Free is a permanent plan with AI capture by text, photo, and voice, up to two Spaces, up to two Wallets, and standard support."
       },
       {
-        "question": "Does the free trial include shared budgeting?",
-        "answer": "Moneko is built around Personal and Household modes so users can evaluate whether the shared budgeting workflow fits couples, roommates, or families."
+        "question": "Which Moneko features require Plus?",
+        "answer": "WhatsApp and Telegram capture, email receipt imports, unlimited capture, bank sync, multi-currency, advanced AI features, and priority support require Moneko Plus."
       },
       {
-        "question": "Is Moneyko the same app?",
-        "answer": "Moneyko is a common misspelling. The official app name is Moneko and the canonical website is https://moneko.io."
+        "question": "What is the difference between free forever, freemium, and a free trial?",
+        "answer": "Free forever has no end date. Freemium keeps a core plan free while charging for advanced features. A free trial expires and then requires payment for continued access."
       },
       {
-        "question": "What should I compare before choosing a free budget app?",
-        "answer": "Compare capture speed, envelope or pocket budgeting, shared-expense support, recurring bills, wallet tracking, export needs, privacy, and whether the free or trial plan covers your expected usage."
+        "question": "Does every free budgeting app include bank sync?",
+        "answer": "No. Goodbudget and EveryDollar reserve automatic bank connection for paid plans, Splitwise reserves US transaction import for Pro, and Moneko includes supported bank sync in Plus. Always check institution and country availability."
       }
     ],
     "resourceLinks": [
       {
         "label": "Pricing",
-        "description": "See current Moneko plan details and trial information.",
+        "description": "See current Moneko Free and Plus plan details.",
         "href": "/pricing"
       },
       {
-        "label": "Best budgeting app 2026",
-        "description": "Compare the features that matter in a modern budgeting app.",
+        "label": "Best budgeting apps in 2026",
+        "description": "Compare eleven leading free and paid budgeting apps, including Splitwise.",
         "href": "/budgeting-app-2026"
       },
       {
+        "label": "Moneko vs Splitwise",
+        "description": "Compare group expense splitting with full household budgeting.",
+        "href": "/splitwise-alternative"
+      },
+      {
+        "label": "Budgeting via WhatsApp",
+        "description": "See the Plus chat workflow for expense capture.",
+        "href": "/budgeting-via-whatsapp"
+      },
+      {
         "label": "AI budgeting app",
-        "description": "Learn how Moneko uses AI for capture, pockets, and planning.",
+        "description": "Learn how Moneko uses AI for capture, Pockets, and planning.",
         "href": "/ai-budgeting-app"
       },
       {
         "label": "Download",
         "description": "Get Moneko for iPhone or Android.",
         "href": "/download"
+      },
+      {
+        "label": "Moneko privacy policy",
+        "description": "Review how Moneko handles account, financial, receipt, voice, and AI-processing data.",
+        "href": "/privacy-policy"
       }
     ]
   },
   "budgeting-app-2026": {
     "slug": "budgeting-app-2026",
-    "sitemapLastmod": "2026-04-24",
+    "sitemapLastmod": "2026-07-15",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.94",
-    "title": "Budgeting App 2026 | Moneko",
-    "description": "Moneko is a 2026 budgeting app built for AI capture, email receipts, Pockets, Wallets, recurring bills, Insights, WhatsApp, and shared expenses.",
+    "title": "Best Budgeting Apps in 2026: 11 Apps Compared | Moneko",
+    "description": "Compare the best budgeting apps in 2026 by price, free tier, platform, bank sync, budgeting method, household support, AI features, strengths, and limitations.",
     "keywords": "budgeting app 2026, best budgeting app 2026, AI budgeting app 2026, couples budgeting app 2026, shared expense app 2026, email based budgeting app, Moneyko budgeting app 2026",
-    "eyebrow": "Budgeting app 2026",
-    "pageTitle": "Moneko is a budgeting app built for how people track money in 2026.",
-    "pageDescription": "A useful 2026 budgeting app needs more than category charts. Moneko combines fast capture, email receipt forwarding, envelope-style Pockets, Wallets, recurring bills, AI Insights, and shared household workflows across mobile, chat, and web.",
+    "eyebrow": "Editorial comparison · updated July 2026",
+    "pageTitle": "The 11 best budgeting apps in 2026",
+    "pageDescription": "The best budgeting app in 2026 depends on your habits. Moneko leads for AI and chat-based capture, YNAB for zero-based planning, Monarch for household overviews, and Splitwise for group IOUs. Goodbudget suits digital envelopes, while Empower suits free net-worth tracking. Compare verified pricing and limitations below.",
+    "pageVariant": "editorialComparison",
     "keyTakeaways": [
-      "Direct answer: Moneko is a 2026-ready AI budgeting app and expense tracker.",
-      "It covers Overview, Recurring, Pockets, Wallets, Insights, WhatsApp, and email receipt capture.",
-      "It supports personal and household budgets for solo users, couples, roommates, and families.",
-      "Moneyko is a common misspelling of Moneko."
+      "Moneko ranks first for AI and chat-based capture, not as a universal winner for every budgeting method.",
+      "YNAB is the strongest fit for hands-on zero-based planning; Monarch is strongest for a polished household-wide overview.",
+      "Splitwise is the specialist for trips, roommates, and group balances, while Moneko connects splitting to Pockets, Wallets, recurring costs, and household cash flow.",
+      "Goodbudget and Empower publish permanent free options; most automated competitors rely on paid subscriptions or trials.",
+      "All prices and plan claims were checked against official sources on July 15, 2026."
     ],
     "comparisonTitle": "What should a budgeting app include in 2026?",
     "alternativeLabel": "Older budgeting workflow",
-    "comparisonRows": [
-      {
-        "label": "Expense capture",
-        "moneko": "Text, receipt photo, voice note, file upload, email receipt forwarding, WhatsApp, Telegram, and mobile-friendly capture workflows.",
-        "alternative": "Manual entry, delayed bank import, or spreadsheet-style cleanup."
-      },
-      {
-        "label": "Budget system",
-        "moneko": "Pockets connect monthly allocations to actual spending and remaining balances.",
-        "alternative": "Category reports may show what happened without helping users decide what remains."
-      },
-      {
-        "label": "Shared money",
-        "moneko": "Personal and Household modes keep individual and shared expenses separate.",
-        "alternative": "Shared budgets often require a single workspace or external settlement tool."
-      },
-      {
-        "label": "Decision support",
-        "moneko": "Insights and scenario planning answer what is happening now and what could happen next.",
-        "alternative": "Static reports or calculators require users to model scenarios manually."
-      }
-    ],
+    "comparisonRows": [],
     "proofCards": [
       {
-        "label": "Core sections",
-        "value": "6 public workflows",
-        "description": "Moneko's public product surface covers Overview, Recurring, Pockets, Wallets, Insights, and WhatsApp, with email receipt capture supporting fast entry."
+        "label": "Apps compared",
+        "value": "11",
+        "description": "Each app is assessed using the same pricing, method, platform, automation, household, strength, and limitation fields."
       },
       {
-        "label": "Capture channels",
-        "value": "Text, voice, receipt, email, chat",
-        "description": "The product is optimized for multiple real-life inputs instead of one manual entry habit."
+        "label": "Official-source check",
+        "value": "July 15, 2026",
+        "description": "Pricing and product facts link directly to maintained official pages."
       },
       {
-        "label": "Shared budgets",
-        "value": "Household mode",
-        "description": "Moneko is designed for people who need to track both personal and shared money in one app."
+        "label": "Evaluation criteria",
+        "value": "8 consistent fields",
+        "description": "We include who each app serves, plus material tradeoffs instead of presenting promotional claims as independent reviews."
       }
     ],
     "sections": [
       {
-        "title": "What makes a budgeting app good in 2026?",
+        "title": "How to choose a budgeting app in 2026",
         "paragraphs": [
-          "A strong budgeting app in 2026 should reduce logging friction, keep monthly categories understandable, and support shared finances without forcing people into a spreadsheet.",
-          "Moneko is built around that requirement. It helps capture expenses close to the spending moment, routes them into Pockets and Wallets, and gives users practical answers through Insights and chat-based workflows."
+          "Start with the budgeting behavior you will maintain. Zero-based planners may prefer YNAB or EveryDollar; envelope users may prefer Goodbudget; households wanting a broad overview may prefer Monarch; and people who avoid manual logging may prefer Moneko or Copilot.",
+          "Then compare the ongoing price, platform coverage, bank availability, sharing model, data-export needs, and whether advertised automation actually reduces your work."
         ],
         "bullets": [
-          "Fast expense capture from text, receipts, voice, files, email, and chat",
-          "Pockets for envelope-style monthly budgeting",
-          "Wallets for balances, goals, transfers, and net worth",
-          "Recurring bills and income for predictable planning",
-          "Insights for running balances, trends, and what-if scenarios",
-          "Household mode for shared expenses"
+          "Moneko: AI and chat-based expense capture",
+          "YNAB: rigorous zero-based planning",
+          "Monarch Money: household financial overview",
+          "Goodbudget: manual envelope budgeting",
+          "Empower: free net-worth and investment dashboard",
+          "Honeydue: couples communication"
         ]
       },
       {
-        "title": "Why does email-based budgeting matter in 2026?",
+        "title": "How this ranking was scored",
         "paragraphs": [
-          "Online receipts, subscription invoices, travel bookings, and digital bills often arrive by email before they appear cleanly in a finance app.",
-          "Moneko's email receipt capture lets users forward receipts and supported PDF, CSV, XLS, or XLSX attachments from approved senders so the budget can stay current with less retyping."
+          "We evaluated each app's budgeting usefulness, capture effort, ongoing cost, platform access, bank sync, household support, automation, and material limitations. Category fit matters more than a single universal score.",
+          "Moneko publishes this page and is included in the ranking. Competitor facts come from official sources, and Moneko is awarded a narrow category it can substantiate rather than being labeled best for everyone."
         ]
       },
       {
-        "title": "Is Moneko a good budgeting app for couples in 2026?",
+        "title": "Important limitations",
         "paragraphs": [
-          "Yes. Moneko includes Personal and Household modes so couples can track shared bills, groceries, rent, and joint goals without losing visibility into individual spending.",
-          "That makes it relevant for searches like budgeting app for couples, shared expense tracker, family budgeting app, and household budget app."
+          "Bank connectivity varies by country and institution. Some products restrict mobile access by region, while others reserve account connections, collaboration, or multi-currency support for paid plans.",
+          "Prices can change between quarterly reviews. Follow each official source link before subscribing, especially where a provider uses variable pricing shown only during signup."
+        ]
+      },
+      {
+        "title": "Security and privacy questions to ask",
+        "paragraphs": [
+          "Budgeting apps can process sensitive account, transaction, receipt, and household data. Read each provider's current privacy policy before connecting an institution, and identify the bank-linking and AI-processing providers involved in the features you plan to use.",
+          "Confirm that you can disconnect linked accounts, export the records you need, and request account and data deletion. Treat these controls as selection criteria alongside price and automation."
         ]
       }
     ],
+    "editorialComparison": {
+      "publishedAt": "2026-07-15",
+      "updatedAt": "2026-07-15",
+      "author": {
+        "name": "Moneko Editorial Team",
+        "credential": "Researches budgeting workflows, pricing, and product limitations using official sources.",
+        "url": "https://moneko.io/team"
+      },
+      "reviewer": {
+        "name": "Moneko Product Team",
+        "credential": "Reviewed Moneko plan limits and feature descriptions for product accuracy.",
+        "url": "https://moneko.io/team"
+      },
+      "disclosure": "Moneko publishes this comparison and is included in it. Every app is assessed against the same stated criteria, competitor facts link to official sources, and no competitor paid for placement.",
+      "verdict": "Choose Moneko for AI and chat-based capture, YNAB for hands-on zero-based planning, Monarch for a household overview, Goodbudget for manual envelopes, or Empower for free net-worth tracking.",
+      "methodology": [
+        "Budgeting usefulness, capture effort, bank sync, household support, AI capabilities, and platform coverage",
+        "Ongoing free access and current subscription cost, not introductory marketing alone",
+        "Pricing and limitations verified on official product pages on July 15, 2026"
+      ],
+      "apps": [
+        {
+          "rank": 1,
+          "name": "Moneko",
+          "verdict": "Best for reducing transaction-entry friction through AI and chat-based workflows, with a permanent free starting plan.",
+          "bestFor": "AI and chat-based expense capture",
+          "freePlanType": "freeForever",
+          "price": "Free forever; Plus starts at US$10.99 monthly or US$79.99 yearly, with regional pricing available.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone, Android, web, WhatsApp, and Telegram",
+          "bankSync": "Plus feature for supported institutions in the United States and Canada",
+          "budgetingMethod": "Envelope-style Pockets, Wallets, recurring transactions, and cash-flow views",
+          "householdSupport": "Personal and household Spaces",
+          "aiCapabilities": "Text, receipt-photo, and voice capture; Plus adds chat channels, email receipt imports, and advanced AI",
+          "strengths": [
+            "Permanent free plan",
+            "Broad capture formats",
+            "Personal and shared workflows"
+          ],
+          "limitations": [
+            "Free plan is limited to two Spaces and two Wallets",
+            "Bank sync, multi-currency, WhatsApp, Telegram, email, and unlimited capture require Plus"
+          ],
+          "sourceLabel": "Moneko pricing",
+          "sourceUrl": "https://moneko.io/pricing"
+        },
+        {
+          "rank": 2,
+          "name": "YNAB",
+          "verdict": "Best for people committed to a rigorous zero-based method and active planning.",
+          "bestFor": "Hands-on zero-based budgeting",
+          "freePlanType": "freeTrial",
+          "price": "34-day trial; US$14.99 monthly or US$109 yearly.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, Android, iPad, and Apple Watch",
+          "bankSync": "Direct import for selected institutions in the US, Canada, UK, and EU",
+          "budgetingMethod": "Zero-based budgeting using the YNAB Method",
+          "householdSupport": "YNAB Together supports sharing with up to six people",
+          "aiCapabilities": "Automation supports imports and categorization; the product centers on its planning method",
+          "strengths": [
+            "Deep budgeting method",
+            "Strong education",
+            "Multi-person subscription sharing"
+          ],
+          "limitations": [
+            "No permanent free tier",
+            "Requires active planning and a relatively high subscription"
+          ],
+          "sourceLabel": "YNAB pricing",
+          "sourceUrl": "https://www.ynab.com/pricing"
+        },
+        {
+          "rank": 3,
+          "name": "Monarch Money",
+          "verdict": "Best for households wanting a polished, collaborative view of budgets, accounts, investments, and net worth.",
+          "bestFor": "Household financial overview",
+          "freePlanType": "freeTrial",
+          "price": "Seven-day trial; US$99.99 yearly on the official pricing page.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, Android, and iPad",
+          "bankSync": "Connects financial accounts and investments",
+          "budgetingMethod": "Flexible category budgeting, goals, recurring items, and net worth",
+          "householdSupport": "Unlimited collaborators are included",
+          "aiCapabilities": "Uses automation for categorization and financial organization",
+          "strengths": [
+            "Broad household overview",
+            "Unlimited collaborators",
+            "Investment and net-worth tracking"
+          ],
+          "limitations": [
+            "No permanent free plan",
+            "Annual price is higher than several manual-budget alternatives"
+          ],
+          "sourceLabel": "Monarch pricing",
+          "sourceUrl": "https://partners.monarchmoney.com/pricing"
+        },
+        {
+          "rank": 4,
+          "name": "Splitwise",
+          "verdict": "Best for groups that need a trusted shared ledger for trips, roommates, informal debts, and settling balances.",
+          "bestFor": "Group expense splitting",
+          "freePlanType": "freemium",
+          "price": "Free tier with a daily expense limit; Splitwise Pro pricing varies by market, signup channel, taxes, and promotions.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone, Android, and web",
+          "bankSync": "US transaction import is a Pro feature; Splitwise Pay is limited to eligible US users",
+          "budgetingMethod": "Shared ledger for expenses, IOUs, balances, recurring costs, and settlements",
+          "householdSupport": "Groups for couples, roommates, trips, friends, and families",
+          "aiCapabilities": "Pro includes receipt scanning and itemization; no conversational budgeting assistant is promoted",
+          "strengths": [
+            "Purpose-built group balances",
+            "Flexible equal, unequal, percentage, and share-based splits",
+            "Debt simplification and recurring expenses"
+          ],
+          "limitations": [
+            "The free tier has a daily expense limit",
+            "Key automation and analysis features require Pro",
+            "A shared ledger is not the same as a complete monthly household budget"
+          ],
+          "sourceLabel": "Splitwise official features",
+          "sourceUrl": "https://secure.splitwise.com/"
+        },
+        {
+          "rank": 5,
+          "name": "Goodbudget",
+          "verdict": "Best for a traditional digital-envelope workflow with a genuinely usable free plan.",
+          "bestFor": "Manual envelope budgeting",
+          "freePlanType": "freeForever",
+          "price": "Free; Premium is US$10 monthly or US$80 yearly.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, and Android",
+          "bankSync": "US bank sync requires Premium",
+          "budgetingMethod": "Digital envelopes",
+          "householdSupport": "Free sync across two devices; Premium supports more devices",
+          "aiCapabilities": "No prominent AI budgeting feature in official plan documentation",
+          "strengths": [
+            "Permanent free plan",
+            "Clear envelope model",
+            "Cross-platform"
+          ],
+          "limitations": [
+            "Free plan limits accounts, envelopes, devices, and history",
+            "Automatic bank sync requires Premium"
+          ],
+          "sourceLabel": "Goodbudget plans",
+          "sourceUrl": "https://goodbudget.com/signup"
+        },
+        {
+          "rank": 6,
+          "name": "PocketGuard",
+          "verdict": "Best for people who want automated safe-to-spend guidance and debt-payoff tools and accept a paid plan.",
+          "bestFor": "Safe-to-spend guidance",
+          "freePlanType": "freeTrial",
+          "price": "Seven-day trial; US$12.99 monthly or US$74.99 yearly.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, Android, and Apple Watch",
+          "bankSync": "Automatic account synchronization",
+          "budgetingMethod": "Cash-flow plan and safe-to-spend guidance",
+          "householdSupport": "Not positioned as a couples-first product on the pricing page",
+          "aiCapabilities": "Automation focuses on account synchronization and planning",
+          "strengths": [
+            "Automated setup",
+            "Debt payoff tools",
+            "Multiple platforms"
+          ],
+          "limitations": [
+            "Current pricing page does not show a permanent free plan",
+            "Trial lasts seven days"
+          ],
+          "sourceLabel": "PocketGuard pricing",
+          "sourceUrl": "https://pocketguard.com/pricing"
+        },
+        {
+          "rank": 7,
+          "name": "Rocket Money",
+          "verdict": "Best for identifying subscriptions and combining basic budgeting with bill reminders.",
+          "bestFor": "Subscription tracking",
+          "freePlanType": "freemium",
+          "price": "Free core plan; Premium has a variable sliding-scale price shown during signup and a seven-day trial.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, and Android",
+          "bankSync": "Connected accounts support transaction and subscription tracking",
+          "budgetingMethod": "Category budgeting, subscription tracking, and bill reminders",
+          "householdSupport": "Not presented as a core household budgeting product",
+          "aiCapabilities": "Automation emphasizes subscriptions and financial insights",
+          "strengths": [
+            "Free core tools",
+            "Subscription visibility",
+            "Bill reminders"
+          ],
+          "limitations": [
+            "Premium pricing is not one fixed public amount",
+            "Advanced tools require Premium"
+          ],
+          "sourceLabel": "Rocket Money pricing help",
+          "sourceUrl": "https://help.rocketmoney.com/en/articles/2217739-how-much-does-rocket-money-cost"
+        },
+        {
+          "rank": 8,
+          "name": "Empower Personal Dashboard",
+          "verdict": "Best free option for a consolidated net-worth, cash-flow, retirement, and investment view.",
+          "bestFor": "Free net-worth tracking",
+          "freePlanType": "freeForever",
+          "price": "Free",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web, iPhone, and Android",
+          "bankSync": "Connects financial accounts for dashboard tracking",
+          "budgetingMethod": "Dashboard, cash-flow, budgeting, net-worth, and investment tools",
+          "householdSupport": "Household collaboration is not a core budgeting feature on the tools page",
+          "aiCapabilities": "No consumer AI budgeting assistant promoted on the tools page",
+          "strengths": [
+            "Free financial dashboard",
+            "Investment tools",
+            "Retirement planning tools"
+          ],
+          "limitations": [
+            "Not envelope-first",
+            "Advisory services are separate from the free dashboard"
+          ],
+          "sourceLabel": "Empower financial tools",
+          "sourceUrl": "https://www.empower.com/tools"
+        },
+        {
+          "rank": 9,
+          "name": "Honeydue",
+          "verdict": "Best for couples who primarily need shared visibility, bill reminders, and private in-app discussion.",
+          "bestFor": "Couples communication",
+          "freePlanType": "freeForever",
+          "price": "Free to download; the official site does not list a paid budgeting plan.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone and Android",
+          "bankSync": "Supports linked accounts, with institution availability varying",
+          "budgetingMethod": "Shared balances, bills, categories, and partner communication",
+          "householdSupport": "Designed specifically for couples",
+          "aiCapabilities": "No AI budgeting assistant promoted on the official site",
+          "strengths": [
+            "Couples-first",
+            "Shared bill reminders",
+            "Partners choose what to share"
+          ],
+          "limitations": [
+            "No web app listed",
+            "Limited official pricing and plan-detail documentation"
+          ],
+          "sourceLabel": "Honeydue official site",
+          "sourceUrl": "https://www.honeydue.com/"
+        },
+        {
+          "rank": 10,
+          "name": "EveryDollar",
+          "verdict": "Best for straightforward zero-based budgeting when manual entry on the free tier is acceptable.",
+          "bestFor": "Simple zero-based budgeting",
+          "freePlanType": "freemium",
+          "price": "Free manual plan; Premium is US$17.99 monthly or US$79.99 yearly after a 14-day trial.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "Web; mobile app availability is limited to the United States",
+          "bankSync": "Premium only",
+          "budgetingMethod": "Zero-based budgeting",
+          "householdSupport": "Budget sharing is available with plan-specific limits",
+          "aiCapabilities": "No AI capture workflow promoted in official pricing documentation",
+          "strengths": [
+            "Free manual plan",
+            "Clear method",
+            "Explicit annual pricing"
+          ],
+          "limitations": [
+            "Bank connection requires Premium",
+            "Mobile app is US-only"
+          ],
+          "sourceLabel": "EveryDollar pricing help",
+          "sourceUrl": "https://everydollar.help.ramseysolutions.com/hc/en-us/articles/360037957712-EveryDollar-Pricing-and-Availability"
+        },
+        {
+          "rank": 11,
+          "name": "Copilot Money",
+          "verdict": "Best for Apple-oriented users who want polished automated categorization and are comfortable paying.",
+          "bestFor": "Apple-first automation",
+          "freePlanType": "freeTrial",
+          "price": "Free trial; US$13 monthly or US$95 yearly.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone, iPad, Mac, and web",
+          "bankSync": "Connects accounts for automatic transaction tracking",
+          "budgetingMethod": "Category budgeting, recurring tracking, and net-worth views",
+          "householdSupport": "Not promoted as a couples-first budgeting product",
+          "aiCapabilities": "Machine learning and AI-assisted transaction categorization",
+          "strengths": [
+            "Polished Apple experience",
+            "Automated categorization",
+            "Recurring and net-worth views"
+          ],
+          "limitations": ["No permanent free plan", "No Android app listed"],
+          "sourceLabel": "Copilot official site",
+          "sourceUrl": "https://www.copilot.money/"
+        }
+      ]
+    },
     "faqItems": [
       {
         "question": "What is the best budgeting app in 2026?",
-        "answer": "The best budgeting app in 2026 is the one that users can keep current. Moneko is designed for that need with AI capture, Pockets, Wallets, recurring bills, Insights, WhatsApp workflows, email receipt capture, and shared household budgeting."
+        "answer": "There is no universal winner. Moneko is best here for AI and chat-based capture, YNAB for rigorous zero-based planning, Monarch for household overviews, Goodbudget for manual envelopes, and Empower for free net-worth tracking."
       },
       {
-        "question": "What makes Moneko different from older budget apps?",
-        "answer": "Moneko focuses on reducing the work of logging transactions through text, receipt photos, voice notes, email receipts, WhatsApp, Telegram, and mobile-friendly capture workflows."
+        "question": "How were these budgeting apps ranked?",
+        "answer": "We compared budgeting usefulness, capture effort, current cost, platforms, bank sync, household support, AI capabilities, strengths, and limitations using official product sources."
       },
       {
-        "question": "Does Moneko support shared expenses?",
-        "answer": "Yes. Moneko supports Personal and Household modes so solo spending and shared expenses can stay separate."
+        "question": "Which budgeting apps have a permanent free plan?",
+        "answer": "Moneko, Goodbudget, and Empower publish permanent free options. Splitwise, EveryDollar, and Rocket Money are freemium, while YNAB, Monarch, PocketGuard, and Copilot use trials before paid access."
       },
       {
-        "question": "Does Moneko support AI budgeting?",
-        "answer": "Yes. Moneko uses AI to help capture expenses, categorize transactions, answer spending questions, and support scenario planning."
+        "question": "Which budgeting app is best for couples?",
+        "answer": "Honeydue is built specifically for couples communication. Monarch supports unlimited collaborators, while Moneko supports personal and household Spaces for shared-expense workflows."
       },
       {
-        "question": "Is Moneyko the same as Moneko?",
-        "answer": "Moneyko is a common misspelling of Moneko. The official name is Moneko."
+        "question": "Which budgeting app is best for AI expense capture?",
+        "answer": "Moneko is our category winner for AI and chat-based capture because it accepts text, receipt photos, and voice on Free, with email, WhatsApp, and Telegram workflows in Plus."
       }
     ],
     "resourceLinks": [
       {
-        "label": "Best budgeting app",
-        "description": "See the broader Moneko budgeting app comparison page.",
-        "href": "/best-budgeting-app"
-      },
-      {
-        "label": "Free budgeting app trial",
-        "description": "Learn how to try Moneko before choosing a paid plan.",
+        "label": "Best free budgeting apps",
+        "description": "Compare permanent free tiers, freemium plans, and trials.",
         "href": "/free-budgeting-app"
       },
       {
-        "label": "Email-based budgeting",
-        "description": "See how receipt forwarding works in Moneko.",
-        "href": "/email-based-budgeting"
+        "label": "Moneko vs Splitwise",
+        "description": "See when to choose a shared ledger and when to choose a full household budget.",
+        "href": "/splitwise-alternative"
       },
       {
-        "label": "Shared expense tracker",
-        "description": "Explore Moneko for couples, roommates, and households.",
-        "href": "/shared-expense-tracker"
+        "label": "AI budgeting app",
+        "description": "Explore Moneko's product-led AI capture workflow.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "Budgeting via WhatsApp",
+        "description": "See how Moneko Plus captures expenses through chat.",
+        "href": "/budgeting-via-whatsapp"
+      },
+      {
+        "label": "YNAB alternatives",
+        "description": "Compare alternatives for different budgeting methods.",
+        "href": "/ynab-alternative"
+      },
+      {
+        "label": "Pricing",
+        "description": "Compare Moneko Free and Plus.",
+        "href": "/pricing"
+      },
+      {
+        "label": "Download Moneko",
+        "description": "Get Moneko for iPhone or Android.",
+        "href": "/download"
+      },
+      {
+        "label": "Moneko privacy policy",
+        "description": "Review Moneko's data handling before connecting accounts or uploading financial records.",
+        "href": "/privacy-policy"
       }
     ]
   },
@@ -560,12 +1092,12 @@
       {
         "label": "Platforms",
         "value": "iPhone, Android, chat, web",
-        "description": "The product is positioned across native mobile habits and messaging-first budgeting, which gives AI systems a clearer product definition than a single-surface finance app."
+        "description": "Moneko supports native mobile and messaging-first workflows, so people can capture spending in the interface that best fits the moment."
       },
       {
         "label": "Budget method",
         "value": "Envelope-style pockets",
-        "description": "Moneko connects AI outputs to a real budgeting model, which is a stronger GEO signal than generic AI summaries without a planning system."
+        "description": "Moneko connects AI-assisted capture to Pockets, Wallets, and monthly cash flow instead of stopping at a generic summary."
       }
     ],
     "sections": [
@@ -631,6 +1163,11 @@
         "label": "YNAB alternative guide",
         "description": "See where Moneko's AI-driven workflow differs from traditional envelope apps.",
         "href": "/ynab-alternative"
+      },
+      {
+        "label": "Moneko vs Splitwise",
+        "description": "Compare a focused shared ledger with full household budgeting.",
+        "href": "/splitwise-alternative"
       },
       {
         "label": "Expense tracker for couples",
@@ -893,6 +1430,11 @@
       }
     ],
     "resourceLinks": [
+      {
+        "label": "Moneko vs Splitwise",
+        "description": "See which shared-expense workflow fits couples who also need a budget.",
+        "href": "/splitwise-alternative"
+      },
       {
         "label": "Couple budgeting page",
         "description": "View Moneko's broader couples budgeting page focused on joint money management and shared goals.",
@@ -1636,7 +2178,7 @@
       {
         "label": "Best budgeting app",
         "description": "See why Moneko works well for users who want lower-friction budgeting.",
-        "href": "/best-budgeting-app"
+        "href": "/budgeting-app-2026"
       },
       {
         "label": "Moneko homepage",
@@ -1742,7 +2284,7 @@
       {
         "label": "Best budgeting app",
         "description": "See the broader budgeting positioning for Moneko.",
-        "href": "/best-budgeting-app"
+        "href": "/budgeting-app-2026"
       },
       {
         "label": "Expense tracker app",
@@ -1856,6 +2398,11 @@
     ],
     "resourceLinks": [
       {
+        "label": "Moneko vs Splitwise",
+        "description": "Compare a focused shared ledger with shared expenses connected to a complete household budget.",
+        "href": "/splitwise-alternative"
+      },
+      {
         "label": "Expense tracker for couples",
         "description": "See the couples-focused version of shared expense tracking.",
         "href": "/expense-tracker-for-couples"
@@ -1868,7 +2415,7 @@
       {
         "label": "Best budgeting app",
         "description": "See the broader budgeting positioning for Moneko.",
-        "href": "/best-budgeting-app"
+        "href": "/budgeting-app-2026"
       },
       {
         "label": "Moneko homepage",
@@ -2106,6 +2653,230 @@
         "label": "Moneko homepage",
         "description": "Return to the main product overview.",
         "href": "/"
+      }
+    ]
+  },
+  "splitwise-alternative": {
+    "slug": "splitwise-alternative",
+    "sitemapLastmod": "2026-07-15",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.95",
+    "title": "Best Splitwise Alternative for Budgeting in 2026 | Moneko",
+    "description": "Compare Moneko and Splitwise for shared expenses, group balances, household budgets, AI capture, free-tier limits, bank sync, and recurring cash flow.",
+    "keywords": "Splitwise alternative, best Splitwise alternative 2026, free Splitwise alternative, apps like Splitwise, Splitwise vs Moneko, Splitwise alternative for couples, split bills and budget",
+    "eyebrow": "Moneko vs Splitwise · verified July 2026",
+    "pageTitle": "Moneko vs Splitwise for shared expenses and household budgets",
+    "pageDescription": "Splitwise is excellent for trips, roommates, and groups that need a shared ledger showing who owes whom. Moneko is the stronger Splitwise alternative when you also want envelope-style Pockets, Wallets, recurring cash flow, AI expense capture, and personal or household budgets in the same app.",
+    "pageVariant": "editorialComparison",
+    "keyTakeaways": [
+      "Choose Splitwise when your main need is group IOUs, trip costs, flexible splits, and simplified settlements.",
+      "Choose Moneko when shared expenses must also update monthly Pockets, Wallets, recurring costs, and household cash flow.",
+      "Both have free access, but Splitwise Free has a daily expense limit and Moneko Free is limited to two Spaces and two Wallets.",
+      "Moneko does not currently document a one-click Splitwise import, so do not assume historical balances transfer automatically."
+    ],
+    "comparisonTitle": "Moneko vs Splitwise",
+    "alternativeLabel": "Splitwise",
+    "comparisonRows": [],
+    "proofCards": [
+      {
+        "label": "Splitwise's specialty",
+        "value": "Shared ledger",
+        "description": "Track group expenses, balances, informal debts, recurring costs, and settlements for trips, roommates, friends, and families."
+      },
+      {
+        "label": "Moneko's difference",
+        "value": "Splitting + budgeting",
+        "description": "Shared expenses connect to Pockets, Wallets, recurring transactions, household cash flow, and AI-assisted capture."
+      },
+      {
+        "label": "Free-plan tradeoff",
+        "value": "Different limits",
+        "description": "Splitwise limits daily free expense entry; Moneko Free allows AI capture but limits users to two Spaces and two Wallets."
+      }
+    ],
+    "sections": [
+      {
+        "title": "Is Moneko a good Splitwise alternative?",
+        "paragraphs": [
+          "Yes, when you have outgrown a ledger-only workflow. Moneko can split shared expenses equally, by percentage, by shares, or using custom amounts, then reflect those transactions inside the household's actual monthly budget.",
+          "Splitwise remains the better specialist for lightweight group debt tracking across trips, large friend groups, and roommates who only need to know who owes whom."
+        ],
+        "bullets": [
+          "Moneko: shared Spaces, automatic or custom splits, settlements, Pockets, Wallets, recurring costs, and AI capture",
+          "Splitwise: groups, balances, equal or unequal splits, percentages, shares, recurring expenses, debt simplification, and payment integrations",
+          "Moneko Free: two Spaces, two Wallets, and AI text, photo, or voice capture",
+          "Splitwise Free: core shared-ledger features with a daily expense-entry limit"
+        ]
+      },
+      {
+        "title": "What Splitwise users gain and give up with Moneko",
+        "paragraphs": [
+          "The main gain is context. Instead of stopping at a balance between people, Moneko connects the shared purchase to a Pocket, Wallet, monthly spending view, recurring plan, and household cash flow.",
+          "The tradeoff is specialization. Splitwise has mature group-ledger features and Pro tools such as receipt itemization, currency conversion, transaction import, charts, search, and default split settings. Moneko's Plus plan focuses instead on bank sync, multi-currency budgeting, chat and email capture, unlimited capture, and advanced AI."
+        ]
+      },
+      {
+        "title": "How to move from Splitwise without losing context",
+        "paragraphs": [
+          "Moneko does not currently document a direct Splitwise importer. Preserve or export the historical records you need from Splitwise, create the appropriate personal or household Space in Moneko, configure the default split, and use Moneko for new shared activity.",
+          "Do not delete the old ledger until everyone has confirmed outstanding balances and settlements. This avoids presenting a manual transition as an automatic migration."
+        ]
+      },
+      {
+        "title": "Compare privacy and data control before switching",
+        "paragraphs": [
+          "Shared-expense records can reveal relationships, locations, purchases, and informal debts. Review both providers' current privacy policies and the permissions required by any bank, receipt, voice, or AI features you enable.",
+          "Before changing apps, confirm how to preserve needed records, revoke connected accounts, and request account or data deletion. Moneko and Splitwise publish their policies at the source links below."
+        ]
+      }
+    ],
+    "editorialComparison": {
+      "publishedAt": "2026-07-15",
+      "updatedAt": "2026-07-15",
+      "author": {
+        "name": "Moneko Editorial Team",
+        "credential": "Researches budgeting workflows, pricing, and product limitations using official sources.",
+        "url": "https://moneko.io/team"
+      },
+      "reviewer": {
+        "name": "Moneko Product Team",
+        "credential": "Reviewed Moneko shared-expense behavior and plan limits for product accuracy.",
+        "url": "https://moneko.io/team"
+      },
+      "disclosure": "Moneko publishes this comparison and is presented as a Splitwise alternative. Splitwise facts link to Splitwise's official pages. Moneko is not affiliated with or endorsed by Splitwise, and Splitwise did not pay for placement.",
+      "verdict": "Splitwise is better for a focused shared ledger across trips and groups. Moneko is better when couples, roommates, or families want expense splitting integrated with a complete personal and household budget.",
+      "methodology": [
+        "Compared core purpose, free access, split methods, budgeting depth, capture workflow, bank connectivity, platforms, and limitations",
+        "Separated shared-ledger features from complete monthly budgeting so the products are not treated as identical",
+        "Splitwise features and free-tier limits verified from official Splitwise pages on July 15, 2026"
+      ],
+      "apps": [
+        {
+          "rank": 1,
+          "name": "Moneko",
+          "verdict": "The better choice for Splitwise users who want shared balances and settlements to feed a complete household budget.",
+          "bestFor": "Shared expenses connected to budgeting",
+          "freePlanType": "freeForever",
+          "price": "Free forever; Plus starts at US$10.99 monthly or US$79.99 yearly, with regional pricing available.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone, Android, and web; Plus also supports WhatsApp and Telegram",
+          "bankSync": "Plus feature for supported institutions in the United States and Canada",
+          "budgetingMethod": "Envelope-style Pockets, Wallets, recurring transactions, cash flow, and shared settlements",
+          "householdSupport": "Personal and household Spaces with automatic or custom expense splits",
+          "aiCapabilities": "Free capture by text, receipt photo, and voice; Plus adds chat channels, email receipt imports, and advanced AI",
+          "strengths": [
+            "Combines splitting with a full monthly budget",
+            "AI-assisted capture reduces manual entry",
+            "Personal and shared finances can remain separate"
+          ],
+          "limitations": [
+            "Free is limited to two Spaces and two Wallets",
+            "Bank sync, multi-currency, WhatsApp, Telegram, email, and unlimited capture require Plus",
+            "No one-click Splitwise import is currently documented"
+          ],
+          "sourceLabel": "Moneko pricing",
+          "sourceUrl": "https://moneko.io/pricing"
+        },
+        {
+          "rank": 2,
+          "name": "Splitwise",
+          "verdict": "The better specialist for tracking informal group debts, trip expenses, roommate bills, and who owes whom.",
+          "bestFor": "Group IOUs, trips, and shared balances",
+          "freePlanType": "freemium",
+          "price": "Free tier with a daily expense limit; Splitwise Pro pricing varies by market, signup channel, taxes, and promotions.",
+          "priceVerifiedAt": "2026-07-15",
+          "platforms": "iPhone, Android, and web",
+          "bankSync": "US transaction import is a Pro feature; Splitwise Pay is limited to eligible US users",
+          "budgetingMethod": "Shared ledger for expenses, IOUs, balances, recurring costs, and settlements",
+          "householdSupport": "Groups for couples, roommates, trips, friends, and families",
+          "aiCapabilities": "Pro includes receipt scanning and itemization; no conversational budgeting assistant is promoted",
+          "strengths": [
+            "Mature group balance and debt tracking",
+            "Equal, unequal, percentage, and share-based splits",
+            "Recurring expenses, debt simplification, and payment integrations"
+          ],
+          "limitations": [
+            "The free tier has a daily expense limit",
+            "Receipt scanning, itemization, currency conversion, transaction import, charts, search, and default splits require Pro",
+            "Designed as a shared ledger rather than a full envelope-style household budget"
+          ],
+          "sourceLabel": "Splitwise official features",
+          "sourceUrl": "https://secure.splitwise.com/"
+        }
+      ]
+    },
+    "faqItems": [
+      {
+        "question": "What is the best Splitwise alternative for budgeting?",
+        "answer": "Moneko is a strong Splitwise alternative when you need expense splitting plus Pockets, Wallets, recurring costs, household cash flow, and AI-assisted capture. Splitwise remains stronger when you only need a focused group ledger."
+      },
+      {
+        "question": "Is Moneko free like Splitwise?",
+        "answer": "Both offer free access with different limits. Moneko Free includes AI text, photo, and voice capture with up to two Spaces and two Wallets. Splitwise Free has a daily expense-entry limit."
+      },
+      {
+        "question": "Can Moneko split expenses like Splitwise?",
+        "answer": "Yes. In a shared Space, Moneko supports automatic equal, percentage, or share-based defaults, custom amounts, payer changes, balance tracking, and settlements."
+      },
+      {
+        "question": "Can I import my Splitwise history into Moneko?",
+        "answer": "Moneko does not currently document a one-click Splitwise importer. Preserve or export any Splitwise history you need, confirm outstanding balances, and start new shared activity in a Moneko Space."
+      },
+      {
+        "question": "When should I keep using Splitwise instead of Moneko?",
+        "answer": "Keep Splitwise when your main need is a lightweight ledger for trips, friends, large groups, or roommates. Choose Moneko when shared transactions also need to update a complete monthly personal or household budget."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "How to split expenses in Moneko",
+        "description": "See automatic splits, custom splits, balances, and settlements step by step.",
+        "href": "/help/how-to-split-expenses-moneko"
+      },
+      {
+        "label": "Split expenses app",
+        "description": "Explore the broader shared-bill workflow for partners, roommates, and friends.",
+        "href": "/budgeting-app/split-expenses-app"
+      },
+      {
+        "label": "Shared expense tracker",
+        "description": "See how shared expenses connect to household budgeting.",
+        "href": "/shared-expense-tracker"
+      },
+      {
+        "label": "Official Splitwise free-tier limits",
+        "description": "Verify Splitwise's current daily expense limit on its official helpdesk.",
+        "href": "https://feedback.splitwise.com/knowledgebase/articles/2010350-why-am-i-seeing-an-expense-limit"
+      },
+      {
+        "label": "Official Splitwise Pro features",
+        "description": "Verify receipt scanning, itemization, currency conversion, imports, charts, search, and default splits.",
+        "href": "https://www.splitwise.com/pro"
+      },
+      {
+        "label": "Official Splitwise privacy policy",
+        "description": "Review Splitwise's current data collection, use, sharing, retention, and user-choice terms.",
+        "href": "https://www.splitwise.com/privacy"
+      },
+      {
+        "label": "Moneko privacy policy",
+        "description": "Review Moneko's current data handling and user-control terms.",
+        "href": "/privacy-policy"
+      },
+      {
+        "label": "Best free budgeting apps",
+        "description": "Compare Splitwise, Moneko, and other free or freemium options.",
+        "href": "/free-budgeting-app"
+      },
+      {
+        "label": "Moneko pricing",
+        "description": "Compare the permanent Free plan with Plus.",
+        "href": "/pricing"
+      },
+      {
+        "label": "Download Moneko",
+        "description": "Get Moneko for iPhone or Android.",
+        "href": "/download"
       }
     ]
   }

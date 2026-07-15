@@ -38,6 +38,7 @@ import {
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { HomeHeader } from "@/components/index/header";
+import { BudgetingComparisonLinks } from "@/components/geo/budgeting-comparison-links";
 
 const META_TITLE =
   "AI Financial Assistant & Expense Forecasting | Moneko Insights";
@@ -295,7 +296,7 @@ export function AIInsightsRouteComponent() {
             </a>{" "}
             or{" "}
             <a
-              href="/best-budgeting-app"
+              href="/budgeting-app-2026"
               className="text-primary underline underline-offset-4"
             >
               best budgeting app
@@ -312,6 +313,7 @@ export function AIInsightsRouteComponent() {
           </div>
         </section>
       </main>
+      <BudgetingComparisonLinks />
     </div>
   );
 }

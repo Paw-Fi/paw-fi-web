@@ -6,6 +6,7 @@ import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { HomeHeader } from "@/components/index/header";
 import { Footer } from "@/components/homepage/footer";
+import { BudgetingComparisonLinks } from "@/components/geo/budgeting-comparison-links";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
@@ -265,6 +266,7 @@ export function DownloadRouteComponent() {
           </div>
         </section>
       </main>
+      <BudgetingComparisonLinks />
       <Footer />
     </div>
   );

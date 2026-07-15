@@ -43,7 +43,9 @@ async function updateSitemap() {
 
     const cleanedSitemap = filterNonPublicUrls(sitemapWithBudgetingVariants);
 
-    const finalSitemap = mergeFixedPublicUrls(cleanedSitemap);
+    const finalSitemap = dedupeSitemapUrls(
+      mergeFixedPublicUrls(cleanedSitemap),
+    );
 
     writeFileWithBackup(OUTPUT_PATH, finalSitemap);
 
@@ -174,7 +176,10 @@ function loadGeoPages() {
   const parsed = JSON.parse(raw);
 
   return Object.values(parsed)
-    .filter((page) => page.slug && page.slug !== "main")
+    .filter(
+      (page) =>
+        page.slug && page.slug !== "main" && page.slug !== "best-budgeting-app",
+    )
     .map((page) => ({
       slug: page.slug,
       // Only emit <lastmod> when we have a specific, intentional value.
@@ -189,7 +194,9 @@ function loadBudgetingAppVariants() {
   const parsed = JSON.parse(raw);
 
   return Object.keys(parsed)
-    .filter((slug) => slug && slug !== "main")
+    .filter(
+      (slug) => slug && slug !== "main" && slug !== "best-budgeting-app-2026",
+    )
     .map((slug) => ({
       slug,
       changefreq: "weekly",
@@ -485,6 +492,8 @@ function filterNonPublicUrls(xmlContent) {
     /^\/avatar-customizer(?:\/|$)/,
     /^\/health(?:\/|$)/,
     /^\/test(?:\/|$)/,
+    /^\/best-budgeting-app$/,
+    /^\/budgeting-app\/best-budgeting-app-2026$/,
   ];
 
   const urlBlocks = [...xmlContent.matchAll(/<url>[\s\S]*?<\/url>/g)].map(
@@ -532,6 +541,37 @@ function filterNonPublicUrls(xmlContent) {
     : '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
 
   return `${xmlContent.split(openTag)[0]}${openTag}\n${kept.join("\n")}\n</urlset>`;
+}
+
+function dedupeSitemapUrls(xmlContent) {
+  const urlBlocks = [...xmlContent.matchAll(/<url>[\s\S]*?<\/url>/g)].map(
+    (match) => match[0],
+  );
+  const uniqueBlocks = new Map();
+
+  for (const block of urlBlocks) {
+    const location = block.match(/<loc>(.*?)<\/loc>/)?.[1];
+    if (!location) continue;
+
+    const existing = uniqueBlocks.get(location);
+    const existingLastmod = existing?.match(/<lastmod>(.*?)<\/lastmod>/)?.[1];
+    const candidateLastmod = block.match(/<lastmod>(.*?)<\/lastmod>/)?.[1];
+
+    if (!existing || (candidateLastmod ?? "") > (existingLastmod ?? "")) {
+      uniqueBlocks.set(location, block);
+    }
+  }
+
+  const removed = urlBlocks.length - uniqueBlocks.size;
+  if (removed > 0) {
+    console.log(`🧹 Removed ${removed} duplicate sitemap URL(s)`);
+  }
+
+  const withoutUrls = xmlContent.replace(/<url>[\s\S]*?<\/url>\s*/g, "");
+  return withoutUrls.replace(
+    "</urlset>",
+    `${[...uniqueBlocks.values()].join("\n")}\n</urlset>`,
+  );
 }
 
 function getUrlCount(xmlContent) {

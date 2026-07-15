@@ -2,6 +2,7 @@ import {
   createFileRoute,
   lazyRouteComponent,
   notFound,
+  redirect,
 } from "@tanstack/react-router";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -11,6 +12,10 @@ export const Route = createFileRoute("/budgeting-app/$slug")({
   // Use Streaming SSR for dynamic personalized content
   ssr: true,
   loader: async ({ params }) => {
+    if (params.slug === "best-budgeting-app-2026") {
+      throw redirect({ href: "/budgeting-app-2026", statusCode: 301 });
+    }
+
     const pageData = await getPassiveIncomePage(params.slug);
 
     if (!pageData) {

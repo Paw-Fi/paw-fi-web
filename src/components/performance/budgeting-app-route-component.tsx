@@ -4,6 +4,7 @@ import { HomeHeader } from "@/components/index/header";
 import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
 import { FeaturesBentoGrid } from "@/components/homepage/features-bento-grid";
 import { Footer } from "@/components/homepage/footer";
+import { BudgetingComparisonLinks } from "@/components/geo/budgeting-comparison-links";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
 import HeroSection from "@/components/homepage/new/hero-section";
 import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
@@ -51,6 +52,7 @@ export function BudgetingAppRouteComponent() {
         <FAQSection />
       </section>
 
+      <BudgetingComparisonLinks />
       <Footer />
     </div>
   );

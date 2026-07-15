@@ -58,7 +58,7 @@ export const Route = createFileRoute("/pricing")({
         "@type": "AggregateOffer",
         url: pageUrl,
         priceCurrency: "USD",
-        lowPrice: "10.99",
+        lowPrice: "0",
         highPrice: "79.99",
         offerCount: pricingOffers.length,
         availability: "https://schema.org/InStock",

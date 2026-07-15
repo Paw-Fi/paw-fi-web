@@ -1,6 +1,7 @@
 import { Variants, motion, AnimatePresence } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
+import { BudgetingComparisonLinks } from "@/components/geo/budgeting-comparison-links";
 import { useState, useEffect, useMemo } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
@@ -150,8 +151,6 @@ function CountryPricingSelector({
   );
 }
 
-
-
 export function PricingRouteComponent() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
@@ -253,7 +252,10 @@ export function PricingRouteComponent() {
 
       if (planId === "free") {
         setIsLoading(false);
-        navigate({ to: "/register" });
+        navigate({
+          to: "/register",
+          search: { redirect: undefined, code: undefined, trial: false },
+        });
         return;
       }
 
@@ -564,6 +566,8 @@ export function PricingRouteComponent() {
           </Card>
         </motion.div>
       </div>
+
+      <BudgetingComparisonLinks />
 
       {/* Global Loading Overlay */}
       {isLoading && (

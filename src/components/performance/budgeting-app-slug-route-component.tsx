@@ -103,7 +103,7 @@ function EmailReceiptCaptureLanding({ pageData }: { pageData: any }) {
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <a href="/budgeting-app/best-budgeting-app-2026">
+                <a href="/budgeting-app-2026">
                   Compare budgeting features
                 </a>
               </Button>

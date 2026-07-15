@@ -3178,6 +3178,12 @@
         "description": "Log shared expenses from chat via text, voice, or receipt photos.",
         "icon": "💬",
         "route": "/features/whatsapp-assistant"
+      },
+      {
+        "title": "Moneko vs Splitwise",
+        "description": "Compare group-ledger tracking with shared expenses connected to a complete household budget.",
+        "icon": "⚖️",
+        "route": "/splitwise-alternative"
       }
     ],
     "lessons": [
@@ -3409,7 +3415,7 @@
         "title": "Default Space and Wallet",
         "description": "Automatically route captured expenses to the right personal or household budget.",
         "icon": "wallet",
-        "route": "/budgeting-app/best-budgeting-app-2026"
+        "route": "/budgeting-app-2026"
       }
     ],
     "lessons": [

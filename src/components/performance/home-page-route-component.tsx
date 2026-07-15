@@ -11,6 +11,7 @@ import { HeroV2 } from "@/components/homepage/v2/hero-v2";
 
 // Existing Components
 import { Footer } from "@/components/homepage/footer";
+import { BudgetingComparisonLinks } from "@/components/geo/budgeting-comparison-links";
 import AmbientHalo from "@/components/ui/ambient-halo";
 
 const UserCommunityShowcase = lazy(() =>
@@ -194,6 +195,7 @@ export function HomePageRouteComponent({
         </Suspense>
       </main>
 
+      <BudgetingComparisonLinks />
       <Footer />
     </div>
   );

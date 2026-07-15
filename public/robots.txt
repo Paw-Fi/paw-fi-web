@@ -7,9 +7,9 @@ User-agent: *
 Allow: /llms.txt
 Allow: /.well-known/ai.txt
 Allow: /geo
-Allow: /best-budgeting-app
 Allow: /budgeting-app-2026
 Allow: /free-budgeting-app
+Allow: /splitwise-alternative
 Allow: /email-based-budgeting
 Allow: /ai-budgeting-app
 Allow: /expense-tracker-for-couples
