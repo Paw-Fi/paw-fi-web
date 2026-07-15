@@ -132,6 +132,8 @@ export const Footer = () => {
               <li>
                 <Link
                   to="/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                 >
                   Privacy Policy
@@ -140,6 +142,8 @@ export const Footer = () => {
               <li>
                 <Link
                   to="/terms-of-service"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                 >
                   Terms of Service
@@ -148,6 +152,8 @@ export const Footer = () => {
               <li>
                 <Link
                   to="/cookie-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                 >
                   Cookie Policy
@@ -156,6 +162,8 @@ export const Footer = () => {
               <li>
                 <Link
                   to="/eula"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                 >
                   EULA
