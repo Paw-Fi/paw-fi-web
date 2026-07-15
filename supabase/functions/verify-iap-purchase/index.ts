@@ -5,6 +5,7 @@ import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { hasActiveHouseholdSubscriptionAccess } from "../shared/household-subscription-sharing.ts";
 import {
   Environment,
   type JWSTransactionDecodedPayload,
@@ -517,7 +518,9 @@ serve(async (req: Request) => {
       const boundToUserId = (existingSub as any).bound_to_user_id as string;
       const { data: ownerSub, error: ownerSubError } = await supabase
         .from("subscriptions")
-        .select("plan, status, bound_to_user_id")
+        .select(
+          "plan, status, bound_to_user_id, current_period_end, trial_end",
+        )
         .eq("user_id", boundToUserId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -538,11 +541,9 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription = !!ownerSub &&
-        !ownerSub.bound_to_user_id &&
-        ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
-          ownerSub.status === "trialing" ||
-          (ownerSub.status === "active" && ownerSub.plan !== "free"));
+      const ownerHasActiveSubscription = hasActiveHouseholdSubscriptionAccess(
+        ownerSub,
+      );
 
       if (ownerHasActiveSubscription) {
         return new Response(

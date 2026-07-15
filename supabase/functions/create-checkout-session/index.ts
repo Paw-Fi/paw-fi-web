@@ -28,6 +28,7 @@ import {
   retrieveCustomerWithRetry,
 } from "../shared/stripe-retry.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { hasActiveHouseholdSubscriptionAccess } from "../shared/household-subscription-sharing.ts";
 import {
   BillingInterval,
   isValidInterval,
@@ -79,12 +80,11 @@ async function resolveRegionalPriceId(
   billingInterval: BillingInterval | undefined,
   market: RegionalPricingMarket,
 ): Promise<string> {
-  const planTarget =
-    plan === "lifetime"
-      ? "lifetime"
-      : billingInterval === "yearly"
-        ? "plus_yearly"
-        : "plus_monthly";
+  const planTarget = plan === "lifetime"
+    ? "lifetime"
+    : billingInterval === "yearly"
+    ? "plus_yearly"
+    : "plus_monthly";
   const lookupKey = getRegionalStripePriceLookupKey(planTarget);
   const cached = regionalPriceIdCache.get(lookupKey);
   if (cached) return cached;
@@ -101,16 +101,14 @@ async function resolveRegionalPriceId(
   const regionalPrice = matches.data[0];
   if (regionalPrice) {
     const currency = market.currencyCode.toLowerCase();
-    const expectedAmount =
-      plan === "lifetime"
-        ? market.lifetime
-        : billingInterval === "yearly"
-          ? market.yearly
-          : market.monthly;
-    const actualAmount =
-      regionalPrice.currency === currency
-        ? regionalPrice.unit_amount
-        : regionalPrice.currency_options?.[currency]?.unit_amount;
+    const expectedAmount = plan === "lifetime"
+      ? market.lifetime
+      : billingInterval === "yearly"
+      ? market.yearly
+      : market.monthly;
+    const actualAmount = regionalPrice.currency === currency
+      ? regionalPrice.unit_amount
+      : regionalPrice.currency_options?.[currency]?.unit_amount;
     if (actualAmount !== expectedAmount) {
       throw new Error(`Stripe Price amount mismatch for ${lookupKey}`);
     }
@@ -222,8 +220,9 @@ serve(async (req: Request) => {
       currency,
     } = await req.json();
 
-    const requestedCountry =
-      typeof country === "string" ? country.trim().toUpperCase() : null;
+    const requestedCountry = typeof country === "string"
+      ? country.trim().toUpperCase()
+      : null;
 
     if (
       requestedCountry !== null &&
@@ -239,10 +238,9 @@ serve(async (req: Request) => {
     }
 
     const regionalMarket = getRegionalPricingMarket(requestedCountry);
-    const requestedCurrency =
-      typeof currency === "string"
-        ? currency.trim().toUpperCase()
-        : regionalMarket.currencyCode;
+    const requestedCurrency = typeof currency === "string"
+      ? currency.trim().toUpperCase()
+      : regionalMarket.currencyCode;
 
     if (!isSupportedRegionalCurrency(requestedCurrency)) {
       return new Response(
@@ -356,7 +354,9 @@ serve(async (req: Request) => {
       const boundToUserId = existingSub.bound_to_user_id;
       const { data: ownerSub, error: ownerSubError } = await supabase
         .from("subscriptions")
-        .select("plan, status, bound_to_user_id")
+        .select(
+          "plan, status, bound_to_user_id, current_period_end, trial_end",
+        )
         .eq("user_id", boundToUserId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -377,12 +377,9 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription =
-        !!ownerSub &&
-        !ownerSub.bound_to_user_id &&
-        ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
-          ownerSub.status === "trialing" ||
-          (ownerSub.status === "active" && ownerSub.plan !== "free"));
+      const ownerHasActiveSubscription = hasActiveHouseholdSubscriptionAccess(
+        ownerSub,
+      );
 
       if (ownerHasActiveSubscription) {
         console.error("User is bound to active household subscription:", {
@@ -538,8 +535,7 @@ serve(async (req: Request) => {
           appUrl: env.appUrl,
           successUrl: typeof successUrl === "string" ? successUrl : null,
           cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
-          allowLocalhost:
-            env.appUrl.includes("localhost") ||
+          allowLocalhost: env.appUrl.includes("localhost") ||
             env.appUrl.includes("127.0.0.1"),
         });
 
@@ -586,7 +582,8 @@ serve(async (req: Request) => {
               return new Response(
                 JSON.stringify({
                   error: "Invalid promotion code",
-                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                  details:
+                    `The promotion code '${promoCode}' is not valid or has expired.`,
                 }),
                 {
                   status: 400,
@@ -783,7 +780,8 @@ serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
-                details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                details:
+                  `The promotion code '${promoCode}' is not valid or has expired.`,
               }),
               {
                 status: 400,

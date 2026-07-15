@@ -28,6 +28,7 @@ import {
   retrieveCustomerWithRetry,
 } from "../shared/stripe-retry.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { hasActiveHouseholdSubscriptionAccess } from "../shared/household-subscription-sharing.ts";
 import {
   BillingInterval,
   isValidInterval,
@@ -261,7 +262,9 @@ serve(async (req: Request) => {
       const boundToUserId = existingSub.bound_to_user_id;
       const { data: ownerSub, error: ownerSubError } = await supabase
         .from("subscriptions")
-        .select("plan, status, bound_to_user_id")
+        .select(
+          "plan, status, bound_to_user_id, current_period_end, trial_end",
+        )
         .eq("user_id", boundToUserId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -280,11 +283,9 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription = !!ownerSub &&
-        !ownerSub.bound_to_user_id &&
-        ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
-          ownerSub.status === "trialing" ||
-          (ownerSub.status === "active" && ownerSub.plan !== "free"));
+      const ownerHasActiveSubscription = hasActiveHouseholdSubscriptionAccess(
+        ownerSub,
+      );
 
       if (ownerHasActiveSubscription) {
         console.error("User is bound to active household subscription:", {
@@ -421,8 +422,7 @@ serve(async (req: Request) => {
           appUrl: env.appUrl,
           successUrl: typeof successUrl === "string" ? successUrl : null,
           cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
-          allowLocalhost:
-            env.appUrl.includes("localhost") ||
+          allowLocalhost: env.appUrl.includes("localhost") ||
             env.appUrl.includes("127.0.0.1"),
         });
 
