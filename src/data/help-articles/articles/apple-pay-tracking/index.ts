@@ -1,4 +1,5 @@
 import type { HelpArticle } from "../../types";
+import appleShortcutsSetupVideo from "@assets/videos/apple-shortcuts-setup.mp4";
 
 export const applePayTrackingArticle: HelpArticle = {
   id: "apple-pay-tracking",
@@ -88,7 +89,9 @@ export const applePayTrackingArticle: HelpArticle = {
       text: "Set the automation to Run Immediately so it logs without asking.",
     },
   ],
-  content: `# How to Automatically Track Apple Pay Transactions in Moneko
+  content: `<video src="${appleShortcutsSetupVideo}" controls playsInline preload="metadata" class="mb-8 w-full rounded-lg border border-border shadow-sm" aria-label="Video tutorial showing how to set up the Moneko Apple Wallet Shortcut in iOS Shortcuts app"></video>
+
+# How to Automatically Track Apple Pay Transactions in Moneko
 
 You can automatically track your **Apple Pay transactions** in Moneko.
 

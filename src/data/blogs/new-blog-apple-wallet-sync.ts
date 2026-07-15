@@ -2,6 +2,7 @@ import { Blog } from "@/components/blogs/blogs.typing";
 
 import { authorsData } from "./authors";
 import { tags } from "./authors";
+import appleShortcutsSetupVideo from "@assets/videos/apple-shortcuts-setup.mp4";
 
 const newBlog: Blog = {
   id: "apple-wallet-sync-2026",
@@ -72,6 +73,10 @@ Moneko also offers an iOS Shortcut that lets you capture Apple Pay transactions 
 5. Then choose **Capture Wallet Transactions** from the list
 
 <img src="https://www.moneko.io/blogs/create-new-shortcut.jpeg" alt="Create New Shortcut screen in iOS Shortcuts app showing the step to tap Create New Shortcut before selecting Capture Wallet Transactions" class="w-full rounded-lg border border-border shadow-sm" />
+
+<video src="${appleShortcutsSetupVideo}" controls playsInline preload="metadata" class="mt-6 w-full rounded-lg border border-border shadow-sm" aria-label="Video tutorial showing how to set up the Moneko Apple Wallet Shortcut in iOS Shortcuts app"></video>
+
+<p class="text-muted-foreground text-sm text-center mt-2 mb-6">Watch the full setup tutorial above — see exactly how to configure the Apple Wallet Shortcut step by step.</p>
 
 Once configured, every time you pay with Apple Pay, the shortcut can log the transaction directly into Moneko — merchant, amount, and date — without you having to type anything.
 

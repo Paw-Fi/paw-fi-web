@@ -30,39 +30,55 @@ interface ChangelogEntry {
 }
 
 const changelogs: ChangelogEntry[] = [
-{
-  title: "Your Financial Month, Your Way",
-  date: "2026-07-13",
-  version: "2.2.5",
-  tags: ["Fix", "Wallet", "Household", "Performance", "UI"],
-  description:
-    "Choose when your financial month starts, with key fixes for settlements, wallets, and bank connections.",
-  items: [
-    "Reports, transactions, pockets, and wallets now follow your chosen month start day",
-    "Settlement balances now update correctly after expenses change",
-    "Connect Bank now appears for eligible users in the US and Canada",
-    "Wallet balances and pocket budgets are now more accurate",
-    "Logout is more reliable and no longer signs you out unexpectedly",
-    "Pending Android payment notifications sync when you return to the app",
-    "Dashboards and shared spaces refresh more smoothly",
-  ],
-},
-{
-  title: "Custom Logos, Budget Rollover & Wallet Cleanup",
-  date: "2026-07-08",
-  version: "2.2.4",
-  tags: ["Feature", "Wallet", "Budget", "UI", "Fix"],
-  description:
-    "Make Moneko feel more personal with custom logos, automatically roll over unused pocket budgets, and permanently delete wallets you no longer need.",
-  items: [
-    "Personalize your wallets and pockets with custom logos for easier recognition",
-    "Pocket budgets can now roll over unused funds to the next period when enabled, helping you build up your savings over time",
-    "Permanently delete wallets you no longer need to keep your wallet list organized",
-    "Improved bank sync reliability for smoother transaction imports",
-    "Refined wallet and pocket cards with clearer visual feedback",
-    "General bug fixes, stability improvements, and performance enhancements",
-  ],
-},
+  {
+    title: "More Reliable Tracking & Health Reports",
+    date: "2026-07-15",
+    version: "2.2.6",
+    tags: ["Fix", "Notifications", "Performance", "Currency"],
+    description:
+      "This release makes automatic transaction capture more reliable, improves monthly health reports, and smooths out multi-currency experiences.",
+    items: [
+      "Android notification capture is now more reliable and avoids saving duplicate or invalid transactions",
+      "Monthly health reports now load and display more consistently",
+      "Recurring transactions work correctly when multiple currencies are selected",
+      "Household subscription sharing is more reliable when members join or accept invitations",
+      "Transaction currencies, wallets, recurring schedules, and shared expenses are handled more accurately",
+      "General stability and performance improvements",
+    ],
+  },
+  {
+    title: "Your Financial Month, Your Way",
+    date: "2026-07-13",
+    version: "2.2.5",
+    tags: ["Fix", "Wallet", "Household", "Performance", "UI"],
+    description:
+      "Choose when your financial month starts, with key fixes for settlements, wallets, and bank connections.",
+    items: [
+      "Reports, transactions, pockets, and wallets now follow your chosen month start day",
+      "Settlement balances now update correctly after expenses change",
+      "Connect Bank now appears for eligible users in the US and Canada",
+      "Wallet balances and pocket budgets are now more accurate",
+      "Logout is more reliable and no longer signs you out unexpectedly",
+      "Pending Android payment notifications sync when you return to the app",
+      "Dashboards and shared spaces refresh more smoothly",
+    ],
+  },
+  {
+    title: "Custom Logos, Budget Rollover & Wallet Cleanup",
+    date: "2026-07-08",
+    version: "2.2.4",
+    tags: ["Feature", "Wallet", "Budget", "UI", "Fix"],
+    description:
+      "Make Moneko feel more personal with custom logos, automatically roll over unused pocket budgets, and permanently delete wallets you no longer need.",
+    items: [
+      "Personalize your wallets and pockets with custom logos for easier recognition",
+      "Pocket budgets can now roll over unused funds to the next period when enabled, helping you build up your savings over time",
+      "Permanently delete wallets you no longer need to keep your wallet list organized",
+      "Improved bank sync reliability for smoother transaction imports",
+      "Refined wallet and pocket cards with clearer visual feedback",
+      "General bug fixes, stability improvements, and performance enhancements",
+    ],
+  },
   {
     title: "Enhanced Bank Sync & Authentication",
     date: "2026-06-28",
