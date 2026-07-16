@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import { mapPlaidTransactionToExpense } from "../shared/plaid-client.ts";
@@ -222,5 +224,52 @@ Deno.test(
     assertEquals(plan.updates.length, 1);
     assertEquals(plan.updates[0].deleted_reason, "user_deleted");
     assertEquals(plan.updates[0].deleted_at, "2026-04-09T10:00:00.000Z");
+  },
+);
+
+Deno.test(
+  "bank expense projection freezes settlement-linked accounting fields",
+  () => {
+    const plan = buildBankExpenseMutationPlan({
+      records: [
+        makeExpenseRecord({
+          amount_cents: 2200,
+          currency: "EUR",
+          household_id: null,
+          account_id: "provider-wallet",
+        }),
+      ],
+      transactions: [makePlaidTransaction()],
+      existingRows: [
+        {
+          id: "expense-settlement-linked",
+          provider_transaction_id: "txn-1",
+          split_group_id: "split-group-1",
+          amount_cents: 1250,
+          currency: "CAD",
+          household_id: "household-1",
+          account_id: "household-wallet",
+          deleted_at: null,
+          deleted_reason: null,
+          sync_version: 7,
+          user_overrides: {},
+        },
+      ],
+      providerPendingTransactionIds: new Map(),
+      cursorGeneration: 8,
+    });
+
+    assertEquals(plan.updates.length, 1);
+    assertEquals(plan.updates[0].amount_cents, 1250);
+    assertEquals(plan.updates[0].currency, "CAD");
+    assertEquals(plan.updates[0].household_id, "household-1");
+    assertEquals(plan.updates[0].account_id, "household-wallet");
+    assertEquals(plan.updates[0].provider_fields?.amount_cents, 2200);
+    assertEquals(plan.updates[0].provider_fields?.currency, "EUR");
+    assertEquals(plan.updates[0].provider_fields?.household_id, null);
+    assertEquals(
+      plan.updates[0].provider_fields?.account_id,
+      "provider-wallet",
+    );
   },
 );

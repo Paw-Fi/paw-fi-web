@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import {
+  commitHouseholdSplitRecords,
+  expectedSplitParentFromTransaction,
+} from "../shared/household-auto-split.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -11,9 +15,9 @@ type SplitType = "equal" | "percentage" | "amount" | "shares";
 
 interface SplitLine {
   user_id: string;
-  amount_cents?: number;
-  percentage?: number;
-  shares?: number;
+  amount_cents?: number | null;
+  percentage?: number | null;
+  shares?: number | null;
 }
 
 interface ComputeSplitsRequest {
@@ -96,13 +100,10 @@ serve(async (req) => {
   try {
     // Only allow POST requests
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed" }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get the authorization header
@@ -118,9 +119,10 @@ serve(async (req) => {
     }
 
     // Get the user from the JWT token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", ""),
-    );
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
 
     if (authError || !user) {
       return new Response(
@@ -147,8 +149,13 @@ serve(async (req) => {
 
     // Validate required fields
     if (
-      !expense_id || !household_id || !payer_user_id || !split_type ||
-      !currency || !total_amount_cents || !splits
+      !expense_id ||
+      !household_id ||
+      !payer_user_id ||
+      !split_type ||
+      !currency ||
+      !total_amount_cents ||
+      !splits
     ) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
@@ -159,7 +166,9 @@ serve(async (req) => {
       );
     }
 
-    if (total_amount_cents <= 0) {
+    if (
+      !Number.isSafeInteger(total_amount_cents) || total_amount_cents <= 0
+    ) {
       return new Response(
         JSON.stringify({ error: "total_amount_cents must be positive" }),
         {
@@ -177,6 +186,33 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
+    }
+
+    const normalizedCurrency = currency.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
+      return new Response(JSON.stringify({ error: "Invalid currency" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (
+      splits.some((split) =>
+        !split || typeof split.user_id !== "string" ||
+        split.user_id.trim().length === 0 ||
+        (split.amount_cents != null &&
+          (!Number.isSafeInteger(split.amount_cents) ||
+            split.amount_cents < 0)) ||
+        (split.percentage != null &&
+          (!Number.isFinite(split.percentage) || split.percentage < 0)) ||
+        (split.shares != null &&
+          (!Number.isSafeInteger(split.shares) || split.shares <= 0))
+      )
+    ) {
+      return new Response(JSON.stringify({ error: "Invalid split values" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Verify user is a member of the household
@@ -197,8 +233,46 @@ serve(async (req) => {
       );
     }
 
+    // This endpoint is compute-only: it may attach a split to the exact
+    // active expense the caller selected, but it must never rewrite parent
+    // accounting fields from request data. The RPC repeats this snapshot as
+    // a row-locked CAS before making any change.
+    const { data: expense, error: expenseError } = await supabase
+      .from("expenses")
+      .select(
+        "id, user_id, household_id, amount_cents, currency, type, account_id, split_group_id",
+      )
+      .eq("id", expense_id)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (expenseError || !expense) {
+      return new Response(JSON.stringify({ error: "Expense not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (
+      String(expense.type ?? "expense") !== "expense" ||
+      expense.household_id !== household_id ||
+      Math.abs(Number(expense.amount_cents)) !== total_amount_cents ||
+      String(expense.currency ?? "").trim().toUpperCase() !==
+        normalizedCurrency ||
+      expense.split_group_id != null ||
+      typeof expense.account_id !== "string"
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: "Expense changed; refresh before creating its split",
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Validate all split participants are household members (SECURITY)
-    const allUserIds = splits.map((s) => s.user_id).filter(Boolean);
+    const allUserIds = splits.map((s) => s.user_id.trim()).filter(Boolean);
     if (allUserIds.length === 0) {
       return new Response(
         JSON.stringify({ error: "No valid user IDs in splits" }),
@@ -212,11 +286,20 @@ serve(async (req) => {
     // Include payer in validation
     const userIdsToValidate = [...new Set([...allUserIds, payer_user_id])];
 
+    if (new Set(allUserIds).size !== allUserIds.length) {
+      return new Response(
+        JSON.stringify({ error: "Each household member may appear only once" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const { data: members, error: membersError } = await supabase
       .from("household_members")
       .select("user_id")
-      .eq("household_id", household_id)
-      .in("user_id", userIdsToValidate);
+      .eq("household_id", household_id);
 
     if (membersError) {
       console.error("Error validating participants:", membersError);
@@ -230,11 +313,15 @@ serve(async (req) => {
     }
 
     const validMemberIds = new Set(members?.map((m) => m.user_id) || []);
-    const invalidUserIds = userIdsToValidate.filter((id) =>
-      !validMemberIds.has(id)
+    const invalidUserIds = userIdsToValidate.filter(
+      (id) => !validMemberIds.has(id),
     );
 
-    if (invalidUserIds.length > 0) {
+    if (
+      invalidUserIds.length > 0 ||
+      validMemberIds.size !== new Set(allUserIds).size ||
+      [...validMemberIds].some((id) => !allUserIds.includes(id))
+    ) {
       return new Response(
         JSON.stringify({
           error: "Some participants are not household members",
@@ -253,7 +340,7 @@ serve(async (req) => {
     if (split_type === "equal") {
       // Equal split: divide total amount equally among all participants
       const amountPerPerson = Math.floor(total_amount_cents / splits.length);
-      const remainder = total_amount_cents - (amountPerPerson * splits.length);
+      const remainder = total_amount_cents - amountPerPerson * splits.length;
 
       calculatedSplitLines = splits.map((split, index) => ({
         user_id: split.user_id,
@@ -363,13 +450,10 @@ serve(async (req) => {
         };
       });
     } else {
-      return new Response(
-        JSON.stringify({ error: "Invalid split_type" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Invalid split_type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Check if split group already exists for this transaction
@@ -391,71 +475,56 @@ serve(async (req) => {
       );
     }
 
-    // Create split group (atomic transaction)
-    const { data: splitGroup, error: splitGroupError } = await supabase
-      .from("expense_split_groups")
-      .insert({
-        household_id,
-        expense_id: expense_id,
-        payer_user_id,
-        split_type,
-        currency,
-        total_amount_cents,
-        description,
-      })
-      .select()
-      .single();
-
-    if (splitGroupError) {
-      console.error("Error creating split group:", splitGroupError);
-      return new Response(
-        JSON.stringify({ error: "Failed to create split group" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Create split lines
+    const splitGroupId = crypto.randomUUID();
+    const splitCreatedAt = new Date().toISOString();
     const splitLinesData = calculatedSplitLines.map((line) => ({
-      split_group_id: splitGroup.id,
+      split_group_id: splitGroupId,
       user_id: line.user_id,
       amount_cents: line.amount_cents,
       percentage: line.percentage,
       shares: line.shares,
       is_settled: false,
     }));
+    const { data: committedSplit, error: commitError } =
+      await commitHouseholdSplitRecords({
+        supabase,
+        actorUserId: user.id,
+        group: {
+          id: splitGroupId,
+          household_id,
+          expense_id,
+          payer_user_id,
+          split_type,
+          currency: normalizedCurrency,
+          total_amount_cents,
+          description: description ?? null,
+          created_at: splitCreatedAt,
+        },
+        lines: splitLinesData.map((line) => ({
+          ...line,
+          percentage: line.percentage ?? null,
+          shares: line.shares ?? null,
+          amount_cents: Number(line.amount_cents ?? 0),
+          settled_at: null,
+          created_at: splitCreatedAt,
+        })),
+        expectedParent: expectedSplitParentFromTransaction(
+          expense as Record<string, unknown>,
+        ),
+        previousSplitGroupId: null,
+        targetAccountId: expense.account_id,
+      });
 
-    const { data: splitLines, error: splitLinesError } = await supabase
-      .from("expense_split_lines")
-      .insert(splitLinesData)
-      .select();
-
-    if (splitLinesError) {
-      console.error("Error creating split lines:", splitLinesError);
-
-      // Rollback: delete the split group
-      await supabase
-        .from("expense_split_groups")
-        .delete()
-        .eq("id", splitGroup.id);
-
+    if (commitError) {
+      console.error("Error committing split write:", commitError);
       return new Response(
-        JSON.stringify({ error: "Failed to create split lines" }),
+        JSON.stringify({ error: "Failed to create split" }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
     }
-
-    // Update expense with split_group_id
-    await supabase
-      .from("expenses")
-      .update({ split_group_id: splitGroup.id })
-      .eq("id", expense_id)
-      .is("deleted_at", null);
 
     // Calculate balances (who owes whom)
     const balances: Record<string, number> = {};
@@ -470,41 +539,58 @@ serve(async (req) => {
         balances[payer_user_id] -= line.amount_cents!;
       } else {
         // Other participants owe money
-        balances[line.user_id] = -(line.amount_cents!);
+        balances[line.user_id] = -line.amount_cents!;
       }
     }
 
-    // Create notification event
-    await supabase
-      .from("notification_events")
-      .insert({
+    const notificationRows = Array.from(
+      new Map(
+        calculatedSplitLines
+          .filter(
+            (line) => line.user_id !== user.id && (line.amount_cents ?? 0) > 0,
+          )
+          .map((line) => [line.user_id, line]),
+      ).values(),
+    ).map((line) => ({
+      household_id,
+      user_id: line.user_id,
+      event_type: "split_created",
+      payload: {
+        split_group_id: splitGroupId,
+        split_id: splitGroupId,
+        expense_id,
         household_id,
-        user_id: user.id,
-        event_type: "split_created",
-        payload: {
-          split_group_id: splitGroup.id,
-          expense_id,
-          payer_user_id,
-          split_type,
-          total_amount_cents,
-          participant_count: splits.length,
-        },
-      });
+        payer_user_id,
+        split_type,
+        amount_cents: line.amount_cents,
+        total_amount_cents,
+        currency: normalizedCurrency,
+        participant_count: splits.length,
+      },
+    }));
+
+    if (notificationRows.length > 0) {
+      const { error: notificationError } = await supabase
+        .from("notification_events")
+        .insert(notificationRows);
+      if (notificationError) {
+        console.error("Error creating split notifications:", notificationError);
+      }
+    }
 
     const response: ComputeSplitsResponse = {
       success: true,
-      split_group_id: splitGroup.id,
-      split_lines: splitLines,
+      split_group_id: splitGroupId,
+      split_lines:
+        (committedSplit as { split_lines?: unknown[] } | null)?.split_lines ??
+          splitLinesData,
       balances,
     };
 
-    return new Response(
-      JSON.stringify(response),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Unexpected error:", error);
     return new Response(

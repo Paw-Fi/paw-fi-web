@@ -25,7 +25,9 @@ import {
 } from "../shared/accounts.ts";
 import {
   buildHouseholdSplitRecords,
+  commitHouseholdSplitRecords,
   type CustomSplits,
+  expectedSplitParentFromTransaction,
   fetchHouseholdAutoSplitSettings,
   resolveEffectiveSplit,
 } from "../shared/household-auto-split.ts";
@@ -196,10 +198,9 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate =
-        body.recurrence_rule.end_date == null
-          ? undefined
-          : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate = body.recurrence_rule.end_date == null
+        ? undefined
+        : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -268,8 +269,8 @@ Deno.serve(async (req: Request) => {
     if (!detection.isGpt && !sanitizedCategory) {
       return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
     }
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
+    const resolvedCategory = sanitizedCategory ??
+      normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -509,6 +510,8 @@ Deno.serve(async (req: Request) => {
       preliminaryAccountId,
     });
 
+    // deno-lint-ignore no-explicit-any
+    let expense: any = null;
     if (normalizedIdempotencyKey) {
       let existingExpenseQuery = supabase
         .from("expenses")
@@ -539,55 +542,81 @@ Deno.serve(async (req: Request) => {
 
       const existingExpense = existingExpenses?.[0] ?? null;
       if (existingExpense) {
-        console.log(
-          "[save-expense] Duplicate detected (idempotency), returning existing:",
-          existingExpense.id,
-        );
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: existingExpense,
-            duplicate: true,
-            message: "Expense already exists (idempotency key matched)",
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        // A prior request can commit the parent insert and lose connectivity
+        // before its atomic split RPC. Replay that incomplete household row
+        // through the normal split path instead of returning a false success.
+        if (
+          resolvedSharedHouseholdId != null &&
+          existingExpense.split_group_id == null
+        ) {
+          if (
+            Number(existingExpense.amount_cents) !== amountCents ||
+            String(existingExpense.currency ?? "").toUpperCase() !== currency
+          ) {
+            return errorResponse(
+              "Idempotency key was already used for a different expense",
+              409,
+              "VALIDATION_ERROR",
+            );
+          }
+          expense = existingExpense;
+          console.log(
+            "[save-expense] Replaying incomplete idempotent household split:",
+            existingExpense.id,
+          );
+        } else {
+          console.log(
+            "[save-expense] Duplicate detected (idempotency), returning existing:",
+            existingExpense.id,
+          );
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: existingExpense,
+              duplicate: true,
+              message: "Expense already exists (idempotency key matched)",
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
       }
     }
 
-    // Insert expense into expenses table
-    const { data: expense, error: expenseError } = await supabase
-      .from("expenses")
-      .insert({
-        contact_id: contactId,
-        user_id: userId,
-        amount_cents: amountCents,
-        category: effectiveCategory,
-        date: body.date,
-        raw_text: body.description || "",
-        merchant: normalizedMerchant,
-        currency: currency,
-        breakdown: body.breakdown ?? null,
-        receipt_image_url: normalizedReceiptImageUrl,
-        created_at: normalizedClientCreatedAt,
-        is_recurring: body.isRecurring || false,
-        recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
-        household_id: insertScopeHouseholdId,
-        account_id: preliminaryAccountId,
-        idempotency_key: normalizedIdempotencyKey,
-      })
-      .select()
-      .single();
+    if (!expense) {
+      // Insert expense into expenses table
+      const { data: insertedExpense, error: expenseError } = await supabase
+        .from("expenses")
+        .insert({
+          contact_id: contactId,
+          user_id: userId,
+          amount_cents: amountCents,
+          category: effectiveCategory,
+          date: body.date,
+          raw_text: body.description || "",
+          merchant: normalizedMerchant,
+          currency: currency,
+          breakdown: body.breakdown ?? null,
+          receipt_image_url: normalizedReceiptImageUrl,
+          created_at: normalizedClientCreatedAt,
+          is_recurring: body.isRecurring || false,
+          recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
+          household_id: insertScopeHouseholdId,
+          account_id: preliminaryAccountId,
+          idempotency_key: normalizedIdempotencyKey,
+        })
+        .select()
+        .single();
 
-    if (expenseError) {
-      console.error("[save-expense] Error saving expense:", expenseError);
-      return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
+      if (expenseError) {
+        console.error("[save-expense] Error saving expense:", expenseError);
+        return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
+      }
+      expense = insertedExpense;
+      console.log("[save-expense] Expense saved:", expense.id);
     }
-
-    console.log("[save-expense] Expense saved:", expense.id);
 
     // Learn/ensure custom category + preference mapping for future AI categorization
     try {
@@ -792,6 +821,7 @@ Deno.serve(async (req: Request) => {
         description: body.description || null,
         members,
         customSplits: effectiveSplit.customSplits,
+        reconcileMemberChanges: effectiveSplit.source === "default",
       });
       if (!buildResult.ok) {
         console.error("[save-expense] Invalid household split payload:", {
@@ -801,70 +831,6 @@ Deno.serve(async (req: Request) => {
         return errorResponse(buildResult.error, 400);
       }
       const splitType = buildResult.group.split_type;
-
-      // Create expense split group
-      const { data: splitGroup, error: splitGroupError } = await supabase
-        .from("expense_split_groups")
-        .insert(buildResult.group)
-        .select()
-        .single();
-
-      if (splitGroupError) {
-        console.error(
-          "[save-expense] Error creating split group:",
-          splitGroupError,
-        );
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: expense,
-            warning: "Expense saved but split group creation failed",
-            resolvedUserId: userId,
-            meta: resolvedUserMetadata,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      console.log(
-        "[save-expense] Split group created:",
-        splitGroup.id,
-        "with type:",
-        splitType,
-      );
-
-      const { error: splitLinesError } = await supabase
-        .from("expense_split_lines")
-        .insert(buildResult.lines);
-
-      if (splitLinesError) {
-        console.error(
-          "[save-expense] Error creating split lines:",
-          splitLinesError,
-        );
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: expense,
-            warning: "Expense saved but split lines creation failed",
-            resolvedUserId: userId,
-            meta: resolvedUserMetadata,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      console.log(
-        "[save-expense] Split lines created for",
-        members.length,
-        "members",
-      );
 
       let sharedScopeAccountId: string | null = await resolveDefaultAccountId(
         supabase,
@@ -896,16 +862,46 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Update expense with split_group_id, household_id, and account_id
-      await supabase
-        .from("expenses")
-        .update({
-          split_group_id: splitGroup.id,
-          household_id: body.householdId,
-          account_id: sharedScopeAccountId,
-        })
-        .eq("id", expense.id)
-        .is("deleted_at", null);
+      if (!sharedScopeAccountId) {
+        console.error(
+          "[save-expense] Failed to resolve household account for atomic split",
+        );
+        return errorResponse(
+          "Failed to finalize household split",
+          500,
+          "SERVER_ERROR",
+        );
+      }
+
+      const { error: commitSplitError } = await commitHouseholdSplitRecords({
+        supabase,
+        actorUserId: userId,
+        group: buildResult.group,
+        lines: buildResult.lines,
+        expectedParent: expectedSplitParentFromTransaction(expense),
+        targetAccountId: sharedScopeAccountId,
+      });
+      if (commitSplitError) {
+        console.error(
+          "[save-expense] Error committing household split:",
+          commitSplitError,
+        );
+        return errorResponse(
+          "Failed to finalize household split",
+          500,
+          "SERVER_ERROR",
+        );
+      }
+
+      console.log(
+        "[save-expense] Split committed atomically:",
+        buildResult.group.id,
+        "with type:",
+        splitType,
+        "for",
+        members.length,
+        "members",
+      );
 
       const { data: refreshedExpense, error: refreshError } = await supabase
         .from("expenses")

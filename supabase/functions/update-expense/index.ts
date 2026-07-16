@@ -26,8 +26,20 @@ import {
 } from "../shared/accounts.ts";
 import {
   buildHouseholdSplitRecords,
+  buildPreservedHistoricalSplitRecords,
+  commitHouseholdSplitRecordsWithPatch,
+  expectedSplitParentFromTransaction,
   fetchHouseholdAutoSplitSettings,
+  parseExplicitReSplitRequested,
+  removeHouseholdSplitWithPatch,
   resolveEffectiveSplit,
+  resolveExistingSplitMutationDecision,
+  resolveExistingSplitWriteIntent,
+  shouldApplyExistingReSplit,
+  type SplitGroupRecord,
+  type SplitLineRecord,
+  type StoredSplitLineRecord,
+  validateExistingSplitPayerIntent,
 } from "../shared/household-auto-split.ts";
 import {
   normalizeIsoTimestampWithZone,
@@ -82,6 +94,9 @@ interface UpdateExpenseRequest {
   customSplits?: CustomSplitsPayload;
   payerUserId?: string;
   splitUpdate?: CustomSplitsPayload;
+  reSplitRequested?: boolean;
+  resplitRequested?: boolean;
+  resplit_requested?: boolean;
   // Optional client timezone context for date validation (preferred over server UTC).
   // Offset uses the Dart/JS convention: minutes east of UTC (e.g., UTC+08:00 => 480).
   clientTimezoneOffsetMinutes?: number;
@@ -308,11 +323,11 @@ Deno.serve(async (req: Request) => {
     const expenseId = body.expenseId ?? body.expense_id;
     const updates = (body as any).updates ?? {};
     const clientRecordId = body.clientRecordId?.trim() || null;
-    const clientMutationId =
-      body.clientMutationId?.trim() || body.idempotencyKey?.trim() || null;
+    const clientMutationId = body.clientMutationId?.trim() ||
+      body.idempotencyKey?.trim() || null;
 
-    const categoryRemapRaw =
-      (body as any).categoryRemap ?? (body as any).category_remap;
+    const categoryRemapRaw = (body as any).categoryRemap ??
+      (body as any).category_remap;
     const hasCategoryRemap = categoryRemapRaw != null;
 
     const detection = detectGptRequest(req);
@@ -457,8 +472,20 @@ Deno.serve(async (req: Request) => {
     const rawSplitUpdate = (body as any).splitUpdate as
       | CustomSplitsPayload
       | undefined;
-    const hasSplitPayload =
-      !!rawCustomSplits?.memberSplits?.length ||
+    const parsedReSplitRequest = parseExplicitReSplitRequested(
+      body as unknown as Record<string, unknown>,
+    );
+    if (!parsedReSplitRequest.ok) {
+      return errorResponse(
+        parsedReSplitRequest.error,
+        "VALIDATION_ERROR",
+      );
+    }
+    const existingSplitWriteIntent = resolveExistingSplitWriteIntent({
+      explicitReSplitRequested: parsedReSplitRequest.value,
+      splitUpdate: rawSplitUpdate,
+    });
+    const hasSplitPayload = !!rawCustomSplits?.memberSplits?.length ||
       !!rawSplitUpdate?.memberSplits?.length;
 
     if (
@@ -862,7 +889,7 @@ Deno.serve(async (req: Request) => {
         if (ianaTimezone != null) {
           return (
             getTodayYyyyMmDdInIanaTimezone(ianaTimezone) ??
-            getTodayYyyyMmDdInOffset(0)
+              getTodayYyyyMmDdInOffset(0)
           );
         }
         return getTodayYyyyMmDdInOffset(0);
@@ -1050,8 +1077,8 @@ Deno.serve(async (req: Request) => {
       !hasSplitPayload
     ) {
       const remap = categoryRemapRaw as any;
-      const fromRaw =
-        remap?.fromCategory ?? remap?.from_category ?? remap?.from;
+      const fromRaw = remap?.fromCategory ?? remap?.from_category ??
+        remap?.from;
       const toRaw = remap?.toCategory ?? remap?.to_category ?? remap?.to;
 
       if (typeof fromRaw !== "string" || typeof toRaw !== "string") {
@@ -1061,10 +1088,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const fromCategory =
-        sanitizeCategoryName(fromRaw) ?? normalizeCategoryForStorage(fromRaw);
-      const toCategory =
-        sanitizeCategoryName(toRaw) ?? normalizeCategoryForStorage(toRaw);
+      const fromCategory = sanitizeCategoryName(fromRaw) ??
+        normalizeCategoryForStorage(fromRaw);
+      const toCategory = sanitizeCategoryName(toRaw) ??
+        normalizeCategoryForStorage(toRaw);
 
       if (!fromCategory || !toCategory) {
         return errorResponse(
@@ -1158,7 +1185,7 @@ Deno.serve(async (req: Request) => {
       if (existingRemap?.id) {
         const nextCount =
           typeof (existingRemap as any).use_count === "number" &&
-          Number.isFinite((existingRemap as any).use_count)
+            Number.isFinite((existingRemap as any).use_count)
             ? Math.max(1, Math.trunc((existingRemap as any).use_count) + 1)
             : 1;
 
@@ -1225,8 +1252,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Capture old values for notification payload
-    const oldAmountCents: number | null =
-      (expense as any)?.amount_cents ?? null;
+    const oldAmountCents: number | null = (expense as any)?.amount_cents ??
+      null;
     const oldCurrency: string | null = (expense as any)?.currency ?? null;
     const oldNote: string | null = (expense as any)?.raw_text ?? null;
     const oldCategory: string | null = (expense as any)?.category ?? null;
@@ -1237,39 +1264,54 @@ Deno.serve(async (req: Request) => {
     const expenseHouseholdId: string | null = expenseHouseholdIdRaw;
     const existingSplitGroupId: string | null =
       (expense as any)?.split_group_id ?? null;
+    if (Object.prototype.hasOwnProperty.call(updates, "split_group_id")) {
+      const requestedSplitGroupId = sanitizeUuid(
+        String((updates as any).split_group_id ?? ""),
+      );
+      if (
+        requestedSplitGroupId != null &&
+        requestedSplitGroupId !== existingSplitGroupId
+      ) {
+        return errorResponse(
+          "split_group_id is managed by the household split workflow",
+          "VALIDATION_ERROR",
+        );
+      }
+      delete (updates as any).split_group_id;
+    }
 
     const bodyHouseholdIdRaw = (body as any).householdId;
     if (bodyHouseholdIdRaw != null && typeof bodyHouseholdIdRaw !== "string") {
       return errorResponse("householdId must be a string", "VALIDATION_ERROR");
     }
-    const bodyHouseholdIdValue =
-      typeof bodyHouseholdIdRaw === "string" ? bodyHouseholdIdRaw.trim() : "";
-    const bodyHouseholdId =
-      bodyHouseholdIdValue.length === 0
-        ? null
-        : sanitizeUuid(bodyHouseholdIdValue);
+    const bodyHouseholdIdValue = typeof bodyHouseholdIdRaw === "string"
+      ? bodyHouseholdIdRaw.trim()
+      : "";
+    const bodyHouseholdId = bodyHouseholdIdValue.length === 0
+      ? null
+      : sanitizeUuid(bodyHouseholdIdValue);
     if (bodyHouseholdIdValue.length > 0 && !bodyHouseholdId) {
       return errorResponse("Invalid householdId format", "VALIDATION_ERROR");
     }
-    const customSplits = (body as any).customSplits as
-      | CustomSplitsPayload
-      | undefined;
+    const customSplits = rawCustomSplits;
     const payerUserIdRaw = (body as any).payerUserId as string | undefined;
-    const splitUpdate = (body as any).splitUpdate as
-      | CustomSplitsPayload
-      | undefined;
+    const splitUpdate = rawSplitUpdate;
+    const reSplitRequested = shouldApplyExistingReSplit({
+      intent: existingSplitWriteIntent,
+      hasAmountUpdate: typeof updates.amount_cents === "number",
+    });
 
     const updatesHasHouseholdId =
       Object.prototype.hasOwnProperty.call(updates, "household_id") ||
       Object.prototype.hasOwnProperty.call(updates, "householdId");
     const updatesHouseholdIdRaw = Object.prototype.hasOwnProperty.call(
-      updates,
-      "household_id",
-    )
+        updates,
+        "household_id",
+      )
       ? (updates as any).household_id
       : Object.prototype.hasOwnProperty.call(updates, "householdId")
-        ? (updates as any).householdId
-        : undefined;
+      ? (updates as any).householdId
+      : undefined;
     let updatesHouseholdId: string | null | undefined = undefined;
     if (updatesHasHouseholdId) {
       if (
@@ -1325,10 +1367,9 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Forbidden target household", "UNAUTHORIZED", 403);
       }
     }
-    const targetCurrency =
-      typeof (updates as any).currency === "string"
-        ? (updates as any).currency
-        : validateCurrency((expense as any)?.currency ?? "USD");
+    const targetCurrency = typeof (updates as any).currency === "string"
+      ? (updates as any).currency
+      : validateCurrency((expense as any)?.currency ?? "USD");
     const sameHouseholdScope = targetHouseholdId === expenseHouseholdId;
     let targetIsPortfolioHousehold = isPortfolioHousehold;
     if (targetHouseholdId && !sameHouseholdScope) {
@@ -1354,13 +1395,12 @@ Deno.serve(async (req: Request) => {
       (updates as any).split_group_id = null;
     }
 
-    const requestedAccountIdRaw =
-      (updates as any)?.account_id ?? (updates as any)?.accountId;
-    const requestedAccountId =
-      requestedAccountIdRaw == null ||
-      String(requestedAccountIdRaw).trim().length === 0
-        ? null
-        : sanitizeUuid(String(requestedAccountIdRaw));
+    const requestedAccountIdRaw = (updates as any)?.account_id ??
+      (updates as any)?.accountId;
+    const requestedAccountId = requestedAccountIdRaw == null ||
+        String(requestedAccountIdRaw).trim().length === 0
+      ? null
+      : sanitizeUuid(String(requestedAccountIdRaw));
 
     if (
       requestedAccountIdRaw != null &&
@@ -1410,8 +1450,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const shouldCleanupPreviousSplitGroup =
-      !sameHouseholdScope &&
+    const shouldCleanupPreviousSplitGroup = !sameHouseholdScope &&
       !!expenseHouseholdId &&
       !isPortfolioHousehold &&
       !!existingSplitGroupId;
@@ -1450,13 +1489,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const shouldCreateSplitGroup =
-      !!targetHouseholdId &&
+    const shouldCreateSplitGroup = !!targetHouseholdId &&
       !targetIsPortfolioHousehold &&
       (!existingSplitGroupId || !sameHouseholdScope) &&
       (bodyHouseholdId === targetHouseholdId || updatesHasHouseholdId);
 
     let createdSplitGroupId: string | null = null;
+    let splitWriteNeedsFinalization = false;
+    let pendingSplitCommit: {
+      group: SplitGroupRecord;
+      lines: SplitLineRecord[];
+      previousSplitGroupId: string | null;
+      reSplitRequested: boolean;
+    } | null = null;
 
     if (shouldCreateSplitGroup) {
       const { data: members } = await supabase
@@ -1472,10 +1517,9 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const effectiveAmountCents =
-        typeof updates.amount_cents === "number"
-          ? updates.amount_cents
-          : (((expense as any)?.amount_cents as number | null) ?? 0);
+      const effectiveAmountCents = typeof updates.amount_cents === "number"
+        ? updates.amount_cents
+        : (((expense as any)?.amount_cents as number | null) ?? 0);
       const autoSplitSettings = await fetchHouseholdAutoSplitSettings(
         supabase,
         targetHouseholdId,
@@ -1498,40 +1542,26 @@ Deno.serve(async (req: Request) => {
             null) as string | null,
           members,
           customSplits: effectiveSplit.customSplits,
+          reconcileMemberChanges: effectiveSplit.source === "default",
+          splitGroupId: existingSplitGroupId ?? undefined,
         });
 
         if (!buildResult.ok) {
           return errorResponse(buildResult.error, "VALIDATION_ERROR");
         }
 
-        const { data: splitGroup, error: splitGroupError } = await supabase
-          .from("expense_split_groups")
-          .insert(buildResult.group)
-          .select()
-          .single();
-
-        if (splitGroupError || !splitGroup) {
-          console.error(
-            "[update-expense] Failed to create split group:",
-            splitGroupError,
-          );
-          return errorResponse("Failed to create splits", "SERVER_ERROR", 500);
-        }
-
-        const { error: splitLinesError } = await supabase
-          .from("expense_split_lines")
-          .insert(buildResult.lines);
-
-        if (splitLinesError) {
-          console.error(
-            "[update-expense] Failed to create split lines:",
-            splitLinesError,
-          );
-          return errorResponse("Failed to create splits", "SERVER_ERROR", 500);
-        }
-
-        createdSplitGroupId = (splitGroup as any).id as string;
-        updates.split_group_id = createdSplitGroupId;
+        createdSplitGroupId = buildResult.group.id;
+        splitWriteNeedsFinalization = true;
+        pendingSplitCommit = {
+          group: buildResult.group,
+          lines: buildResult.lines,
+          previousSplitGroupId: existingSplitGroupId,
+          reSplitRequested: false,
+        };
+        // The atomic commit RPC creates the referenced group and links it only
+        // after the parent expense update succeeds. Sending the future ID in
+        // this standalone UPDATE would violate the FK.
+        delete updates.split_group_id;
       }
     }
 
@@ -1539,16 +1569,28 @@ Deno.serve(async (req: Request) => {
     // This is separate from initial split group creation and is only allowed
     // when the expense already has a split_group_id and no lines have been
     // settled yet (to preserve settlement history correctness).
-    const wantsSplitUpdate =
-      !!targetHouseholdId &&
+    const hasValidSplitUpdatePayload = !!splitUpdate &&
+      !!splitUpdate.memberSplits &&
+      splitUpdate.memberSplits.length > 0;
+    if (
+      reSplitRequested && targetHouseholdId && sameHouseholdScope &&
+      existingSplitGroupId && !hasValidSplitUpdatePayload
+    ) {
+      return errorResponse(
+        "An explicit re-split requires splitUpdate for all current members",
+        "VALIDATION_ERROR",
+      );
+    }
+
+    const wantsSplitUpdate = !!targetHouseholdId &&
       sameHouseholdScope &&
       !targetIsPortfolioHousehold &&
       !!existingSplitGroupId &&
-      !!splitUpdate &&
-      !!splitUpdate.memberSplits &&
-      splitUpdate.memberSplits.length > 0;
+      reSplitRequested &&
+      hasValidSplitUpdatePayload;
 
     if (wantsSplitUpdate) {
+      splitWriteNeedsFinalization = true;
       if (!splitUpdate) {
         return errorResponse(
           "Invalid split update payload",
@@ -1569,7 +1611,7 @@ Deno.serve(async (req: Request) => {
         await supabase
           .from("expense_split_groups")
           .select(
-            "id, household_id, total_amount_cents, currency, split_type, expense_split_lines(is_settled)",
+            "id, expense_id, household_id, payer_user_id, total_amount_cents, currency, split_type, description, created_at, expense_split_lines(is_settled)",
           )
           .eq("id", existingSplitGroupId)
           .maybeSingle();
@@ -1615,8 +1657,8 @@ Deno.serve(async (req: Request) => {
 
       const existingLines = ((existingGroup as any).expense_split_lines ||
         []) as {
-        is_settled?: boolean;
-      }[];
+          is_settled?: boolean;
+        }[];
       const hasSettledLines = existingLines.some(
         (line) => line && line.is_settled === true,
       );
@@ -1647,13 +1689,11 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const effectiveAmountCents =
-        typeof updates.amount_cents === "number"
-          ? updates.amount_cents
-          : (((expense as any)?.amount_cents as number | null) ?? 0);
+      const effectiveAmountCents = typeof updates.amount_cents === "number"
+        ? updates.amount_cents
+        : (((expense as any)?.amount_cents as number | null) ?? 0);
 
-      const splitType =
-        splitUpdate.splitType ||
+      const splitType = splitUpdate.splitType ||
         ((existingGroup as any).split_type as CustomSplitsPayload["splitType"]);
 
       // Validate user IDs match all household members (same rule as initial creation)
@@ -1709,32 +1749,16 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Delete existing lines before inserting the new configuration
-      const { error: deleteLinesError } = await supabase
-        .from("expense_split_lines")
-        .delete()
-        .eq("split_group_id", existingSplitGroupId);
-
-      if (deleteLinesError) {
-        console.error(
-          "[update-expense] Failed to delete existing split lines for update:",
-          deleteLinesError,
-        );
-        return errorResponse("Failed to update splits", "SERVER_ERROR", 500);
-      }
-
       // Build replacement split lines based on the updated configuration
       let updatedSplitLines: any[] = [];
 
       if (splitType === "equal") {
-        const amountPerMember =
-          members.length > 0
-            ? Math.floor(effectiveAmountCents / members.length)
-            : 0;
-        const remainder =
-          members.length > 0
-            ? effectiveAmountCents - amountPerMember * members.length
-            : 0;
+        const amountPerMember = members.length > 0
+          ? Math.floor(effectiveAmountCents / members.length)
+          : 0;
+        const remainder = members.length > 0
+          ? effectiveAmountCents - amountPerMember * members.length
+          : 0;
         updatedSplitLines = members.map((member: any, index: number) => ({
           split_group_id: existingSplitGroupId,
           user_id: member.user_id,
@@ -1745,7 +1769,7 @@ Deno.serve(async (req: Request) => {
         }));
       } else if (splitType === "amount") {
         const cents = splitUpdate.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100)),
+          Math.max(0, Math.round((split.amount || 0) * 100))
         );
         const sumCents = cents.reduce((sum, v) => sum + v, 0);
         const diff = effectiveAmountCents - sumCents;
@@ -1779,8 +1803,9 @@ Deno.serve(async (req: Request) => {
         }));
       } else if (splitType === "shares") {
         const weights = splitUpdate.memberSplits.map((split) => {
-          const shares =
-            typeof split.shares === "number" ? Math.trunc(split.shares) : 0;
+          const shares = typeof split.shares === "number"
+            ? Math.trunc(split.shares)
+            : 0;
           return shares > 0 ? shares : 0;
         });
         const allocatedCents = allocateCentsByWeights(
@@ -1789,8 +1814,9 @@ Deno.serve(async (req: Request) => {
         );
         if (weights.reduce((sum, v) => sum + v, 0) > 0) {
           updatedSplitLines = splitUpdate.memberSplits.map((split, index) => {
-            const shares =
-              typeof split.shares === "number" ? Math.trunc(split.shares) : 0;
+            const shares = typeof split.shares === "number"
+              ? Math.trunc(split.shares)
+              : 0;
             return {
               split_group_id: existingSplitGroupId,
               user_id: split.userId,
@@ -1804,110 +1830,285 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      if (updatedSplitLines.length > 0) {
-        const { error: insertUpdatedLinesError } = await supabase
-          .from("expense_split_lines")
-          .insert(updatedSplitLines);
+      if (updatedSplitLines.length === 0) {
+        return errorResponse(
+          "Failed to build updated splits",
+          "SERVER_ERROR",
+          500,
+        );
+      }
 
-        if (insertUpdatedLinesError) {
-          console.error(
-            "[update-expense] Failed to insert updated split lines:",
-            insertUpdatedLinesError,
-          );
-          return errorResponse("Failed to update splits", "SERVER_ERROR", 500);
+      const commitCreatedAt = new Date().toISOString();
+      pendingSplitCommit = {
+        group: {
+          id: existingSplitGroupId,
+          household_id: targetHouseholdId,
+          expense_id: normalizedExpenseId,
+          payer_user_id: String((existingGroup as any).payer_user_id),
+          split_type: splitType,
+          currency: String(
+            updates.currency || (existingGroup as any).currency ||
+              targetCurrency,
+          ),
+          total_amount_cents: effectiveAmountCents,
+          description: Object.prototype.hasOwnProperty.call(updates, "raw_text")
+            ? ((updates.raw_text as string | null) ?? null)
+            : (((existingGroup as any).description as string | null) ?? null),
+          created_at: ((existingGroup as any).created_at as string | null) ??
+            commitCreatedAt,
+        },
+        lines: updatedSplitLines.map((line) => ({
+          split_group_id: existingSplitGroupId,
+          user_id: String(line.user_id),
+          amount_cents: Number(line.amount_cents ?? 0),
+          percentage: typeof line.percentage === "number"
+            ? line.percentage
+            : null,
+          shares: typeof line.shares === "number" ? line.shares : null,
+          is_settled: false,
+          settled_at: null,
+          created_at: typeof line.created_at === "string"
+            ? line.created_at
+            : commitCreatedAt,
+        })),
+        previousSplitGroupId: existingSplitGroupId,
+        reSplitRequested: true,
+      };
+    }
+
+    // Update payer on existing split group if requested
+    const targetSplitGroupId = createdSplitGroupId ??
+      (sameHouseholdScope ? existingSplitGroupId : null);
+
+    let cachedExistingGroupForPreservation: Record<string, unknown> | null =
+      null;
+    let cachedCurrentMemberIds: string[] | null = null;
+    const loadCurrentMemberIds = async (): Promise<string[]> => {
+      if (cachedCurrentMemberIds) return cachedCurrentMemberIds;
+      if (!targetHouseholdId) {
+        throw new Error("Household is required to load split members");
+      }
+      const { data: currentMembers, error: currentMembersError } =
+        await supabase
+          .from("household_members")
+          .select("user_id")
+          .eq("household_id", targetHouseholdId);
+      if (currentMembersError) throw currentMembersError;
+      cachedCurrentMemberIds = (currentMembers ?? [])
+        .map((member: { user_id?: string }) => member.user_id ?? "")
+        .filter((memberId: string) => memberId.length > 0)
+        .sort();
+      return cachedCurrentMemberIds;
+    };
+    const loadExistingGroupForPreservation = async () => {
+      if (cachedExistingGroupForPreservation) {
+        return cachedExistingGroupForPreservation;
+      }
+      if (!targetSplitGroupId) throw new Error("Split group not found");
+
+      const { data: group, error: groupError } = await supabase
+        .from("expense_split_groups")
+        .select(
+          "id, expense_id, household_id, payer_user_id, split_type, currency, total_amount_cents, description, created_at, expense_split_lines(user_id, amount_cents, percentage, shares, is_settled, created_at)",
+        )
+        .eq("id", targetSplitGroupId)
+        .maybeSingle();
+      if (groupError || !group) {
+        throw groupError ?? new Error("Split group not found");
+      }
+
+      cachedExistingGroupForPreservation = group as Record<string, unknown>;
+      return cachedExistingGroupForPreservation;
+    };
+
+    const ensurePendingCommitForExistingGroup = async () => {
+      if (pendingSplitCommit || !targetSplitGroupId || !targetHouseholdId) {
+        return;
+      }
+
+      const group = await loadExistingGroupForPreservation();
+
+      const currentLines =
+        ((group as any).expense_split_lines || []) as StoredSplitLineRecord[];
+      const targetTotal = typeof updates.amount_cents === "number"
+        ? updates.amount_cents
+        : Number((group as any).total_amount_cents ?? 0);
+      const splitType = String((group as any).split_type) as
+        | "equal"
+        | "amount"
+        | "percentage"
+        | "shares";
+      const now = new Date().toISOString();
+      const preservedSplit = buildPreservedHistoricalSplitRecords({
+        group: {
+          id: targetSplitGroupId,
+          household_id: targetHouseholdId,
+          expense_id: normalizedExpenseId,
+          payer_user_id: String((group as any).payer_user_id),
+          split_type: splitType,
+          currency: String((group as any).currency),
+          total_amount_cents: Number(
+            (group as any).total_amount_cents ?? 0,
+          ),
+          description: ((group as any).description as string | null) ?? null,
+          created_at: ((group as any).created_at as string | null) ?? now,
+        },
+        lines: currentLines,
+        targetAmountCents: targetTotal,
+        targetCurrency: String(updates.currency || (group as any).currency),
+        targetDescription: Object.prototype.hasOwnProperty.call(
+            updates,
+            "raw_text",
+          )
+          ? ((updates.raw_text as string | null) ?? null)
+          : (((group as any).description as string | null) ?? null),
+        now,
+      });
+      if (!preservedSplit.ok) {
+        throw new Error(preservedSplit.error);
+      }
+      pendingSplitCommit = {
+        group: preservedSplit.group,
+        lines: preservedSplit.lines,
+        previousSplitGroupId: targetSplitGroupId,
+        reSplitRequested: false,
+      };
+      splitWriteNeedsFinalization = true;
+    };
+
+    if (
+      targetSplitGroupId &&
+      sameHouseholdScope &&
+      !pendingSplitCommit
+    ) {
+      try {
+        let storedPayerUserId: string | null = null;
+        let storedPayerIsCurrentMember = true;
+        if (normalizedPayerUserId != null) {
+          const storedGroup = await loadExistingGroupForPreservation();
+          storedPayerUserId = typeof storedGroup.payer_user_id === "string"
+            ? storedGroup.payer_user_id
+            : null;
+          const currentMemberIds = await loadCurrentMemberIds();
+          storedPayerIsCurrentMember = storedPayerUserId != null &&
+            currentMemberIds.includes(storedPayerUserId);
         }
+        const mutationDecision = resolveExistingSplitMutationDecision({
+          updates: updates as Record<string, unknown>,
+          storedAmountCents: Number((expense as any).amount_cents),
+          storedCurrency: String((expense as any).currency ?? ""),
+          storedPayerUserId,
+          requestedPayerUserId: normalizedPayerUserId,
+          reSplitRequested: false,
+          legacyImplicitPayerPayload:
+            parsedReSplitRequest.value === undefined &&
+            !hasValidSplitUpdatePayload,
+          storedPayerIsCurrentMember,
+        });
+        if (mutationDecision.requiresSplitCommit) {
+          await ensurePendingCommitForExistingGroup();
+        }
+      } catch (error) {
+        console.error(
+          "[update-expense] Failed to prepare existing split update:",
+          error,
+        );
+        return errorResponse(
+          error instanceof Error
+            ? error.message
+            : "Failed to prepare expense splits",
+          "SERVER_ERROR",
+          500,
+        );
       }
+    }
 
-      // Keep split group metadata in sync with any amount/currency changes
-      const splitGroupUpdates: Record<string, unknown> = {};
-      if (typeof updates.amount_cents === "number") {
-        splitGroupUpdates.total_amount_cents = updates.amount_cents;
-      }
+    const isUpdatingExistingSplit = !!targetSplitGroupId &&
+      targetSplitGroupId === existingSplitGroupId && sameHouseholdScope;
+    if (isUpdatingExistingSplit && pendingSplitCommit) {
+      const storedPayerUserId = pendingSplitCommit.group.payer_user_id;
+      const effectivePayerUserId = normalizedPayerUserId ?? storedPayerUserId;
+      const payerChanged = effectivePayerUserId !== storedPayerUserId;
+      const requiresCurrentMembership = pendingSplitCommit.reSplitRequested ||
+        payerChanged;
+      let currentMemberIds: string[] = [];
 
-      const newGroupCurrency =
-        updates.currency ||
-        ((existingGroup as any).currency as string | null) ||
-        null;
-      if (newGroupCurrency) {
-        splitGroupUpdates.currency = newGroupCurrency;
-      }
-
-      if (Object.keys(splitGroupUpdates).length > 0) {
-        const { error: splitGroupUpdateError } = await supabase
-          .from("expense_split_groups")
-          .update(splitGroupUpdates)
-          .eq("id", existingSplitGroupId);
-
-        if (splitGroupUpdateError) {
+      if (requiresCurrentMembership) {
+        if (!targetHouseholdId) {
+          return errorResponse(
+            "Payer can only be set for household expenses",
+            "VALIDATION_ERROR",
+          );
+        }
+        try {
+          currentMemberIds = await loadCurrentMemberIds();
+        } catch (currentMembersError) {
           console.error(
-            "[update-expense] Failed to update split group metadata:",
-            splitGroupUpdateError,
+            "[update-expense] Failed to verify current split membership:",
+            currentMembersError,
           );
           return errorResponse(
-            "Failed to update expense splits",
+            "Failed to verify expense payer",
             "SERVER_ERROR",
             500,
           );
         }
       }
-    }
 
-    // Update payer on existing split group if requested
-    const targetSplitGroupId =
-      createdSplitGroupId ?? (sameHouseholdScope ? existingSplitGroupId : null);
-    if (normalizedPayerUserId && targetSplitGroupId) {
-      if (!targetHouseholdId) {
-        return errorResponse(
-          "Payer can only be set for household expenses",
-          "VALIDATION_ERROR",
-        );
+      const payerIntent = validateExistingSplitPayerIntent({
+        storedPayerUserId,
+        requestedPayerUserId: normalizedPayerUserId,
+        reSplitRequested: pendingSplitCommit.reSplitRequested,
+        participantIds: pendingSplitCommit.lines.map((line) => line.user_id),
+        currentMemberIds,
+      });
+      if (!payerIntent.ok) {
+        return errorResponse(payerIntent.error, "VALIDATION_ERROR");
       }
-
-      const { data: payerMembership, error: payerMembershipError } =
-        await supabase
-          .from("household_members")
-          .select("id")
-          .eq("household_id", targetHouseholdId)
-          .eq("user_id", normalizedPayerUserId)
-          .maybeSingle();
-
-      if (payerMembershipError) {
-        console.error(
-          "[update-expense] Failed to verify payer membership:",
-          payerMembershipError,
-        );
-        return errorResponse(
-          "Failed to verify expense payer",
-          "SERVER_ERROR",
-          500,
-        );
+      if (payerIntent.payerChanged) {
+        splitWriteNeedsFinalization = true;
+        pendingSplitCommit = {
+          ...pendingSplitCommit,
+          group: {
+            ...pendingSplitCommit.group,
+            payer_user_id: payerIntent.effectivePayerUserId,
+          },
+        };
       }
-
-      if (!payerMembership) {
-        return errorResponse(
-          "Payer must be a household member",
-          "VALIDATION_ERROR",
-        );
-      }
-
-      const { error: payerUpdateError } = await supabase
-        .from("expense_split_groups")
-        .update({ payer_user_id: normalizedPayerUserId })
-        .eq("id", targetSplitGroupId);
-      if (payerUpdateError) {
-        console.error(
-          "[update-expense] Failed to update payer_user_id on split group:",
-          payerUpdateError,
-        );
-        return errorResponse(
-          "Failed to update expense payer",
-          "SERVER_ERROR",
-          500,
-        );
-      }
+    } else if (
+      normalizedPayerUserId && targetSplitGroupId && pendingSplitCommit
+    ) {
+      pendingSplitCommit = {
+        ...pendingSplitCommit,
+        group: {
+          ...pendingSplitCommit.group,
+          payer_user_id: normalizedPayerUserId,
+        },
+      };
+      splitWriteNeedsFinalization = true;
     }
 
     const expenseRecord = expense as Record<string, unknown>;
+    const splitRpcOwnsStructuralFields = pendingSplitCommit != null ||
+      shouldCleanupPreviousSplitGroup;
+    const hasTargetAccountUpdate = Object.prototype.hasOwnProperty.call(
+      updates,
+      "account_id",
+    );
+    const targetAccountIdForAtomicWrite = hasTargetAccountUpdate
+      ? ((updates as any).account_id as string | null | undefined)
+      : ((expense as any).account_id as string | null | undefined);
+    if (
+      splitRpcOwnsStructuralFields &&
+      hasTargetAccountUpdate &&
+      typeof targetAccountIdForAtomicWrite !== "string"
+    ) {
+      return errorResponse(
+        "Failed to resolve target account for split expense",
+        "SERVER_ERROR",
+        500,
+      );
+    }
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -1929,6 +2130,16 @@ Deno.serve(async (req: Request) => {
     ];
     for (const key of allowedExpenseColumns) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
+        if (
+          splitRpcOwnsStructuralFields &&
+          (key === "amount_cents" ||
+            key === "currency" ||
+            key === "household_id" ||
+            key === "account_id" ||
+            key === "split_group_id")
+        ) {
+          continue;
+        }
         updatePayload[key] = updates[key];
       }
     }
@@ -1939,33 +2150,32 @@ Deno.serve(async (req: Request) => {
       String(expenseRecord["provider_transaction_id"]).trim().length > 0;
 
     if (isProviderManagedExpense) {
-      const storedProviderFields =
-        expenseRecord["provider_fields"] &&
-        typeof expenseRecord["provider_fields"] === "object"
-          ? (expenseRecord["provider_fields"] as Record<string, unknown>)
-          : null;
+      const storedProviderFields = expenseRecord["provider_fields"] &&
+          typeof expenseRecord["provider_fields"] === "object"
+        ? (expenseRecord["provider_fields"] as Record<string, unknown>)
+        : null;
       const providerFields = {
         ...buildProviderFieldsFromExpenseRow(expenseRecord),
         ...(storedProviderFields ?? {}),
       };
 
       const visibleExpense = {
-        amount_cents:
-          updates.amount_cents ?? expenseRecord["amount_cents"] ?? null,
+        amount_cents: updates.amount_cents ?? expenseRecord["amount_cents"] ??
+          null,
         currency: updates.currency ?? expenseRecord["currency"] ?? null,
         date: updates.date ?? expenseRecord["date"] ?? null,
         category: updates.category ?? expenseRecord["category"] ?? null,
         raw_text: updates.raw_text ?? expenseRecord["raw_text"] ?? null,
         merchant: updates.merchant ?? expenseRecord["merchant"] ?? null,
         source: updates.source ?? expenseRecord["source"] ?? null,
-        is_recurring:
-          updates.is_recurring ?? expenseRecord["is_recurring"] ?? false,
-        recurrence_rule:
-          updates.recurrence_rule ?? expenseRecord["recurrence_rule"] ?? null,
-        account_id:
-          (updates as any).account_id ?? expenseRecord["account_id"] ?? null,
-        household_id:
-          targetHouseholdId ?? expenseRecord["household_id"] ?? null,
+        is_recurring: updates.is_recurring ?? expenseRecord["is_recurring"] ??
+          false,
+        recurrence_rule: updates.recurrence_rule ??
+          expenseRecord["recurrence_rule"] ?? null,
+        account_id: (updates as any).account_id ??
+          expenseRecord["account_id"] ?? null,
+        household_id: targetHouseholdId ?? expenseRecord["household_id"] ??
+          null,
       };
 
       updatePayload["user_overrides"] = computeBankExpenseUserOverrides({
@@ -1974,47 +2184,98 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Update expense
-    const { data: updatedExpense, error: updateError } = await supabase
-      .from("expenses")
-      .update(updatePayload)
-      .eq("id", normalizedExpenseId)
-      .is("deleted_at", null)
-      .select()
-      .single();
-
-    if (updateError) {
-      console.error("[update-expense] Update error:", updateError);
-      if (updateError.code === "22P02") {
-        return errorResponse("Invalid expenseId format", "VALIDATION_ERROR");
+    let updatedExpense: unknown = null;
+    if (splitWriteNeedsFinalization && pendingSplitCommit) {
+      const splitCommit = pendingSplitCommit;
+      const { error: commitSplitError } =
+        await commitHouseholdSplitRecordsWithPatch({
+          supabase,
+          actorUserId: userId,
+          group: splitCommit.group,
+          lines: splitCommit.lines,
+          expectedParent: expectedSplitParentFromTransaction(expenseRecord),
+          previousSplitGroupId: splitCommit.previousSplitGroupId,
+          targetAccountId: targetAccountIdForAtomicWrite ?? null,
+          expensePatch: updatePayload,
+        });
+      if (commitSplitError) {
+        console.error(
+          "[update-expense] Failed to commit split write:",
+          commitSplitError,
+        );
+        return errorResponse(
+          "Failed to finalize expense splits",
+          "SERVER_ERROR",
+          500,
+        );
       }
-      return errorResponse("Failed to update expense", "SERVER_ERROR", 500);
+    } else if (shouldCleanupPreviousSplitGroup && existingSplitGroupId) {
+      const targetAmountCents = typeof updates.amount_cents === "number"
+        ? updates.amount_cents
+        : Number((expense as any)?.amount_cents ?? 0);
+      const { error: removePreviousSplitError } =
+        await removeHouseholdSplitWithPatch({
+          supabase,
+          actorUserId: userId,
+          expenseId: normalizedExpenseId,
+          splitGroupId: existingSplitGroupId,
+          targetHouseholdId,
+          targetCurrency,
+          targetAmountCents,
+          targetAccountId: targetAccountIdForAtomicWrite ?? null,
+          expectedParent: expectedSplitParentFromTransaction(expenseRecord),
+          expensePatch: updatePayload,
+        });
+      if (removePreviousSplitError) {
+        console.error(
+          "[update-expense] Failed to remove previous split group after scope change:",
+          removePreviousSplitError,
+        );
+        return errorResponse(
+          "Failed to move expense split configuration",
+          "SERVER_ERROR",
+          500,
+        );
+      }
+    } else {
+      const { data, error: updateError } = await supabase
+        .from("expenses")
+        .update(updatePayload)
+        .eq("id", normalizedExpenseId)
+        .is("deleted_at", null)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("[update-expense] Update error:", updateError);
+        if (updateError.code === "22P02") {
+          return errorResponse("Invalid expenseId format", "VALIDATION_ERROR");
+        }
+        return errorResponse("Failed to update expense", "SERVER_ERROR", 500);
+      }
+      updatedExpense = data;
     }
 
-    if (shouldCleanupPreviousSplitGroup && existingSplitGroupId) {
-      const { error: deletePreviousLinesError } = await supabase
-        .from("expense_split_lines")
-        .delete()
-        .eq("split_group_id", existingSplitGroupId);
-
-      if (deletePreviousLinesError) {
+    if (splitRpcOwnsStructuralFields) {
+      const { data: refreshedExpense, error: refreshExpenseError } =
+        await supabase
+          .from("expenses")
+          .select()
+          .eq("id", normalizedExpenseId)
+          .is("deleted_at", null)
+          .single();
+      if (refreshExpenseError || !refreshedExpense) {
         console.error(
-          "[update-expense] Failed to delete previous split lines after scope change:",
-          deletePreviousLinesError,
+          "[update-expense] Failed to reload expense after atomic split write:",
+          refreshExpenseError,
         );
-      } else {
-        const { error: deletePreviousGroupError } = await supabase
-          .from("expense_split_groups")
-          .delete()
-          .eq("id", existingSplitGroupId);
-
-        if (deletePreviousGroupError) {
-          console.error(
-            "[update-expense] Failed to delete previous split group after scope change:",
-            deletePreviousGroupError,
-          );
-        }
+        return errorResponse(
+          "Failed to reload updated expense",
+          "SERVER_ERROR",
+          500,
+        );
       }
+      updatedExpense = refreshedExpense;
     }
 
     console.log(
@@ -2074,30 +2335,28 @@ Deno.serve(async (req: Request) => {
       } catch (_) {}
 
       // Compute new values
-      const newAmountCents: number | null =
-        (updates as any).amount_cents ??
+      const newAmountCents: number | null = (updates as any).amount_cents ??
         (updatedExpense as any)?.amount_cents ??
         null;
-      const newCurrency: string | null =
-        (updates as any).currency ??
+      const newCurrency: string | null = (updates as any).currency ??
         (updatedExpense as any)?.currency ??
         oldCurrency;
-      const newNote: string | null =
-        (updates as any).raw_text ?? (updatedExpense as any)?.raw_text ?? null;
-      const newCategory: string | null =
-        (updates as any).category ?? (updatedExpense as any)?.category ?? null;
-      const newDate: string | null =
-        (updates as any).date ?? (updatedExpense as any)?.date ?? null;
-      const newCreatedAt: string | null =
-        (updates as any).created_at ??
+      const newNote: string | null = (updates as any).raw_text ??
+        (updatedExpense as any)?.raw_text ?? null;
+      const newCategory: string | null = (updates as any).category ??
+        (updatedExpense as any)?.category ?? null;
+      const newDate: string | null = (updates as any).date ??
+        (updatedExpense as any)?.date ?? null;
+      const newCreatedAt: string | null = (updates as any).created_at ??
         (updatedExpense as any)?.created_at ??
         null;
 
       const transactionType =
         ((expense as any)?.type as string | null | undefined)?.toLowerCase() ??
-        "expense";
-      const eventType =
-        transactionType == "income" ? "income_edited" : "expense_edited";
+          "expense";
+      const eventType = transactionType == "income"
+        ? "income_edited"
+        : "expense_edited";
 
       const { error: notifyError } = await supabase.rpc(
         "notify_household_members_expense",
@@ -2124,7 +2383,7 @@ Deno.serve(async (req: Request) => {
             updated_fields: Object.keys(updates),
             is_recurring:
               ((updates as any).is_recurring as boolean | undefined) ??
-              (updatedExpense as any)?.is_recurring === true,
+                (updatedExpense as any)?.is_recurring === true,
           },
         },
       );

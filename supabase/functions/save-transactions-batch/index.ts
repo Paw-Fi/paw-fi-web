@@ -32,8 +32,10 @@ import {
 } from "../shared/import-dedupe.ts";
 import {
   buildHouseholdSplitRecords,
+  commitHouseholdSplitRecords,
   createHouseholdAutoSplitForTransaction,
   type CustomSplits,
+  expectedSplitParentFromTransaction,
   fetchHouseholdAutoSplitSettings,
   type HouseholdAutoSplitSettings,
   resolveEffectiveSplit,
@@ -507,37 +509,20 @@ export async function saveTransactionsBatchInternal(
         : null,
       members: householdMembers,
       customSplits: effective.customSplits,
+      reconcileMemberChanges: effective.source === "default",
     });
     if (!buildResult.ok) {
       throw new SaveTransactionsBatchError(buildResult.error, 400);
     }
 
-    const { error: splitGroupError } = await supabase
-      .from("expense_split_groups")
-      .insert([buildResult.group]);
-    if (splitGroupError) {
-      throw splitGroupError;
-    }
-
-    if (buildResult.lines.length > 0) {
-      const { error: splitLinesError } = await supabase
-        .from("expense_split_lines")
-        .insert(buildResult.lines);
-      if (splitLinesError) {
-        throw splitLinesError;
-      }
-    }
-
-    const { error: updateError } = await supabase
-      .from("expenses")
-      .update({
-        split_group_id: buildResult.group.id,
-        household_id: resolvedHouseholdId,
-      })
-      .eq("id", expenseId);
-    if (updateError) {
-      throw updateError;
-    }
+    const { error: commitError } = await commitHouseholdSplitRecords({
+      supabase,
+      actorUserId: resolvedUserId,
+      group: buildResult.group,
+      lines: buildResult.lines,
+      expectedParent: expectedSplitParentFromTransaction(expense),
+    });
+    if (commitError) throw commitError;
 
     return {
       ...expense,
@@ -1175,9 +1160,6 @@ export async function saveTransactionsBatchInternal(
             `[save-transactions-batch] Creating splits for ${expensesNeedingSplitRepair.length} expenses`,
           );
 
-          const splitGroups: any[] = [];
-          const splitLines: any[] = [];
-
           for (let i = 0; i < expensesNeedingSplitRepair.length; i++) {
             const expense = expensesNeedingSplitRepair[i].expense;
             const meta = expensesNeedingSplitRepair[i].meta;
@@ -1217,68 +1199,35 @@ export async function saveTransactionsBatchInternal(
               description: expense.raw_text || null,
               members: householdMembers,
               customSplits: effective.customSplits,
+              reconcileMemberChanges: effective.source === "default",
             });
             if (!buildResult.ok) {
-              console.warn(
-                "[save-transactions-batch] Invalid expense split payload:",
-                {
-                  index: meta.index,
-                  code: buildResult.code,
-                  error: buildResult.error,
-                },
+              throw new SaveTransactionsBatchError(
+                buildResult.error,
+                400,
               );
-              continue;
             }
-            splitGroups.push(buildResult.group);
+
+            const { error: commitError } = await commitHouseholdSplitRecords({
+              supabase,
+              actorUserId: userId,
+              group: buildResult.group,
+              lines: buildResult.lines,
+              expectedParent: expectedSplitParentFromTransaction(expense),
+            });
+            if (commitError) {
+              console.error(
+                "[save-transactions-batch] Atomic split commit error:",
+                { index: meta.index, error: commitError },
+              );
+              throw commitError;
+            }
 
             expenseUpdates.push({
               id: expense.id,
               split_group_id: buildResult.group.id,
               household_id: resolvedHouseholdId,
             });
-
-            splitLines.push(...buildResult.lines);
-          }
-
-          if (splitGroups.length > 0) {
-            const { error: splitGroupError } = await supabase
-              .from("expense_split_groups")
-              .insert(splitGroups);
-
-            if (splitGroupError) {
-              console.error(
-                "[save-transactions-batch] Split groups insert error:",
-                splitGroupError,
-              );
-            } else {
-              if (splitLines.length > 0) {
-                const { error: splitLinesError } = await supabase
-                  .from("expense_split_lines")
-                  .insert(splitLines);
-
-                if (splitLinesError) {
-                  console.error(
-                    "[save-transactions-batch] Split lines insert error:",
-                    splitLinesError,
-                  );
-                }
-              }
-
-              await runWithConcurrencyLimit(
-                expenseUpdates,
-                25,
-                async (update) => {
-                  await supabase
-                    .from("expenses")
-                    .update({
-                      split_group_id: update.split_group_id,
-                      household_id: update.household_id,
-                    })
-                    .eq("id", update.id)
-                    .is("deleted_at", null);
-                },
-              );
-            }
           }
         }
 

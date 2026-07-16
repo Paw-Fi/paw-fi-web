@@ -4,6 +4,9 @@ export interface ExistingExpenseProjectionRow {
   id: string;
   provider_transaction_id: string | null;
   bank_account_id?: string | null;
+  account_id?: string | null;
+  household_id?: string | null;
+  split_group_id?: string | null;
   amount_cents?: number | null;
   currency?: string | null;
   date?: string | null;
@@ -143,7 +146,17 @@ export function buildBankExpenseMutationPlan(
         : (existingByProviderId.get(record.provider_transaction_id) ?? null);
 
     const providerFields = extractProviderFields(record);
-    const userOverrides = matchedRow?.user_overrides || {};
+    const userOverrides = {
+      ...(matchedRow?.user_overrides || {}),
+      ...(matchedRow?.split_group_id
+        ? {
+          amount_cents: matchedRow.amount_cents ?? record.amount_cents,
+          currency: matchedRow.currency ?? record.currency,
+          household_id: matchedRow.household_id ?? null,
+          account_id: matchedRow.account_id ?? null,
+        }
+        : {}),
+    };
     const visibleRecord = applyUserOverridesToRecord(record, userOverrides);
 
     const baseMutation: BankExpenseMutationRecord = {

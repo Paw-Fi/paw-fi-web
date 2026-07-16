@@ -20,6 +20,7 @@ export interface EmailOptions {
   cc?: string | string[];
   bcc?: string | string[];
   attachments?: any[];
+  idempotencyKey?: string;
 }
 
 interface ResendApiResponse {
@@ -61,6 +62,7 @@ export async function sendEmail({
   cc,
   bcc,
   attachments,
+  idempotencyKey,
 }: EmailOptions) {
   try {
     // For testing/development: log email instead of sending
@@ -86,6 +88,7 @@ export async function sendEmail({
           headers: {
             Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY") || ""}`,
             "Content-Type": "application/json",
+            ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
           },
           body: JSON.stringify({
             from,
@@ -124,16 +127,30 @@ export async function sendEmail({
               continue;
             }
           }
-          throw new Error(`Failed to send email: ${message}`);
+          if (response.status >= 500 && attempt < maxAttempts - 1) {
+            attempt++;
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * 2 ** (attempt - 1)),
+            );
+            continue;
+          }
+          const responseError = new Error(
+            `Failed to send email: ${message}`,
+          ) as Error & { status?: number };
+          responseError.status = response.status;
+          throw responseError;
         }
 
         return { success: true, id: result.id };
       } catch (sendError) {
         // Check if it's a rate limit error from exception
         const errorMsg = (sendError as any)?.message || "";
+        const errorStatus = (sendError as any)?.status;
         if (
           (errorMsg.includes("Too many requests") ||
-            errorMsg.includes("rate limit")) &&
+            errorMsg.includes("rate limit") ||
+            errorStatus >= 500 ||
+            errorStatus === undefined) &&
           attempt < maxAttempts - 1
         ) {
           attempt++;
@@ -161,6 +178,7 @@ export async function sendUserEmail(
     text: string;
     subject: string;
   },
+  idempotencyKey?: string,
 ) {
   // Replace template variables
   const html = emailTemplate.html
@@ -185,5 +203,6 @@ export async function sendUserEmail(
     html,
     text,
     replyTo: "hello@moneko.io",
+    idempotencyKey,
   });
 }

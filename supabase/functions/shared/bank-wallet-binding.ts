@@ -6,6 +6,7 @@ interface ExpenseWalletBindingRow {
   id: string;
   account_id?: string | null;
   household_id?: string | null;
+  split_group_id?: string | null;
   user_overrides?: Record<string, unknown> | null;
 }
 
@@ -79,10 +80,9 @@ export async function rebindBankAccountExpensesToWallet(
   let scanned = 0;
   let updated = 0;
   let offset = 0;
-  const needsBindingFilter =
-    targetHouseholdId == null
-      ? `account_id.is.null,account_id.neq.${params.walletId},household_id.not.is.null`
-      : `account_id.is.null,account_id.neq.${params.walletId},household_id.is.null,household_id.neq.${targetHouseholdId}`;
+  const needsBindingFilter = targetHouseholdId == null
+    ? `account_id.is.null,account_id.neq.${params.walletId},household_id.not.is.null`
+    : `account_id.is.null,account_id.neq.${params.walletId},household_id.is.null,household_id.neq.${targetHouseholdId}`;
 
   const { data: candidateRows, error: candidateError } = await params.supabase
     .from("expenses")
@@ -92,6 +92,7 @@ export async function rebindBankAccountExpensesToWallet(
     .eq("bank_account_id", params.bankAccountId)
     .eq("currency", params.walletCurrency)
     .is("deleted_at", null)
+    .is("split_group_id", null)
     .or(needsBindingFilter)
     .limit(1);
 
@@ -107,7 +108,9 @@ export async function rebindBankAccountExpensesToWallet(
   while (true) {
     const { data, error } = await params.supabase
       .from("expenses")
-      .select("id, account_id, household_id, user_overrides")
+      .select(
+        "id, account_id, household_id, split_group_id, user_overrides",
+      )
       .eq("user_id", params.userId)
       .eq("provider", params.provider)
       .eq("bank_account_id", params.bankAccountId)
@@ -123,6 +126,7 @@ export async function rebindBankAccountExpensesToWallet(
     const rows = (data || []) as ExpenseWalletBindingRow[];
     scanned += rows.length;
     const idsToRebind = rows
+      .filter((row) => row.split_group_id == null)
       .filter((row) => !hasUserAccountOverride(row.user_overrides))
       .filter(
         (row) =>
@@ -172,10 +176,9 @@ async function rebindBankRecurringTemplatesToWallet(
     )
     .is("deleted_at", null);
 
-  query =
-    targetHouseholdId == null
-      ? query.is("household_id", null)
-      : query.eq("household_id", targetHouseholdId);
+  query = targetHouseholdId == null
+    ? query.is("household_id", null)
+    : query.eq("household_id", targetHouseholdId);
 
   const { data, error } = await query;
   if (error) throw error;

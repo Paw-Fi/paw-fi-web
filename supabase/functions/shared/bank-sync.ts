@@ -434,6 +434,11 @@ interface ExpenseUpsertRecord extends ExpenseUpsertInput {
 interface ProviderRow {
   id: string;
   provider_transaction_id: string | null;
+  amount_cents?: number | null;
+  currency?: string | null;
+  household_id?: string | null;
+  account_id?: string | null;
+  split_group_id?: string | null;
 }
 
 interface SupabaseErrorLike {
@@ -1219,7 +1224,7 @@ export async function persistPlaidTransactions(
     const { data, error: selectError } = await params.supabase
       .from("expenses")
       .select(
-        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, is_recurring, recurrence_rule",
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule",
       )
       .eq("user_id", params.userId)
       .eq("provider", PLAID_PROVIDER)
@@ -1418,7 +1423,9 @@ export async function persistTinkTransactions(
 
   const { data: existingRows, error: selectError } = await params.supabase
     .from("expenses")
-    .select("id, provider_transaction_id")
+    .select(
+      "id, provider_transaction_id, amount_cents, currency, household_id, account_id, split_group_id",
+    )
     .eq("user_id", params.userId)
     .eq("provider", TINK_PROVIDER)
     .eq("bank_account_id", params.bankAccountId)
@@ -1428,10 +1435,10 @@ export async function persistTinkTransactions(
     throw selectError;
   }
 
-  const existingByProviderId = new Map<string, string>();
+  const existingByProviderId = new Map<string, ProviderRow>();
   (existingRows || []).forEach((row: ProviderRow) => {
     if (row.provider_transaction_id) {
-      existingByProviderId.set(row.provider_transaction_id, row.id);
+      existingByProviderId.set(row.provider_transaction_id, row);
     }
   });
 
@@ -1439,10 +1446,19 @@ export async function persistTinkTransactions(
   const inserts: typeof normalizedRecords = [];
 
   for (const record of normalizedRecords) {
-    if (existingByProviderId.has(record.provider_transaction_id)) {
+    const existing = existingByProviderId.get(record.provider_transaction_id);
+    if (existing) {
       updates.push({
         ...record,
-        id: existingByProviderId.get(record.provider_transaction_id)!,
+        ...(existing.split_group_id
+          ? {
+            amount_cents: existing.amount_cents ?? record.amount_cents,
+            currency: existing.currency ?? record.currency,
+            household_id: existing.household_id ?? null,
+            account_id: existing.account_id ?? null,
+          }
+          : {}),
+        id: existing.id,
       });
       continue;
     }

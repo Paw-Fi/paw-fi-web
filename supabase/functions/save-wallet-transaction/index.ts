@@ -2561,14 +2561,14 @@ Deno.serve(async (req: Request) => {
         const { data: existingExpense } = await supabase
           .from("expenses")
           .select(
-            "id, category, amount_cents, currency, raw_text, household_id, split_group_id",
+            "id, category, amount_cents, currency, raw_text, household_id, account_id, split_group_id",
           )
           .eq("wallet_capture_idempotency_key", requestIdempotencyKey)
           .is("deleted_at", null)
           .maybeSingle();
 
         if (existingExpense) {
-          let responseExistingExpense = existingExpense;
+          const responseExistingExpense = existingExpense;
           if (requiresHouseholdSplit && !existingExpense.split_group_id) {
             const splitResult = await createHouseholdAutoSplitForTransaction({
               supabase,
@@ -2579,9 +2579,7 @@ Deno.serve(async (req: Request) => {
               settings: householdAutoSplitSettings,
               payerUserId: userId,
             });
-            if (splitResult.kind === "created") {
-              responseExistingExpense = splitResult.transaction;
-            } else if (
+            if (
               splitResult.kind === "invalid" ||
               splitResult.kind === "failed"
             ) {

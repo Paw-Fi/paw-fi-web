@@ -10,6 +10,11 @@ import {
   ensureUserCategory,
   learnUserCategoryPreference,
 } from "./user-categories.ts";
+import {
+  buildHouseholdSplitRecords,
+  commitHouseholdSplitRecords,
+  expectedSplitParentFromTransaction,
+} from "./household-auto-split.ts";
 
 export type SupabaseClient = SupabaseJsClient;
 
@@ -35,86 +40,6 @@ function sanitizeUuidList(values: string[] | undefined): string[] {
     out.push(s);
   }
   return out;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && isFinite(value);
-}
-
-function normalizePercentage(value: unknown): number {
-  if (!isFiniteNumber(value)) return 0;
-  if (value < 0) return 0;
-  if (value > 100) return 100;
-  return value;
-}
-
-function normalizeShares(value: unknown): number | null {
-  if (!isFiniteNumber(value)) return null;
-  const shares = Math.floor(value);
-  return shares > 0 ? shares : null;
-}
-
-function normalizeAmount(value: unknown): number {
-  if (!isFiniteNumber(value)) return 0;
-  return value < 0 ? 0 : value;
-}
-
-function isSplitType(value: string): value is CustomSplits["splitType"] {
-  return (
-    value === "equal" ||
-    value === "amount" ||
-    value === "percentage" ||
-    value === "shares"
-  );
-}
-
-function allocateCentsByWeights(
-  totalCents: number,
-  weights: number[],
-): number[] {
-  const safeTotal = isFinite(totalCents)
-    ? Math.max(0, Math.floor(totalCents))
-    : 0;
-  const safeWeights = weights.map((w) => (isFinite(w) && w > 0 ? w : 0));
-  const totalWeight = safeWeights.reduce((sum, w) => sum + w, 0);
-
-  if (safeTotal === 0 || totalWeight <= 0 || safeWeights.length === 0) {
-    return safeWeights.map(() => 0);
-  }
-
-  const floors: number[] = [];
-  const fracs: { idx: number; frac: number }[] = [];
-  let sumFloors = 0;
-
-  for (let i = 0; i < safeWeights.length; i++) {
-    const weight = safeWeights[i];
-    if (weight <= 0) {
-      floors.push(0);
-      continue;
-    }
-    const raw = safeTotal * (weight / totalWeight);
-    const floored = Math.floor(raw);
-    const frac = raw - floored;
-    floors.push(floored);
-    sumFloors += floored;
-    fracs.push({ idx: i, frac });
-  }
-
-  let remainder = safeTotal - sumFloors;
-  if (remainder <= 0) return floors;
-
-  fracs.sort((a, b) => b.frac - a.frac);
-  if (fracs.length === 0) return floors;
-
-  let cursor = 0;
-  while (remainder > 0) {
-    const target = fracs[cursor % fracs.length].idx;
-    floors[target] += 1;
-    remainder -= 1;
-    cursor += 1;
-  }
-
-  return floors;
 }
 
 export interface FetchExpensesOptions {
@@ -220,12 +145,10 @@ export async function saveExpenseDirect(
 ) {
   const amount_cents = Math.round((params.amount || 0) * 100);
   const date = params.date || new Date().toISOString().split("T")[0];
-  const category =
-    sanitizeCategoryName(params.category || "") ??
+  const category = sanitizeCategoryName(params.category || "") ??
     normalizeCategoryForStorage(params.category || "other");
   const isPortfolioExpense = params.isPortfolio === true;
-  const isHouseholdExpense =
-    !!params.householdId &&
+  const isHouseholdExpense = !!params.householdId &&
     !isPortfolioExpense &&
     (params.type || "expense") === "expense";
   const payload: Record<string, unknown> = {
@@ -286,7 +209,13 @@ export async function saveExpenseDirect(
     .from("household_members")
     .select("user_id")
     .eq("household_id", householdId);
-  if (membersError || !members || members.length === 0) return insertRes;
+  if (membersError) return { data: null, error: membersError } as const;
+  if (!members || members.length === 0) {
+    return {
+      data: null,
+      error: new Error("Household has no members for expense split"),
+    } as const;
+  }
 
   const memberIds: string[] = members
     .map((m: any) => m.user_id as string | null | undefined)
@@ -294,134 +223,41 @@ export async function saveExpenseDirect(
       (value: string | null | undefined): value is string =>
         typeof value === "string" && value.length > 0,
     );
-  if (memberIds.length === 0) return insertRes;
-
-  const rawSplitType = (params.customSplits?.splitType || "equal")
-    .toString()
-    .trim()
-    .toLowerCase();
-  const normalizedSplitType = isSplitType(rawSplitType)
-    ? (rawSplitType as CustomSplits["splitType"])
-    : "equal";
-  const hasMemberSplits =
-    Array.isArray(params.customSplits?.memberSplits) &&
-    params.customSplits!.memberSplits.length > 0;
-  const customSplits =
-    hasMemberSplits && normalizedSplitType !== "equal"
-      ? params.customSplits
-      : undefined;
-  const splitType = customSplits ? normalizedSplitType : "equal";
+  if (memberIds.length === 0) {
+    return {
+      data: null,
+      error: new Error("Household has no valid members for expense split"),
+    } as const;
+  }
 
   let payerUserId = params.payerUserId || userId;
   if (memberIds.indexOf(payerUserId) === -1) {
     payerUserId = userId;
   }
-
-  const { data: splitGroup, error: splitGroupError } = await supabase
-    .from("expense_split_groups")
-    .insert({
-      household_id: householdId,
-      expense_id: insertRes.data.id,
-      payer_user_id: payerUserId,
-      split_type: splitType,
-      currency: params.currency,
-      total_amount_cents: amount_cents,
-      description: params.description || null,
-    })
-    .select()
-    .single();
-  if (splitGroupError || !splitGroup) return insertRes;
-
-  let splitLines: any[] = [];
-
-  if (splitType === "equal") {
-    const per = Math.floor(amount_cents / memberIds.length);
-    const remainder = amount_cents - per * memberIds.length;
-    splitLines = memberIds.map((memberId: string, index: number) => ({
-      split_group_id: splitGroup.id,
-      user_id: memberId,
-      amount_cents: per + (index === 0 ? remainder : 0),
-    }));
-  } else if (splitType === "amount" && customSplits) {
-    const normalizedById: Record<string, MemberSplit> = {};
-    for (const s of customSplits.memberSplits || []) {
-      if (memberIds.indexOf(s.userId) === -1) continue;
-      normalizedById[s.userId] = {
-        userId: s.userId,
-        amount: normalizeAmount(s.amount),
-      };
-    }
-    const full = memberIds.map(
-      (id: string) => normalizedById[id] || { userId: id, amount: 0 },
-    );
-    const cents = full.map((s: MemberSplit) =>
-      Math.max(0, Math.round((s.amount || 0) * 100)),
-    );
-    const sum = cents.reduce((a: number, b: number) => a + b, 0);
-    const diff = amount_cents - sum;
-    if (cents.length > 0 && diff !== 0)
-      cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
-    splitLines = full.map((s: MemberSplit, idx: number) => ({
-      split_group_id: splitGroup.id,
-      user_id: s.userId,
-      amount_cents: cents[idx],
-    }));
-  } else if (splitType === "percentage" && customSplits) {
-    const normalizedById: Record<string, MemberSplit> = {};
-    for (const s of customSplits.memberSplits || []) {
-      if (memberIds.indexOf(s.userId) === -1) continue;
-      normalizedById[s.userId] = {
-        userId: s.userId,
-        percentage: normalizePercentage(s.percentage),
-      };
-    }
-    const full = memberIds.map(
-      (id: string) => normalizedById[id] || { userId: id, percentage: 0 },
-    );
-    const weights = full.map((s: MemberSplit) => s.percentage || 0);
-    const cents = allocateCentsByWeights(amount_cents, weights);
-    splitLines = full.map((s: MemberSplit, idx: number) => ({
-      split_group_id: splitGroup.id,
-      user_id: s.userId,
-      amount_cents: cents[idx],
-      percentage: s.percentage,
-    }));
-  } else if (splitType === "shares" && customSplits) {
-    const normalizedById: Record<string, MemberSplit> = {};
-    for (const s of customSplits.memberSplits || []) {
-      if (memberIds.indexOf(s.userId) === -1) continue;
-      normalizedById[s.userId] = {
-        userId: s.userId,
-        shares: normalizeShares(s.shares) ?? 1,
-      };
-    }
-    const full = memberIds.map(
-      (id: string) => normalizedById[id] || { userId: id, shares: 1 },
-    );
-    const weights = full.map((s: MemberSplit) => s.shares || 0);
-    const cents = allocateCentsByWeights(amount_cents, weights);
-    splitLines = full.map((s: MemberSplit, idx: number) => ({
-      split_group_id: splitGroup.id,
-      user_id: s.userId,
-      amount_cents: cents[idx],
-      shares: s.shares ?? null,
-    }));
-  } else {
-    // Fallback to equal
-    const per = Math.floor(amount_cents / memberIds.length);
-    const remainder = amount_cents - per * memberIds.length;
-    splitLines = memberIds.map((memberId: string, index: number) => ({
-      split_group_id: splitGroup.id,
-      user_id: memberId,
-      amount_cents: per + (index === 0 ? remainder : 0),
-    }));
+  const buildResult = buildHouseholdSplitRecords({
+    householdId,
+    transactionId: insertRes.data.id,
+    payerUserId,
+    amountCents: amount_cents,
+    currency: params.currency,
+    description: params.description || null,
+    members,
+    customSplits: params.customSplits ?? null,
+  });
+  if (!buildResult.ok) {
+    return { data: null, error: new Error(buildResult.error) } as const;
   }
 
-  await supabase.from("expense_split_lines").insert(splitLines);
-  await supabase
-    .from("expenses")
-    .update({ split_group_id: splitGroup.id, household_id: householdId })
-    .eq("id", insertRes.data.id);
+  const { error: commitError } = await commitHouseholdSplitRecords({
+    supabase,
+    actorUserId: userId,
+    group: buildResult.group,
+    lines: buildResult.lines,
+    expectedParent: expectedSplitParentFromTransaction(
+      insertRes.data as Record<string, unknown>,
+    ),
+  });
+  if (commitError) return { data: null, error: commitError } as const;
 
   const refreshed = await supabase
     .from("expenses")
@@ -472,8 +308,7 @@ export async function deleteExpenseDirect(
     | undefined;
 
   if (!expenseHouseholdId) {
-    const canDeletePersonal =
-      (expenseUserId && expenseUserId === userId) ||
+    const canDeletePersonal = (expenseUserId && expenseUserId === userId) ||
       (expenseContactId && expenseContactId === contactId);
     if (!canDeletePersonal) {
       return {
