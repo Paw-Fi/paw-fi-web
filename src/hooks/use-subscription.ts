@@ -93,7 +93,9 @@ const updateCachedSubscription = (
 ): SubscriptionData | undefined => {
   if (!current) return current;
 
-  const nextSubscription = updater(normalizeSubscriptionData(current.subscription));
+  const nextSubscription = updater(
+    normalizeSubscriptionData(current.subscription),
+  );
 
   return {
     ...current,
@@ -416,12 +418,17 @@ export function useSubscription(userId: string | undefined) {
     ? data?.subscription[0]
     : data?.subscription;
 
-  // Check if user's subscription is expired
-  const isExpired = subscriptionData && subscriptionData.status === "canceled";
+  const subscriptionStatus = subscriptionData?.status?.toLowerCase() || "";
+  const isExpired = Boolean(
+    subscriptionData &&
+      ["canceled", "incomplete_expired", "unpaid"].includes(subscriptionStatus),
+  );
 
   // Check if user has an active subscription
   const isActive = Boolean(
-    subscriptionData && subscriptionData.plan !== "free" && !isExpired,
+    subscriptionData &&
+      subscriptionData.plan !== "free" &&
+      ["active", "trialing", "past_due"].includes(subscriptionStatus),
   );
 
   return {

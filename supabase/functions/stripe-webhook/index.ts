@@ -7,13 +7,18 @@ import { referralAcceptedTemplate } from "../shared/email-templates.ts";
 import {
   discountExpiringTemplate,
   invoiceFinalizedTemplate,
+  invoiceLocationRequiredTemplate,
   invoicePaymentSucceededTemplate,
   invoiceUpcomingTemplate,
   paymentActionRequiredTemplate,
   paymentFailedTemplate,
   paymentMethodUpdatedTemplate,
+  refundFailedTemplate,
+  refundProcessedTemplate,
   subscriptionCanceledTemplate,
   subscriptionCreatedTemplate,
+  subscriptionPausedTemplate,
+  subscriptionResumedTemplate,
   subscriptionUpdatedTemplate,
   trialEndingTemplate,
 } from "../shared/email-templates.ts";
@@ -28,6 +33,7 @@ import {
   PlanType,
 } from "../shared/subscription-constants.ts";
 import {
+  getPlanFromPriceId,
   resolveInvoicePlanFromLinePrices,
   resolveSubscriptionPlanFromPrice,
 } from "../shared/stripe-subscription-prices.ts";
@@ -49,27 +55,38 @@ interface QueuedEmail {
   email: string;
   name: string;
   template: EmailTemplate;
+  idempotencyKey: string;
 }
 
 type EnqueueUserEmail = (
   email: string,
   name: string,
   template: EmailTemplate,
+  idempotencyKey?: string,
 ) => void;
 
 async function flushQueuedEmails(emails: QueuedEmail[]): Promise<void> {
   for (const item of emails) {
     try {
-      await sendUserEmail(item.email, item.name, item.template);
+      const result = await sendUserEmail(
+        item.email,
+        item.name,
+        item.template,
+        item.idempotencyKey,
+      );
+      if (!result?.success) {
+        throw new Error(result?.error || "Email provider rejected the email");
+      }
     } catch (error) {
       reportStripeWebhookError("flush_queued_emails", error, {
         email: item.email,
       });
       const msg = error instanceof Error ? error.message : String(error);
-      console.error("Failed to send queued email (non-fatal):", {
+      console.error("Failed to send queued email:", {
         email: item.email,
         error: msg,
       });
+      throw error;
     }
   }
 }
@@ -230,8 +247,8 @@ function reportStripeWebhookError(
   phase: string,
   error: unknown,
   context?: Record<string, unknown>,
-): void {
-  void reportEdgeFunctionError({
+): Promise<void> {
+  const report = reportEdgeFunctionError({
     functionName: "stripe-webhook",
     error,
     context: {
@@ -239,13 +256,67 @@ function reportStripeWebhookError(
       ...context,
     },
   });
+  const edgeRuntime = (
+    globalThis as unknown as {
+      EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void };
+    }
+  ).EdgeRuntime;
+  if (typeof edgeRuntime?.waitUntil === "function") {
+    edgeRuntime.waitUntil(report);
+  }
+  return report;
+}
+
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const invoiceSubscription = (invoice as any).subscription;
+  const parentSubscription = (invoice as any).parent?.subscription_details
+    ?.subscription;
+  const subscription = invoiceSubscription ?? parentSubscription;
+
+  if (typeof subscription === "string") return subscription;
+  return subscription?.id ?? null;
+}
+
+async function getInvoicePaymentIntentId(
+  invoice: Stripe.Invoice,
+): Promise<string | null> {
+  const directPaymentIntent = (invoice as any).payment_intent;
+  if (directPaymentIntent) {
+    return typeof directPaymentIntent === "string"
+      ? directPaymentIntent
+      : (directPaymentIntent.id ?? null);
+  }
+
+  const latestInvoice = await stripe.invoices.retrieve(invoice.id, {
+    expand: ["payments.data.payment.payment_intent"],
+  });
+  const payments = (latestInvoice as any).payments?.data || [];
+  const payment = payments.find((item: any) => item.is_default) ?? payments[0];
+  const paymentIntent = payment?.payment?.payment_intent;
+
+  if (!paymentIntent) return null;
+  return typeof paymentIntent === "string"
+    ? paymentIntent
+    : (paymentIntent.id ?? null);
 }
 
 serve(async (req) => {
   const startTime = Date.now();
   const queuedEmails: QueuedEmail[] = [];
-  const enqueueUserEmail: EnqueueUserEmail = (email, name, template) => {
-    queuedEmails.push({ email, name, template });
+  let webhookEventId = "unknown";
+  const enqueueUserEmail: EnqueueUserEmail = (
+    email,
+    name,
+    template,
+    idempotencyKey,
+  ) => {
+    queuedEmails.push({
+      email,
+      name,
+      template,
+      idempotencyKey:
+        idempotencyKey || `${webhookEventId}:${queuedEmails.length}`,
+    });
   };
 
   try {
@@ -312,6 +383,7 @@ serve(async (req) => {
     }
 
     // IDEMPOTENCY: Check if event was already processed
+    webhookEventId = event.id;
     const alreadyProcessed = await isWebhookEventProcessed(supabase, event.id);
 
     if (alreadyProcessed) {
@@ -352,19 +424,57 @@ serve(async (req) => {
             enqueueUserEmail,
           );
           break;
+        case "checkout.session.expired":
+          await handleCheckoutSessionExpired(
+            event.data.object as Stripe.Checkout.Session,
+          );
+          break;
         case "charge.refunded":
           await handleChargeRefunded(
             event.data.object as Stripe.Charge,
             event.id,
-            enqueueUserEmail,
           );
           break;
-        case "refund.created":
+        case "refund.created": {
+          const refund = event.data.object as Stripe.Refund;
+          await handleRefundCreatedOrUpdated(
+            refund,
+            event.id,
+            enqueueUserEmail,
+            (refund as any).status === "succeeded",
+          );
+          break;
+        }
         case "refund.updated":
+        case "charge.refund.updated": {
+          const refund = event.data.object as Stripe.Refund;
+          const previousStatus = (event.data.previous_attributes as any)
+            ?.status;
+          await handleRefundCreatedOrUpdated(
+            refund,
+            event.id,
+            enqueueUserEmail,
+            (refund as any).status === "succeeded" &&
+              previousStatus !== undefined &&
+              previousStatus !== "succeeded",
+          );
+          break;
+        }
+        case "refund.failed":
           await handleRefundCreatedOrUpdated(
             event.data.object as Stripe.Refund,
             event.id,
             enqueueUserEmail,
+            false,
+          );
+          break;
+        case "charge.dispute.created":
+        case "charge.dispute.closed":
+        case "charge.dispute.funds_withdrawn":
+        case "charge.dispute.funds_reinstated":
+          await handleChargeDispute(
+            event.data.object as Stripe.Dispute,
+            event.type,
           );
           break;
         case "payment_intent.succeeded":
@@ -374,8 +484,16 @@ serve(async (req) => {
             event.id,
           );
           break;
+        case "payment_intent.payment_failed":
+          await handlePaymentIntentFailed(
+            event.data.object as Stripe.PaymentIntent,
+            enqueueUserEmail,
+          );
+          break;
         case "customer.subscription.created":
         case "customer.subscription.updated":
+        case "customer.subscription.paused":
+        case "customer.subscription.resumed":
           await handleSubscriptionUpdated(
             event.data.object as Stripe.Subscription,
             event.id,
@@ -395,6 +513,7 @@ serve(async (req) => {
             enqueueUserEmail,
           );
           break;
+        case "invoice.paid":
         case "invoice.payment_succeeded":
           await handleInvoicePaymentSucceeded(
             event.data.object as Stripe.Invoice,
@@ -405,11 +524,18 @@ serve(async (req) => {
         case "invoice.payment_failed":
           await handleInvoicePaymentFailed(
             event.data.object as Stripe.Invoice,
+            event.id,
             enqueueUserEmail,
           );
           break;
         case "invoice.payment_action_required":
           await handleInvoicePaymentActionRequired(
+            event.data.object as Stripe.Invoice,
+            enqueueUserEmail,
+          );
+          break;
+        case "invoice.finalization_failed":
+          await handleInvoiceFinalizationFailed(
             event.data.object as Stripe.Invoice,
             enqueueUserEmail,
           );
@@ -457,18 +583,36 @@ serve(async (req) => {
             enqueueUserEmail,
           );
           break;
+        case "subscription_schedule.aborted":
+        case "subscription_schedule.canceled":
+        case "subscription_schedule.completed":
+        case "subscription_schedule.released":
+          await handleTerminalSubscriptionSchedule(
+            event.data.object as Stripe.SubscriptionSchedule,
+            event.type,
+          );
+          break;
         default:
           console.log(`Unhandled event type: ${event.type}`);
       }
 
+      // Email delivery must complete before the event is marked processed.
+      // Resend idempotency keys make Stripe retries safe if delivery fails.
+      await flushQueuedEmails(queuedEmails);
+
       // Mark event as processed with processing time
       const processingTime = Date.now() - startTime;
-      await markWebhookEventProcessed(supabase, event.id, event.type, {
-        processing_time_ms: processingTime,
-      });
-
-      // Non-critical side effects should run AFTER idempotency is recorded.
-      await flushQueuedEmails(queuedEmails);
+      const markedProcessed = await markWebhookEventProcessed(
+        supabase,
+        event.id,
+        event.type,
+        {
+          processing_time_ms: processingTime,
+        },
+      );
+      if (!markedProcessed) {
+        throw new Error(`Failed to record webhook event ${event.id}`);
+      }
 
       console.log(
         `Event ${event.id} processed successfully in ${processingTime}ms`,
@@ -482,7 +626,7 @@ serve(async (req) => {
         },
       );
     } catch (error: any) {
-      reportStripeWebhookError("process_webhook_event", error, {
+      await reportStripeWebhookError("process_webhook_event", error, {
         eventId: event.id,
         eventType: event.type,
       });
@@ -535,7 +679,7 @@ serve(async (req) => {
       );
     }
   } catch (error: any) {
-    reportStripeWebhookError("serve_handler", error);
+    await reportStripeWebhookError("serve_handler", error);
     console.error(`Unexpected webhook error:`, {
       error: error.message,
       stack: error.stack,
@@ -552,11 +696,7 @@ serve(async (req) => {
 });
 
 // Handler for refunded charges (revoke lifetime access if applicable)
-async function handleChargeRefunded(
-  charge: Stripe.Charge,
-  eventId: string,
-  enqueueUserEmail: EnqueueUserEmail,
-) {
+async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
   try {
     console.log("Processing charge.refunded:", charge.id);
 
@@ -585,7 +725,7 @@ async function handleChargeRefunded(
       | null;
 
     // Only revoke if it was a Lifetime purchase
-    if (plan !== "lifetime" || !userId) {
+    if (plan !== "lifetime" || !isUuid(userId)) {
       console.log(
         "Refund is not for a Lifetime purchase or missing user id, skipping",
       );
@@ -610,7 +750,10 @@ async function handleChargeRefunded(
       return;
     }
 
-    await revokeLifetimeAccess({ userId, eventId, enqueueUserEmail });
+    await revokeLifetimeAccess({
+      userId,
+      eventId,
+    });
   } catch (error: any) {
     reportStripeWebhookError("handle_charge_refunded", error, {
       chargeId: charge.id,
@@ -624,90 +767,113 @@ async function handleChargeRefunded(
   }
 }
 
+async function handleChargeDispute(
+  dispute: Stripe.Dispute,
+  eventType: string,
+): Promise<void> {
+  await reportStripeWebhookError(
+    "handle_charge_dispute",
+    new Error(
+      `Stripe dispute lifecycle event requires attention: ${eventType}`,
+    ),
+    {
+      eventType,
+      disputeId: dispute.id,
+      chargeId:
+        typeof dispute.charge === "string"
+          ? dispute.charge
+          : dispute.charge?.id,
+      status: dispute.status,
+      amount: dispute.amount,
+      currency: dispute.currency,
+    },
+  );
+}
+
 async function revokeLifetimeAccess(params: {
   userId: string;
   eventId: string;
-  enqueueUserEmail: EnqueueUserEmail;
 }): Promise<void> {
-  const { userId, eventId, enqueueUserEmail } = params;
+  const { userId, eventId } = params;
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("subscriptions")
-    .select("plan, status")
+    .select("plan, status, last_event_id")
     .eq("user_id", userId)
     .maybeSingle();
 
-  // Idempotency across different Stripe refund event ids.
-  if (existing?.plan === "free" && existing?.status === "canceled") {
-    return;
+  if (existingError) {
+    throw new Error(`subscriptions lookup failed: ${existingError.message}`);
   }
 
-  const nowIso = new Date().toISOString();
-
-  const { error: updateError } = await supabase
-    .from("subscriptions")
-    .update({
-      provider: "stripe",
-      plan: "free",
-      status: "canceled",
-      billing_interval: null,
-      stripe_subscription_id: null,
-      // Provider hygiene: clear IAP identifiers.
-      store_product_id: null,
-      app_store_transaction_id: null,
-      app_store_original_transaction_id: null,
-      app_store_environment: null,
-      play_purchase_token: null,
-      play_order_id: null,
-      play_package_name: null,
-      ended_at: nowIso,
-      last_event_id: eventId,
-      updated_at: nowIso,
-    })
-    .eq("user_id", userId);
-
-  if (updateError) {
-    console.error("Error downgrading user after refund:", updateError);
-    return;
-  }
-
-  // CRITICAL: Cascade cancellation to all household members bound to this lifetime subscription
-  try {
-    await supabase.rpc("cascade_subscription_cancellation", {
-      p_owner_user_id: userId,
-    });
-  } catch (error) {
-    reportStripeWebhookError("revoke_lifetime_access_cascade", error, {
-      userId,
-      eventId,
-    });
-    console.error(
-      "Unexpected error during lifetime refund cascade cancellation:",
-      error,
+  if (existing?.plan !== "lifetime") {
+    console.log(
+      "Skipping Lifetime refund revocation because current entitlement is not Lifetime",
+      {
+        userId: redactUserId(userId),
+        currentPlan: existing?.plan || null,
+        currentStatus: existing?.status || null,
+      },
     );
+    return;
   }
 
-  // Notify user of revocation (queued; flushed after event idempotency is recorded)
-  const { data: userData } = await supabase
-    .from("users")
-    .select("email, full_name")
-    .eq("id", userId)
-    .single();
+  const alreadyRevoked =
+    existing?.plan === "free" && existing?.status === "canceled";
 
-  if (userData?.email) {
-    const name = userData.full_name || "";
-    const emailTemplate = subscriptionCanceledTemplate({
-      name,
-      planName: "Lifetime",
-      endDate: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-      immediateCancel: true,
-    });
-    enqueueUserEmail(userData.email, name, emailTemplate);
+  if (!alreadyRevoked) {
+    const nowIso = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("subscriptions")
+      .update({
+        provider: "stripe",
+        plan: "free",
+        status: "canceled",
+        billing_interval: null,
+        stripe_subscription_id: null,
+        // Provider hygiene: clear IAP identifiers.
+        store_product_id: null,
+        app_store_transaction_id: null,
+        app_store_original_transaction_id: null,
+        app_store_environment: null,
+        play_purchase_token: null,
+        play_order_id: null,
+        play_package_name: null,
+        ended_at: nowIso,
+        last_event_id: eventId,
+        updated_at: nowIso,
+      })
+      .eq("user_id", userId);
+
+    if (updateError) {
+      console.error("Error downgrading user after refund:", updateError);
+      throw new Error(
+        `failed to revoke lifetime access: ${updateError.message}`,
+      );
+    }
+
+    // CRITICAL: Cascade cancellation to all household members bound to this lifetime subscription
+    try {
+      const { error: cascadeError } = await supabase.rpc(
+        "cascade_subscription_cancellation",
+        { p_owner_user_id: userId },
+      );
+      if (cascadeError) {
+        throw new Error(
+          `failed to cascade lifetime revocation: ${cascadeError.message}`,
+        );
+      }
+    } catch (error) {
+      reportStripeWebhookError("revoke_lifetime_access_cascade", error, {
+        userId,
+        eventId,
+      });
+      console.error(
+        "Unexpected error during lifetime refund cascade cancellation:",
+        error,
+      );
+      throw error;
+    }
   }
 }
 
@@ -715,8 +881,114 @@ async function handleRefundCreatedOrUpdated(
   refund: Stripe.Refund,
   eventId: string,
   enqueueUserEmail: EnqueueUserEmail,
+  shouldSendConfirmation: boolean,
 ): Promise<void> {
-  // Only react to a successful refund; pending refunds shouldn't revoke access.
+  refund = await stripe.refunds.retrieve(refund.id);
+  const refundStatus = (refund as any).status;
+  if (refundStatus === "failed" || refundStatus === "canceled") {
+    const failureReason = (refund as any).failure_reason || null;
+    await reportStripeWebhookError(
+      "handle_refund_failed",
+      new Error(`Stripe refund ${refundStatus} and requires attention`),
+      {
+        refundId: refund.id,
+        refundStatus,
+        failureReason,
+      },
+    );
+
+    const refundCustomer = (refund as any).customer;
+    const customerId =
+      typeof refundCustomer === "string" ? refundCustomer : refundCustomer?.id;
+    if (!customerId) {
+      await reportStripeWebhookError(
+        "handle_refund_failed_missing_customer",
+        new Error("Failed Stripe refund is missing its customer ID"),
+        { refundId: refund.id, refundStatus },
+      );
+      return;
+    }
+
+    const user = await getUserByCustomerId(customerId);
+    if (!user?.email) {
+      await reportStripeWebhookError(
+        "handle_refund_failed_missing_user",
+        new Error("No user mapping or email found for failed Stripe refund"),
+        { customerId, refundId: refund.id, refundStatus },
+      );
+      return;
+    }
+
+    const accessRestored = await restoreLifetimeAccessAfterFailedRefund({
+      refund,
+      eventId,
+      customerId,
+      userId: user.id,
+    });
+
+    const name = user.full_name || "";
+    const emailTemplate = refundFailedTemplate({
+      name,
+      amount: refund.amount / 100,
+      currency: refund.currency.toUpperCase(),
+      failureReason,
+      accessRestored,
+    });
+    enqueueUserEmail(
+      user.email,
+      name,
+      emailTemplate,
+      `refund_failed:${refund.id}`,
+    );
+    return;
+  }
+
+  if (shouldSendConfirmation) {
+    const refundCustomer = (refund as any).customer;
+    const customerId =
+      typeof refundCustomer === "string" ? refundCustomer : refundCustomer?.id;
+
+    if (!customerId) {
+      const error = new Error(
+        "Created Stripe refund is missing its customer ID",
+      );
+      reportStripeWebhookError(
+        "handle_refund_created_missing_customer",
+        error,
+        {
+          refundId: refund.id,
+        },
+      );
+      throw error;
+    }
+
+    const user = await getUserByCustomerId(customerId);
+    if (!user?.email) {
+      const error = new Error(
+        "No user mapping or email found for created Stripe refund",
+      );
+      reportStripeWebhookError("handle_refund_created_missing_user", error, {
+        customerId,
+        refundId: refund.id,
+      });
+      throw error;
+    }
+
+    const name = user.full_name || "";
+    const emailTemplate = refundProcessedTemplate({
+      name,
+      amount: refund.amount / 100,
+      currency: refund.currency.toUpperCase(),
+    });
+    enqueueUserEmail(
+      user.email,
+      name,
+      emailTemplate,
+      `refund_processed:${refund.id}`,
+    );
+  }
+
+  // Pending refunds should notify the customer once, but must not revoke access.
   if ((refund as any).status !== "succeeded") {
     return;
   }
@@ -739,7 +1011,7 @@ async function handleRefundCreatedOrUpdated(
     | string
     | null;
 
-  if (plan !== "lifetime" || !userId) {
+  if (plan !== "lifetime" || !isUuid(userId)) {
     return;
   }
 
@@ -761,7 +1033,105 @@ async function handleRefundCreatedOrUpdated(
     return;
   }
 
-  await revokeLifetimeAccess({ userId, eventId, enqueueUserEmail });
+  await revokeLifetimeAccess({
+    userId,
+    eventId,
+  });
+}
+
+async function restoreLifetimeAccessAfterFailedRefund(params: {
+  refund: Stripe.Refund;
+  eventId: string;
+  customerId: string;
+  userId: string;
+}): Promise<boolean> {
+  const paymentIntentId =
+    typeof (params.refund as any).payment_intent === "string"
+      ? (params.refund as any).payment_intent
+      : (params.refund as any).payment_intent?.id;
+  const chargeId =
+    typeof params.refund.charge === "string"
+      ? params.refund.charge
+      : params.refund.charge?.id;
+  if (!paymentIntentId || !chargeId) return false;
+
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  const paymentUserId =
+    paymentIntent.metadata?.user_id || paymentIntent.metadata?.userId;
+  if (paymentIntent.metadata?.plan !== "lifetime") return false;
+
+  if (isUuid(paymentUserId) && paymentUserId !== params.userId) {
+    await reportStripeWebhookError(
+      "restore_lifetime_after_failed_refund_user_conflict",
+      new Error(
+        "Failed Lifetime refund user metadata conflicts with customer mapping",
+      ),
+      {
+        refundId: params.refund.id,
+        customerId: params.customerId,
+        mappedUserId: params.userId,
+        metadataUserId: paymentUserId,
+      },
+    );
+    return false;
+  }
+
+  const charge = await stripe.charges.retrieve(chargeId);
+  const chargeStillFullyRefunded =
+    charge.refunded === true ||
+    (typeof charge.amount_refunded === "number" &&
+      typeof charge.amount === "number" &&
+      charge.amount_refunded >= charge.amount);
+  if (chargeStillFullyRefunded) return false;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("subscriptions")
+    .select("plan, status, provider")
+    .eq("user_id", params.userId)
+    .maybeSingle();
+  if (existingError) {
+    throw new Error(`subscriptions lookup failed: ${existingError.message}`);
+  }
+
+  if (
+    existing?.plan !== "free" ||
+    existing?.status !== "canceled" ||
+    existing?.provider !== "stripe"
+  ) {
+    return false;
+  }
+
+  const { error: restoreError } = await supabase
+    .from("subscriptions")
+    .upsert(
+      createLifetimeSubscriptionPayload(
+        params.userId,
+        params.customerId,
+        params.eventId,
+      ),
+      { onConflict: "user_id", ignoreDuplicates: false },
+    );
+  if (restoreError) {
+    throw new Error(
+      `failed to restore Lifetime access after refund failure: ${restoreError.message}`,
+    );
+  }
+
+  const { error: cascadeError } = await supabase.rpc(
+    "cascade_subscription_upgrade",
+    {
+      p_owner_user_id: params.userId,
+      p_new_plan: "lifetime",
+      p_new_status: "active",
+    },
+  );
+  if (cascadeError) {
+    throw new Error(
+      `failed to cascade restored Lifetime access: ${cascadeError.message}`,
+    );
+  }
+
+  return true;
 }
 
 // Handler for successful payment intents (one-time payments like Lifetime)
@@ -805,13 +1175,71 @@ async function handlePaymentIntentSucceeded(
   }
 }
 
+async function handlePaymentIntentFailed(
+  paymentIntent: Stripe.PaymentIntent,
+  enqueueUserEmail: EnqueueUserEmail,
+): Promise<void> {
+  try {
+    const plan = paymentIntent.metadata?.plan;
+    const userId =
+      paymentIntent.metadata?.user_id || paymentIntent.metadata?.userId;
+
+    // Recurring invoice failures have their own canonical notification path.
+    // This handler is for one-time Lifetime checkout failures only.
+    if (plan !== "lifetime" || !isUuid(userId)) return;
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("email, full_name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (userError) {
+      throw new Error(`users lookup failed: ${userError.message}`);
+    }
+
+    if (!userData?.email) return;
+
+    const failureReason =
+      paymentIntent.last_payment_error?.message ||
+      paymentIntent.last_payment_error?.decline_code ||
+      paymentIntent.last_payment_error?.code ||
+      "Your payment method was declined or could not be charged.";
+    const name = userData.full_name || "";
+    const membershipUrl = `${DASHBOARD_URL}/dashboard/user-settings/membership`;
+    const emailTemplate = paymentFailedTemplate({
+      name,
+      planName: "Lifetime",
+      dashboardUrl: membershipUrl,
+      updatePaymentUrl: membershipUrl,
+      failureReason,
+    });
+
+    enqueueUserEmail(
+      userData.email,
+      name,
+      emailTemplate,
+      `payment_intent_failed:${paymentIntent.id}`,
+    );
+  } catch (error) {
+    reportStripeWebhookError("handle_payment_intent_failed", error, {
+      paymentIntentId: paymentIntent.id,
+    });
+    throw error;
+  }
+}
+
 // Helper function to safely extract product ID from price object
 // Handles both string and expanded object formats
 function getProductIdFromPrice(price: any): string | null {
-  if (!price?.product) return null;
-  return typeof price.product === "string"
-    ? price.product
-    : price.product?.id || null;
+  const product =
+    price?.product ?? price?.pricing?.price_details?.product ?? null;
+  if (!product) return null;
+  return typeof product === "string" ? product : product.id || null;
+}
+
+function getProductIdFromInvoiceLine(line: any): string | null {
+  return getProductIdFromPrice(line?.price) || getProductIdFromPrice(line);
 }
 
 // Handler for subscription created or updated events
@@ -824,8 +1252,13 @@ async function getUserByCustomerId(customerId: string) {
     .eq("stripe_customer_id", customerId)
     .maybeSingle();
 
-  if (mappingError || !mappingData) {
-    console.error("Error finding user mapping:", mappingError);
+  if (mappingError) {
+    throw new Error(
+      `user_stripe_mapping lookup failed: ${mappingError.message}`,
+    );
+  }
+
+  if (!mappingData) {
     return null;
   }
 
@@ -837,8 +1270,7 @@ async function getUserByCustomerId(customerId: string) {
     .maybeSingle();
 
   if (userError) {
-    console.error("Error finding user:", userError);
-    return null;
+    throw new Error(`users lookup failed: ${userError.message}`);
   }
 
   return userData;
@@ -1000,6 +1432,41 @@ function createLifetimeSubscriptionPayload(
   };
 }
 
+async function cancelSubscriptionBeforeLifetimeGrant(params: {
+  subscriptionId: string;
+  userId: string;
+  sessionId: string;
+}): Promise<void> {
+  try {
+    await stripe.subscriptions.cancel(params.subscriptionId, {
+      prorate: false,
+    });
+    return;
+  } catch (cancelError) {
+    try {
+      const existingSubscription = await stripe.subscriptions.retrieve(
+        params.subscriptionId,
+      );
+      if (isTerminalDowngradeStatus(existingSubscription.status)) return;
+    } catch (retrieveError) {
+      reportStripeWebhookError(
+        "handle_checkout_session_completed_retrieve_old_subscription",
+        retrieveError,
+        params,
+      );
+    }
+
+    reportStripeWebhookError(
+      "handle_checkout_session_completed_cancel_old_subscription",
+      cancelError,
+      params,
+    );
+    throw new Error(
+      `failed to cancel old subscription ${params.subscriptionId} before lifetime grant`,
+    );
+  }
+}
+
 async function completeReferralAcceptance(params: {
   referralCodeId: string;
   referrerUserId: string;
@@ -1139,6 +1606,19 @@ async function handleSubscriptionUpdated(
   try {
     console.log("Processing subscription update:", subscription.id);
 
+    try {
+      subscription = await stripe.subscriptions.retrieve(subscription.id);
+    } catch (retrieveError: any) {
+      if (retrieveError?.code === "resource_missing") {
+        console.log(
+          "Skipping subscription snapshot because the subscription no longer exists",
+          { subscriptionId: subscription.id, eventId },
+        );
+        return;
+      }
+      throw retrieveError;
+    }
+
     const customerId =
       typeof subscription.customer === "string"
         ? subscription.customer
@@ -1146,6 +1626,11 @@ async function handleSubscriptionUpdated(
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
+      reportStripeWebhookError(
+        "handle_subscription_updated_missing_customer",
+        new Error("Stripe subscription is missing its customer ID"),
+        { subscriptionId: subscription.id },
+      );
       return;
     }
 
@@ -1155,6 +1640,11 @@ async function handleSubscriptionUpdated(
         customerId,
         subscriptionId: subscription.id,
       });
+      reportStripeWebhookError(
+        "handle_subscription_updated_missing_user",
+        new Error("No user mapping found for Stripe subscription customer"),
+        { customerId, subscriptionId: subscription.id },
+      );
       return;
     }
 
@@ -1162,13 +1652,34 @@ async function handleSubscriptionUpdated(
     const status = subscription.status;
     const cancelAtPeriodEnd = subscription.cancel_at_period_end;
 
-    const { data: previousSub } = await supabase
+    const { data: previousSub, error: previousSubError } = await supabase
       .from("subscriptions")
       .select(
-        "plan, billing_interval, status, stripe_subscription_id, current_price_id, cancel_at_period_end, current_period_end, ended_at",
+        "plan, billing_interval, status, stripe_subscription_id, current_price_id, cancel_at_period_end, current_period_end, ended_at, last_event_id, pending_plan, pending_interval, pending_effective_date",
       )
       .eq("user_id", userId)
       .maybeSingle();
+
+    if (previousSubError) {
+      throw new Error(
+        `subscriptions lookup failed: ${previousSubError.message}`,
+      );
+    }
+
+    if (
+      previousSub?.plan === "lifetime" &&
+      previousSub.status === "active" &&
+      previousSub.stripe_subscription_id !== subscription.id
+    ) {
+      console.log(
+        "Ignoring recurring subscription event for active Lifetime user",
+        {
+          userId: redactUserId(userId),
+          incomingSubscriptionId: subscription.id,
+        },
+      );
+      return;
+    }
 
     const previousStoredStatus = previousSub?.status || "";
     const previousPlan = previousSub?.plan as PlanType | null;
@@ -1294,8 +1805,9 @@ async function handleSubscriptionUpdated(
       });
 
       if (
-        previousSub?.status !== "canceled" &&
-        previousSub?.status !== "unpaid"
+        (previousSub?.status !== "canceled" &&
+          previousSub?.status !== "unpaid") ||
+        previousSub?.last_event_id === eventId
       ) {
         const productId =
           subscription.items?.data?.length > 0
@@ -1311,7 +1823,12 @@ async function handleSubscriptionUpdated(
           dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         });
 
-        enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
+        enqueueUserEmail(
+          user.email,
+          user.full_name || "",
+          emailTemplate,
+          `subscription_terminal:${eventId}`,
+        );
         console.log(`Terminal status email queued for ${user.email}`);
       }
 
@@ -1430,7 +1947,10 @@ async function handleSubscriptionUpdated(
       }
     }
     const finalPlan = pricePlanInfo.plan;
-    const finalInterval = pricePlanInfo.interval;
+    const finalInterval = pricePlanInfo.interval as BillingInterval;
+    const pendingChangeApplied =
+      previousSub?.pending_plan === finalPlan &&
+      previousSub?.pending_interval === finalInterval;
 
     const trialStart =
       typeof subscription.trial_start === "number" &&
@@ -1538,6 +2058,13 @@ async function handleSubscriptionUpdated(
           trial_start: trialStart,
           trial_end: trialEnd,
           current_price_id: subscription.items.data[0]?.price?.id,
+          ...(pendingChangeApplied
+            ? {
+                pending_plan: null,
+                pending_interval: null,
+                pending_effective_date: null,
+              }
+            : {}),
           previous_plan: previousPlan,
           previous_interval: previousInterval,
           ended_at: null,
@@ -1548,11 +2075,9 @@ async function handleSubscriptionUpdated(
       );
 
     if (subscriptionError) {
-      console.error(
-        "Error updating subscription in database:",
-        subscriptionError,
+      throw new Error(
+        `failed to update subscription ${subscription.id}: ${subscriptionError.message}`,
       );
-      return;
     }
 
     try {
@@ -1566,9 +2091,8 @@ async function handleSubscriptionUpdated(
       );
 
       if (cascadeError) {
-        console.error(
-          "Error cascading subscription update to household members:",
-          cascadeError,
+        throw new Error(
+          `failed to cascade subscription update: ${cascadeError.message}`,
         );
       } else if (cascadeResult && cascadeResult > 0) {
         console.log(
@@ -1584,6 +2108,7 @@ async function handleSubscriptionUpdated(
         "Unexpected error during subscription update cascade:",
         error,
       );
+      throw error;
     }
 
     const productId =
@@ -1596,7 +2121,31 @@ async function handleSubscriptionUpdated(
     const hasAccessNow = isAccessGrantingStatus(storedStatus);
     const hadAccessBefore = isAccessGrantingStatus(previousSub?.status || "");
 
-    const isNew = hasAccessNow && !hadAccessBefore;
+    if (storedStatus === "paused" && previousStoredStatus !== "paused") {
+      const emailTemplate = subscriptionPausedTemplate({ name });
+      enqueueUserEmail(
+        user.email,
+        name,
+        emailTemplate,
+        `subscription_paused:${subscription.id}`,
+      );
+      return;
+    }
+
+    if (hasAccessNow && previousStoredStatus === "paused") {
+      const emailTemplate = subscriptionResumedTemplate({ name });
+      enqueueUserEmail(
+        user.email,
+        name,
+        emailTemplate,
+        `subscription_resumed:${subscription.id}:${subscriptionPeriodEnd ?? "unknown"}`,
+      );
+      return;
+    }
+
+    const isNew =
+      hasAccessNow &&
+      (!hadAccessBefore || previousSub?.last_event_id === eventId);
 
     if (isNew) {
       const emailTemplate = subscriptionCreatedTemplate({
@@ -1607,7 +2156,12 @@ async function handleSubscriptionUpdated(
         isLifetime: false,
       });
 
-      enqueueUserEmail(user.email, name, emailTemplate);
+      enqueueUserEmail(
+        user.email,
+        name,
+        emailTemplate,
+        `subscription_created:${subscription.id}`,
+      );
       console.log(`Welcome email queued for ${user.email}`);
       return;
     }
@@ -1615,7 +2169,8 @@ async function handleSubscriptionUpdated(
     if (
       hasAccessNow &&
       cancelAtPeriodEnd &&
-      !previousSub?.cancel_at_period_end
+      (!previousSub?.cancel_at_period_end ||
+        previousSub?.last_event_id === eventId)
     ) {
       const emailTemplate = subscriptionCanceledTemplate({
         name,
@@ -1625,7 +2180,12 @@ async function handleSubscriptionUpdated(
         immediateCancel: false,
       });
 
-      enqueueUserEmail(user.email, name, emailTemplate);
+      enqueueUserEmail(
+        user.email,
+        name,
+        emailTemplate,
+        `subscription_cancellation_scheduled:${eventId}`,
+      );
       console.log(`Scheduled cancellation email queued for ${user.email}`);
       return;
     }
@@ -1633,7 +2193,9 @@ async function handleSubscriptionUpdated(
     if (
       hasAccessNow &&
       previousPlan &&
-      (previousPlan !== finalPlan || previousInterval !== finalInterval)
+      (previousPlan !== finalPlan ||
+        previousInterval !== finalInterval ||
+        previousSub?.last_event_id === eventId)
     ) {
       const changeType = getChangeType(
         previousPlan,
@@ -1659,7 +2221,12 @@ async function handleSubscriptionUpdated(
         changeType: templateChangeType,
       });
 
-      enqueueUserEmail(user.email, name, emailTemplate);
+      enqueueUserEmail(
+        user.email,
+        name,
+        emailTemplate,
+        `subscription_change_applied:${subscription.id}:${finalPlan}:${finalInterval}:${previousSub?.current_period_end ?? subscriptionPeriodEnd ?? "unknown"}`,
+      );
       console.log(
         `Subscription ${templateChangeType} email queued for ${user.email}`,
       );
@@ -1694,18 +2261,22 @@ async function handleSubscriptionDeleted(
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
+      reportStripeWebhookError(
+        "handle_subscription_deleted_missing_customer",
+        new Error("Stripe subscription deletion is missing its customer ID"),
+        { subscriptionId: subscription.id },
+      );
       return;
     }
 
     const { data: subData, error: subError } = await supabase
       .from("subscriptions")
-      .select("user_id, plan, status")
+      .select("user_id, plan, status, last_event_id")
       .eq("stripe_subscription_id", subscription.id)
       .maybeSingle();
 
     if (subError) {
-      console.error("Error finding subscription:", subError);
-      return;
+      throw new Error(`subscriptions lookup failed: ${subError.message}`);
     }
 
     if (!subData?.user_id) {
@@ -1720,6 +2291,8 @@ async function handleSubscriptionDeleted(
     }
 
     const userId = subData.user_id;
+    const wasAlreadyTerminal = isTerminalDowngradeStatus(subData.status);
+    const wasHandledByThisEvent = subData.last_event_id === eventId;
 
     if (subData.plan === "lifetime" && subData.status === "active") {
       console.log(
@@ -1744,13 +2317,25 @@ async function handleSubscriptionDeleted(
           : new Date().toISOString(),
     });
 
+    if (wasAlreadyTerminal && !wasHandledByThisEvent) {
+      console.log(
+        "Subscription deletion already handled by a terminal billing event",
+        { subscriptionId: subscription.id },
+      );
+      return;
+    }
+
     console.log("User downgraded to free plan:", userId);
 
-    const { data: affectedUser } = await supabase
+    const { data: affectedUser, error: affectedUserError } = await supabase
       .from("users")
       .select("email, full_name")
       .eq("id", userId)
       .maybeSingle();
+
+    if (affectedUserError) {
+      throw new Error(`users lookup failed: ${affectedUserError.message}`);
+    }
 
     if (!affectedUser?.email) {
       return;
@@ -1773,7 +2358,12 @@ async function handleSubscriptionDeleted(
       immediateCancel: true,
     });
 
-    enqueueUserEmail(affectedUser.email, name, emailTemplate);
+    enqueueUserEmail(
+      affectedUser.email,
+      name,
+      emailTemplate,
+      `subscription_canceled:${subscription.id}`,
+    );
     console.log(
       `Subscription cancellation email queued for ${affectedUser.email}`,
     );
@@ -1803,12 +2393,9 @@ async function handleInvoicePaymentSucceeded(
     console.log("Processing successful payment for invoice:", invoice.id);
 
     // Process RECURRING subscription invoices
-    if (invoice.subscription) {
-      const subscriptionId =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription.id;
+    const subscriptionId = getInvoiceSubscriptionId(invoice);
 
+    if (subscriptionId) {
       // Get the subscription details
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
@@ -1829,6 +2416,11 @@ async function handleInvoicePaymentSucceeded(
 
       if (!customerId) {
         console.error("No customer ID in invoice:", invoice.id);
+        reportStripeWebhookError(
+          "handle_invoice_payment_succeeded_missing_customer",
+          new Error("Stripe invoice is missing its customer ID"),
+          { invoiceId: invoice.id },
+        );
         return;
       }
 
@@ -1837,13 +2429,18 @@ async function handleInvoicePaymentSucceeded(
 
       if (!user) {
         console.error("No user found for customer:", customerId);
+        reportStripeWebhookError(
+          "handle_invoice_payment_succeeded_missing_user",
+          new Error("No user mapping found for Stripe invoice customer"),
+          { customerId, invoiceId: invoice.id },
+        );
         return;
       }
 
       // Get plan name from invoice line items - use safe extraction
       const productId =
         invoice.lines?.data?.length > 0
-          ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+          ? getProductIdFromInvoiceLine(invoice.lines.data[0])
           : null;
       const planName = await getPlanNameFromProductId(productId);
 
@@ -1877,7 +2474,12 @@ async function handleInvoicePaymentSucceeded(
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
       });
 
-      enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
+      enqueueUserEmail(
+        user.email,
+        user.full_name || "",
+        emailTemplate,
+        `invoice_payment_succeeded:${invoice.id}`,
+      );
       console.log(
         `Invoice receipt email queued for ${user.email} with PDF link`,
       );
@@ -1908,10 +2510,7 @@ async function handleInvoicePaymentSucceeded(
 
       // Try to determine plan and user. Lifetime grants must be proven by the
       // paid line item price, never by mutable metadata alone.
-      const paymentIntentId =
-        typeof invoice.payment_intent === "string"
-          ? invoice.payment_intent
-          : invoice.payment_intent?.id;
+      const paymentIntentId = await getInvoicePaymentIntentId(invoice);
 
       const linePricePlanInfo = resolveInvoicePlanFromLinePrices(invoice);
       let determinedPlan: PlanType | null = linePricePlanInfo?.plan ?? null;
@@ -2040,10 +2639,7 @@ async function handleInvoicePaymentSucceeded(
         // Referral sidecar: attempt to complete via DB-backed acceptance.
         try {
           let processed = false;
-          const paymentIntentId =
-            typeof invoice.payment_intent === "string"
-              ? invoice.payment_intent
-              : invoice.payment_intent?.id;
+          const paymentIntentId = await getInvoicePaymentIntentId(invoice);
 
           if (paymentIntentId) {
             const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
@@ -2114,14 +2710,24 @@ async function handleInvoicePaymentSucceeded(
         }
 
         // Check existing sub
-        const { data: existingSub } = await supabase
+        const { data: existingSub, error: existingSubError } = await supabase
           .from("subscriptions")
-          .select("plan, status")
+          .select("plan, status, stripe_subscription_id, last_event_id")
           .eq("user_id", userId)
           .maybeSingle();
 
+        if (existingSubError) {
+          throw new Error(
+            `existing subscription lookup failed: ${existingSubError.message}`,
+          );
+        }
+
         const payerAlreadyLifetime =
           existingSub?.plan === "lifetime" && existingSub?.status === "active";
+        const invoiceLifetimeEventId = `invoice_${eventId}`;
+        const shouldSendLifetimeWelcome =
+          !payerAlreadyLifetime ||
+          existingSub?.last_event_id === invoiceLifetimeEventId;
         if (payerAlreadyLifetime) {
           console.log(
             `✅ User ${userId} already has active lifetime subscription`,
@@ -2130,6 +2736,18 @@ async function handleInvoicePaymentSucceeded(
         }
 
         if (!payerAlreadyLifetime) {
+          const oldStripeSubscriptionId = existingSub?.stripe_subscription_id;
+          if (
+            oldStripeSubscriptionId &&
+            oldStripeSubscriptionId.startsWith("sub_")
+          ) {
+            await cancelSubscriptionBeforeLifetimeGrant({
+              subscriptionId: oldStripeSubscriptionId,
+              userId,
+              sessionId: invoice.id,
+            });
+          }
+
           const lifetimeData = {
             user_id: userId,
             provider: "stripe",
@@ -2152,7 +2770,7 @@ async function handleInvoicePaymentSucceeded(
             cancel_at_period_end: false,
             trial_start: null,
             trial_end: null,
-            last_event_id: `invoice_${eventId}`,
+            last_event_id: invoiceLifetimeEventId,
             updated_at: new Date().toISOString(),
           };
 
@@ -2170,27 +2788,31 @@ async function handleInvoicePaymentSucceeded(
             );
             throw upsertError;
           }
+        }
 
-          // Send confirmation email to payer
-          const { data: userData } = await supabase
-            .from("users")
-            .select("email, full_name")
-            .eq("id", userId)
-            .single();
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("email, full_name")
+          .eq("id", userId)
+          .single();
 
-          if (userData) {
-            const emailTemplate = subscriptionCreatedTemplate({
-              name: userData.full_name || "",
-              planName: "Lifetime",
-              dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-              isLifetime: true,
-            });
-            enqueueUserEmail(
-              userData.email,
-              userData.full_name || "",
-              emailTemplate,
-            );
-          }
+        if (userError) {
+          throw new Error(`users lookup failed: ${userError.message}`);
+        }
+
+        if (userData?.email && shouldSendLifetimeWelcome) {
+          const emailTemplate = subscriptionCreatedTemplate({
+            name: userData.full_name || "",
+            planName: "Lifetime",
+            dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
+            isLifetime: true,
+          });
+          enqueueUserEmail(
+            userData.email,
+            userData.full_name || "",
+            emailTemplate,
+            `lifetime_purchase:${paymentIntentId ?? invoice.id}`,
+          );
         }
       } else {
         // Safety: do not create recurring subscriptions from manual invoices without subscription ID
@@ -2220,40 +2842,71 @@ async function handleInvoicePaymentSucceeded(
 // Handler for failed invoice payments
 async function handleInvoicePaymentFailed(
   invoice: Stripe.Invoice,
+  eventId: string,
   enqueueUserEmail: EnqueueUserEmail,
 ) {
   try {
     console.log("Processing failed payment for invoice:", invoice.id);
 
-    if (!invoice.subscription) {
+    const subscriptionId = getInvoiceSubscriptionId(invoice);
+
+    if (!subscriptionId) {
       return;
     }
 
-    const subscriptionId =
-      typeof invoice.subscription === "string"
-        ? invoice.subscription
-        : invoice.subscription.id;
-
-    const { data: subData, error: subError } = await supabase
+    let { data: subData, error: subError } = await supabase
       .from("subscriptions")
-      .select("user_id, plan")
+      .select("user_id, plan, status, last_event_id")
       .eq("stripe_subscription_id", subscriptionId)
       .maybeSingle();
 
     if (subError) {
-      console.error("Error finding subscription:", subError);
-      return;
+      throw new Error(`subscriptions lookup failed: ${subError.message}`);
+    }
+
+    if (!subData?.user_id) {
+      const stripeSubscription =
+        await stripe.subscriptions.retrieve(subscriptionId);
+      await handleSubscriptionUpdated(
+        stripeSubscription,
+        eventId,
+        enqueueUserEmail,
+        invoice,
+      );
+
+      const retryLookup = await supabase
+        .from("subscriptions")
+        .select("user_id, plan, status, last_event_id")
+        .eq("stripe_subscription_id", subscriptionId)
+        .maybeSingle();
+      subData = retryLookup.data;
+      subError = retryLookup.error;
+      if (subError) {
+        throw new Error(`subscriptions lookup failed: ${subError.message}`);
+      }
     }
 
     if (!subData?.user_id) {
       console.error("No subscription found with ID:", subscriptionId);
+      reportStripeWebhookError(
+        "handle_invoice_payment_failed_missing_subscription",
+        new Error("No local subscription found for failed Stripe invoice"),
+        { invoiceId: invoice.id, subscriptionId },
+      );
       return;
     }
 
     const userId = subData.user_id;
     const plan = (subData as any).plan as string | null;
+    const previousStatus = (subData as any).status as string | null;
+    const handledByThisInvoice =
+      subData.last_event_id === `invoice_payment_failed_${invoice.id}`;
 
     let latestStripeStatus = "past_due";
+    let paymentIntentStatus: string | null = null;
+    let failureReason =
+      (invoice as any).last_finalization_error?.message ||
+      "Your payment method was declined or could not be charged.";
     try {
       const latestSubscription =
         await stripe.subscriptions.retrieve(subscriptionId);
@@ -2274,6 +2927,43 @@ async function handleInvoicePaymentFailed(
           error: retrieveError?.message || String(retrieveError),
         },
       );
+    }
+
+    try {
+      const latestInvoice = await stripe.invoices.retrieve(invoice.id, {
+        expand: ["payments.data.payment.payment_intent"],
+      });
+      const payments = (latestInvoice as any).payments?.data || [];
+      const latestPayment =
+        payments.find((payment: any) => payment.is_default) ?? payments[0];
+      const paymentIntent =
+        latestPayment?.payment?.payment_intent ||
+        (latestInvoice as any).payment_intent;
+      const paymentIntentObject =
+        typeof paymentIntent === "object" && paymentIntent !== null
+          ? paymentIntent
+          : paymentIntent
+            ? await stripe.paymentIntents.retrieve(paymentIntent)
+            : null;
+      paymentIntentStatus = paymentIntentObject?.status ?? null;
+      const paymentError = paymentIntentObject?.last_payment_error;
+
+      failureReason =
+        paymentError?.message ||
+        paymentError?.decline_code ||
+        paymentError?.code ||
+        (latestInvoice as any).last_finalization_error?.message ||
+        failureReason;
+    } catch (reasonError) {
+      reportStripeWebhookError(
+        "handle_invoice_payment_failed_retrieve_reason",
+        reasonError,
+        { invoiceId: invoice.id, subscriptionId },
+      );
+      console.error("Could not retrieve payment failure reason", {
+        invoiceId: invoice.id,
+        error: reasonError instanceof Error ? reasonError.message : reasonError,
+      });
     }
 
     const mappedStatus = mapStripeStatusToStoredStatus(latestStripeStatus);
@@ -2299,39 +2989,69 @@ async function handleInvoicePaymentFailed(
         .eq("user_id", userId);
 
       if (updateError) {
-        console.error("Error updating subscription status:", updateError);
-        return;
+        throw new Error(
+          `failed to update payment-failed subscription status: ${updateError.message}`,
+        );
       }
 
       if (plan) {
         try {
-          await supabase.rpc("cascade_subscription_upgrade", {
-            p_owner_user_id: userId,
-            p_new_plan: plan,
-            p_new_status: mappedStatus,
-          });
+          const { error: cascadeError } = await supabase.rpc(
+            "cascade_subscription_upgrade",
+            {
+              p_owner_user_id: userId,
+              p_new_plan: plan,
+              p_new_status: mappedStatus,
+            },
+          );
+          if (cascadeError) {
+            throw new Error(
+              `failed to cascade payment-failed subscription status: ${cascadeError.message}`,
+            );
+          }
         } catch (cascadeError) {
           reportStripeWebhookError(
             "handle_invoice_payment_failed_cascade",
             cascadeError,
-            {
-              invoiceId: invoice.id,
-              userId,
-            },
+            { invoiceId: invoice.id, userId },
           );
-          console.error(
-            "Error cascading payment-failed status to household members (non-fatal):",
-            cascadeError,
-          );
+          throw cascadeError;
         }
       }
     }
 
-    const { data: userData } = await supabase
+    const attemptCount = (invoice as any).attempt_count;
+    const shouldNotify = isTerminalDowngradeStatus(latestStripeStatus)
+      ? !isTerminalDowngradeStatus(previousStatus || "") || handledByThisInvoice
+      : typeof attemptCount === "number"
+        ? attemptCount === 1
+        : previousStatus !== "past_due";
+
+    if (!shouldNotify) {
+      console.log("Skipping repeated payment failure notification", {
+        subscriptionId,
+        previousStatus,
+        latestStripeStatus,
+      });
+      return;
+    }
+
+    // Stripe emits invoice.payment_action_required for SCA flows. Let that
+    // dedicated email explain the required authentication instead of also
+    // sending a generic payment-failed email.
+    if (paymentIntentStatus === "requires_action") {
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabase
       .from("users")
       .select("email, full_name")
       .eq("id", userId)
       .single();
+
+    if (userError) {
+      throw new Error(`users lookup failed: ${userError.message}`);
+    }
 
     if (!userData) {
       return;
@@ -2372,11 +3092,19 @@ async function handleInvoicePaymentFailed(
       planName,
       dashboardUrl: membershipUrl,
       updatePaymentUrl: membershipUrl,
+      failureReason,
       isDowngraded: isTerminalDowngradeStatus(latestStripeStatus),
       resubscribeUrl: membershipUrl,
     });
 
-    enqueueUserEmail(userData.email, name, emailTemplate);
+    enqueueUserEmail(
+      userData.email,
+      name,
+      emailTemplate,
+      `invoice_payment_failed:${invoice.id}:${
+        isTerminalDowngradeStatus(latestStripeStatus) ? "terminal" : "past_due"
+      }`,
+    );
     console.log(`Payment failure email queued for ${userData.email}`);
   } catch (error: any) {
     reportStripeWebhookError("handle_invoice_payment_failed", error, {
@@ -2406,22 +3134,47 @@ async function handleInvoicePaymentActionRequired(
 
     if (!customerId) {
       console.error("No customer ID in invoice:", invoice.id);
+      reportStripeWebhookError(
+        "handle_invoice_payment_action_required_missing_customer",
+        new Error(
+          "Stripe invoice requiring payment action is missing its customer ID",
+        ),
+        { invoiceId: invoice.id },
+      );
       return;
     }
 
-    const user = await getUserByCustomerId(customerId);
+    let user = await getUserByCustomerId(customerId);
+
+    if (!user) {
+      const subscriptionId = getInvoiceSubscriptionId(invoice);
+      if (subscriptionId) {
+        const subscription =
+          await stripe.subscriptions.retrieve(subscriptionId);
+        user = await getUserForStripeSubscription(subscription, customerId);
+      }
+    }
 
     if (!user) {
       console.error("No user found for customer:", customerId);
+      reportStripeWebhookError(
+        "handle_invoice_payment_action_required_missing_user",
+        new Error("No user mapping found for payment-action invoice customer"),
+        { customerId, invoiceId: invoice.id },
+      );
       return;
     }
 
     // Get user data for personalized email
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from("users")
       .select("email, full_name")
       .eq("id", user.id)
       .single();
+
+    if (userError) {
+      throw new Error(`users lookup failed: ${userError.message}`);
+    }
 
     if (!userData) {
       console.error(
@@ -2435,7 +3188,7 @@ async function handleInvoicePaymentActionRequired(
     // Get plan name from invoice - use safe extraction
     const productId =
       invoice.lines?.data?.length > 0
-        ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+        ? getProductIdFromInvoiceLine(invoice.lines.data[0])
         : null;
     const planName = await getPlanNameFromProductId(productId);
 
@@ -2454,7 +3207,12 @@ async function handleInvoicePaymentActionRequired(
       dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
     });
 
-    enqueueUserEmail(userData.email, name, emailTemplate);
+    enqueueUserEmail(
+      userData.email,
+      name,
+      emailTemplate,
+      `invoice_payment_action_required:${invoice.id}`,
+    );
     console.log(`Payment action required email queued for ${userData.email}`);
   } catch (error: any) {
     reportStripeWebhookError("handle_invoice_payment_action_required", error, {
@@ -2477,6 +3235,26 @@ async function handleSubscriptionTrialEnding(
   try {
     console.log("Processing trial ending for subscription:", subscription.id);
 
+    try {
+      subscription = await stripe.subscriptions.retrieve(subscription.id);
+    } catch (retrieveError: any) {
+      if (retrieveError?.code === "resource_missing") return;
+      throw retrieveError;
+    }
+
+    if (
+      subscription.status !== "trialing" ||
+      typeof subscription.trial_end !== "number" ||
+      subscription.trial_end <= Math.floor(Date.now() / 1000)
+    ) {
+      console.log("Skipping stale trial ending notification", {
+        subscriptionId: subscription.id,
+        status: subscription.status,
+        trialEnd: subscription.trial_end,
+      });
+      return;
+    }
+
     const customerId =
       typeof subscription.customer === "string"
         ? subscription.customer
@@ -2484,13 +3262,25 @@ async function handleSubscriptionTrialEnding(
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
+      reportStripeWebhookError(
+        "handle_subscription_trial_ending_missing_customer",
+        new Error("Trial-ending subscription is missing its customer ID"),
+        { subscriptionId: subscription.id },
+      );
       return;
     }
 
-    const user = await getUserByCustomerId(customerId);
+    const user = await getUserForStripeSubscription(subscription, customerId);
 
     if (!user) {
       console.error("No user found for customer:", customerId);
+      reportStripeWebhookError(
+        "handle_subscription_trial_ending_missing_user",
+        new Error(
+          "No user mapping found for trial-ending subscription customer",
+        ),
+        { customerId, subscriptionId: subscription.id },
+      );
       return;
     }
 
@@ -2798,18 +3588,40 @@ async function handleCheckoutSessionCompleted(
 
         // CRITICAL: Fetch old subscription ID BEFORE upserting lifetime
         // We need to cancel any existing Stripe subscription when user upgrades to lifetime
-        const { data: oldSubData } = await supabase
+        const { data: oldSubData, error: oldSubError } = await supabase
           .from("subscriptions")
-          .select("stripe_subscription_id, plan, status")
+          .select("stripe_subscription_id, plan, status, last_event_id")
           .eq("user_id", lifetimeUserId)
           .maybeSingle();
 
+        if (oldSubError) {
+          throw new Error(
+            `old subscription lookup failed: ${oldSubError.message}`,
+          );
+        }
+
         const oldStripeSubscriptionId = oldSubData?.stripe_subscription_id;
+        const payerAlreadyLifetime =
+          oldSubData?.plan === "lifetime" && oldSubData?.status === "active";
+        const shouldSendLifetimeWelcome =
+          !payerAlreadyLifetime || oldSubData?.last_event_id === eventId;
         console.log("Existing subscription before lifetime upgrade:", {
           oldPlan: oldSubData?.plan,
           oldStatus: oldSubData?.status,
           oldSubscriptionId: oldStripeSubscriptionId,
         });
+
+        if (
+          oldStripeSubscriptionId &&
+          oldStripeSubscriptionId !== "null" &&
+          oldStripeSubscriptionId.startsWith("sub_")
+        ) {
+          await cancelSubscriptionBeforeLifetimeGrant({
+            subscriptionId: oldStripeSubscriptionId,
+            userId: lifetimeUserId,
+            sessionId,
+          });
+        }
 
         // Create or update subscription record for Lifetime plan
         // Use helper function to create consistent lifetime payload
@@ -2972,68 +3784,18 @@ async function handleCheckoutSessionCompleted(
           }
         }
 
-        // CRITICAL FIX: Cancel the old Stripe subscription to prevent webhook conflicts
-        // If user had an active trial/paid subscription, it must be canceled immediately
-        if (
-          oldStripeSubscriptionId &&
-          oldStripeSubscriptionId !== "null" &&
-          oldStripeSubscriptionId.startsWith("sub_")
-        ) {
-          console.log(
-            `🔄 Canceling old subscription ${oldStripeSubscriptionId} for user ${redactUserId(
-              lifetimeUserId,
-            )} (upgraded to lifetime)`,
-          );
-
-          try {
-            // Cancel immediately (user already paid for lifetime)
-            await stripe.subscriptions.cancel(oldStripeSubscriptionId, {
-              prorate: false, // Don't prorate, they already paid for lifetime
-            });
-            console.log(
-              `✅ Old subscription ${oldStripeSubscriptionId} canceled successfully`,
-            );
-          } catch (cancelError) {
-            reportStripeWebhookError(
-              "handle_checkout_session_completed_cancel_old_subscription",
-              cancelError,
-              {
-                oldStripeSubscriptionId,
-                userId: redactUserId(lifetimeUserId),
-                sessionId: session.id,
-              },
-            );
-            // Log but don't throw - lifetime is already granted
-            const msg =
-              cancelError instanceof Error
-                ? cancelError.message
-                : String(cancelError);
-            const code = (cancelError as any)?.code;
-            console.error(
-              `⚠️  Warning: Could not cancel old subscription ${oldStripeSubscriptionId}:`,
-              {
-                error: msg,
-                code,
-              },
-            );
-            console.log(
-              "   User still has lifetime access. Admin should manually cancel subscription in Stripe.",
-            );
-          }
-        } else {
-          console.log(
-            "ℹ️  No existing Stripe subscription to cancel (user may have been on free plan or first purchase)",
-          );
-        }
-
         // Get user details for welcome email
-        const { data: userData } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from("users")
           .select("email, full_name")
           .eq("id", lifetimeUserId)
           .single();
 
-        if (userData) {
+        if (userError) {
+          throw new Error(`users lookup failed: ${userError.message}`);
+        }
+
+        if (userData && shouldSendLifetimeWelcome) {
           // Send Lifetime purchase confirmation email
           const name = userData.full_name || "";
           const emailTemplate = subscriptionCreatedTemplate({
@@ -3043,7 +3805,16 @@ async function handleCheckoutSessionCompleted(
             isLifetime: true, // No end date, permanent access
           });
 
-          enqueueUserEmail(userData.email, name, emailTemplate);
+          enqueueUserEmail(
+            userData.email,
+            name,
+            emailTemplate,
+            `lifetime_purchase:${
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id || session.id
+            }`,
+          );
           console.log("Lifetime confirmation email queued");
         }
       } else {
@@ -3107,15 +3878,26 @@ async function handleCheckoutSessionAsyncPaymentFailed(
 
     if (!userId) {
       console.error("No user ID in checkout session:", session.id);
+      reportStripeWebhookError(
+        "handle_checkout_session_async_payment_failed_missing_user",
+        new Error(
+          "Async payment failure checkout session is missing its user ID",
+        ),
+        { sessionId: session.id },
+      );
       return;
     }
 
     // Get user details
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from("users")
       .select("email, full_name")
       .eq("id", userId)
       .single();
+
+    if (userError) {
+      throw new Error(`users lookup failed: ${userError.message}`);
+    }
 
     if (userData) {
       // Send async payment failure email
@@ -3127,7 +3909,12 @@ async function handleCheckoutSessionAsyncPaymentFailed(
         updatePaymentUrl: `${DASHBOARD_URL}/checkout?plan=${session.metadata?.plan}`,
       });
 
-      enqueueUserEmail(userData.email, name, emailTemplate);
+      enqueueUserEmail(
+        userData.email,
+        name,
+        emailTemplate,
+        `checkout_async_payment_failed:${session.id}`,
+      );
       console.log(`Async payment failure email queued for ${userData.email}`);
     }
   } catch (error: any) {
@@ -3147,6 +3934,63 @@ async function handleCheckoutSessionAsyncPaymentFailed(
   }
 }
 
+async function handleCheckoutSessionExpired(
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const { error } = await supabase
+    .from("stripe_checkout_session_verifications")
+    .delete()
+    .eq("session_id", session.id);
+  if (error) {
+    throw new Error(
+      `failed to remove expired checkout verification: ${error.message}`,
+    );
+  }
+}
+
+async function handleInvoiceFinalizationFailed(
+  invoice: Stripe.Invoice,
+  enqueueUserEmail: EnqueueUserEmail,
+): Promise<void> {
+  const finalizationError = (invoice as any).last_finalization_error;
+  const automaticTaxStatus = (invoice as any).automatic_tax?.status || null;
+  await reportStripeWebhookError(
+    "handle_invoice_finalization_failed",
+    new Error(
+      finalizationError?.message ||
+        "Stripe invoice failed to finalize and cannot collect payment",
+    ),
+    {
+      invoiceId: invoice.id,
+      customerId:
+        typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id,
+      automaticTaxStatus,
+      errorCode: finalizationError?.code || null,
+    },
+  );
+
+  if (automaticTaxStatus !== "requires_location_inputs") return;
+
+  const customerId =
+    typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id;
+  if (!customerId) return;
+
+  const user = await getUserByCustomerId(customerId);
+  if (!user?.email) return;
+
+  const name = user.full_name || "";
+  enqueueUserEmail(
+    user.email,
+    name,
+    invoiceLocationRequiredTemplate({ name }),
+    `invoice_finalization_location_required:${invoice.id}`,
+  );
+}
+
 // Handler for invoice finalized (send invoice copy)
 async function handleInvoiceFinalized(
   invoice: Stripe.Invoice,
@@ -3155,6 +3999,12 @@ async function handleInvoiceFinalized(
   try {
     console.log("Processing finalized invoice:", invoice.id);
 
+    // Automatic-charge invoices get a receipt after payment succeeds; sending
+    // a finalized email as well would create a duplicate billing notification.
+    if (invoice.collection_method === "charge_automatically") {
+      return;
+    }
+
     const customerId =
       typeof invoice.customer === "string"
         ? invoice.customer
@@ -3162,6 +4012,11 @@ async function handleInvoiceFinalized(
 
     if (!customerId) {
       console.error("No customer ID in invoice:", invoice.id);
+      reportStripeWebhookError(
+        "handle_invoice_finalized_missing_customer",
+        new Error("Finalized Stripe invoice is missing its customer ID"),
+        { invoiceId: invoice.id },
+      );
       return;
     }
 
@@ -3169,18 +4024,32 @@ async function handleInvoiceFinalized(
 
     if (!user) {
       console.error("No user found for customer:", customerId);
+      reportStripeWebhookError(
+        "handle_invoice_finalized_missing_user",
+        new Error("No user mapping found for finalized invoice customer"),
+        { customerId, invoiceId: invoice.id },
+      );
       return;
     }
 
     // Get user data for personalized email
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from("users")
       .select("email, full_name")
       .eq("id", user.id)
       .single();
 
+    if (userError) {
+      throw new Error(`users lookup failed: ${userError.message}`);
+    }
+
     if (!userData) {
       console.error("Could not fetch user data for invoice email");
+      reportStripeWebhookError(
+        "handle_invoice_finalized_missing_user_data",
+        new Error("User data was unavailable for finalized invoice email"),
+        { customerId, invoiceId: invoice.id, userId: user.id },
+      );
       return;
     }
 
@@ -3189,7 +4058,7 @@ async function handleInvoiceFinalized(
     // Get plan name from subscription - use safe extraction
     const productId =
       invoice.lines?.data?.length > 0
-        ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+        ? getProductIdFromInvoiceLine(invoice.lines.data[0])
         : null;
     const planName = await getPlanNameFromProductId(productId);
 
@@ -3206,7 +4075,12 @@ async function handleInvoiceFinalized(
       dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
     });
 
-    enqueueUserEmail(userData.email, name, emailTemplate);
+    enqueueUserEmail(
+      userData.email,
+      name,
+      emailTemplate,
+      `invoice_finalized:${invoice.id}`,
+    );
     console.log(`Invoice finalized email queued for ${userData.email}`);
   } catch (error: any) {
     reportStripeWebhookError("handle_invoice_finalized", error, {
@@ -3236,12 +4110,22 @@ async function handleInvoiceUpcoming(
 
     if (!customerId) {
       console.error("No customer ID in invoice:", invoice.id);
+      reportStripeWebhookError(
+        "handle_invoice_upcoming_missing_customer",
+        new Error("Upcoming Stripe invoice is missing its customer ID"),
+        { invoiceId: invoice.id },
+      );
       return;
     }
 
     const user = await getUserByCustomerId(customerId);
     if (!user) {
       console.error("No user found for customer:", customerId);
+      reportStripeWebhookError(
+        "handle_invoice_upcoming_missing_user",
+        new Error("No user mapping found for upcoming invoice customer"),
+        { customerId, invoiceId: invoice.id },
+      );
       return;
     }
 
@@ -3256,6 +4140,10 @@ async function handleInvoiceUpcoming(
     }
 
     const chargeDate = new Date(invoice.next_payment_attempt * 1000);
+    const upcomingSubscriptionKey =
+      getInvoiceSubscriptionId(invoice) || customerId;
+    const upcomingPeriodKey =
+      invoice.lines?.data?.[0]?.period?.end || invoice.next_payment_attempt;
     const now = new Date();
     const daysUntil = Math.ceil(
       (chargeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
@@ -3331,7 +4219,12 @@ async function handleInvoiceUpcoming(
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
       });
 
-      enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
+      enqueueUserEmail(
+        user.email,
+        user.full_name || "",
+        emailTemplate,
+        `invoice_upcoming_discount:${upcomingSubscriptionKey}:${upcomingPeriodKey}:${daysUntil}`,
+      );
       console.log(
         `✅ Discount expiration reminder queued for ${user.email} (${daysUntil} days before expiry)`,
       );
@@ -3347,14 +4240,23 @@ async function handleInvoiceUpcoming(
       )} ${invoice.currency.toUpperCase()}`,
     );
 
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from("users")
       .select("email, full_name")
       .eq("id", user.id)
       .single();
 
+    if (userError) {
+      throw new Error(`users lookup failed: ${userError.message}`);
+    }
+
     if (!userData) {
       console.error("Could not fetch user data for renewal reminder email");
+      reportStripeWebhookError(
+        "handle_invoice_upcoming_missing_user_data",
+        new Error("User data was unavailable for renewal reminder email"),
+        { customerId, invoiceId: invoice.id, userId: user.id },
+      );
       return;
     }
 
@@ -3362,7 +4264,7 @@ async function handleInvoiceUpcoming(
 
     const productId =
       invoice.lines?.data?.length > 0
-        ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+        ? getProductIdFromInvoiceLine(invoice.lines.data[0])
         : null;
     const planName = await getPlanNameFromProductId(productId);
 
@@ -3381,7 +4283,12 @@ async function handleInvoiceUpcoming(
       updatePaymentUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership?tab=payment`,
     });
 
-    enqueueUserEmail(userData.email, name, emailTemplate);
+    enqueueUserEmail(
+      userData.email,
+      name,
+      emailTemplate,
+      `invoice_upcoming:${upcomingSubscriptionKey}:${upcomingPeriodKey}`,
+    );
     console.log(`Renewal reminder email queued for ${userData.email}`);
   } catch (error: any) {
     reportStripeWebhookError("handle_invoice_upcoming", error, {
@@ -3411,6 +4318,11 @@ async function handlePaymentMethodAttached(
 
     if (!customerId) {
       console.error("No customer ID in payment method:", paymentMethod.id);
+      reportStripeWebhookError(
+        "handle_payment_method_attached_missing_customer",
+        new Error("Attached payment method is missing its customer ID"),
+        { paymentMethodId: paymentMethod.id },
+      );
       return;
     }
 
@@ -3418,6 +4330,11 @@ async function handlePaymentMethodAttached(
 
     if (!user) {
       console.error("No user found for customer:", customerId);
+      reportStripeWebhookError(
+        "handle_payment_method_attached_missing_user",
+        new Error("No user mapping found for attached payment method customer"),
+        { customerId, paymentMethodId: paymentMethod.id },
+      );
       return;
     }
 
@@ -3432,11 +4349,15 @@ async function handlePaymentMethodAttached(
     }
 
     // Get user data for personalized email
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from("users")
       .select("email, full_name")
       .eq("id", user.id)
       .single();
+
+    if (userError) {
+      throw new Error(`users lookup failed: ${userError.message}`);
+    }
 
     if (!userData) {
       console.error(
@@ -3470,7 +4391,12 @@ async function handlePaymentMethodAttached(
       dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
     });
 
-    enqueueUserEmail(userData.email, name, emailTemplate);
+    enqueueUserEmail(
+      userData.email,
+      name,
+      emailTemplate,
+      `payment_method_attached:${paymentMethod.id}`,
+    );
     console.log(
       `Payment method confirmation email queued for ${userData.email}`,
     );
@@ -3496,6 +4422,38 @@ async function handleSubscriptionPendingUpdateApplied(
   try {
     console.log("Processing pending update applied:", subscription.id);
 
+    // Reconcile through the canonical subscription path so price, period,
+    // status, household access, and user notification logic stay consistent.
+    await handleSubscriptionUpdated(subscription, eventId, enqueueUserEmail);
+
+    const customerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer?.id;
+    if (!customerId) return;
+
+    const user = await getUserForStripeSubscription(subscription, customerId);
+    if (!user) return;
+
+    const { error: clearPendingError } = await supabase
+      .from("subscriptions")
+      .update({
+        pending_plan: null,
+        pending_interval: null,
+        pending_effective_date: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id);
+
+    if (clearPendingError) {
+      throw new Error(
+        `failed to clear applied pending subscription update: ${clearPendingError.message}`,
+      );
+    }
+
+    return;
+
+    /*
     // Extract customer ID
     const customerId =
       typeof subscription.customer === "string"
@@ -3504,6 +4462,11 @@ async function handleSubscriptionPendingUpdateApplied(
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
+      reportStripeWebhookError(
+        "handle_subscription_pending_update_applied_missing_customer",
+        new Error("Applied pending subscription update is missing its customer ID"),
+        { subscriptionId: subscription.id },
+      );
       return;
     }
 
@@ -3511,6 +4474,11 @@ async function handleSubscriptionPendingUpdateApplied(
     const user = await getUserByCustomerId(customerId);
     if (!user) {
       console.error("No user found with customer ID:", customerId);
+      reportStripeWebhookError(
+        "handle_subscription_pending_update_applied_missing_user",
+        new Error("No user mapping found for applied pending subscription update"),
+        { customerId, subscriptionId: subscription.id },
+      );
       return;
     }
 
@@ -3527,19 +4495,30 @@ async function handleSubscriptionPendingUpdateApplied(
     const plan = pricePlanInfo.plan;
     const billingInterval = pricePlanInfo.interval;
 
-    // Get previous plan for change type detection
-    const { data: previousSub } = await supabase
+    const { data: previousSub, error: previousSubError } = await supabase
       .from("subscriptions")
-      .select("plan, billing_interval")
+      .select(
+        "plan, billing_interval, current_period_end, pending_plan, pending_interval, pending_effective_date, last_event_id",
+      )
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const previousPlan = previousSub?.plan as PlanType | null;
-    const previousInterval =
-      previousSub?.billing_interval as BillingInterval | null;
+    if (previousSubError) {
+      throw new Error(
+        `subscriptions lookup failed: ${previousSubError.message}`,
+      );
+    }
+
+    const hadPendingChange = Boolean(
+      previousSub?.pending_plan || previousSub?.pending_interval,
+    );
+    const planChanged =
+      previousSub?.plan !== plan ||
+      previousSub?.billing_interval !== billingInterval;
+    const wasHandledByThisEvent = previousSub?.last_event_id === eventId;
 
     // Clear pending fields - the scheduled change has been applied
-    await supabase
+    const { error: pendingUpdateError } = await supabase
       .from("subscriptions")
       .update({
         plan,
@@ -3552,47 +4531,51 @@ async function handleSubscriptionPendingUpdateApplied(
       })
       .eq("user_id", user.id);
 
+    if (pendingUpdateError) {
+      throw new Error(
+        `failed to apply pending subscription update: ${pendingUpdateError.message}`,
+      );
+    }
+
     console.log("Scheduled subscription change applied for user:", user.id);
 
-    // Send email notification
-    const itemPeriodEnd = subscription.items?.data?.[0]?.current_period_end;
-
-    // Determine the actual change type
-    const changeType = previousPlan
-      ? getChangeType(
-          previousPlan,
-          plan,
-          previousInterval || undefined,
-          billingInterval,
-        )
-      : "renewal";
-
-    const templateChangeType =
-      changeType === "upgraded"
-        ? "upgrade"
-        : changeType === "downgraded"
-          ? "downgrade"
-          : changeType === "interval_changed"
-            ? "interval_changed"
-            : "renewal";
-
-    const emailTemplate = subscriptionUpdatedTemplate({
-      name: user.full_name || "",
-      planName: plan.charAt(0).toUpperCase() + plan.slice(1),
-      endDate:
-        itemPeriodEnd && !isNaN(itemPeriodEnd)
-          ? new Intl.DateTimeFormat("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }).format(new Date(itemPeriodEnd * 1000))
-          : "N/A",
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-      changeType: templateChangeType,
-    });
-
-    enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
-    console.log(`Scheduled change notification queued for ${user.email}`);
+    if (hadPendingChange || planChanged || wasHandledByThisEvent) {
+      const itemPeriodEnd = subscription.items?.data?.[0]?.current_period_end;
+      const planName = await getPlanNameFromProductId(
+        getProductIdFromPrice(subscription.items?.data?.[0]?.price),
+      );
+      const changeType = previousSub?.plan
+        ? getChangeType(
+            previousSub.plan as PlanType,
+            plan,
+            (previousSub.billing_interval as BillingInterval | null) ||
+              undefined,
+            billingInterval,
+          )
+        : "renewal";
+      const templateChangeType =
+        changeType === "upgraded"
+          ? "upgrade"
+          : changeType === "downgraded"
+            ? "downgrade"
+            : changeType === "interval_changed"
+              ? "interval_changed"
+              : "renewal";
+      const emailTemplate = subscriptionUpdatedTemplate({
+        name: user.full_name || "",
+        planName,
+        endDate: formatUnixTimestampDate(itemPeriodEnd) || "N/A",
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
+        changeType: templateChangeType,
+      });
+      enqueueUserEmail(
+        user.email,
+        user.full_name || "",
+        emailTemplate,
+        `subscription_change_applied:${subscription.id}:${plan}:${billingInterval}:${previousSub?.pending_effective_date ?? previousSub?.current_period_end ?? itemPeriodEnd ?? "unknown"}`,
+      );
+    }
+    */
   } catch (error: any) {
     reportStripeWebhookError(
       "handle_subscription_pending_update_applied",
@@ -3627,6 +4610,13 @@ async function handleSubscriptionPendingUpdateExpired(
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
+      reportStripeWebhookError(
+        "handle_subscription_pending_update_expired_missing_customer",
+        new Error(
+          "Expired pending subscription update is missing its customer ID",
+        ),
+        { subscriptionId: subscription.id },
+      );
       return;
     }
 
@@ -3634,11 +4624,18 @@ async function handleSubscriptionPendingUpdateExpired(
     const user = await getUserByCustomerId(customerId);
     if (!user) {
       console.error("No user found with customer ID:", customerId);
+      reportStripeWebhookError(
+        "handle_subscription_pending_update_expired_missing_user",
+        new Error(
+          "No user mapping found for expired pending subscription update",
+        ),
+        { customerId, subscriptionId: subscription.id },
+      );
       return;
     }
 
     // Clear pending fields - the scheduled change was cancelled or expired
-    await supabase
+    const { error: pendingExpiryError } = await supabase
       .from("subscriptions")
       .update({
         pending_plan: null,
@@ -3647,6 +4644,12 @@ async function handleSubscriptionPendingUpdateExpired(
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", user.id);
+
+    if (pendingExpiryError) {
+      throw new Error(
+        `failed to clear expired pending subscription update: ${pendingExpiryError.message}`,
+      );
+    }
 
     console.log("Scheduled subscription change expired for user:", user.id);
   } catch (error: any) {
@@ -3666,6 +4669,74 @@ async function handleSubscriptionPendingUpdateExpired(
   }
 }
 
+async function handleTerminalSubscriptionSchedule(
+  schedule: Stripe.SubscriptionSchedule,
+  eventType: string,
+): Promise<void> {
+  const subscriptionId =
+    typeof schedule.subscription === "string"
+      ? schedule.subscription
+      : schedule.subscription?.id;
+  if (!subscriptionId) {
+    await reportStripeWebhookError(
+      "handle_terminal_subscription_schedule_missing_subscription",
+      new Error("Terminal Stripe subscription schedule has no subscription ID"),
+      { eventType, scheduleId: schedule.id },
+    );
+    return;
+  }
+
+  try {
+    const currentSubscription =
+      await stripe.subscriptions.retrieve(subscriptionId);
+    const currentScheduleId =
+      typeof currentSubscription.schedule === "string"
+        ? currentSubscription.schedule
+        : currentSubscription.schedule?.id;
+    if (currentScheduleId && currentScheduleId !== schedule.id) return;
+  } catch (retrieveError: any) {
+    if (retrieveError?.code !== "resource_missing") throw retrieveError;
+  }
+
+  const finalPhase = schedule.phases?.[schedule.phases.length - 1];
+  const finalPrice = finalPhase?.items?.[0]?.price;
+  const finalPriceId =
+    typeof finalPrice === "string" ? finalPrice : finalPrice?.id;
+  const targetPlan = getPlanFromPriceId(finalPriceId);
+  if (!targetPlan?.interval) return;
+
+  const { data: localSubscription, error: lookupError } = await supabase
+    .from("subscriptions")
+    .select("pending_plan, pending_interval")
+    .eq("stripe_subscription_id", subscriptionId)
+    .maybeSingle();
+  if (lookupError) {
+    throw new Error(`subscriptions lookup failed: ${lookupError.message}`);
+  }
+
+  if (
+    localSubscription?.pending_plan !== targetPlan.plan ||
+    localSubscription?.pending_interval !== targetPlan.interval
+  ) {
+    return;
+  }
+
+  const { error: clearError } = await supabase
+    .from("subscriptions")
+    .update({
+      pending_plan: null,
+      pending_interval: null,
+      pending_effective_date: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", subscriptionId);
+  if (clearError) {
+    throw new Error(
+      `failed to clear terminal subscription schedule: ${clearError.message}`,
+    );
+  }
+}
+
 // Handler for setup_intent.succeeded (payment method successfully added)
 async function handleSetupIntentSucceeded(
   setupIntent: Stripe.SetupIntent,
@@ -3681,6 +4752,11 @@ async function handleSetupIntentSucceeded(
 
     if (!customerId) {
       console.error("No customer ID in setup intent:", setupIntent.id);
+      reportStripeWebhookError(
+        "handle_setup_intent_succeeded_missing_customer",
+        new Error("Succeeded setup intent is missing its customer ID"),
+        { setupIntentId: setupIntent.id },
+      );
       return;
     }
 
@@ -3688,6 +4764,11 @@ async function handleSetupIntentSucceeded(
 
     if (!user) {
       console.error("No user found for customer:", customerId);
+      reportStripeWebhookError(
+        "handle_setup_intent_succeeded_missing_user",
+        new Error("No user mapping found for succeeded setup intent customer"),
+        { customerId, setupIntentId: setupIntent.id },
+      );
       return;
     }
 
@@ -3699,6 +4780,11 @@ async function handleSetupIntentSucceeded(
 
     if (!paymentMethodId) {
       console.error("No payment method in setup intent:", setupIntent.id);
+      reportStripeWebhookError(
+        "handle_setup_intent_succeeded_missing_payment_method",
+        new Error("Succeeded setup intent is missing its payment method"),
+        { setupIntentId: setupIntent.id },
+      );
       return;
     }
 
@@ -3773,6 +4859,11 @@ async function handleSetupIntentFailed(
 
     if (!customerId) {
       console.error("No customer ID in setup intent:", setupIntent.id);
+      reportStripeWebhookError(
+        "handle_setup_intent_failed_missing_customer",
+        new Error("Failed setup intent is missing its customer ID"),
+        { setupIntentId: setupIntent.id },
+      );
       return;
     }
 
@@ -3780,6 +4871,11 @@ async function handleSetupIntentFailed(
 
     if (!user) {
       console.error("No user found for customer:", customerId);
+      reportStripeWebhookError(
+        "handle_setup_intent_failed_missing_user",
+        new Error("No user mapping found for failed setup intent customer"),
+        { customerId, setupIntentId: setupIntent.id },
+      );
       return;
     }
 

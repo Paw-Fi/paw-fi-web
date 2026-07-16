@@ -9,8 +9,8 @@
 #   supabase/migrations/20260716170000_restore_notification_fallback_processing.sql
 #
 # The migration installs the notification claim, device registration, and
-# member reminder RPCs used by these functions. It also installs the fallback
-# cron in a paused state so functions can be deployed safely before activation.
+# member reminder RPCs used by these functions. It removes any old fallback
+# cron so the updated worker can be deployed safely before scheduling it again.
 #
 # Required Edge Function secrets:
 #   SUPABASE_URL
@@ -113,11 +113,34 @@ echo "  1. Confirm the Database Webhook for notification_events sends the"
 echo "     service-role Authorization header to:"
 echo "     /functions/v1/households-send-push-notification"
 echo ""
-echo "  2. Activate the fallback cron only after all functions are deployed:"
+echo "  2. Schedule the fallback cron only after all functions are deployed:"
 echo ""
-echo "     update cron.job"
-echo "     set active = true"
-echo "     where jobname = 'process-notification-events';"
+cat <<'SQL'
+     select cron.schedule(
+       'process-notification-events',
+       '*/5 * * * *',
+       $job$
+         select net.http_post(
+           url := (
+             select decrypted_secret
+             from vault.decrypted_secrets
+             where name = 'supabase_url'
+             limit 1
+           ) || '/functions/v1/households-process-notifications',
+           headers := jsonb_build_object(
+             'Authorization', 'Bearer ' || (
+               select decrypted_secret
+               from vault.decrypted_secrets
+               where name = 'service_role_key'
+               limit 1
+             ),
+             'Content-Type', 'application/json'
+           ),
+           body := '{}'::jsonb
+         ) as request_id;
+       $job$
+     );
+SQL
 echo ""
 echo "  3. Verify the cron is active and new notification events are delivered."
 echo ""

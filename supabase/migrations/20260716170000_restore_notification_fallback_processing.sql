@@ -197,41 +197,12 @@ grant execute on function public.create_member_reminder_event(
 
 do $$
 begin
-  if exists (
-    select 1 from cron.job where jobname = 'process-notification-events'
-  ) then
-    perform cron.unschedule('process-notification-events');
-  end if;
+  perform cron.unschedule('process-notification-events');
+exception when others then
+  null;
 end;
 $$;
 
-select cron.schedule(
-  'process-notification-events',
-  '*/5 * * * *',
-  $$
-    select net.http_post(
-      url := (
-        select decrypted_secret
-        from vault.decrypted_secrets
-        where name = 'supabase_url'
-        limit 1
-      ) || '/functions/v1/households-process-notifications',
-      headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || (
-          select decrypted_secret
-          from vault.decrypted_secrets
-          where name = 'service_role_key'
-          limit 1
-        ),
-        'Content-Type', 'application/json'
-      ),
-      body := '{}'::jsonb
-    ) as request_id;
-  $$
-);
-
--- Deploy the updated Edge Functions before enabling this job. This avoids an
--- older worker processing rows during the schema/function rollout window.
-update cron.job
-set active = false
-where jobname = 'process-notification-events';
+-- Schedule process-notification-events only after the updated Edge Functions
+-- are deployed. Keeping scheduling out of this migration avoids both rollout
+-- races and direct cron.job table access, which is restricted on Supabase.

@@ -2,6 +2,8 @@
 // Avoid the Resend SDK here: its React Email dependency pulls html-to-text,
 // which currently breaks Supabase Edge Function bundling through esm.sh.
 
+import { reportEdgeFunctionError } from "./edge-error-alert.ts";
+
 // Constants
 const DEFAULT_FROM = "Moneko Team <hello@moneko.io>";
 
@@ -165,6 +167,11 @@ export async function sendEmail({
     throw new Error("Failed to send email after maximum retry attempts");
   } catch (error) {
     console.error("Error sending email:", error);
+    await reportEdgeFunctionError({
+      functionName: "email-service",
+      error,
+      context: { subject },
+    });
     return { success: false, error: (error as any).message };
   }
 }

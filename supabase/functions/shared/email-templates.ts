@@ -174,6 +174,125 @@ export const subscriptionCanceledTemplate = (data: {
   };
 };
 
+export const subscriptionPausedTemplate = (data: { name: string }) => {
+  const content = `
+    <h1 class="title">Your Moneko Plus Access Is Paused</h1>
+    <p>${renderGreeting(data.name)}</p>
+    <p class="subtitle">Your trial ended without a payment method, so your Moneko Plus access is now paused.</p>
+    <p>Add a payment method from your membership settings to resume your subscription.</p>
+    ${renderButton("Manage Subscription", sanitizeUrl(LINKS.membership))}
+    <p>If you need help, reply to this email and our support team will assist you.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your Moneko Plus subscription was paused.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject("Your Moneko Plus Access Is Paused"),
+  };
+};
+
+export const subscriptionResumedTemplate = (data: { name: string }) => {
+  const content = `
+    <h1 class="title">Your Moneko Plus Access Has Resumed</h1>
+    <p>${renderGreeting(data.name)}</p>
+    <p class="subtitle">Your subscription is active again and your Moneko Plus access has been restored.</p>
+    ${renderButton("Open Moneko", sanitizeUrl(LINKS.appHome))}
+    ${mobileDownloadCtasHtml()}
+    <p>If you have any questions, reply to this email and our support team will help you.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your Moneko Plus subscription resumed.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject("Your Moneko Plus Access Has Resumed"),
+  };
+};
+
+export const refundProcessedTemplate = (data: {
+  name: string;
+  amount: number;
+  currency: string;
+}) => {
+  const content = `
+    <h1 class="title">Your Refund Has Been Processed</h1>
+    <p>${renderGreeting(data.name)}</p>
+    <p class="subtitle">We have processed your refund of ${formatCurrency(
+      data.amount,
+      data.currency,
+    )}.</p>
+    <p>The funds will be returned to your original payment method. Most refunds appear within 5-10 business days, depending on your bank or card provider.</p>
+    <p>If the refund has not appeared after 10 business days, reply to this email and our support team will help you.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because a Moneko payment was refunded.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject("Your Moneko Refund Has Been Processed"),
+  };
+};
+
+export const refundFailedTemplate = (data: {
+  name: string;
+  amount: number;
+  currency: string;
+  failureReason?: string | null;
+  accessRestored?: boolean;
+}) => {
+  const content = `
+    <h1 class="title">We Couldn’t Complete Your Refund</h1>
+    <p>${renderGreeting(data.name)}</p>
+    <p class="subtitle">Your refund of ${formatCurrency(
+      data.amount,
+      data.currency,
+    )} could not be completed.</p>
+    ${
+      data.failureReason
+        ? `<p><strong>Reason:</strong> ${escapeHtml(data.failureReason)}</p>`
+        : ""
+    }
+    ${
+      data.accessRestored
+        ? "<p>Your Moneko Plus Lifetime access has been restored because the refund did not complete.</p>"
+        : ""
+    }
+    <p>Please reply to this email so our support team can arrange another way to return the funds.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because a Moneko refund could not be completed.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject("Action Needed for Your Moneko Refund"),
+  };
+};
+
 // Payment failed template
 export const paymentFailedTemplate = (data: {
   name: string;
@@ -511,6 +630,30 @@ export const invoiceFinalizedTemplate = (data: {
     ),
     text: htmlToText(content),
     subject: sanitizeSubject("Your Moneko Invoice Is Ready"),
+  };
+};
+
+export const invoiceLocationRequiredTemplate = (data: { name: string }) => {
+  const content = `
+    <h1 class="title">Billing Information Needed</h1>
+    <p>${renderGreeting(data.name)}</p>
+    <p class="subtitle">We couldn’t prepare your Moneko invoice because your billing location is missing or incomplete.</p>
+    <p>Please update your billing details so Stripe can calculate the required tax and complete your invoice.</p>
+    ${renderButton("Update Billing Details", sanitizeUrl(LINKS.membership))}
+    <p>If you need help, reply to this email and our support team will assist you.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your Moneko invoice needs updated billing information.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject("Update Your Billing Information"),
   };
 };
 
