@@ -2,13 +2,13 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 interface RegisterDeviceRequest {
-  platform: 'ios' | 'android' | 'web';
+  platform: "ios" | "android" | "web";
   push_token: string;
   device_model?: string;
   os_version?: string;
@@ -26,50 +26,48 @@ interface RegisterDeviceResponse {
 }
 
 serve(async (req) => {
-  const origin = req.headers.get('origin') || '';
+  const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
 
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     // Only allow POST requests
-    if (req.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get the authorization header
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
+        JSON.stringify({ error: "No authorization header" }),
         {
           status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // Get the user from the JWT token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
 
     if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
+        JSON.stringify({ error: "Invalid or expired token" }),
         {
           status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -81,190 +79,158 @@ serve(async (req) => {
       device_model,
       os_version,
       app_version,
-      locale = 'en',
+      locale = "en",
       timezone,
       is_active,
-      delete_device
+      delete_device,
     } = body;
 
     // Validate required fields
     if (!push_token) {
-      return new Response(
-        JSON.stringify({ error: 'push_token is required' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      return new Response(JSON.stringify({ error: "push_token is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // When activating/registering a device we need platform; when deactivating we don't
     if ((is_active === undefined || is_active === true) && !platform) {
       return new Response(
-        JSON.stringify({ error: 'platform is required when registering/activating a device' }),
+        JSON.stringify({
+          error: "platform is required when registering/activating a device",
+        }),
         {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    if (platform && !['ios', 'android', 'web'].includes(platform)) {
+    if (platform && !["ios", "android", "web"].includes(platform)) {
       return new Response(
-        JSON.stringify({ error: 'platform must be ios, android, or web' }),
+        JSON.stringify({ error: "platform must be ios, android, or web" }),
         {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     if (!push_token.trim()) {
       return new Response(
-        JSON.stringify({ error: 'push_token cannot be empty' }),
+        JSON.stringify({ error: "push_token cannot be empty" }),
         {
           status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // Handle device deletion (logout scenario)
     if (delete_device === true) {
       const { error: deleteError } = await supabase
-        .from('devices')
+        .from("devices")
         .delete()
-        .eq('user_id', user.id)
-        .eq('push_token', push_token);
+        .eq("user_id", user.id)
+        .eq("push_token", push_token);
 
       if (deleteError) {
-        console.error('Error deleting device:', deleteError);
+        console.error("Error deleting device:", deleteError);
         return new Response(
-          JSON.stringify({ error: 'Failed to delete device' }),
+          JSON.stringify({ error: "Failed to delete device" }),
           {
             status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
       return new Response(
-        JSON.stringify({ success: true, message: 'Device deleted successfully' }),
+        JSON.stringify({
+          success: true,
+          message: "Device deleted successfully",
+        }),
         {
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    // Upsert device (idempotent operation)
-    // If device with same user_id and push_token exists, update it
-    // Otherwise, create new device
-    const { data: existingDevice } = await supabase
-      .from('devices')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('push_token', push_token)
-      .single();
-
-    let deviceId: string;
-
-    if (existingDevice) {
-      // Update existing device
-      const { data, error: updateError } = await supabase
-        .from('devices')
+    if (is_active === false) {
+      const { data: device, error: deactivateError } = await supabase
+        .from("devices")
         .update({
-          platform: platform ?? undefined,
-          device_model,
-          os_version,
-          app_version,
-          locale,
-          timezone,
-          is_active: is_active === false ? false : true,
-          last_seen_at: new Date().toISOString()
+          is_active: false,
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', existingDevice.id)
-        .select()
-        .single();
+        .eq("user_id", user.id)
+        .eq("push_token", push_token)
+        .select("id")
+        .maybeSingle();
 
-      if (updateError) {
-        console.error('Error updating device:', updateError);
+      if (deactivateError) {
+        console.error("Error deactivating device:", deactivateError);
         return new Response(
-          JSON.stringify({ error: 'Failed to update device' }),
+          JSON.stringify({ error: "Failed to deactivate device" }),
           {
             status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
-      deviceId = data.id;
-    } else {
-      // Create new device
-      const { data, error: insertError } = await supabase
-        .from('devices')
-        .insert({
-          user_id: user.id,
-          platform,
-          push_token,
-          device_model,
-          os_version,
-          app_version,
-          locale,
-          timezone,
-          is_active: is_active === false ? false : true,
-          last_seen_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      return new Response(
+        JSON.stringify({ success: true, device_id: device?.id }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-      if (insertError) {
-        console.error('Error creating device:', insertError);
+    const { data: deviceId, error: registrationError } = await supabase.rpc(
+      "register_notification_device",
+      {
+        p_user_id: user.id,
+        p_platform: platform,
+        p_push_token: push_token,
+        p_device_model: device_model,
+        p_os_version: os_version,
+        p_app_version: app_version,
+        p_locale: locale,
+        p_timezone: timezone,
+      },
+    );
 
-        // Check if it's a unique constraint violation
-        if (insertError.code === '23505') {
-          return new Response(
-            JSON.stringify({ error: 'Device already registered' }),
-            {
-              status: 409,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          );
-        }
-
-        return new Response(
-          JSON.stringify({ error: 'Failed to register device' }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
-      deviceId = data.id;
+    if (registrationError || typeof deviceId !== "string") {
+      console.error("Error registering device:", registrationError);
+      return new Response(
+        JSON.stringify({ error: "Failed to register device" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const response: RegisterDeviceResponse = {
       success: true,
-      device_id: deviceId
+      device_id: deviceId,
     };
 
-    return new Response(
-      JSON.stringify(response),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ error: 'An unexpected error occurred' }),
+      JSON.stringify({ error: "An unexpected error occurred" }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });

@@ -5,6 +5,10 @@ import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
+import {
+  isServiceRoleRequest,
+  shouldSkipPushEvent,
+} from "../shared/notification-delivery.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -418,14 +422,20 @@ function buildDeepLink(
   switch (eventType) {
     case "expense_added":
     case "expense_edited":
-    case "expense_deleted":
     case "income_added":
     case "income_edited":
+    case "income_acknowledged":
       // Navigate to expense detail sheet
       if (data.expense_id) {
         return `${appScheme}expense/${data.expense_id}`;
       }
       // Fallback to household view if expense_id missing
+      if (data.household_id) {
+        return `${appScheme}household/${data.household_id}`;
+      }
+      break;
+
+    case "expense_deleted":
       if (data.household_id) {
         return `${appScheme}household/${data.household_id}`;
       }
@@ -441,8 +451,8 @@ function buildDeepLink(
 
     case "split_created":
       // Navigate to splits view
-      if (data.split_id) {
-        return `${appScheme}split/${data.split_id}`;
+      if (data.split_group_id || data.split_id) {
+        return `${appScheme}split/${data.split_group_id || data.split_id}`;
       }
       if (data.household_id) {
         // Not implemented on mobile yet, but keep a stable link shape.
@@ -511,6 +521,7 @@ async function sendFCMv1Notification(
   accessToken: string,
   imageUrl?: string,
   platform?: string,
+  targetUserId?: string,
 ): Promise<boolean> {
   if (!firebaseProjectId) {
     console.error("[fcm-v1] FIREBASE_PROJECT_ID not configured");
@@ -635,13 +646,17 @@ async function sendFCMv1Notification(
             "[fcm-v1] Invalid or expired device token - deactivating",
           );
           try {
-            await supabase
+            let deactivateQuery = supabase
               .from("devices")
               .update({
                 is_active: false,
                 updated_at: new Date().toISOString(),
               })
               .eq("push_token", deviceToken);
+            if (targetUserId) {
+              deactivateQuery = deactivateQuery.eq("user_id", targetUserId);
+            }
+            await deactivateQuery;
           } catch (e) {
             console.error("[fcm-v1] Failed to deactivate device token:", e);
           }
@@ -662,6 +677,7 @@ serve(async (req: Request) => {
   const url = new URL(req.url);
   const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
+  let activeNotificationEventId: string | undefined;
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -692,22 +708,59 @@ serve(async (req: Request) => {
       });
     }
 
-    // Parse request body (support both custom payload and Database Webhooks envelope)
+    if (!isServiceRoleRequest(req, supabaseServiceRoleKey)) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Database Webhooks include the inserted row, while legacy callers send the id.
+    // Always reload the event so request data cannot override its recipient or payload.
     const raw = await req.json();
 
     // Database Webhooks envelope detection
     const isDbWebhook =
       raw && typeof raw === "object" && "type" in raw && "record" in raw;
 
-    const body: NotificationPayload = isDbWebhook
-      ? {
-          notification_event_id: raw.record?.id,
-          household_id: raw.record?.household_id,
-          user_id: raw.record?.user_id,
-          event_type: raw.record?.event_type,
-          payload: raw.record?.payload ?? {},
-        }
-      : raw;
+    const requestedEventId = isDbWebhook
+      ? raw.record?.id
+      : raw.notification_event_id;
+    activeNotificationEventId = requestedEventId;
+
+    if (!requestedEventId) {
+      return new Response(
+        JSON.stringify({ error: "Missing notification_event_id" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const { data: storedEvent, error: storedEventError } = await supabase
+      .from("notification_events")
+      .select("id, household_id, user_id, event_type, payload, is_sent")
+      .eq("id", requestedEventId)
+      .maybeSingle();
+
+    if (storedEventError || !storedEvent) {
+      return new Response(
+        JSON.stringify({ error: "Notification event not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const body: NotificationPayload = {
+      notification_event_id: storedEvent.id,
+      household_id: storedEvent.household_id,
+      user_id: storedEvent.user_id,
+      event_type: storedEvent.event_type,
+      payload: storedEvent.payload ?? {},
+    };
 
     const {
       notification_event_id,
@@ -748,29 +801,53 @@ serve(async (req: Request) => {
       );
     }
 
-    // Idempotency: if this event is already marked sent, skip to avoid duplicates (e.g., pg_net + webhook)
-    try {
-      const { data: existingEvent } = await supabase
-        .from("notification_events")
-        .select("is_sent")
-        .eq("id", notification_event_id)
-        .single();
+    if (storedEvent.is_sent) {
+      console.log(
+        "[send-push] Event already sent; skipping duplicate delivery",
+        notification_event_id,
+      );
+      return new Response(
+        JSON.stringify({ success: true, skipped: "already_sent" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-      if (existingEvent?.is_sent) {
-        console.log(
-          "[send-push] Event already sent; skipping duplicate delivery",
-          notification_event_id,
-        );
-        return new Response(
-          JSON.stringify({ success: true, skipped: "already_sent" }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-    } catch (_) {
-      // Continue; inability to read shouldn’t block delivery
+    if (shouldSkipPushEvent(event_type)) {
+      await supabase
+        .from("notification_events")
+        .update({
+          is_sent: true,
+          sent_at: new Date().toISOString(),
+          delivery_error: "Push not applicable for this event type",
+        })
+        .eq("id", notification_event_id);
+      return new Response(
+        JSON.stringify({ success: true, skipped: "non_push_event" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const { data: claimed, error: claimError } = await supabase.rpc(
+      "claim_notification_event",
+      { p_event_id: notification_event_id },
+    );
+    if (claimError) {
+      throw claimError;
+    }
+    if (claimed !== true) {
+      return new Response(
+        JSON.stringify({ success: true, skipped: "already_processing" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Check if FCM is configured
@@ -779,11 +856,11 @@ serve(async (req: Request) => {
         "[send-push] Firebase not configured (missing FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID)",
       );
 
-      // Mark as sent to avoid retry loop
       await supabase
         .from("notification_events")
         .update({
-          is_sent: true,
+          last_retry_at: new Date().toISOString(),
+          processing_started_at: null,
           delivery_error: "Firebase not configured",
         })
         .eq("id", notification_event_id);
@@ -791,7 +868,7 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ success: false, error: "Firebase not configured" }),
         {
-          status: 200,
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
@@ -817,6 +894,7 @@ serve(async (req: Request) => {
         .update({
           retry_count: 1,
           last_retry_at: new Date().toISOString(),
+          processing_started_at: null,
           delivery_error: "Failed to obtain access token",
         })
         .eq("id", notification_event_id);
@@ -835,23 +913,35 @@ serve(async (req: Request) => {
       event_type === "expense_edited" ||
       event_type === "expense_deleted" ||
       event_type === "income_added" ||
-      event_type === "income_edited";
+      event_type === "income_edited" ||
+      event_type === "income_acknowledged";
     const isLogExpenseReminder = event_type === "log_expense_reminder";
 
     // Get user's notification preferences
-    const { data: prefs } = await supabase
+    let prefsQuery = supabase
       .from("sharing_prefs")
       .select("enable_nudges, nudge_quiet_hours_start, nudge_quiet_hours_end")
+      .eq("user_id", user_id);
+    prefsQuery = household_id
+      ? prefsQuery.eq("household_id", household_id)
+      : prefsQuery.is("household_id", null);
+    const { data: prefs } = await prefsQuery.maybeSingle();
+    const { data: contact } = await supabase
+      .from("user_contacts")
+      .select("preferred_timezone")
       .eq("user_id", user_id)
-      .eq("household_id", household_id)
-      .single();
+      .maybeSingle();
 
     // Check if notifications are disabled for this user
     if (!isImmediateTransactionEvent && prefs && !prefs.enable_nudges) {
       console.log("[send-push] User has disabled notifications");
       await supabase
         .from("notification_events")
-        .update({ is_sent: true })
+        .update({
+          is_sent: true,
+          sent_at: new Date().toISOString(),
+          processing_started_at: null,
+        })
         .eq("id", notification_event_id);
 
       return new Response(
@@ -887,6 +977,7 @@ serve(async (req: Request) => {
             .update({
               retry_count: 1,
               last_retry_at: new Date().toISOString(),
+              processing_started_at: null,
             })
             .eq("id", notification_event_id);
 
@@ -904,7 +995,10 @@ serve(async (req: Request) => {
         prefs.nudge_quiet_hours_end
       ) {
         const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const currentTime = getLocalTimeMinutes(
+          contact?.preferred_timezone as string | undefined,
+          now,
+        );
 
         const startParts = prefs.nudge_quiet_hours_start.split(":");
         const endParts = prefs.nudge_quiet_hours_end.split(":");
@@ -925,6 +1019,7 @@ serve(async (req: Request) => {
             .update({
               retry_count: 1,
               last_retry_at: new Date().toISOString(),
+              processing_started_at: null,
             })
             .eq("id", notification_event_id);
 
@@ -969,6 +1064,8 @@ serve(async (req: Request) => {
         .from("notification_events")
         .update({
           is_sent: true,
+          sent_at: new Date().toISOString(),
+          processing_started_at: null,
           delivery_error: existingDevices?.length
             ? `No active devices (inactive: ${inactiveCount}/${existingDevices.length})`
             : "No active devices",
@@ -1046,6 +1143,7 @@ serve(async (req: Request) => {
         accessToken,
         imageUrl,
         device.platform,
+        user_id,
       );
 
       if (success) {
@@ -1061,6 +1159,7 @@ serve(async (req: Request) => {
       .update({
         is_sent: sentCount > 0,
         sent_at: sentCount > 0 ? new Date().toISOString() : null,
+        processing_started_at: null,
         delivery_error:
           failedCount > 0
             ? `Sent to ${sentCount}/${devices.length} devices`
@@ -1098,16 +1197,18 @@ serve(async (req: Request) => {
 
     // Try to mark notification with error
     try {
-      const body: NotificationPayload = await req.clone().json();
-      await supabase
-        .from("notification_events")
-        .update({
-          retry_count: 1,
-          last_retry_at: new Date().toISOString(),
-          delivery_error:
-            error instanceof Error ? error.message : String(error),
-        })
-        .eq("id", body.notification_event_id);
+      if (activeNotificationEventId) {
+        await supabase
+          .from("notification_events")
+          .update({
+            retry_count: 1,
+            last_retry_at: new Date().toISOString(),
+            processing_started_at: null,
+            delivery_error:
+              error instanceof Error ? error.message : String(error),
+          })
+          .eq("id", activeNotificationEventId);
+      }
     } catch (updateError) {
       console.error(
         "[send-push] Failed to update notification event:",
@@ -1356,7 +1457,28 @@ function buildNotificationMessage(
         title: actor,
         body: `created a ${amount} expense split for you in ${householdName}`,
         data: {
-          split_id: payload.split_id || "",
+          split_group_id: payload.split_group_id || payload.split_id || "",
+          split_id: payload.split_id || payload.split_group_id || "",
+          expense_id: payload.expense_id || "",
+          household_id: payload.household_id || "",
+        },
+      };
+    }
+
+    case "income_acknowledged": {
+      const acknowledgerName = String(
+        expenseData.acknowledger_name || payload.acknowledger_name || "Someone",
+      );
+      const code = expenseData.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const cents = Number(expenseData.amount_cents ?? 0);
+      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+      const category = String(expenseData.category || "income");
+      return {
+        title: acknowledgerName,
+        body: `acknowledged your ${amount} ${category} income`,
+        data: {
+          expense_id: payload.expense_id || "",
           household_id: payload.household_id || "",
         },
       };
@@ -1460,6 +1582,8 @@ function buildNotificationMessage(
         body,
         data: {
           sender_id: payload.sender_id || "",
+          sender_name: senderName,
+          message: customMessage || "",
           household_id: payload.household_id || "",
         },
       };

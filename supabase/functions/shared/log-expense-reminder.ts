@@ -72,7 +72,7 @@ function buildExpenseContext(payload: Record<string, any>) {
 
   if (trimmedLabel && amountText) {
     const isAt = labelType === "source";
-    return isAt 
+    return isAt
       ? `You recently spent ${amountText} at ${trimmedLabel}.`
       : `You recently spent ${amountText} on ${trimmedLabel}.`;
   }
@@ -100,89 +100,46 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
       ? null
       : Math.abs(Number(forcedVariantRaw));
 
-  const todayKey = String(payload.local_date ?? payload.day_key ?? getLocalDateKey());
+  const todayKey = String(
+    payload.local_date ?? payload.day_key ?? getLocalDateKey(),
+  );
 
   const titlesDaily = [
-   "🧾 Quick check-in",
-    "📝 Add an expense?",
-    "💸 A quick budget check",
-    "📌 One small update",
-    "🌿 Friendly reminder",
-    "✨ Keep things up to date",
-    "🔔 Just a reminder",
-    "📒 Quick budget update",
-    "🧭 Stay on top of things",
-    "🪙 Log a purchase?",
-    "☕ While it's still fresh...",
-    "💡 A quick money check-in",
+    "Anything to add?",
+    "A quick money check-in",
+    "Remember a recent purchase?",
+    "Keep your spending in view",
+    "One quick expense update",
   ];
 
   const titlesLong = [
-    "🧾 Just checking in",
-    "🧘 A gentle nudge",
-    "📌 Whenever you're ready",
-    "🌙 Pick it back up anytime",
-    "🧭 Ready to get back into it?",
-    "✨ A fresh start is okay",
-    "🤝 Ease back in",
-    "📒 Time for a quick catch-up",
-    "🔮 Start again anytime",
-    "🧩 A few expenses to add?",
-    "🕊️ No rush",
+    "Ready for a quick update?",
+    "Anything recent to add?",
+    "See where your money stands",
+    "Pick up where you left off",
+    "Start with your latest expense",
   ];
 
   const dailySet = [
-    "Got a moment? Add today's spending to keep things up to date.",
-    "It only takes a minute to add a recent expense.",
-    "A quick update now makes your budget easier to follow.",
-    "Add today's spending while it's still fresh.",
-    "Just a quick check-in. Want to add an expense?",
-    "A small update now can save you catching up later.",
-    "Before the day ends, add any spending you remember.",
-    "Keep things current with one quick expense.",
-    "Made a purchase today? Add it in.",
-    "One quick note can keep your budget clear.",
-    "Fast and easy: add an expense and you're done.",
-    "Even small purchases count. Add one if you haven't yet.",
-    "Buy anything today? Take a second to add it.",
-    "Got a second? Add a quick expense.",
-    "A little reminder to record any recent spending.",
-    "One quick entry is all it takes.",
-    "Short and simple: add an expense and you're set.",
-    "Want to keep things clear? Add a recent expense.",
-    "A quick update now makes tomorrow easier.",
-    "Keep it simple. Just add one recent purchase.",
-    "Your budget is ready whenever you want to update it.",
-    "Just one recent expense is enough for today.",
-    "A quick tap now helps keep everything current.",
-    "Add an expense now so you don't have to remember it later.",
+    "Log a recent purchase while it’s still fresh.",
+    "Got an expense in mind? Add it in just a few taps.",
+    "Add any recent spending to keep your overview current.",
+    "A quick expense update helps you see where your money is going.",
+    "Remember something you bought recently? Log it now.",
+    "Take a moment to add your latest expense.",
+    "Add a recent purchase and keep your spending easy to follow.",
+    "One quick entry can keep your budget up to date.",
   ];
 
   const longSet = [
-    "No rush. Adding a recent expense can help you ease back in.",
-    "A small update today can make budgeting feel easier.",
-    "Whenever you're ready, you can pick things back up here.",
-    "One small step is enough. Want to add a recent purchase?",
-    "You don't have to catch up all at once. One expense is enough for today.",
-    "Missing a few days is okay. You can start again with one entry.",
-    "A quick update can help you get a clearer picture of your spending.",
-    "If catching up feels like a lot, start with just one expense.",
-    "Getting back into it can be as simple as logging one purchase.",
-    "You don't need to do everything today. One quick entry is a good start.",
-    "Don't remember everything? That's okay. Just add what you can.",
-    "A gentle reset can start with one expense.",
-    "Even one small update is progress.",
-    "You can get back into the habit in just a few seconds.",
-    "It doesn't have to be exact. A rough amount is okay too.",
-    "Just checking in. A quick log today can help you get back on track.",
-    "Been away for a bit? Start with the easiest purchase to remember.",
-    "A calm restart is better than trying to do it all at once.",
-    "You can restart anytime. One quick entry is enough.",
-    "Busy day? Just log one purchase and leave the rest for later.",
-    "Little by little works too. One expense today is a solid step.",
-    "Need an easy place to start? Add your most recent expense.",
-    "No need to fix everything. Just add something recent.",
-    "A small step now can make the next one easier.",
+    "Start with your latest expense and update the rest whenever you’re ready.",
+    "Add a recent purchase to get a clearer view of your spending.",
+    "Remember any recent spending? Start with just one expense.",
+    "Pick up where you left off by logging your latest purchase.",
+    "A quick expense update can help you see where your money stands.",
+    "Add your most recent expense now and come back to the rest later.",
+    "Log any recent spending you remember—one entry is a good start.",
+    "Start with the easiest purchase to remember.",
   ];
 
   const poolBody = inactivityDays > 14 ? longSet : dailySet;
@@ -204,9 +161,8 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
     forcedVariant: forcedVariant === null ? null : forcedVariant + 101,
   });
 
-  const contextLine = buildExpenseContext(payload);
   const baseBody = poolBody[bodyIndex];
-  const body = contextLine ? `${baseBody} ${contextLine}` : baseBody;
+  const body = baseBody;
 
   const data: Record<string, string> = {
     deep_link: "moneko://expenses/log",
@@ -216,7 +172,8 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
     chosen_title_index: String(titleIndex),
   };
 
-  if (payload.last_amount_cents != null) data.last_amount_cents = String(payload.last_amount_cents);
+  if (payload.last_amount_cents != null)
+    data.last_amount_cents = String(payload.last_amount_cents);
   if (payload.last_currency) data.last_currency = String(payload.last_currency);
   if (payload.last_category) data.last_category = String(payload.last_category);
   if (payload.last_source) data.last_source = String(payload.last_source);

@@ -4,6 +4,8 @@ import { getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
+import { isServiceRoleRequest } from "../shared/notification-delivery.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -164,6 +166,7 @@ async function sendFCMv1Notification(
   accessToken: string,
   imageUrl?: string,
   platform?: string,
+  targetUserId?: string,
 ): Promise<boolean> {
   if (!firebaseProjectId) {
     console.error("[fcm-v1] FIREBASE_PROJECT_ID not configured");
@@ -254,16 +257,17 @@ async function sendFCMv1Notification(
         );
       }
 
-      if (
-        errorText.includes("UNREGISTERED") ||
-        errorText.includes("INVALID_ARGUMENT")
-      ) {
+      if (errorText.includes("UNREGISTERED")) {
         console.warn("[fcm-v1] Invalid or expired device token - deactivating");
         try {
-          await supabase
+          let deactivateQuery = supabase
             .from("devices")
             .update({ is_active: false, updated_at: new Date().toISOString() })
             .eq("push_token", deviceToken);
+          if (targetUserId) {
+            deactivateQuery = deactivateQuery.eq("user_id", targetUserId);
+          }
+          await deactivateQuery;
         } catch (e) {
           console.error("[fcm-v1] Failed to deactivate device token:", e);
         }
@@ -286,9 +290,9 @@ function buildDeepLink(
   switch (eventType) {
     case "expense_added":
     case "expense_edited":
-    case "expense_deleted":
     case "income_added":
     case "income_edited":
+    case "income_acknowledged":
       if (data.expense_id) {
         return `${appScheme}expense/${data.expense_id}`;
       }
@@ -296,6 +300,11 @@ function buildDeepLink(
         return `${appScheme}household/${data.household_id}`;
       }
       return `${appScheme}home`;
+
+    case "expense_deleted":
+      return data.household_id
+        ? `${appScheme}household/${data.household_id}`
+        : `${appScheme}home`;
 
     case "budget_warn":
     case "budget_alert":
@@ -471,42 +480,24 @@ serve(async (req) => {
       });
     }
 
-    // This can be called by service role, cron, or authenticated users (for testing)
-    const authHeader = req.headers.get("Authorization");
-    let isServiceRole = false;
-
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      isServiceRole = token === supabaseServiceRoleKey;
-
-      if (!isServiceRole) {
-        // Verify user auth (allow for manual testing)
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser(token);
-
-        if (authError || !user) {
-          return new Response(
-            JSON.stringify({ error: "Invalid or expired token" }),
-            {
-              status: 401,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-      }
+    if (!isServiceRoleRequest(req, supabaseServiceRoleKey)) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Fetch unsent notification events from last 24 hours
-    // This prevents infinite retries on permanently failed notifications
+    // Delay fallback processing so the primary Database Webhook has time to finish.
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
     const { data: unsentEvents, error: eventsError } = await supabase
       .from("notification_events")
       .select("*")
       .eq("is_sent", false)
       .gte("created_at", oneDayAgo)
+      .not("fallback_eligible_at", "is", null)
+      .lte("fallback_eligible_at", tenMinutesAgo)
       .order("created_at", { ascending: true })
       .limit(100); // Process max 100 at a time to avoid timeouts
 
@@ -581,6 +572,17 @@ serve(async (req) => {
     // Process each event
     for (const event of unsentEvents) {
       try {
+        const { data: claimed, error: claimError } = await supabase.rpc(
+          "claim_notification_event",
+          { p_event_id: event.id },
+        );
+        if (claimError || claimed !== true) {
+          if (claimError) {
+            errors.push(`Event ${event.id}: Failed to claim for processing`);
+          }
+          continue;
+        }
+
         // Determine notification content based on event type
         let title: string;
         let body: string;
@@ -598,7 +600,15 @@ serve(async (req) => {
 
         switch (event.event_type) {
           case "invite_sent":
-            // Skip - invites are handled via email, not push
+            await supabase
+              .from("notification_events")
+              .update({
+                is_sent: true,
+                sent_at: new Date().toISOString(),
+                processing_started_at: null,
+                error_message: "Push not applicable for this event type",
+              })
+              .eq("id", event.id);
             continue;
 
           case "invite_accepted":
@@ -608,7 +618,6 @@ serve(async (req) => {
               event.payload.household_name || "household"
             }"`;
             // Target all household members except the joiner
-            targetUserId = null; // Will broadcast to all members
             break;
 
           case "member_left":
@@ -617,7 +626,6 @@ serve(async (req) => {
             body = `A member has left "${
               event.payload.household_name || "household"
             }"`;
-            targetUserId = null; // Broadcast to remaining members
             break;
 
           case "member_reminded": {
@@ -640,7 +648,6 @@ serve(async (req) => {
             body = `A new expense has been split in "${
               event.payload.household_name || "household"
             }"`;
-            targetUserId = null; // Broadcast to all members
             break;
 
           case "split_settled":
@@ -673,7 +680,6 @@ serve(async (req) => {
                   : `A new expense was added in your household`;
               }
             }
-            targetUserId = null; // Broadcast to all members except actor
             break;
 
           case "expense_edited":
@@ -684,7 +690,6 @@ serve(async (req) => {
               title = "✏️ Expense Updated";
               body = `An expense was modified in your household`;
             }
-            targetUserId = null; // Broadcast to all members except actor
             break;
 
           case "expense_deleted":
@@ -712,7 +717,6 @@ serve(async (req) => {
                   : `An expense was deleted in your household`;
               }
             }
-            targetUserId = null; // Broadcast to all members except actor
             break;
 
           case "income_added": {
@@ -736,7 +740,6 @@ serve(async (req) => {
                 ? `A new recurring income entry was added in your household`
                 : `A new income entry was added in your household`;
             }
-            targetUserId = null; // Broadcast to all members except actor
             break;
           }
 
@@ -748,8 +751,23 @@ serve(async (req) => {
               title = "✏️ Income Updated";
               body = `An income entry was modified in your household`;
             }
-            targetUserId = null; // Broadcast to all members except actor
             break;
+
+          case "income_acknowledged": {
+            const acknowledgerName = String(
+              payloadExpenseData.acknowledger_name || "Someone",
+            );
+            const symbol = getCurrencySymbol(
+              payloadExpenseData.currency as string | undefined,
+            );
+            const cents = Number(payloadExpenseData.amount_cents ?? 0);
+            const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+            title = acknowledgerName;
+            body = `acknowledged your ${amount} ${String(
+              payloadExpenseData.category || "income",
+            )} income`;
+            break;
+          }
 
           case "recurring_reminder": {
             const transactionType = (
@@ -758,8 +776,28 @@ serve(async (req) => {
             const category = (event.payload?.category ||
               payloadExpenseData.category ||
               "") as string;
-            const amount = (event.payload?.amount || "") as string;
-            const timeframe = (event.payload?.timeframe || "soon") as string;
+            const symbol = getCurrencySymbol(
+              event.payload?.currency as string | undefined,
+            );
+            const cents = Number(event.payload?.amount_cents ?? 0);
+            const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+            const occurrenceDate = new Date(
+              `${String(event.payload?.occurrence_date || "")}T00:00:00Z`,
+            );
+            const daysUntil = Number.isNaN(occurrenceDate.getTime())
+              ? null
+              : Math.ceil(
+                  (occurrenceDate.getTime() - Date.now()) /
+                    (1000 * 60 * 60 * 24),
+                );
+            const timeframe =
+              daysUntil === 0
+                ? "today"
+                : daysUntil === 1
+                  ? "tomorrow"
+                  : daysUntil != null && daysUntil > 1
+                    ? `in ${daysUntil} days`
+                    : "soon";
 
             title =
               transactionType === "income"
@@ -806,16 +844,42 @@ serve(async (req) => {
           }
 
           case "budget_warn":
-          case "budget_alert":
-            // These are handled by households-send-nudge, skip
-            continue;
+          case "budget_alert": {
+            const percentage = Number(event.payload?.percentage_used ?? 0);
+            title =
+              event.event_type === "budget_alert"
+                ? "Purr-suasive Nudge! 😸"
+                : "Budget Boop! 🐾";
+            body =
+              event.event_type === "budget_alert"
+                ? `Your ${String(event.payload?.currency || "")} budget has reached ${percentage.toFixed(0)}%. Time to pause and review!`
+                : `Your ${String(event.payload?.currency || "")} budget has used ${percentage.toFixed(0)}%. Keep an eye on spending!`;
+            break;
+          }
 
           case "invite_revoked":
-            // Skip - no push needed for revocations
+            await supabase
+              .from("notification_events")
+              .update({
+                is_sent: true,
+                sent_at: new Date().toISOString(),
+                processing_started_at: null,
+                error_message: "Push not applicable for this event type",
+              })
+              .eq("id", event.id);
             continue;
 
           default:
             console.warn(`Unknown event type: ${event.event_type}`);
+            await supabase
+              .from("notification_events")
+              .update({
+                is_sent: true,
+                sent_at: new Date().toISOString(),
+                processing_started_at: null,
+                error_message: `Unsupported push event type: ${event.event_type}`,
+              })
+              .eq("id", event.id);
             continue;
         }
 
@@ -851,6 +915,7 @@ serve(async (req) => {
             .update({
               is_sent: true,
               sent_at: new Date().toISOString(),
+              processing_started_at: null,
               error_message: "No target users found",
             })
             .eq("id", event.id);
@@ -859,16 +924,23 @@ serve(async (req) => {
 
         // Check quiet hours for each user and get their devices
         const currentTime = new Date();
-        const currentHour = currentTime.getHours();
-        const currentMinute = currentTime.getMinutes();
-        const currentTimeMinutes = currentHour * 60 + currentMinute;
-
         // Get sharing preferences for all target users
-        const { data: preferences } = await supabase
+        let preferencesQuery = supabase
           .from("sharing_prefs")
           .select(
             "user_id, enable_nudges, nudge_quiet_hours_start, nudge_quiet_hours_end",
           )
+          .in("user_id", userIds);
+        if (event.household_id) {
+          preferencesQuery = preferencesQuery.eq(
+            "household_id",
+            event.household_id,
+          );
+        }
+        const { data: preferences } = await preferencesQuery;
+        const { data: contacts } = await supabase
+          .from("user_contacts")
+          .select("user_id, preferred_timezone")
           .in("user_id", userIds);
 
         const isImmediateTransactionEvent =
@@ -876,13 +948,18 @@ serve(async (req) => {
           event.event_type === "expense_edited" ||
           event.event_type === "expense_deleted" ||
           event.event_type === "income_added" ||
-          event.event_type === "income_edited";
+          event.event_type === "income_edited" ||
+          event.event_type === "income_acknowledged";
         const isLogExpenseReminder =
           event.event_type === "log_expense_reminder";
 
         // Filter users by quiet hours (skip for immediate transaction events)
         const eligibleUserIds = userIds.filter((userId) => {
           const prefs = preferences?.find((p) => p.user_id === userId);
+          const timezone = contacts?.find(
+            (contact) => contact.user_id === userId,
+          )?.preferred_timezone as string | undefined;
+          const currentTimeMinutes = getLocalTimeMinutes(timezone, currentTime);
 
           // Check if notifications are enabled
           if (
@@ -948,6 +1025,10 @@ serve(async (req) => {
 
         if (eligibleUserIds.length === 0) {
           // All users in quiet hours, retry later
+          await supabase
+            .from("notification_events")
+            .update({ processing_started_at: null })
+            .eq("id", event.id);
           continue;
         }
 
@@ -966,6 +1047,7 @@ serve(async (req) => {
             .update({
               is_sent: true,
               sent_at: new Date().toISOString(),
+              processing_started_at: null,
               error_message: "No active devices found",
             })
             .eq("id", event.id);
@@ -1035,6 +1117,7 @@ serve(async (req) => {
             accessToken,
             imageUrl,
             device.platform,
+            device.user_id,
           );
 
           return { device, success };
@@ -1056,6 +1139,7 @@ serve(async (req) => {
           .update({
             is_sent: eventSentCount > 0,
             sent_at: eventSentCount > 0 ? new Date().toISOString() : null,
+            processing_started_at: null,
             error_message:
               eventFailedCount > 0
                 ? `Failed to send to ${eventFailedCount} devices`
@@ -1097,6 +1181,7 @@ serve(async (req) => {
           .from("notification_events")
           .update({
             error_message: errorMessage,
+            processing_started_at: null,
           })
           .eq("id", event.id);
       }

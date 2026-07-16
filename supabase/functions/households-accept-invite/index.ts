@@ -318,9 +318,8 @@ serve(async (req) => {
       );
     }
 
-    let subscriptionBindingEmailContext:
-      | SubscriptionBindingEmailContext
-      | null = null;
+    let subscriptionBindingEmailContext: SubscriptionBindingEmailContext | null =
+      null;
 
     // 3. Bind user to household owner's subscription if applicable
     console.log(
@@ -384,8 +383,8 @@ serve(async (req) => {
               "[accept-invite] Owner has active subscription - binding new member",
             );
 
-            const subscriptionGrantOwnerId = ownerSub.bound_to_user_id ??
-              household.owner_id;
+            const subscriptionGrantOwnerId =
+              ownerSub.bound_to_user_id ?? household.owner_id;
 
             const { count: grantedUserCount, error: grantCountError } =
               await supabase
@@ -420,7 +419,8 @@ serve(async (req) => {
               grantCountError || existingGrantError,
             );
 
-            const hasReachedGrantLimit = !shouldSkipBindingForGrantCheckError &&
+            const hasReachedGrantLimit =
+              !shouldSkipBindingForGrantCheckError &&
               hasReachedHouseholdSubscriptionGrantLimit(
                 grantedUserCount ?? 0,
                 Boolean(existingGrantedSub),
@@ -620,7 +620,7 @@ serve(async (req) => {
       };
 
       const memberJoinedEvents = allMembers
-        .filter((m) => m.user_id !== user.id) // Exclude the new member themselves
+        .filter((m) => m.user_id !== user.id && m.user_id !== inviterUserId)
         .map((member) => ({
           household_id: invite.household_id,
           user_id: member.user_id,
@@ -740,10 +740,10 @@ async function sendSubscriptionBindingEmails(params: {
       await Promise.all([
         params.inviterUserId
           ? supabase
-            .from("users")
-            .select("email, full_name")
-            .eq("id", params.inviterUserId)
-            .maybeSingle()
+              .from("users")
+              .select("email, full_name")
+              .eq("id", params.inviterUserId)
+              .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         supabase
           .from("users")
@@ -764,8 +764,8 @@ async function sendSubscriptionBindingEmails(params: {
       full_name?: string | null;
     } | null;
     const inviterAuthUser = inviterAuthResult.data.user;
-    const inviterEmail = inviterProfile?.email || inviterAuthUser?.email ||
-      null;
+    const inviterEmail =
+      inviterProfile?.email || inviterAuthUser?.email || null;
     const inviterName = resolveUserDisplayName(
       inviterProfile?.full_name,
       inviterEmail,
@@ -845,20 +845,21 @@ function buildInviterSubscriptionBindingEmail(data: {
   const ownershipText = data.isInviterGrantOwner
     ? "your subscription"
     : `${escapeHtml(data.grantOwnerName)}'s subscription`;
-  const remainingText = data.remainingGrantCount === 1
-    ? "1 more person"
-    : `${data.remainingGrantCount} more people`;
+  const remainingText =
+    data.remainingGrantCount === 1
+      ? "1 more person"
+      : `${data.remainingGrantCount} more people`;
   const content = `
-    <h1 class="title">${escapeHtml(data.inviteeName)} joined ${
-    escapeHtml(data.householdName)
-  }</h1>
-    <p class="subtitle">${escapeHtml(data.inviteeName)} now has ${
-    escapeHtml(data.planName)
-  } access through ${ownershipText}.</p>
+    <h1 class="title">${escapeHtml(data.inviteeName)} joined ${escapeHtml(
+      data.householdName,
+    )}</h1>
+    <p class="subtitle">${escapeHtml(data.inviteeName)} now has ${escapeHtml(
+      data.planName,
+    )} access through ${ownershipText}.</p>
     <p>Your household is using <strong>${data.grantedUserCount}/${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT}</strong> shared subscription seats.</p>
-    <p>You can still share subscription access with <strong>${
-    escapeHtml(remainingText)
-  }</strong> on the current plan.</p>
+    <p>You can still share subscription access with <strong>${escapeHtml(
+      remainingText,
+    )}</strong> on the current plan.</p>
     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 28px 0;" />
     <p><strong>FAQ: What if I invite more than ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users?</strong></p>
     <p>You can invite unlimited people to your household, but only ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users can share subscription access with your current plan. Additional members can still join the household; they just keep their own subscription status.</p>
@@ -888,13 +889,13 @@ function buildInviteeSubscriptionBindingEmail(data: {
 }) {
   const content = `
     <h1 class="title">Your ${escapeHtml(data.planName)} access is ready</h1>
-    <p class="subtitle">Hi ${
-    escapeHtml(data.inviteeName)
-  }, your subscription access is now bound to ${
-    escapeHtml(data.grantOwnerName)
-  }'s ${escapeHtml(data.planName)} plan through ${
-    escapeHtml(data.householdName)
-  }.</p>
+    <p class="subtitle">Hi ${escapeHtml(
+      data.inviteeName,
+    )}, your subscription access is now bound to ${escapeHtml(
+      data.grantOwnerName,
+    )}'s ${escapeHtml(data.planName)} plan through ${escapeHtml(
+      data.householdName,
+    )}.</p>
     <p>Enjoy your Plus benefits in the Moneko app, including WhatsApp and Telegram integrations, email receipt capture, Apple Pay and Android notification capture, and bank sync for US and Canada banks.</p>
     ${mobileDownloadCtasHtml()}
     <p>If you have any questions, just reply to this email and our support team will help.</p>

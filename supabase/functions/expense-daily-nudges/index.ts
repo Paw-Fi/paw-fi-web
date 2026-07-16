@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { isServiceRoleRequest } from "../shared/notification-delivery.ts";
 
 interface ContactRow {
   user_id: string;
@@ -17,8 +18,9 @@ function sleep(ms: number) {
 }
 
 function isTransientTransportError(error: unknown) {
-  const message = String((error as { message?: string })?.message || "")
-    .toLowerCase();
+  const message = String(
+    (error as { message?: string })?.message || "",
+  ).toLowerCase();
   return (
     message.includes("error sending request") ||
     message.includes("fetch failed") ||
@@ -48,8 +50,7 @@ async function runWithRetry<T>(
   };
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const result =
-      (await run()) as { data: T | null; error: unknown };
+    const result = (await run()) as { data: T | null; error: unknown };
     lastResult = {
       ...result,
       attempts: attempt,
@@ -231,6 +232,13 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  if (!isServiceRoleRequest(req, SUPABASE_SERVICE_ROLE_KEY)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
@@ -400,7 +408,7 @@ Deno.serve(async (req: Request) => {
               .select("user_id")
               .eq("event_type", "log_expense_reminder")
               .gte("created_at", last24hIso)
-              .in("user_id", fallbackChunk)
+              .in("user_id", fallbackChunk),
           );
           if (fallbackResult.error) {
             reminderErr = {
@@ -414,7 +422,9 @@ Deno.serve(async (req: Request) => {
             };
             break;
           }
-          fallbackRows.push(...((fallbackResult.data || []) as ReminderUserRow[]));
+          fallbackRows.push(
+            ...((fallbackResult.data || []) as ReminderUserRow[]),
+          );
         }
 
         reminderRows = fallbackRows;
@@ -441,9 +451,7 @@ Deno.serve(async (req: Request) => {
           context: {
             step: "load_recent_reminders",
             operation: "recent_reminder_guard",
-            lookupMode: reminderRpcResult.error
-              ? "fallback_get"
-              : "rpc",
+            lookupMode: reminderRpcResult.error ? "fallback_get" : "rpc",
             fallbackReason: reminderFallbackReason,
             rpcAttempts: reminderRpcResult.attempts,
             isRpcMissingFunctionError:
@@ -471,10 +479,9 @@ Deno.serve(async (req: Request) => {
         data: lastExpenseRows,
         error: lastExpenseErr,
         attempts: lastExpenseAttempts,
-      } =
-        await runWithRetry<LastExpenseRow[]>(() =>
-          supabase.rpc("get_last_expense_per_user", { p_user_ids: chunk })
-        );
+      } = await runWithRetry<LastExpenseRow[]>(() =>
+        supabase.rpc("get_last_expense_per_user", { p_user_ids: chunk }),
+      );
 
       if (lastExpenseErr) {
         console.warn(
@@ -492,11 +499,12 @@ Deno.serve(async (req: Request) => {
       let reminderStatsRows: ReminderStatsRow[] = [];
       let reminderStatsErr: unknown = null;
 
-      const reminderStatsRpcResult = await runWithRetry<ReminderStatsRow[]>(() =>
-        supabase.rpc("get_log_expense_reminder_stats", {
-          p_user_ids: chunk,
-          p_since: statsSinceIso,
-        })
+      const reminderStatsRpcResult = await runWithRetry<ReminderStatsRow[]>(
+        () =>
+          supabase.rpc("get_log_expense_reminder_stats", {
+            p_user_ids: chunk,
+            p_since: statsSinceIso,
+          }),
       );
 
       if (reminderStatsRpcResult.error) {
@@ -515,7 +523,7 @@ Deno.serve(async (req: Request) => {
               .select("user_id, created_at")
               .eq("event_type", "log_expense_reminder")
               .gte("created_at", statsSinceIso)
-              .in("user_id", fallbackChunk)
+              .in("user_id", fallbackChunk),
           );
 
           if (fallbackResult.error) {
@@ -556,8 +564,8 @@ Deno.serve(async (req: Request) => {
         );
       } else {
         reminderStatsErr = reminderStatsRpcResult.error;
-        reminderStatsRows =
-          (reminderStatsRpcResult.data || []) as ReminderStatsRow[];
+        reminderStatsRows = (reminderStatsRpcResult.data ||
+          []) as ReminderStatsRow[];
       }
 
       if (reminderStatsErr) {
