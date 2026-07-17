@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(133);
+select plan(134);
 
 -- Public compatibility and permissions -------------------------------------------------
 
@@ -448,6 +448,8 @@ begin
       'amount_cents', case
         when membership.user_id = p_participant_user_id
           then v_participant_amount_cents
+        when membership.user_id = p_payer_user_id
+          then v_group_total_cents - v_participant_amount_cents
         else 0
       end,
       'percentage', null,
@@ -460,7 +462,7 @@ begin
   where membership.household_id = p_household_id;
 
   if v_group_total_cents = abs(p_amount_cents)
-    and v_participant_amount_cents = v_group_total_cents
+    and v_participant_amount_cents between 0 and v_group_total_cents
   then
     -- Production Edge Functions invoke this service-only RPC. The fixture
     -- temporarily assumes the same JWT claim and restores it even on failure.
@@ -1582,6 +1584,48 @@ select results_eq(
       ('you_owe'::text, 11223::bigint, 11223::bigint)
   $expected$,
   'V2 preserves C$112.23 and C$46.12 instead of clipping one row to C$66.11'
+);
+
+do $$
+declare
+  v_split_share jsonb;
+begin
+  v_split_share := pg_temp.add_settlement_obligation(
+    current_setting('test.settlement_v3_household_id')::uuid,
+    current_setting('test.settlement_v3_member_id')::uuid,
+    current_setting('test.settlement_v3_owner_id')::uuid,
+    'TWD',
+    3000,
+    'Lunch',
+    current_date,
+    3000,
+    1200
+  );
+  perform set_config(
+    'test.settlement_v3_split_share_expense_id',
+    v_split_share ->> 'expense_id',
+    false
+  );
+end;
+$$;
+
+select ok(
+  (
+    select
+      breakdown.total_amount_cents = 3000
+      and breakdown.remaining_amount_cents = 1200
+      and breakdown.expense_date = expense.created_at
+    from public.households_get_settlement_breakdown_v2(
+      current_setting('test.settlement_v3_household_id')::uuid,
+      current_setting('test.settlement_v3_member_id')::uuid,
+      'TWD'
+    ) breakdown
+    join public.expenses expense
+      on expense.id = breakdown.expense_id
+    where breakdown.expense_id =
+      current_setting('test.settlement_v3_split_share_expense_id')::uuid
+  ),
+  'breakdown returns a 12 share with its 30 parent total and exact transaction timestamp'
 );
 
 select is(
