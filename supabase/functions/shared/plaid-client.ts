@@ -228,6 +228,7 @@ export async function exchangePublicToken(
 
 export interface PlaidAccount {
   account_id: string;
+  persistent_account_id?: string | null;
   name: string;
   official_name?: string | null;
   mask?: string | null;
@@ -237,6 +238,8 @@ export interface PlaidAccount {
     iso_currency_code?: string | null;
     unofficial_currency_code?: string | null;
     current?: number | null;
+    available?: number | null;
+    limit?: number | null;
   };
 }
 
@@ -311,6 +314,9 @@ export interface PlaidTransaction {
     payee?: string | null;
     payer?: string | null;
   };
+  counterparties?: Array<{
+    type?: string | null;
+  }>;
 }
 
 export interface PlaidSyncResponse {
@@ -412,14 +418,6 @@ export interface MapPlaidTransactionInput {
   transaction: PlaidTransaction;
 }
 
-type RecurrenceFrequency =
-  | "daily"
-  | "weekly"
-  | "biweekly"
-  | "monthly"
-  | "yearly"
-  | "custom";
-
 export function mapPlaidTransactionToExpense(
   params: MapPlaidTransactionInput,
 ): ExpenseUpsertInput {
@@ -448,13 +446,26 @@ export function mapPlaidTransactionToExpense(
     txn.payment_meta?.payer ||
     null;
   const description = txn.name || txn.merchant_name || null;
-  const { isRecurring, recurrenceRule } = detectRecurring(txn);
   const classification = classifyPlaidTransaction({
     amount,
     pending: txn.pending ?? false,
     pfcPrimary: txn.personal_finance_category?.primary,
     transactionCode: txn.transaction_code,
     accountType: params.accountType,
+    pfcConfidence: txn.personal_finance_category?.confidence_level,
+    hasAmbiguousCounterparty:
+      txn.counterparties?.some((counterparty) =>
+        ["financial_institution", "payment_app"].includes(
+          counterparty.type?.trim().toLowerCase() ?? "",
+        ),
+      ) ?? false,
+    hasMerchantEvidence:
+      Boolean(txn.merchant_name?.trim()) ||
+      (txn.counterparties?.some(
+        (counterparty) =>
+          counterparty.type?.trim().toLowerCase() === "merchant",
+      ) ??
+        false),
   });
   const classificationReview = derivePlaidClassificationReview(
     {
@@ -488,8 +499,8 @@ export function mapPlaidTransactionToExpense(
     merchant: merchantLabel || txn.name || null,
     source: merchantLabel || txn.name || null,
     raw_provider_payload: txn,
-    is_recurring: isRecurring,
-    recurrence_rule: recurrenceRule,
+    is_recurring: false,
+    recurrence_rule: null,
     household_id: null,
     contact_id: null,
     normalized_amount_cents: amountCents,
@@ -517,41 +528,4 @@ export function mapPlaidTransactionToExpense(
     classification_review_state: classificationReview.state,
     classification_review_reason: classificationReview.reason,
   };
-}
-
-function detectRecurring(transaction: PlaidTransaction): {
-  isRecurring: boolean;
-  recurrenceRule: Record<string, unknown> | null;
-} {
-  const detailed =
-    transaction.personal_finance_category?.detailed?.toUpperCase() || "";
-  const keywords = ["SUBSCRIPTION", "PAYROLL", "RENT", "MORTGAGE", "UTILITIES"];
-  const keywordMatch = keywords.some((keyword) => detailed.includes(keyword));
-  const isRecurring = Boolean(keywordMatch);
-  if (!isRecurring) {
-    return { isRecurring: false, recurrenceRule: null };
-  }
-  const frequency = guessFrequency(detailed);
-  return {
-    isRecurring: true,
-    recurrenceRule: {
-      frequency,
-      anchor_date: transaction.date || transaction.authorized_date,
-      provider_hint: {
-        category: transaction.personal_finance_category,
-      },
-    },
-  };
-}
-
-function guessFrequency(detailedCategory: string): RecurrenceFrequency {
-  if (detailedCategory.includes("PAYROLL")) return "biweekly";
-  if (
-    detailedCategory.includes("RENT") ||
-    detailedCategory.includes("MORTGAGE") ||
-    detailedCategory.includes("SUBSCRIPTION")
-  ) {
-    return "monthly";
-  }
-  return "monthly";
 }

@@ -191,7 +191,8 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const budgetCurrency = providedCurrency ||
+  const budgetCurrency =
+    providedCurrency ||
     validateCurrency(contact?.preferred_currency as string | null);
 
   if (!contactId) {
@@ -304,14 +305,20 @@ Deno.serve(async (req: Request) => {
   // Get totals for today - ONLY sum expenses matching the budget currency
   const { data: expenseRows } = await supabase
     .from("expenses")
-    .select("amount_cents,currency")
+    .select(
+      "amount_cents,currency,analytics_is_final,analytics_spending_multiplier",
+    )
     .eq("contact_id", contactId)
     .eq("date", dateStr)
     .eq("currency", budgetCurrency)
+    .eq("analytics_is_final", true)
     .is("deleted_at", null);
 
   const totalSpentCents = (expenseRows || []).reduce(
-    (sum, r: any) => sum + (r.amount_cents || 0),
+    (sum, r: any) =>
+      sum +
+      Math.abs(Number(r.amount_cents || 0)) *
+        Number(r.analytics_spending_multiplier || 0),
     0,
   );
   const remainingCents = Math.max(budgetCents - totalSpentCents, 0);
@@ -336,15 +343,11 @@ Deno.serve(async (req: Request) => {
   // Simple text reply
   const sym = getCurrencySymbol(budgetCurrency);
   const toMoney = (cents: number) => (cents / 100).toFixed(2);
-  const reply = `Budget set to ${sym}${
-    toMoney(
-      budgetCents,
-    )
-  }. Today: spent ${sym}${toMoney(totalSpentCents)} / budget ${sym}${
-    toMoney(
-      budgetCents,
-    )
-  }. Remaining: ${sym}${toMoney(remainingCents)}.`;
+  const reply = `Budget set to ${sym}${toMoney(
+    budgetCents,
+  )}. Today: spent ${sym}${toMoney(totalSpentCents)} / budget ${sym}${toMoney(
+    budgetCents,
+  )}. Remaining: ${sym}${toMoney(remainingCents)}.`;
 
   if (detection.isGpt) {
     return new Response(reply, {

@@ -122,15 +122,6 @@ async function findEffectiveBudget(
     .limit(1)
     .maybeSingle();
 
-  if (otherBudgets) {
-    console.log("[findEffectiveBudget] Found budget in different currency:", {
-      requestedCurrency: primaryCurrency,
-      foundCurrency: otherBudgets.currency,
-      amount: otherBudgets.amount_cents,
-      date: otherBudgets.date,
-    });
-  }
-
   return { effectiveBudget: null, otherCurrencyBudget: otherBudgets };
 }
 
@@ -196,11 +187,12 @@ Deno.serve(async (req: Request) => {
   // 3. preferred_currency from user_contacts table
   // 4. 'USD' as final fallback
   // Canonicalize provided currency (may be symbol/alias)
-  const providedCurrency = (
-    normalizeCurrencyCode(inputCurrency) ||
-    inputCurrency ||
-    ""
-  ).toUpperCase() || null;
+  const providedCurrency =
+    (
+      normalizeCurrencyCode(inputCurrency) ||
+      inputCurrency ||
+      ""
+    ).toUpperCase() || null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
@@ -256,7 +248,8 @@ Deno.serve(async (req: Request) => {
   // Layer 2: User's selected currency (from request)
   // Layer 3: User's preferred_currency (from database)
   // Layer 4: 'USD' (final fallback)
-  const dbPreferred = normalizeCurrencyCode(contact?.preferred_currency) ||
+  const dbPreferred =
+    normalizeCurrencyCode(contact?.preferred_currency) ||
     contact?.preferred_currency ||
     null;
   const preferredCurrency = (
@@ -269,8 +262,8 @@ Deno.serve(async (req: Request) => {
     layer: providedCurrency
       ? "2-inputCurrency"
       : contact?.preferred_currency
-      ? "3-preferred_currency"
-      : "4-USD",
+        ? "3-preferred_currency"
+        : "4-USD",
     value: preferredCurrency,
     providedCurrency,
     dbPreferredCurrency: contact?.preferred_currency,
@@ -362,8 +355,7 @@ Rules:
           role: "user",
           parts: [
             {
-              text:
-                `${systemPrompt}\n\nCaller Currency: ${preferredCurrency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}`,
+              text: `${systemPrompt}\n\nCaller Currency: ${preferredCurrency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}`,
             },
           ],
         },
@@ -470,7 +462,8 @@ Rules:
 
         // Ensure user_id is set so RLS policies (which rely on user_id) include this row
         // Prefer contact.user_id (from DB); fallback to provided userId when available
-        const expenseUserId = (contact?.user_id as string | null) ||
+        const expenseUserId =
+          (contact?.user_id as string | null) ||
           (userId as string | null) ||
           null;
 
@@ -511,10 +504,10 @@ Rules:
         currencies: insertedExpenses?.map((e: any) => e.currency),
         firstExpense: insertedExpenses?.[0]
           ? {
-            id: insertedExpenses[0].id,
-            currency: insertedExpenses[0].currency,
-            amount_cents: insertedExpenses[0].amount_cents,
-          }
+              id: insertedExpenses[0].id,
+              currency: insertedExpenses[0].currency,
+              amount_cents: insertedExpenses[0].amount_cents,
+            }
           : null,
       });
     }
@@ -530,7 +523,7 @@ Rules:
     if (Array.isArray(results.expenses) && results.expenses.length > 0) {
       const expenseCurrencies = new Set(
         results.expenses.map((e: any) =>
-          (e.currency || preferredCurrency).toUpperCase()
+          (e.currency || preferredCurrency).toUpperCase(),
         ),
       );
 
@@ -564,9 +557,12 @@ Rules:
     // Get ALL expenses for today to calculate totals by currency
     const { data: allExpenseRows } = await supabase
       .from("expenses")
-      .select("amount_cents,currency")
+      .select(
+        "amount_cents,currency,analytics_is_final,analytics_spending_multiplier",
+      )
       .eq("contact_id", contactId)
       .eq("date", dateStr)
+      .eq("analytics_is_final", true)
       .is("deleted_at", null);
 
     // Group expenses by currency
@@ -574,7 +570,12 @@ Rules:
     (allExpenseRows || []).forEach((r: any) => {
       const curr = (r.currency || "USD").toUpperCase();
       const current = currencyTotals.get(curr) || 0;
-      currencyTotals.set(curr, current + (r.amount_cents || 0));
+      currencyTotals.set(
+        curr,
+        current +
+          Math.abs(Number(r.amount_cents || 0)) *
+            Number(r.analytics_spending_multiplier || 0),
+      );
     });
 
     // Get budget for the calculation currency (with fallback to other currencies)
@@ -624,7 +625,7 @@ Rules:
     if (Array.isArray(results.expenses) && results.expenses.length > 0) {
       const expenseCurrencies = new Set(
         results.expenses.map((e: any) =>
-          (e.currency || preferredCurrency).toUpperCase()
+          (e.currency || preferredCurrency).toUpperCase(),
         ),
       );
       if (expenseCurrencies.size === 1) {
@@ -635,16 +636,24 @@ Rules:
     // Get ALL expenses for that date
     const { data: allExpenseRows } = await supabase
       .from("expenses")
-      .select("amount_cents,currency")
+      .select(
+        "amount_cents,currency,analytics_is_final,analytics_spending_multiplier",
+      )
       .eq("contact_id", contactId)
       .eq("date", dateForTotals)
+      .eq("analytics_is_final", true)
       .is("deleted_at", null);
 
     const currencyTotals = new Map<string, number>();
     (allExpenseRows || []).forEach((r: any) => {
       const curr = (r.currency || "USD").toUpperCase();
       const current = currencyTotals.get(curr) || 0;
-      currencyTotals.set(curr, current + (r.amount_cents || 0));
+      currencyTotals.set(
+        curr,
+        current +
+          Math.abs(Number(r.amount_cents || 0)) *
+            Number(r.analytics_spending_multiplier || 0),
+      );
     });
 
     // Get budget for the calculation currency (with fallback to other currencies)
@@ -698,8 +707,8 @@ Rules:
       : "";
 
     // Check if budget is zero due to currency mismatch
-    const budgetMismatch = results.totals.budget_cents === 0 &&
-      results.totals.spent_cents > 0;
+    const budgetMismatch =
+      results.totals.budget_cents === 0 && results.totals.spent_cents > 0;
 
     if (budgetMismatch) {
       // Check if we found budget in another currency
@@ -707,33 +716,26 @@ Rules:
         const otherCode = results.otherCurrencyBudget.currency;
         const otherSym = getCurrencySymbol(otherCode);
         const otherAmount = toMoney(results.otherCurrencyBudget.amount_cents);
-        reply = `${setPart}${added}${dateLabel}: spent ${sym}${
-          toMoney(
+        reply =
+          `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(
             results.totals.spent_cents,
-          )
-        }.\n\n` +
+          )}.\n\n` +
           `💡 Your currency is set to *${code}* but you don't have a budget in ${code} yet.\n\n` +
           `You have a budget in *${otherCode}* (${otherSym}${otherAmount}).\n\n` +
           `• Use */setCurrency ${otherCode}* to switch back\n` +
           `• Or use */setBudget <amount>* to create a budget in ${code}`;
       } else {
         // No budget in any currency
-        reply = `${setPart}${added}${dateLabel}: spent ${sym}${
-          toMoney(
-            results.totals.spent_cents,
-          )
-        } (no budget set in ${code}). Set budget: /setBudget <amount> or change currency: /setCurrency <code>`;
+        reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(
+          results.totals.spent_cents,
+        )} (no budget set in ${code}). Set budget: /setBudget <amount> or change currency: /setCurrency <code>`;
       }
     } else {
-      reply = `${setPart}${added}${dateLabel}: spent ${sym}${
-        toMoney(
-          results.totals.spent_cents,
-        )
-      } / budget ${sym}${
-        toMoney(
-          results.totals.budget_cents,
-        )
-      }. Remaining: ${sym}${toMoney(results.totals.remaining_cents)}.`;
+      reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(
+        results.totals.spent_cents,
+      )} / budget ${sym}${toMoney(
+        results.totals.budget_cents,
+      )}. Remaining: ${sym}${toMoney(results.totals.remaining_cents)}.`;
     }
   } else {
     reply = "Update recorded.";

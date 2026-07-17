@@ -25,6 +25,8 @@ interface WalletRow {
   is_default: boolean;
   is_system: boolean;
   is_archived: boolean;
+  linked_bank_account_id: string | null;
+  current_balance_cents?: number;
 }
 
 interface WalletTransaction {
@@ -39,6 +41,9 @@ interface WalletTransaction {
   splitGroupId: string | null;
   walletId: string | null;
   type: string;
+  analyticsIsFinal: boolean;
+  analyticsSpendingMultiplier: number;
+  analyticsCountsTowardIncome: boolean;
 }
 
 interface RecurringRule {
@@ -207,9 +212,8 @@ function firstOnOrAfterDayStep(
     (rangeStart.getTime() - anchor.getTime()) / 86400000,
   );
   const offsetDays = diffDays % stepDays;
-  const deltaDays = offsetDays === 0
-    ? diffDays
-    : diffDays + (stepDays - offsetDays);
+  const deltaDays =
+    offsetDays === 0 ? diffDays : diffDays + (stepDays - offsetDays);
   return new Date(anchor.getTime() + deltaDays * 86400000);
 }
 
@@ -291,10 +295,14 @@ function buildWalletSnapshot(
   let totalIncomeCents = 0;
   let totalSpentCents = 0;
   for (const transaction of filteredTransactions) {
-    if (transaction.type.toLowerCase() === "income") {
+    if (!transaction.analyticsIsFinal) continue;
+    if (transaction.analyticsCountsTowardIncome) {
       totalIncomeCents += Math.abs(transaction.amountCents);
-    } else {
-      totalSpentCents += Math.abs(transaction.amountCents);
+    }
+    if (transaction.analyticsSpendingMultiplier !== 0) {
+      totalSpentCents +=
+        Math.abs(transaction.amountCents) *
+        transaction.analyticsSpendingMultiplier;
     }
   }
 
@@ -329,6 +337,26 @@ function buildWalletSnapshot(
   };
 }
 
+function applyCurrentWalletBalances(
+  snapshot: WalletSnapshot,
+  wallets: WalletRow[],
+): WalletSnapshot {
+  const walletBalances = { ...snapshot.walletBalances };
+  for (const wallet of wallets) {
+    if (wallet.current_balance_cents != null) {
+      walletBalances[wallet.id] = wallet.current_balance_cents;
+    }
+  }
+  return {
+    ...snapshot,
+    walletBalances,
+    netWorthCents: Object.values(walletBalances).reduce(
+      (sum, balance) => sum + balance,
+      0,
+    ),
+  };
+}
+
 function parseRecurringRule(value: unknown): RecurringRule | null {
   if (value == null) return null;
 
@@ -354,8 +382,8 @@ function parseRecurringRule(value: unknown): RecurringRule | null {
   const excludedDatesRaw = Array.isArray(raw.excludedDates)
     ? raw.excludedDates
     : Array.isArray(raw.excluded_dates)
-    ? raw.excluded_dates
-    : [];
+      ? raw.excluded_dates
+      : [];
 
   return {
     frequency,
@@ -445,9 +473,8 @@ function projectRecurringTransactions(
           const monthsBetween =
             (startDay.getFullYear() - anchor.getFullYear()) * 12 +
             (startDay.getMonth() - anchor.getMonth());
-          let n = monthsBetween <= 0
-            ? 0
-            : Math.floor(monthsBetween / stepMonths);
+          let n =
+            monthsBetween <= 0 ? 0 : Math.floor(monthsBetween / stepMonths);
           let current = addMonthsFromAnchor(anchor, n * stepMonths);
           while (normalizeDate(current).getTime() < startDay.getTime()) {
             n += 1;
@@ -504,6 +531,10 @@ function projectRecurringTransactions(
         splitGroupId: recurring.splitGroupId,
         walletId: recurring.accountId,
         type: recurring.type,
+        analyticsIsFinal: true,
+        analyticsSpendingMultiplier:
+          recurring.type.toLowerCase() === "income" ? 0 : 1,
+        analyticsCountsTowardIncome: recurring.type.toLowerCase() === "income",
       });
     }
   }
@@ -634,9 +665,10 @@ Deno.serve(async (req: Request) => {
       .map(parseDateOnly)
       .filter((value): value is Date => value != null)
       .map(normalizeMonthStart);
-    const requestedMonths = requestedMonthStarts.length > 0
-      ? requestedMonthStarts
-      : [normalizeMonthStart(currentMonthStart)];
+    const requestedMonths =
+      requestedMonthStarts.length > 0
+        ? requestedMonthStarts
+        : [normalizeMonthStart(currentMonthStart)];
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
@@ -673,7 +705,7 @@ Deno.serve(async (req: Request) => {
     let accountsQuery = supabase
       .from("accounts")
       .select(
-        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived",
+        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id",
       )
       .eq("is_archived", false)
       .order("is_default", { ascending: false })
@@ -703,8 +735,10 @@ Deno.serve(async (req: Request) => {
     if (accountIds.length > 0) {
       const { data: expenseRows } = await supabase
         .from("expenses")
-        .select("account_id, amount_cents, type, currency")
+        .select("account_id, amount_cents, type, currency, analytics_is_final")
         .in("account_id", accountIds)
+        .eq("is_recurring", false)
+        .lte("date", formatDateOnly(new Date()))
         .is("deleted_at", null);
 
       const expenseOut = new Map<string, number>();
@@ -715,6 +749,7 @@ Deno.serve(async (req: Request) => {
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
           continue;
         }
+        if (row.analytics_is_final === false) continue;
         const amount = toNumber(row.amount_cents);
         if (`${row.type ?? "expense"}`.toLowerCase() === "income") {
           incomeIn.set(accountId, (incomeIn.get(accountId) ?? 0) + amount);
@@ -733,11 +768,9 @@ Deno.serve(async (req: Request) => {
         .in("to_account_id", accountIds);
 
       const transferOut = new Map<string, number>();
-      for (
-        const row of (transferOutRows ?? []) as Array<
-          Record<string, unknown>
-        >
-      ) {
+      for (const row of (transferOutRows ?? []) as Array<
+        Record<string, unknown>
+      >) {
         const key = `${row.from_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -750,11 +783,9 @@ Deno.serve(async (req: Request) => {
       }
 
       const transferIn = new Map<string, number>();
-      for (
-        const row of (transferInRows ?? []) as Array<
-          Record<string, unknown>
-        >
-      ) {
+      for (const row of (transferInRows ?? []) as Array<
+        Record<string, unknown>
+      >) {
         const key = `${row.to_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -770,18 +801,52 @@ Deno.serve(async (req: Request) => {
         const opening = toNumber(wallet.opening_balance_cents);
         (
           wallet as WalletRow & { current_balance_cents?: number }
-        ).current_balance_cents = opening +
+        ).current_balance_cents =
+          opening +
           (incomeIn.get(wallet.id) ?? 0) -
           (expenseOut.get(wallet.id) ?? 0) +
           (transferIn.get(wallet.id) ?? 0) -
           (transferOut.get(wallet.id) ?? 0);
+      }
+
+      const linkedBankAccountIds = wallets
+        .map((wallet) => wallet.linked_bank_account_id)
+        .filter((id): id is string => Boolean(id));
+      if (linkedBankAccountIds.length > 0) {
+        const { data: providerBalanceRows, error: providerBalanceError } =
+          await supabase
+            .from("bank_accounts")
+            .select("id, type, provider_balance_current_cents")
+            .in("id", linkedBankAccountIds);
+        if (providerBalanceError) throw providerBalanceError;
+        const providerBalances = new Map(
+          ((providerBalanceRows ?? []) as Array<Record<string, unknown>>)
+            .filter((row) => row.provider_balance_current_cents != null)
+            .map((row) => {
+              const current = toNumber(row.provider_balance_current_cents);
+              const accountType = `${row.type ?? ""}`.toLowerCase();
+              const displayBalance =
+                accountType === "credit" || accountType === "loan"
+                  ? -Math.abs(current)
+                  : current;
+              return [`${row.id}`, displayBalance] as const;
+            }),
+        );
+        for (const wallet of wallets) {
+          const providerBalance = wallet.linked_bank_account_id
+            ? providerBalances.get(wallet.linked_bank_account_id)
+            : null;
+          if (providerBalance != null) {
+            wallet.current_balance_cents = providerBalance;
+          }
+        }
       }
     }
 
     let actualTransactionsQuery = supabase
       .from("expenses")
       .select(
-        "id, user_id, household_id, date, amount_cents, currency, category, raw_text, split_group_id, account_id, type",
+        "id, user_id, household_id, date, amount_cents, currency, category, raw_text, split_group_id, account_id, type, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
       )
       .eq("is_recurring", false)
       .is("deleted_at", null)
@@ -819,6 +884,9 @@ Deno.serve(async (req: Request) => {
       splitGroupId: row.split_group_id == null ? null : `${row.split_group_id}`,
       walletId: row.account_id == null ? null : `${row.account_id}`,
       type: `${row.type ?? "expense"}`,
+      analyticsIsFinal: row.analytics_is_final != false,
+      analyticsSpendingMultiplier: toNumber(row.analytics_spending_multiplier),
+      analyticsCountsTowardIncome: row.analytics_counts_toward_income == true,
     }));
 
     let recurringQuery = supabase
@@ -885,11 +953,15 @@ Deno.serve(async (req: Request) => {
       recurringAwareTransactions,
     );
     const netWorthSeries = [...availableMonths].reverse().map((monthStart) => {
-      const snapshot = buildWalletSnapshot(
+      const baseSnapshot = buildWalletSnapshot(
         wallets,
         recurringAwareTransactions,
         walletSnapshotEndExclusive(monthStart, now),
       );
+      const snapshot =
+        monthStart.getTime() === normalizeMonthStart(now).getTime()
+          ? applyCurrentWalletBalances(baseSnapshot, wallets)
+          : baseSnapshot;
       return {
         month_start: formatDateOnly(monthStart),
         net_worth_cents: snapshot.netWorthCents,
@@ -897,11 +969,15 @@ Deno.serve(async (req: Request) => {
     });
 
     const monthSnapshots = requestedMonths.map((monthStart) => {
-      const snapshot = buildWalletSnapshot(
+      const baseSnapshot = buildWalletSnapshot(
         wallets,
         recurringAwareTransactions,
         walletSnapshotEndExclusive(monthStart, now),
       );
+      const snapshot =
+        monthStart.getTime() === normalizeMonthStart(now).getTime()
+          ? applyCurrentWalletBalances(baseSnapshot, wallets)
+          : baseSnapshot;
       return {
         month_start: formatDateOnly(monthStart),
         month_end_exclusive: formatDateOnly(

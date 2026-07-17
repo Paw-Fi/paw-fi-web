@@ -32,6 +32,8 @@ interface ExpenseRecord {
   currency: string;
   category: string | null;
   date: string;
+  analytics_is_final: boolean;
+  analytics_spending_multiplier: number;
 }
 
 // ---------- Constants ----------
@@ -274,7 +276,8 @@ async function respondWithChart({
       devicePixelRatio: 2,
     });
 
-    const curSuffix = breakdown.length > 0 ? breakdown[0].currency : (currencyFilter ?? "all");
+    const curSuffix =
+      breakdown.length > 0 ? breakdown[0].currency : (currencyFilter ?? "all");
     const key = `${mocked ? "mock" : "summary"}/${resolvedUserId}_${startDateIso}_${endDateIso}_${curSuffix}.png`;
     chartImageUrl =
       (await uploadPngToBucket(supabase, chartBucket, key, pngBytes)) ??
@@ -529,7 +532,9 @@ Deno.serve(async (req) => {
 
     let qb = supabase
       .from("expenses")
-      .select("id, user_id, amount_cents, currency, category, date")
+      .select(
+        "id, user_id, amount_cents, currency, category, date, analytics_is_final, analytics_spending_multiplier",
+      )
       .eq("user_id", finalUserId)
       .is("deleted_at", null)
       .gte("date", startDateIso)
@@ -557,31 +562,27 @@ Deno.serve(async (req) => {
     const categoryMapByCurrency = new Map<string, Map<string, number>>();
 
     for (const exp of expenses) {
+      if (!exp.analytics_is_final || exp.analytics_spending_multiplier === 0) {
+        continue;
+      }
       const currency = validateCurrency(exp.currency || "USD");
       const category =
         sanitizeCategoryName(exp.category ?? "") ??
         normalizeCategoryForStorage(exp.category);
 
-      // Debug logging to ensure "other" categories are being processed
-      if (category === "other") {
-        console.log(`[expenses-summary] Processing "other" category expense:`, {
-          id: exp.id,
-          originalCategory: exp.category,
-          normalizedCategory: category,
-          amount: exp.amount_cents / 100,
-        });
-      }
+      const analyticsAmount =
+        Math.abs(exp.amount_cents) * exp.analytics_spending_multiplier;
 
       totalsByCurrency.set(
         currency,
-        (totalsByCurrency.get(currency) ?? 0) + exp.amount_cents,
+        (totalsByCurrency.get(currency) ?? 0) + analyticsAmount,
       );
 
       const categoryMap =
         categoryMapByCurrency.get(currency) ?? new Map<string, number>();
       categoryMap.set(
         category,
-        (categoryMap.get(category) ?? 0) + exp.amount_cents,
+        (categoryMap.get(category) ?? 0) + analyticsAmount,
       );
       categoryMapByCurrency.set(currency, categoryMap);
     }

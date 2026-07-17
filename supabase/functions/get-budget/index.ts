@@ -260,9 +260,12 @@ Deno.serve(async (req: Request) => {
 
   const { data: expenseRows, error: expenseErr } = await supabase
     .from("expenses")
-    .select("amount_cents, currency, date")
+    .select(
+      "amount_cents, currency, date, analytics_is_final, analytics_spending_multiplier",
+    )
     .eq("contact_id", contactId)
     .eq("currency", targetCurrency)
+    .eq("analytics_is_final", true)
     .is("deleted_at", null)
     .gte("date", monthStartIso)
     .lte("date", targetDateIso);
@@ -273,7 +276,10 @@ Deno.serve(async (req: Request) => {
   }
 
   const spentToDateCents = (expenseRows ?? []).reduce(
-    (sum, row: any) => sum + (row.amount_cents ?? 0),
+    (sum, row: any) =>
+      sum +
+      Math.abs(Number(row.amount_cents ?? 0)) *
+        Number(row.analytics_spending_multiplier ?? 0),
     0,
   );
   const remainingToDateCents = Math.max(

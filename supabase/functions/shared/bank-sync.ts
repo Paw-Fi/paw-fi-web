@@ -30,6 +30,7 @@ export interface UpsertAccountsParams {
 
 export interface UpsertAccountsResult {
   records: BankAccountRecord[];
+  allRecords: BankAccountRecord[];
 }
 
 export interface BankAccountRecord {
@@ -41,6 +42,12 @@ export interface BankAccountRecord {
   mask?: string | null;
   type?: string | null;
   subtype?: string | null;
+  status?: string | null;
+  provider_persistent_account_id?: string | null;
+  provider_balance_current_cents?: number | null;
+  provider_balance_available_cents?: number | null;
+  provider_balance_limit_cents?: number | null;
+  provider_balance_updated_at?: string | null;
 }
 
 interface BankAccountRecordWithStatus extends BankAccountRecord {
@@ -102,6 +109,7 @@ export interface PersistTransactionsParams {
   accountType?: string | null;
   transactions: PlaidTransaction[];
   cursorGeneration?: number;
+  hideNewTransactions?: boolean;
 }
 export interface PersistTinkTransactionsParams {
   supabase: SupabaseClient;
@@ -171,7 +179,7 @@ interface RecurrenceGroup {
   rows: RecurrenceCandidateRow[];
 }
 
-export interface PlaidRecurringTemplateCandidate {
+interface PlaidRecurringTemplateCandidate {
   idempotencyKey: string;
   userId: string;
   householdId: string | null;
@@ -692,7 +700,9 @@ async function upsertPlaidRecurringTemplates(params: {
   ) => {
     let existingQuery = params.supabase
       .from("expenses")
-      .select("id, date, account_id")
+      .select(
+        "id, date, account_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, deleted_at, deleted_reason, provider_fields, user_overrides",
+      )
       .eq("user_id", candidate.userId)
       .eq("idempotency_key", candidate.idempotencyKey)
       .limit(1);
@@ -703,13 +713,11 @@ async function upsertPlaidRecurringTemplates(params: {
 
     const { data, error } = await existingQuery;
     if (error) throw error;
-    return data?.[0] as
-      | { id: string; date?: string | null; account_id?: string | null }
-      | undefined;
+    return data?.[0] as PlaidRecurringTemplateRow | undefined;
   };
 
   const updateExistingTemplate = async (
-    existing: { id: string; date?: string | null; account_id?: string | null },
+    existing: PlaidRecurringTemplateRow,
     payload: Record<string, unknown>,
   ) => {
     const { error } = await params.supabase
@@ -755,12 +763,32 @@ async function upsertPlaidRecurringTemplates(params: {
       provider_fields: {
         ...candidate.providerFields,
         account_id: accountId,
+        template_fields: {
+          account_id: accountId,
+          amount_cents: candidate.amountCents,
+          currency: candidate.currency,
+          category: candidate.category,
+          date,
+          raw_text: candidate.rawText,
+          merchant: candidate.merchant,
+          source: candidate.merchant || candidate.rawText,
+          type: candidate.type,
+          is_recurring: true,
+          recurrence_rule: recurrenceRule,
+          household_id: candidate.householdId,
+        },
       },
       updated_at: new Date().toISOString(),
     };
 
     if (existing?.id) {
-      await updateExistingTemplate(existing, payload);
+      const mergedPayload = mergePlaidRecurringTemplatePayload(
+        existing,
+        payload,
+      );
+      if (mergedPayload) {
+        await updateExistingTemplate(existing, mergedPayload);
+      }
       continue;
     }
 
@@ -772,15 +800,82 @@ async function upsertPlaidRecurringTemplates(params: {
       if ((error as SupabaseErrorLike).code !== "23505") throw error;
       const racedExisting = await selectExistingTemplate(candidate);
       if (!racedExisting?.id) throw error;
-      await updateExistingTemplate(racedExisting, payload);
+      const mergedPayload = mergePlaidRecurringTemplatePayload(
+        racedExisting,
+        payload,
+      );
+      if (mergedPayload) {
+        await updateExistingTemplate(racedExisting, mergedPayload);
+      }
     }
   }
+}
+
+interface PlaidRecurringTemplateRow extends Record<string, unknown> {
+  id: string;
+  date?: string | null;
+  account_id?: string | null;
+  deleted_at?: string | null;
+  deleted_reason?: string | null;
+  provider_fields?: Record<string, unknown> | null;
+  user_overrides?: Record<string, unknown> | null;
+}
+
+const PLAID_RECURRING_TEMPLATE_VISIBLE_FIELDS = [
+  "account_id",
+  "amount_cents",
+  "currency",
+  "category",
+  "date",
+  "raw_text",
+  "merchant",
+  "source",
+  "type",
+  "is_recurring",
+  "recurrence_rule",
+  "household_id",
+] as const;
+
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+export function mergePlaidRecurringTemplatePayload(
+  existing: PlaidRecurringTemplateRow,
+  providerPayload: Record<string, unknown>,
+): Record<string, unknown> | null {
+  if (existing.deleted_at || existing.deleted_reason === "user_deleted") {
+    return null;
+  }
+
+  const previousProviderFields = existing.provider_fields || {};
+  const previousTemplateFields =
+    previousProviderFields.template_fields &&
+    typeof previousProviderFields.template_fields === "object"
+      ? (previousProviderFields.template_fields as Record<string, unknown>)
+      : null;
+  const userOverrides = existing.user_overrides || {};
+  const merged = { ...providerPayload };
+
+  for (const field of PLAID_RECURRING_TEMPLATE_VISIBLE_FIELDS) {
+    const hasExplicitOverride = Object.prototype.hasOwnProperty.call(
+      userOverrides,
+      field,
+    );
+    const matchedPreviousProviderValue =
+      previousTemplateFields != null &&
+      sameJsonValue(existing[field], previousTemplateFields[field]);
+    if (hasExplicitOverride || !matchedPreviousProviderValue) {
+      merged[field] = existing[field] ?? null;
+    }
+  }
+
+  return merged;
 }
 
 export interface PreparedPlaidTransactionMutations {
   inserts: BankExpenseMutationRecord[];
   updates: BankExpenseMutationRecord[];
-  recurringTemplateCandidates: PlaidRecurringTemplateCandidate[];
   skipped: number;
   currencyMismatches: number;
 }
@@ -792,7 +887,6 @@ export async function preparePlaidTransactionMutations(
     return {
       inserts: [],
       updates: [],
-      recurringTemplateCandidates: [],
       skipped: 0,
       currencyMismatches: 0,
     };
@@ -822,7 +916,6 @@ export async function preparePlaidTransactionMutations(
     return {
       inserts: [],
       updates: [],
-      recurringTemplateCandidates: [],
       skipped: params.transactions.length,
       currencyMismatches: 0,
     };
@@ -868,19 +961,6 @@ export async function preparePlaidTransactionMutations(
       );
     }
   }
-  const recurringByProviderTransactionId = inferPlaidRecurringRules({
-    records: normalizedRecords,
-    transactions: params.transactions,
-    existingRows,
-  });
-  const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
-    userId: params.userId,
-    householdId: params.householdId ?? null,
-    bankAccountId: params.bankAccountId,
-    accountId: params.accountId ?? null,
-    records: normalizedRecords,
-    recurringByProviderTransactionId,
-  });
   const mutationPlan = buildBankExpenseMutationPlan({
     records: normalizedRecords.map((record) => ({
       ...record,
@@ -892,20 +972,19 @@ export async function preparePlaidTransactionMutations(
     providerPendingTransactionIds,
     cursorGeneration: params.cursorGeneration ?? 0,
   });
+  const inserts = params.hideNewTransactions
+    ? mutationPlan.inserts.map((record) => ({
+        ...record,
+        deleted_at: new Date().toISOString(),
+        deleted_reason: "bank_account_inactive",
+      }))
+    : mutationPlan.inserts;
   return {
-    inserts: mutationPlan.inserts,
+    inserts,
     updates: mutationPlan.updates,
-    recurringTemplateCandidates,
     skipped: params.transactions.length - normalizedRecords.length,
     currencyMismatches,
   };
-}
-
-export async function persistPreparedPlaidRecurringTemplates(params: {
-  supabase: SupabaseClient;
-  candidates: PlaidRecurringTemplateCandidate[];
-}): Promise<void> {
-  await upsertPlaidRecurringTemplates(params);
 }
 
 function normalizeExistingRecurrenceCandidate(
@@ -1101,7 +1180,7 @@ export async function upsertPlaidAccounts(
   params: UpsertAccountsParams,
 ): Promise<UpsertAccountsResult> {
   if (!params.accounts.length) {
-    return { records: [] };
+    return { records: [], allRecords: [] };
   }
 
   const disabledProviderAccountIds = await loadDisabledProviderAccountIds({
@@ -1116,6 +1195,7 @@ export async function upsertPlaidAccounts(
     provider: PLAID_PROVIDER,
     plaid_account_id: account.account_id,
     provider_account_id: account.account_id,
+    provider_persistent_account_id: account.persistent_account_id || null,
     name:
       account.name || account.official_name || `Account ${account.account_id}`,
     official_name: account.official_name || null,
@@ -1129,23 +1209,86 @@ export async function upsertPlaidAccounts(
     status: disabledProviderAccountIds.has(account.account_id)
       ? "disabled"
       : "active",
+    provider_balance_current_cents: plaidBalanceToCents(
+      account.balances?.current,
+    ),
+    provider_balance_available_cents: plaidBalanceToCents(
+      account.balances?.available,
+    ),
+    provider_balance_limit_cents: plaidBalanceToCents(account.balances?.limit),
+    provider_balance_updated_at: new Date().toISOString(),
     raw_provider_payload: account,
   }));
 
-  const { data, error } = await params.supabase
-    .from("bank_accounts")
-    .upsert(payload, {
-      onConflict: "bank_connection_id,provider,provider_account_id",
-    })
-    .select(
-      "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype, status",
-    );
+  const selectColumns =
+    "id, plaid_account_id, provider_account_id, provider_persistent_account_id, name, currency, mask, type, subtype, status, provider_balance_current_cents, provider_balance_available_cents, provider_balance_limit_cents, provider_balance_updated_at";
+  const persistentPayload = payload.filter(
+    (account) => account.provider_persistent_account_id != null,
+  );
+  const providerIdPayload = payload.filter(
+    (account) => account.provider_persistent_account_id == null,
+  );
+  const allRecords: BankAccountRecord[] = [];
 
-  if (error) {
-    throw error;
+  if (persistentPayload.length > 0) {
+    for (const account of persistentPayload) {
+      const { error: identityBackfillError } = await params.supabase
+        .from("bank_accounts")
+        .update({
+          provider_persistent_account_id:
+            account.provider_persistent_account_id,
+        })
+        .eq("user_id", params.userId)
+        .eq("bank_connection_id", params.bankConnectionId)
+        .eq("provider", PLAID_PROVIDER)
+        .eq("provider_account_id", account.provider_account_id)
+        .is("provider_persistent_account_id", null);
+      if (identityBackfillError) throw identityBackfillError;
+    }
+    const { data, error } = await params.supabase
+      .from("bank_accounts")
+      .upsert(persistentPayload, {
+        onConflict: "user_id,provider,provider_persistent_account_id",
+      })
+      .select(selectColumns);
+    if (error) throw error;
+    allRecords.push(...((data || []) as BankAccountRecord[]));
   }
+  if (providerIdPayload.length > 0) {
+    const { data, error } = await params.supabase
+      .from("bank_accounts")
+      .upsert(providerIdPayload, {
+        onConflict: "bank_connection_id,provider,provider_account_id",
+      })
+      .select(selectColumns);
+    if (error) throw error;
+    allRecords.push(...((data || []) as BankAccountRecord[]));
+  }
+  const activeAccountIds = allRecords
+    .filter((account) => account.status === "active")
+    .map((account) => account.id);
+  if (activeAccountIds.length > 0) {
+    const { error: restoreError } = await params.supabase
+      .from("expenses")
+      .update({
+        deleted_at: null,
+        deleted_reason: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", params.userId)
+      .eq("provider", PLAID_PROVIDER)
+      .eq("deleted_reason", "bank_account_inactive")
+      .in("bank_account_id", activeAccountIds);
+    if (restoreError) throw restoreError;
+  }
+  return {
+    records: activeBankAccountRecords(allRecords),
+    allRecords,
+  };
+}
 
-  return { records: activeBankAccountRecords(data || []) };
+function plaidBalanceToCents(value: number | null | undefined): number | null {
+  return Number.isFinite(value) ? Math.round(Number(value) * 100) : null;
 }
 
 export interface StageTransactionsParams {
@@ -1308,19 +1451,6 @@ export async function persistPlaidTransactions(
     }
   }
 
-  const recurringByProviderTransactionId = inferPlaidRecurringRules({
-    records: normalizedRecords,
-    transactions: params.transactions,
-    existingRows,
-  });
-  const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
-    userId: params.userId,
-    householdId: params.householdId ?? null,
-    bankAccountId: params.bankAccountId,
-    accountId: params.accountId ?? null,
-    records: normalizedRecords,
-    recurringByProviderTransactionId,
-  });
   const postedOccurrenceRecords = normalizedRecords.map((record) => ({
     ...record,
     is_recurring: false,
@@ -1359,11 +1489,6 @@ export async function persistPlaidTransactions(
       throw updateError;
     }
   }
-
-  await upsertPlaidRecurringTemplates({
-    supabase: params.supabase,
-    candidates: recurringTemplateCandidates,
-  });
 
   return {
     inserted: mutationPlan.inserts.length,

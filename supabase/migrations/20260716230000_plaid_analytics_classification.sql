@@ -13,6 +13,41 @@ alter table public.expenses
   add column if not exists classification_source text,
   add column if not exists classification_version integer;
 
+alter table public.bank_accounts
+  add column if not exists provider_persistent_account_id text,
+  add column if not exists provider_balance_current_cents bigint,
+  add column if not exists provider_balance_available_cents bigint,
+  add column if not exists provider_balance_limit_cents bigint,
+  add column if not exists provider_balance_updated_at timestamptz;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'bank_accounts_user_provider_persistent_unique'
+  ) then
+    alter table public.bank_accounts
+      add constraint bank_accounts_user_provider_persistent_unique
+      unique (user_id, provider, provider_persistent_account_id);
+  end if;
+end $$;
+
+update public.expenses
+set is_recurring = false,
+    recurrence_rule = null,
+    updated_at = now()
+where provider = 'plaid'
+  and coalesce(is_recurring, false)
+  and not (coalesce(user_overrides, '{}'::jsonb) ? 'is_recurring');
+
+update public.expenses
+set deleted_at = coalesce(deleted_at, now()),
+    deleted_reason = coalesce(deleted_reason, 'provider_inference_retired'),
+    updated_at = now()
+where coalesce(is_recurring, false)
+  and provider_fields ->> 'source' = 'plaid_recurring_template'
+  and deleted_at is null;
+
 create or replace function public.classify_plaid_transaction_v1(
   p_amount numeric,
   p_pending boolean,
@@ -49,6 +84,9 @@ as $$
         when transaction_code in ('bank charge', 'late fee', 'membership fee', 'returned item fee') then 'bank_fee'
         when transaction_code = 'adjustment' and amount < 0 then 'refund_or_reversal'
         when transaction_code = 'adjustment' then 'unknown'
+        when transaction_code = 'purchase'
+          and pfc_primary in ('INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS', 'LOAN_DISBURSEMENTS', 'BANK_FEES')
+          then 'unknown'
         when transaction_code = 'purchase' and amount < 0 then 'refund_or_reversal'
         when transaction_code = 'purchase' and account_type in ('credit', 'depository') then 'consumer_spend'
         when transaction_code = 'purchase' then 'unknown'
@@ -64,6 +102,7 @@ as $$
         when pfc_primary = 'LOAN_DISBURSEMENTS' then 'unknown'
         when pfc_primary = 'BANK_FEES' then 'bank_fee'
         when pfc_primary = 'OTHER' then 'unknown'
+        when transaction_code in ('bill payment', 'cheque', 'payment', 'standing order') then 'unknown'
         when amount < 0 then 'refund_or_reversal'
         when account_type in ('credit', 'depository') then 'consumer_spend'
         else 'unknown'
@@ -126,6 +165,65 @@ cross join lateral public.classify_plaid_transaction_v1(
 where e.provider = 'plaid'
   and ba.id = e.bank_account_id
   and coalesce(e.classification_source, '') <> 'user_override';
+
+update public.expenses e
+set analytics_class = 'unknown',
+    analytics_direction = 'none',
+    analytics_is_final = not coalesce(e.provider_pending, false),
+    analytics_spending_multiplier = 0,
+    analytics_counts_toward_income = false,
+    classification_source = 'plaid_low_confidence',
+    classification_version = 2
+where e.provider = 'plaid'
+  and coalesce(e.classification_source, '') <> 'user_override'
+  and upper(coalesce(e.provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH')
+  and coalesce(e.provider_transaction_code, '') not in (
+    'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+    'bank charge', 'late fee', 'membership fee', 'returned item fee',
+    'adjustment', 'purchase'
+  );
+
+update public.expenses e
+set analytics_class = 'unknown',
+    analytics_direction = 'none',
+    analytics_is_final = not coalesce(e.provider_pending, false),
+    analytics_spending_multiplier = 0,
+    analytics_counts_toward_income = false,
+    classification_source = 'plaid_counterparty_review',
+    classification_version = 2
+where e.provider = 'plaid'
+  and coalesce(e.classification_source, '') <> 'user_override'
+  and coalesce(e.provider_transaction_code, '') not in (
+    'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+    'bank charge', 'late fee', 'membership fee', 'returned item fee',
+    'adjustment', 'purchase'
+  )
+  and coalesce(e.provider_pfc_primary, '') not in (
+    'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+    'LOAN_DISBURSEMENTS', 'BANK_FEES'
+  )
+  and e.raw_provider_payload @? '$.counterparties[*] ? (@.type == "financial_institution" || @.type == "payment_app")';
+
+update public.expenses e
+set analytics_class = 'unknown',
+    analytics_direction = 'none',
+    analytics_is_final = not coalesce(e.provider_pending, false),
+    analytics_spending_multiplier = 0,
+    analytics_counts_toward_income = false,
+    classification_source = 'plaid_ambiguous_depository',
+    classification_version = 2
+from public.bank_accounts ba
+where e.provider = 'plaid'
+  and ba.id = e.bank_account_id
+  and lower(coalesce(ba.type, '')) = 'depository'
+  and coalesce(e.classification_source, '') <> 'user_override'
+  and coalesce(e.provider_transaction_code, '') = ''
+  and coalesce(e.provider_pfc_primary, '') not in (
+    'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+    'LOAN_DISBURSEMENTS', 'BANK_FEES'
+  )
+  and nullif(trim(e.raw_provider_payload ->> 'merchant_name'), '') is null
+  and not e.raw_provider_payload @? '$.counterparties[*] ? (@.type == "merchant")';
 
 update public.expenses e
 set
@@ -279,7 +377,45 @@ begin
       v_account_type
     );
 
-    if upper(coalesce(new.provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
+    if coalesce(new.provider_transaction_code, '') not in (
+        'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+        'bank charge', 'late fee', 'membership fee', 'returned item fee',
+        'adjustment', 'purchase'
+      )
+      and coalesce(new.provider_pfc_primary, '') not in (
+        'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+        'LOAN_DISBURSEMENTS', 'BANK_FEES'
+      )
+      and new.raw_provider_payload @? '$.counterparties[*] ? (@.type == "financial_institution" || @.type == "payment_app")' then
+      new.analytics_class := 'unknown';
+      new.analytics_direction := 'none';
+      new.analytics_is_final := not new.provider_pending;
+      new.analytics_spending_multiplier := 0;
+      new.analytics_counts_toward_income := false;
+      new.classification_source := 'plaid_counterparty_review';
+      new.classification_version := 2;
+      return new;
+    end if;
+
+    if lower(coalesce(v_account_type, '')) = 'depository'
+      and coalesce(new.provider_transaction_code, '') = ''
+      and coalesce(new.provider_pfc_primary, '') not in (
+        'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+        'LOAN_DISBURSEMENTS', 'BANK_FEES'
+      )
+      and nullif(trim(new.raw_provider_payload ->> 'merchant_name'), '') is null
+      and not new.raw_provider_payload @? '$.counterparties[*] ? (@.type == "merchant")' then
+      new.analytics_class := 'unknown';
+      new.analytics_direction := 'none';
+      new.analytics_is_final := not new.provider_pending;
+      new.analytics_spending_multiplier := 0;
+      new.analytics_counts_toward_income := false;
+      new.classification_source := 'plaid_ambiguous_depository';
+      new.classification_version := 2;
+      return new;
+    end if;
+
+    if upper(coalesce(new.provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH')
       and coalesce(new.provider_transaction_code, '') not in (
         'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
         'bank charge', 'late fee', 'membership fee', 'returned item fee',
@@ -443,6 +579,11 @@ begin
           ))
         )
         or (p_household_id is not null and e.household_id = p_household_id)
+      )
+      and not (
+        p_household_id is not null
+        and e.user_id is distinct from p_user_id
+        and e.privacy_scope = 'balances_only'
       )
       and (v_currencies is null or upper(coalesce(e.currency, '')) = any(v_currencies))
       and (p_account_id is null or e.account_id = p_account_id or (
@@ -987,6 +1128,11 @@ begin
         )
         or (p_household_id is not null and e.household_id = p_household_id)
       )
+      and not (
+        p_household_id is not null
+        and e.user_id is distinct from p_user_id
+        and e.privacy_scope = 'balances_only'
+      )
       and (p_currency is null or upper(coalesce(e.currency, '')) = upper(p_currency))
     order by e.date desc, e.created_at desc, e.id desc
     limit v_limit
@@ -1057,6 +1203,11 @@ begin
           ))
         )
         or (p_household_id is not null and e.household_id = p_household_id)
+      )
+      and not (
+        p_household_id is not null
+        and e.user_id is distinct from p_user_id
+        and e.privacy_scope = 'balances_only'
       )
       and (p_currency is null or upper(coalesce(e.currency, '')) = upper(p_currency))
       and (p_start_date is null or e.date >= p_start_date)

@@ -25,6 +25,12 @@ create table if not exists public.plaid_sync_events (
 create index if not exists plaid_sync_events_connection_created_idx
   on public.plaid_sync_events(bank_connection_id, created_at desc);
 
+create index if not exists expenses_plaid_transfer_match_idx
+  on public.expenses (
+    user_id, bank_account_id, currency, amount_cents, date, id
+  )
+  where provider = 'plaid' and deleted_at is null and analytics_is_final;
+
 alter table public.plaid_sync_events enable row level security;
 
 drop policy if exists plaid_sync_events_owner_select on public.plaid_sync_events;
@@ -37,6 +43,164 @@ create policy plaid_sync_events_owner_select
   ));
 
 revoke all on table public.plaid_sync_events from public, anon, authenticated;
+revoke all on table public.bank_sync_audit from public, anon, authenticated;
+grant select, insert, update on table public.bank_sync_audit to service_role;
+
+alter table public.bank_sync_locks
+  add column if not exists lock_token uuid,
+  add column if not exists heartbeat_at timestamptz;
+
+create or replace function public.acquire_bank_sync_lock_v2(
+  p_bank_connection_id uuid,
+  p_lock_token uuid,
+  p_lock_seconds integer default 900,
+  p_locked_by text default null
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_locked_until timestamptz;
+  v_rowcount integer;
+begin
+  if p_lock_token is null then
+    raise exception 'Bank sync lock token is required' using errcode = '22023';
+  end if;
+
+  v_locked_until := now() + make_interval(
+    secs => greatest(30, least(coalesce(p_lock_seconds, 900), 900))
+  );
+
+  insert into public.bank_sync_locks (
+    bank_connection_id, locked_until, locked_by, lock_token, heartbeat_at
+  ) values (
+    p_bank_connection_id, v_locked_until, p_locked_by, p_lock_token, now()
+  )
+  on conflict (bank_connection_id) do update
+  set locked_until = excluded.locked_until,
+      locked_by = excluded.locked_by,
+      lock_token = excluded.lock_token,
+      heartbeat_at = excluded.heartbeat_at
+  where public.bank_sync_locks.locked_until <= now()
+     or public.bank_sync_locks.lock_token = p_lock_token;
+
+  get diagnostics v_rowcount = row_count;
+  return v_rowcount > 0;
+end;
+$$;
+
+create or replace function public.extend_bank_sync_lock_v2(
+  p_bank_connection_id uuid,
+  p_lock_token uuid,
+  p_lock_seconds integer default 900
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_rowcount integer;
+begin
+  update public.bank_sync_locks
+  set locked_until = now() + make_interval(
+        secs => greatest(30, least(coalesce(p_lock_seconds, 900), 900))
+      ),
+      heartbeat_at = now()
+  where bank_connection_id = p_bank_connection_id
+    and lock_token = p_lock_token
+    and locked_until > now();
+
+  get diagnostics v_rowcount = row_count;
+  return v_rowcount > 0;
+end;
+$$;
+
+create or replace function public.release_bank_sync_lock_v2(
+  p_bank_connection_id uuid,
+  p_lock_token uuid
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_rowcount integer;
+begin
+  delete from public.bank_sync_locks
+  where bank_connection_id = p_bank_connection_id
+    and lock_token = p_lock_token;
+
+  get diagnostics v_rowcount = row_count;
+  return v_rowcount > 0;
+end;
+$$;
+
+revoke all on function public.acquire_bank_sync_lock(uuid, integer, text)
+  from public, anon, authenticated, service_role;
+revoke all on function public.release_bank_sync_lock(uuid)
+  from public, anon, authenticated, service_role;
+
+revoke all on function public.acquire_bank_sync_lock_v2(uuid, uuid, integer, text)
+  from public, anon, authenticated;
+revoke all on function public.extend_bank_sync_lock_v2(uuid, uuid, integer)
+  from public, anon, authenticated;
+revoke all on function public.release_bank_sync_lock_v2(uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function public.acquire_bank_sync_lock_v2(uuid, uuid, integer, text)
+  to service_role;
+grant execute on function public.extend_bank_sync_lock_v2(uuid, uuid, integer)
+  to service_role;
+grant execute on function public.release_bank_sync_lock_v2(uuid, uuid)
+  to service_role;
+
+create or replace function public.reset_invalid_plaid_cursor_v1(
+  p_user_id uuid,
+  p_bank_connection_id uuid,
+  p_expected_cursor_generation integer
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_rowcount integer;
+begin
+  update public.bank_connections
+  set cursor = null,
+      plaid_cursor = null,
+      cursor_generation = coalesce(cursor_generation, 0) + 1,
+      needs_resync = true,
+      item_health_state = 'stale_cursor',
+      error_code = 'INVALID_CURSOR',
+      error_message = 'Transaction history needs a safe replay',
+      metadata = jsonb_set(
+        coalesce(metadata, '{}'::jsonb),
+        '{plaid_sync_status}',
+        coalesce(metadata -> 'plaid_sync_status', '{}'::jsonb) ||
+          jsonb_build_object(
+            'initial_update_complete', false,
+            'historical_update_complete', false,
+            'webhook_code', 'INVALID_CURSOR',
+            'updated_at', now()
+          ),
+        true
+      ),
+      updated_at = now()
+  where id = p_bank_connection_id
+    and user_id = p_user_id
+    and provider = 'plaid'
+    and coalesce(cursor_generation, 0) = p_expected_cursor_generation;
+
+  get diagnostics v_rowcount = row_count;
+  return v_rowcount > 0;
+end;
+$$;
+
+revoke all on function public.reset_invalid_plaid_cursor_v1(uuid, uuid, integer)
+  from public, anon, authenticated;
+grant execute on function public.reset_invalid_plaid_cursor_v1(uuid, uuid, integer)
+  to service_role;
 
 create or replace function public.set_expense_classification_review_v1()
 returns trigger
@@ -54,11 +218,26 @@ begin
     and old.classification_source = 'user_override'
     and new.classification_review_state = 'provider_restored' then
     new.classification_review_reason := null;
+  elsif new.classification_review_state = 'needs_review'
+    and new.classification_review_reason = 'possible_transfer_match' then
+    null;
+  elsif (
+    new.provider_transaction_code = 'transfer'
+    and coalesce(new.provider_pfc_primary, '') not in ('', 'TRANSFER_IN', 'TRANSFER_OUT')
+  ) or (
+    new.provider_transaction_code = 'purchase'
+    and new.provider_pfc_primary in (
+      'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+      'LOAN_DISBURSEMENTS', 'BANK_FEES'
+    )
+  ) then
+    new.classification_review_state := 'needs_review';
+    new.classification_review_reason := 'conflicting_provider_signals';
   elsif new.analytics_class = 'unknown' then
     new.classification_review_state := 'needs_review';
     new.classification_review_reason := 'unknown_provider_intent';
   elsif new.classification_source <> 'plaid_transaction_code'
-    and upper(coalesce(new.provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN') then
+    and upper(coalesce(new.provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH') then
     new.classification_review_state := 'needs_review';
     new.classification_review_reason := 'low_provider_confidence';
   else
@@ -73,7 +252,8 @@ drop trigger if exists expenses_classification_review_v1 on public.expenses;
 drop trigger if exists z_set_expense_classification_review_v1 on public.expenses;
 create trigger z_set_expense_classification_review_v1
 before insert or update of provider, analytics_class, classification_source,
-  provider_pfc_confidence, classification_review_state
+  provider_pfc_primary, provider_pfc_confidence, provider_transaction_code,
+  classification_review_state
 on public.expenses
 for each row execute function public.set_expense_classification_review_v1();
 
@@ -133,7 +313,7 @@ where provider = 'plaid'
     'bank charge', 'late fee', 'membership fee', 'returned item fee',
     'adjustment', 'purchase'
   )
-  and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN');
+  and upper(coalesce(provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH');
 
 update public.expenses
 set classification_review_state = case
@@ -141,19 +321,43 @@ set classification_review_state = case
       when provider = 'plaid' and (
         analytics_class = 'unknown'
         or (
+          provider_transaction_code = 'transfer'
+          and coalesce(provider_pfc_primary, '') not in ('', 'TRANSFER_IN', 'TRANSFER_OUT')
+        )
+        or (
+          provider_transaction_code = 'purchase'
+          and provider_pfc_primary in (
+            'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+            'LOAN_DISBURSEMENTS', 'BANK_FEES'
+          )
+        )
+        or (
           classification_source <> 'plaid_transaction_code'
-          and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
+          and upper(coalesce(provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH')
         )
       ) then 'needs_review'
       else 'not_required'
     end,
     classification_review_reason = case
       when classification_source = 'user_override' then null
+      when provider = 'plaid' and (
+        (
+          provider_transaction_code = 'transfer'
+          and coalesce(provider_pfc_primary, '') not in ('', 'TRANSFER_IN', 'TRANSFER_OUT')
+        )
+        or (
+          provider_transaction_code = 'purchase'
+          and provider_pfc_primary in (
+            'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+            'LOAN_DISBURSEMENTS', 'BANK_FEES'
+          )
+        )
+      ) then 'conflicting_provider_signals'
       when provider = 'plaid' and analytics_class = 'unknown'
         then 'unknown_provider_intent'
       when provider = 'plaid'
         and classification_source <> 'plaid_transaction_code'
-        and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
+        and upper(coalesce(provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH')
         then 'low_provider_confidence'
       else null
     end;
@@ -443,6 +647,67 @@ begin
   )
   select count(*)::integer into v_removed from removed;
 
+  update public.expenses e
+  set classification_review_state = 'not_required',
+      classification_review_reason = null,
+      updated_at = v_now
+  where e.user_id = p_user_id
+    and e.provider = 'plaid'
+    and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+    and e.classification_source <> 'user_override'
+    and e.classification_review_reason = 'possible_transfer_match';
+
+  with transfer_candidates as (
+    select e.id
+    from public.expenses e
+    join public.expenses m
+      on m.user_id = e.user_id
+      and m.provider = 'plaid'
+      and m.deleted_at is null
+      and m.analytics_is_final
+      and m.bank_account_id is distinct from e.bank_account_id
+      and m.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      and m.household_id is not distinct from v_connection_household_id
+      and upper(coalesce(m.currency, '')) = upper(coalesce(e.currency, ''))
+      and abs(m.amount_cents) = abs(e.amount_cents)
+      and m.type is distinct from e.type
+      and abs(m.date - e.date) <= 3
+    where e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.deleted_at is null
+      and e.analytics_is_final
+      and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      and e.household_id is not distinct from v_connection_household_id
+      and e.classification_source <> 'user_override'
+    union
+    select m.id
+    from public.expenses e
+    join public.expenses m
+      on m.user_id = e.user_id
+      and m.provider = 'plaid'
+      and m.deleted_at is null
+      and m.analytics_is_final
+      and m.bank_account_id is distinct from e.bank_account_id
+      and m.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      and m.household_id is not distinct from v_connection_household_id
+      and upper(coalesce(m.currency, '')) = upper(coalesce(e.currency, ''))
+      and abs(m.amount_cents) = abs(e.amount_cents)
+      and m.type is distinct from e.type
+      and abs(m.date - e.date) <= 3
+    where e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.deleted_at is null
+      and e.analytics_is_final
+      and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      and e.household_id is not distinct from v_connection_household_id
+      and m.classification_source <> 'user_override'
+  )
+  update public.expenses e
+  set classification_review_state = 'needs_review',
+      classification_review_reason = 'possible_transfer_match',
+      updated_at = v_now
+  where e.id in (select id from transfer_candidates);
+
   update public.bank_accounts
   set last_synced_at = v_now
   where id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
@@ -464,6 +729,7 @@ begin
       else coalesce(item_status, 'active')
     end,
     item_health_state = 'healthy',
+    needs_resync = false,
     relink_state = case
       when relink_state = 'required' then null
       when relink_state = 'new_accounts_available' then 'new_accounts_available'
@@ -540,6 +806,13 @@ begin
       and provider = 'plaid'
   ) then
     raise exception 'Plaid connection not found' using errcode = 'P0002';
+  end if;
+  if p_household_id is not null and not exists (
+    select 1 from public.household_members hm
+    where hm.household_id = p_household_id
+      and hm.user_id = p_user_id
+  ) then
+    raise exception 'Unauthorized Plaid review household' using errcode = '42501';
   end if;
   if exists (
     select 1 from unnest(coalesce(p_bank_account_ids, '{}'::uuid[])) account_id
@@ -624,6 +897,13 @@ begin
   ) then
     raise exception 'Plaid connection not found' using errcode = 'P0002';
   end if;
+  if p_household_id is not null and not exists (
+    select 1 from public.household_members hm
+    where hm.household_id = p_household_id
+      and hm.user_id = p_user_id
+  ) then
+    raise exception 'Unauthorized Plaid review household' using errcode = '42501';
+  end if;
   if exists (
     select 1 from unnest(coalesce(p_bank_account_ids, '{}'::uuid[])) account_id
     where not exists (
@@ -665,4 +945,141 @@ revoke all on function public.get_plaid_sync_review_transactions_v1(
 ) from public, anon;
 grant execute on function public.get_plaid_sync_review_transactions_v1(
   uuid, uuid, uuid[], uuid, integer, integer
+) to authenticated;
+
+create index if not exists expenses_plaid_review_keyset_idx
+  on public.expenses (
+    user_id, bank_account_id, classification_review_state,
+    date desc, created_at desc, id desc
+  )
+  where provider = 'plaid' and deleted_at is null;
+
+create or replace function public.get_plaid_sync_review_transactions_v2(
+  p_user_id uuid,
+  p_bank_connection_id uuid,
+  p_bank_account_ids uuid[],
+  p_household_id uuid default null,
+  p_cursor_review_priority boolean default null,
+  p_cursor_date date default null,
+  p_cursor_created_at timestamptz default null,
+  p_cursor_id uuid default null,
+  p_limit integer default 200
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_limit integer := greatest(1, least(coalesce(p_limit, 200), 500));
+  v_result jsonb;
+begin
+  if auth.uid() is null or auth.uid() <> p_user_id then
+    raise exception 'Unauthorized Plaid review access' using errcode = '42501';
+  end if;
+  if not exists (
+    select 1 from public.bank_connections
+    where id = p_bank_connection_id and user_id = p_user_id and provider = 'plaid'
+  ) then
+    raise exception 'Plaid connection not found' using errcode = 'P0002';
+  end if;
+  if p_household_id is not null and not exists (
+    select 1 from public.household_members hm
+    where hm.household_id = p_household_id
+      and hm.user_id = p_user_id
+  ) then
+    raise exception 'Unauthorized Plaid review household' using errcode = '42501';
+  end if;
+  if exists (
+    select 1 from unnest(coalesce(p_bank_account_ids, '{}'::uuid[])) account_id
+    where not exists (
+      select 1 from public.bank_accounts ba
+      where ba.id = account_id
+        and ba.bank_connection_id = p_bank_connection_id
+        and ba.user_id = p_user_id
+        and ba.provider = 'plaid'
+    )
+  ) then
+    raise exception 'Invalid Plaid review account scope' using errcode = '42501';
+  end if;
+
+  with ordered_rows as materialized (
+    select e.id, e.contact_id, e.user_id, e.household_id, e.date,
+      e.amount_cents, e.currency, e.category, e.created_at, e.updated_at,
+      e.raw_text, e.merchant, e.bank_account_id, e.account_id, e.type,
+      e.is_recurring, e.recurrence_rule, e.analytics_class,
+      e.classification_source, e.classification_review_state,
+      e.classification_review_reason, e.provider_pfc_confidence,
+      (e.classification_review_state = 'needs_review') as review_priority
+    from public.expenses e
+    where e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.deleted_at is null
+      and e.bank_account_id = any(coalesce(p_bank_account_ids, '{}'::uuid[]))
+      and e.household_id is not distinct from p_household_id
+      and (
+        p_cursor_review_priority is null
+        or (
+          (e.classification_review_state = 'needs_review'),
+          e.date, e.created_at, e.id
+        ) < (
+          p_cursor_review_priority,
+          p_cursor_date,
+          coalesce(p_cursor_created_at, 'infinity'::timestamptz),
+          coalesce(p_cursor_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
+        )
+      )
+    order by review_priority desc, e.date desc, e.created_at desc, e.id desc
+    limit v_limit + 1
+  ), page_rows as (
+    select * from ordered_rows
+    order by review_priority desc, date desc, created_at desc, id desc
+    limit v_limit
+  ), page_boundary as (
+    select * from page_rows
+    order by review_priority asc, date asc, created_at asc, id asc
+    limit 1
+  ), unresolved as (
+    select count(*)::integer as count
+    from public.expenses e
+    where e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.deleted_at is null
+      and e.bank_account_id = any(coalesce(p_bank_account_ids, '{}'::uuid[]))
+      and e.household_id is not distinct from p_household_id
+      and e.classification_review_state = 'needs_review'
+  )
+  select jsonb_build_object(
+    'items', coalesce((
+      select jsonb_agg(to_jsonb(rows) order by rows.review_priority desc, rows.date desc, rows.created_at desc, rows.id desc)
+      from page_rows rows
+    ), '[]'::jsonb),
+    'has_more', (select count(*) from ordered_rows) > v_limit,
+    'next_cursor', case
+      when (select count(*) from ordered_rows) > v_limit then (
+        select jsonb_build_object(
+          'review_priority', rows.review_priority,
+          'date', rows.date,
+          'created_at', rows.created_at,
+          'id', rows.id
+        ) from page_boundary rows
+      )
+      else null
+    end,
+    'unresolved_count', (select count from unresolved)
+  ) into v_result;
+
+  return coalesce(v_result, jsonb_build_object(
+    'items', '[]'::jsonb,
+    'has_more', false,
+    'next_cursor', null,
+    'unresolved_count', 0
+  ));
+end;
+$$;
+
+revoke all on function public.get_plaid_sync_review_transactions_v2(
+  uuid, uuid, uuid[], uuid, boolean, date, timestamptz, uuid, integer
+) from public, anon;
+grant execute on function public.get_plaid_sync_review_transactions_v2(
+  uuid, uuid, uuid[], uuid, boolean, date, timestamptz, uuid, integer
 ) to authenticated;

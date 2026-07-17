@@ -109,6 +109,16 @@ Deno.serve(async (req: Request) => {
         404,
       );
     }
+    if (account.linked_bank_account_id) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Linked bank balances are managed by the bank sync",
+          code: "BANK_LINKED_BALANCE_MANAGED",
+        },
+        409,
+      );
+    }
 
     if (account.household_id == null) {
       if (account.user_id !== userId) {
@@ -134,8 +144,11 @@ Deno.serve(async (req: Request) => {
 
     const { data: expenseRows } = await supabase
       .from("expenses")
-      .select("amount_cents, type, currency")
+      .select("amount_cents, type, currency, analytics_is_final")
       .eq("account_id", accountId)
+      .eq("is_recurring", false)
+      .eq("analytics_is_final", true)
+      .lte("date", new Date().toISOString().slice(0, 10))
       .is("deleted_at", null);
 
     const { data: transferOutRows } = await supabase

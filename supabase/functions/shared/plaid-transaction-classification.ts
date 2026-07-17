@@ -16,6 +16,9 @@ export interface PlaidTransactionClassificationInput {
   pfcPrimary?: string | null;
   transactionCode?: string | null;
   accountType?: string | null;
+  pfcConfidence?: string | null;
+  hasAmbiguousCounterparty?: boolean;
+  hasMerchantEvidence?: boolean;
 }
 
 export interface PlaidClassificationReview {
@@ -29,6 +32,7 @@ export interface PlaidTransactionClassification {
   isFinal: boolean;
   spendingMultiplier: -1 | 0 | 1;
   countsTowardIncome: boolean;
+  hasProviderConflict: boolean;
   classificationSource: "plaid_pfc_v2" | "plaid_transaction_code";
 }
 
@@ -46,7 +50,22 @@ const BANK_FEE_TRANSACTION_CODES = new Set([
   "returned item fee",
 ]);
 
+const AMBIGUOUS_MONEY_MOVEMENT_CODES = new Set([
+  "bill payment",
+  "cheque",
+  "payment",
+  "standing order",
+]);
+
 const CONSUMER_SPEND_ACCOUNT_TYPES = new Set(["credit", "depository"]);
+const NON_CONSUMER_PFC_CATEGORIES = new Set([
+  "INCOME",
+  "TRANSFER_IN",
+  "TRANSFER_OUT",
+  "LOAN_PAYMENTS",
+  "LOAN_DISBURSEMENTS",
+  "BANK_FEES",
+]);
 
 export function classifyPlaidTransaction(
   input: PlaidTransactionClassificationInput,
@@ -56,6 +75,13 @@ export function classifyPlaidTransaction(
   const accountType = input.accountType?.trim().toLowerCase() ?? "";
   const direction = input.amount > 0 ? "out" : input.amount < 0 ? "in" : "none";
   const isFinal = !input.pending;
+  const hasProviderConflict =
+    (transactionCode === "transfer" &&
+      primary.length > 0 &&
+      primary !== "TRANSFER_IN" &&
+      primary !== "TRANSFER_OUT") ||
+    (transactionCode === "purchase" &&
+      NON_CONSUMER_PFC_CATEGORIES.has(primary));
 
   const result = (
     analyticsClass: PlaidAnalyticsClass,
@@ -68,6 +94,7 @@ export function classifyPlaidTransaction(
     isFinal,
     spendingMultiplier: isFinal ? spendingMultiplier : 0,
     countsTowardIncome: isFinal && countsTowardIncome,
+    hasProviderConflict,
     classificationSource,
   });
   const codeResult = (
@@ -102,6 +129,12 @@ export function classifyPlaidTransaction(
       ? codeResult("refund_or_reversal", -1)
       : codeResult("unknown");
   }
+  if (
+    transactionCode === "purchase" &&
+    NON_CONSUMER_PFC_CATEGORIES.has(primary)
+  ) {
+    return codeResult("unknown");
+  }
   if (transactionCode === "purchase") {
     if (input.amount < 0) return codeResult("refund_or_reversal", -1);
     return CONSUMER_SPEND_ACCOUNT_TYPES.has(accountType)
@@ -127,6 +160,19 @@ export function classifyPlaidTransaction(
     return result("bank_fee");
   }
   if (primary === "OTHER") return result("unknown");
+  if (AMBIGUOUS_MONEY_MOVEMENT_CODES.has(transactionCode)) {
+    return codeResult("unknown");
+  }
+  if (input.hasAmbiguousCounterparty) {
+    return result("unknown");
+  }
+  if (
+    accountType === "depository" &&
+    transactionCode.length === 0 &&
+    input.hasMerchantEvidence === false
+  ) {
+    return result("unknown");
+  }
   if (input.amount < 0) return result("refund_or_reversal", -1);
   if (!CONSUMER_SPEND_ACCOUNT_TYPES.has(accountType)) {
     return result("unknown");
@@ -159,11 +205,14 @@ export function derivePlaidClassificationReview(
   if (classification.analyticsClass === "unknown") {
     return { state: "needs_review", reason: "unknown_provider_intent" };
   }
+  if (classification.hasProviderConflict) {
+    return { state: "needs_review", reason: "conflicting_provider_signals" };
+  }
   if (classification.classificationSource === "plaid_transaction_code") {
     return { state: "not_required", reason: null };
   }
   const confidence = input.pfcConfidence?.trim().toUpperCase();
-  if (confidence === "LOW" || confidence === "UNKNOWN") {
+  if (confidence !== "HIGH" && confidence !== "VERY_HIGH") {
     return { state: "needs_review", reason: "low_provider_confidence" };
   }
   return { state: "not_required", reason: null };

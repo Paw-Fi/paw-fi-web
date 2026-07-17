@@ -28,6 +28,9 @@ interface TransactionRow {
   account_id: string | null;
   type: string | null;
   merchant: string | null;
+  analytics_is_final: boolean;
+  analytics_spending_multiplier: number;
+  analytics_counts_toward_income: boolean;
 }
 
 interface AccountRow {
@@ -176,12 +179,15 @@ Deno.serve(async (req: Request) => {
       (row) => normalizeCurrency(row.currency) === filters.displayCurrency,
     );
     const expenseRows = displayTransactions.filter(
-      (row) => normalizeType(row.type) === "expense",
+      (row) => row.analytics_spending_multiplier !== 0,
     );
     const incomeRows = displayTransactions.filter(
-      (row) => normalizeType(row.type) === "income",
+      (row) => row.analytics_counts_toward_income,
     );
-    const expenseCents = sumAbs(expenseRows.map((row) => row.amount_cents));
+    const expenseCents = expenseRows.reduce(
+      (sum, row) => sum + canonicalSpendingCents(row),
+      0,
+    );
     const incomeCents = sumAbs(incomeRows.map((row) => row.amount_cents));
     const cashOnHandCents = computeCashOnHand(
       accounts,
@@ -189,10 +195,13 @@ Deno.serve(async (req: Request) => {
       filters.displayCurrency,
     );
     const receiptCount = transactions.filter(hasReceiptOrAttachment).length;
-    const missingReceiptCount = expenseRows.filter(
+    const purchaseRows = expenseRows.filter(
+      (row) => row.analytics_spending_multiplier > 0,
+    );
+    const missingReceiptCount = purchaseRows.filter(
       (row) => !hasReceiptOrAttachment(row),
     ).length;
-    const uncategorizedCount = transactions.filter((row) =>
+    const uncategorizedCount = purchaseRows.filter((row) =>
       isUncategorized(row.category),
     ).length;
 
@@ -335,7 +344,7 @@ async function fetchTransactions(
   let query = supabase
     .from("expenses")
     .select(
-      "id, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant",
+      "id, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", false)
     .is("deleted_at", null)
@@ -346,6 +355,9 @@ async function fetchTransactions(
     .limit(500);
 
   query = applyScope(query, userId, filters.householdId);
+  if (filters.householdId) {
+    query = query.or(`user_id.eq.${userId},privacy_scope.eq.full`);
+  }
   if (filters.accountId) query = query.eq("account_id", filters.accountId);
   if (filters.category) query = query.ilike("category", filters.category);
   if (filters.search) {
@@ -369,13 +381,16 @@ async function fetchRecurring(
   let query = supabase
     .from("expenses")
     .select(
-      "id, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant",
+      "id, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", true)
     .is("deleted_at", null)
     .in("currency", filters.selectedCurrencies)
     .limit(50);
   query = applyScope(query, userId, filters.householdId);
+  if (filters.householdId) {
+    query = query.or(`user_id.eq.${userId},privacy_scope.eq.full`);
+  }
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as TransactionRow[];
@@ -484,6 +499,7 @@ function computeCashOnHand(
     if (transaction.account_id && !accountIds.has(transaction.account_id)) {
       continue;
     }
+    if (!transaction.analytics_is_final) continue;
     const amount = Math.abs(Number(transaction.amount_cents ?? 0));
     transactionNet +=
       normalizeType(transaction.type) === "income" ? amount : -amount;
@@ -499,8 +515,8 @@ function buildTrends(transactions: TransactionRow[]) {
   for (const row of transactions) {
     const bucket = byDate.get(row.date) ?? { incomeCents: 0, expenseCents: 0 };
     const amount = Math.abs(Number(row.amount_cents ?? 0));
-    if (normalizeType(row.type) === "income") bucket.incomeCents += amount;
-    else bucket.expenseCents += amount;
+    if (row.analytics_counts_toward_income) bucket.incomeCents += amount;
+    bucket.expenseCents += canonicalSpendingCents(row);
     byDate.set(row.date, bucket);
   }
   return Array.from(byDate.entries())
@@ -587,15 +603,13 @@ function buildBudgetProgress(params: {
             Number(envelope.budget_percentage ?? 0)) /
             100,
         );
-      const spent = sumAbs(
-        params.expenseRows
-          .filter(
-            (row) =>
-              normalizeCategory(row.category) ===
-              normalizeCategory(envelope.name),
-          )
-          .map((row) => row.amount_cents),
-      );
+      const spent = params.expenseRows
+        .filter(
+          (row) =>
+            normalizeCategory(row.category) ===
+            normalizeCategory(envelope.name),
+        )
+        .reduce((sum, row) => sum + canonicalSpendingCents(row), 0);
       return {
         id: envelope.id,
         name: envelope.name,
@@ -621,7 +635,7 @@ function buildTopCategories(
       amountCents: 0,
       transactionCount: 0,
     };
-    current.amountCents += Math.abs(Number(row.amount_cents ?? 0));
+    current.amountCents += canonicalSpendingCents(row);
     current.transactionCount += 1;
     categories.set(category, current);
   }
@@ -633,6 +647,14 @@ function buildTopCategories(
     }))
     .sort((left, right) => right.amountCents - left.amountCents)
     .slice(0, 8);
+}
+
+function canonicalSpendingCents(row: TransactionRow): number {
+  if (!row.analytics_is_final) return 0;
+  return (
+    Math.abs(Number(row.amount_cents ?? 0)) *
+    Number(row.analytics_spending_multiplier ?? 0)
+  );
 }
 
 function hasReceiptOrAttachment(row: TransactionRow): boolean {
