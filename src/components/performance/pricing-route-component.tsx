@@ -164,7 +164,7 @@ export function PricingRouteComponent() {
 
   useEffect(() => {
     setIsLoading(false);
-    setPricingCountry(detectRegionalPricingCountry());
+    // setPricingCountry(detectRegionalPricingCountry());
   }, []);
 
   const regionalPrices = getRegionalPriceLabels(pricingCountry);
