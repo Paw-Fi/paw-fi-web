@@ -18,13 +18,18 @@ export interface PlaidTransactionClassificationInput {
   accountType?: string | null;
 }
 
+export interface PlaidClassificationReview {
+  state: "not_required" | "needs_review";
+  reason: string | null;
+}
+
 export interface PlaidTransactionClassification {
   analyticsClass: PlaidAnalyticsClass;
   direction: "in" | "out" | "none";
   isFinal: boolean;
   spendingMultiplier: -1 | 0 | 1;
   countsTowardIncome: boolean;
-  classificationSource: "plaid_pfc_v2";
+  classificationSource: "plaid_pfc_v2" | "plaid_transaction_code";
 }
 
 const CASH_TRANSACTION_CODES = new Set([
@@ -56,40 +61,52 @@ export function classifyPlaidTransaction(
     analyticsClass: PlaidAnalyticsClass,
     spendingMultiplier: -1 | 0 | 1 = 0,
     countsTowardIncome = false,
+    classificationSource: PlaidTransactionClassification["classificationSource"] = "plaid_pfc_v2",
   ): PlaidTransactionClassification => ({
     analyticsClass,
     direction,
     isFinal,
     spendingMultiplier: isFinal ? spendingMultiplier : 0,
     countsTowardIncome: isFinal && countsTowardIncome,
-    classificationSource: "plaid_pfc_v2",
+    classificationSource,
   });
+  const codeResult = (
+    analyticsClass: PlaidAnalyticsClass,
+    spendingMultiplier: -1 | 0 | 1 = 0,
+    countsTowardIncome = false,
+  ) =>
+    result(
+      analyticsClass,
+      spendingMultiplier,
+      countsTowardIncome,
+      "plaid_transaction_code",
+    );
 
   if (input.amount === 0) return result("unknown");
   if (CASH_TRANSACTION_CODES.has(transactionCode)) {
-    return result("cash_movement");
+    return codeResult("cash_movement");
   }
   if (transactionCode === "transfer") {
-    return result(input.amount < 0 ? "transfer_in" : "transfer_out");
+    return codeResult(input.amount < 0 ? "transfer_in" : "transfer_out");
   }
   if (transactionCode === "refund") {
     return input.amount < 0
-      ? result("refund_or_reversal", -1)
-      : result("unknown");
+      ? codeResult("refund_or_reversal", -1)
+      : codeResult("unknown");
   }
   if (BANK_FEE_TRANSACTION_CODES.has(transactionCode)) {
-    return result("bank_fee");
+    return codeResult("bank_fee");
   }
   if (transactionCode === "adjustment") {
     return input.amount < 0
-      ? result("refund_or_reversal", -1)
-      : result("unknown");
+      ? codeResult("refund_or_reversal", -1)
+      : codeResult("unknown");
   }
   if (transactionCode === "purchase") {
-    if (input.amount < 0) return result("refund_or_reversal", -1);
+    if (input.amount < 0) return codeResult("refund_or_reversal", -1);
     return CONSUMER_SPEND_ACCOUNT_TYPES.has(accountType)
-      ? result("consumer_spend", 1)
-      : result("unknown");
+      ? codeResult("consumer_spend", 1)
+      : codeResult("unknown");
   }
   if (!primary) return result("unknown");
 
@@ -131,4 +148,23 @@ export function classifyUserCategoryOverride(
   if (normalizedCategory === "debt payments") return "debt_payment";
   if (normalizedCategory === "bank fees") return "bank_fee";
   return normalizedType === "income" ? "income" : "consumer_spend";
+}
+
+export function derivePlaidClassificationReview(
+  input: {
+    pfcConfidence?: string | null;
+  },
+  classification: PlaidTransactionClassification,
+): PlaidClassificationReview {
+  if (classification.analyticsClass === "unknown") {
+    return { state: "needs_review", reason: "unknown_provider_intent" };
+  }
+  if (classification.classificationSource === "plaid_transaction_code") {
+    return { state: "not_required", reason: null };
+  }
+  const confidence = input.pfcConfidence?.trim().toUpperCase();
+  if (confidence === "LOW" || confidence === "UNKNOWN") {
+    return { state: "needs_review", reason: "low_provider_confidence" };
+  }
+  return { state: "not_required", reason: null };
 }

@@ -2126,6 +2126,7 @@ Deno.serve(async (req: Request) => {
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
+    let explicitAnalyticsOverride: Record<string, unknown> | null = null;
     const allowedExpenseColumns = [
       "amount_cents",
       "category",
@@ -2199,11 +2200,16 @@ Deno.serve(async (req: Request) => {
       });
 
       if (Object.prototype.hasOwnProperty.call(updates, "category")) {
-        updatePayload["analytics_class"] = classifyUserCategoryOverride(
-          String(updates.category ?? ""),
-          String(expenseRecord["type"] ?? "expense"),
-        );
-        updatePayload["classification_source"] = "user_override";
+        explicitAnalyticsOverride = {
+          analytics_class: classifyUserCategoryOverride(
+            String(updates.category ?? ""),
+            String(expenseRecord["type"] ?? "expense"),
+          ),
+          classification_source: "user_override",
+        };
+        if (!splitRpcOwnsStructuralFields) {
+          Object.assign(updatePayload, explicitAnalyticsOverride);
+        }
       }
     }
 
@@ -2278,6 +2284,25 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Failed to update expense", "SERVER_ERROR", 500);
       }
       updatedExpense = data;
+    }
+
+    if (splitRpcOwnsStructuralFields && explicitAnalyticsOverride) {
+      const { error: analyticsOverrideError } = await supabase
+        .from("expenses")
+        .update(explicitAnalyticsOverride)
+        .eq("id", normalizedExpenseId)
+        .is("deleted_at", null);
+      if (analyticsOverrideError) {
+        console.error(
+          "[update-expense] Failed to apply analytics override:",
+          analyticsOverrideError,
+        );
+        return errorResponse(
+          "Failed to update transaction classification",
+          "SERVER_ERROR",
+          500,
+        );
+      }
     }
 
     if (splitRpcOwnsStructuralFields) {

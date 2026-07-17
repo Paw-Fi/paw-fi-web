@@ -71,11 +71,9 @@ function startOfUtcMonth(date: Date): Date {
 }
 
 function addUtcMonths(date: Date, months: number): Date {
-  return new Date(Date.UTC(
-    date.getUTCFullYear(),
-    date.getUTCMonth() + months,
-    1,
-  ));
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1),
+  );
 }
 
 function subtractUtcHours(date: Date, hours: number): Date {
@@ -101,20 +99,10 @@ export function computePlaidBillingWindow(
 
 export function derivePlaidLinkProducts(
   products: string[],
-  options: DerivePlaidLinkProductsOptions = {},
+  _options: DerivePlaidLinkProductsOptions = {},
 ): string[] {
   const baseProducts = Array.from(new Set(products.filter(Boolean)));
-
-  return baseProducts.filter((product) => {
-    if (product !== "recurring_transactions") {
-      return true;
-    }
-
-    return Boolean(
-      options.isConvertedPaidUser &&
-        options.enableRecurringTransactionsProduct,
-    );
-  });
+  return baseProducts.filter((product) => product === "transactions");
 }
 
 export function canRequestPlaidManualRefresh(

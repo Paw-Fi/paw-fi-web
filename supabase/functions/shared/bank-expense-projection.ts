@@ -160,6 +160,8 @@ export function buildBankExpenseMutationPlan(
         ? {
             analytics_class: matchedRow.analytics_class ?? "unknown",
             classification_source: "user_override",
+            classification_review_state: "user_override",
+            classification_review_reason: null,
           }
         : {}),
       ...(matchedRow?.split_group_id

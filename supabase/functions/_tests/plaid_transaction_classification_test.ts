@@ -5,6 +5,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   classifyPlaidTransaction,
   classifyUserCategoryOverride,
+  derivePlaidClassificationReview,
 } from "../shared/plaid-transaction-classification.ts";
 
 Deno.test(
@@ -24,6 +25,53 @@ Deno.test(
     assertEquals(result.countsTowardIncome, false);
   },
 );
+
+Deno.test("unknown Plaid intent requires explicit review", () => {
+  const classification = classifyPlaidTransaction({
+    amount: 25,
+    pending: false,
+    pfcPrimary: null,
+    transactionCode: null,
+    accountType: "depository",
+  });
+  assertEquals(derivePlaidClassificationReview({}, classification), {
+    state: "needs_review",
+    reason: "unknown_provider_intent",
+  });
+});
+
+Deno.test("low-confidence Plaid categories require explicit review", () => {
+  const input = {
+    amount: 25,
+    pending: false,
+    pfcPrimary: "FOOD_AND_DRINK",
+    transactionCode: null,
+    accountType: "depository",
+    pfcConfidence: "LOW",
+  };
+  const classification = classifyPlaidTransaction(input);
+  assertEquals(derivePlaidClassificationReview(input, classification), {
+    state: "needs_review",
+    reason: "low_provider_confidence",
+  });
+});
+
+Deno.test("authoritative transaction codes do not require PFC review", () => {
+  const input = {
+    amount: 25,
+    pending: false,
+    pfcPrimary: "GENERAL_SERVICES",
+    transactionCode: "transfer",
+    accountType: "depository",
+    pfcConfidence: "LOW",
+  };
+  const classification = classifyPlaidTransaction(input);
+  assertEquals(classification.analyticsClass, "transfer_out");
+  assertEquals(derivePlaidClassificationReview(input, classification), {
+    state: "not_required",
+    reason: null,
+  });
+});
 
 Deno.test(
   "Plaid classification keeps pending purchases out of finalized totals",

@@ -1,5 +1,8 @@
 import { normalizeCategory } from "./category-colors.ts";
-import { classifyPlaidTransaction } from "./plaid-transaction-classification.ts";
+import {
+  classifyPlaidTransaction,
+  derivePlaidClassificationReview,
+} from "./plaid-transaction-classification.ts";
 import { fetchWithRetry } from "./bank-retry.ts";
 
 export const PLAID_PROVIDER = "plaid";
@@ -152,10 +155,18 @@ export async function createPlaidLinkToken(
   };
 
   if (!params.omitProducts) {
-    request.products =
+    const products =
       params.products && params.products.length > 0
         ? params.products
         : config.products;
+    request.products = products;
+    if (!params.accessToken && products.includes("transactions")) {
+      request.account_filters = {
+        depository: { account_subtypes: ["all"] },
+        credit: { account_subtypes: ["all"] },
+        loan: { account_subtypes: ["mortgage", "student"] },
+      };
+    }
   }
 
   if (platform === "android") {
@@ -389,6 +400,8 @@ export interface ExpenseUpsertInput {
   analytics_counts_toward_income: boolean;
   classification_source: string;
   classification_version: number;
+  classification_review_state?: string;
+  classification_review_reason?: string | null;
 }
 
 export interface MapPlaidTransactionInput {
@@ -443,6 +456,22 @@ export function mapPlaidTransactionToExpense(
     transactionCode: txn.transaction_code,
     accountType: params.accountType,
   });
+  const classificationReview = derivePlaidClassificationReview(
+    {
+      pfcConfidence: txn.personal_finance_category?.confidence_level,
+    },
+    classification,
+  );
+  const effectiveClassification =
+    classificationReview.reason === "low_provider_confidence"
+      ? classifyPlaidTransaction({
+          amount,
+          pending: txn.pending ?? false,
+          pfcPrimary: null,
+          transactionCode: txn.transaction_code,
+          accountType: params.accountType,
+        })
+      : classification;
 
   return {
     user_id: params.userId,
@@ -478,13 +507,15 @@ export function mapPlaidTransactionToExpense(
     provider_transaction_code:
       txn.transaction_code?.trim().toLowerCase() || null,
     provider_pending: txn.pending ?? false,
-    analytics_class: classification.analyticsClass,
-    analytics_direction: classification.direction,
-    analytics_is_final: classification.isFinal,
-    analytics_spending_multiplier: classification.spendingMultiplier,
-    analytics_counts_toward_income: classification.countsTowardIncome,
-    classification_source: classification.classificationSource,
+    analytics_class: effectiveClassification.analyticsClass,
+    analytics_direction: effectiveClassification.direction,
+    analytics_is_final: effectiveClassification.isFinal,
+    analytics_spending_multiplier: effectiveClassification.spendingMultiplier,
+    analytics_counts_toward_income: effectiveClassification.countsTowardIncome,
+    classification_source: effectiveClassification.classificationSource,
     classification_version: 2,
+    classification_review_state: classificationReview.state,
+    classification_review_reason: classificationReview.reason,
   };
 }
 
@@ -495,13 +526,8 @@ function detectRecurring(transaction: PlaidTransaction): {
   const detailed =
     transaction.personal_finance_category?.detailed?.toUpperCase() || "";
   const keywords = ["SUBSCRIPTION", "PAYROLL", "RENT", "MORTGAGE", "UTILITIES"];
-  const description = `${transaction.name || ""} ${
-    transaction.merchant_name || ""
-  }`.toLowerCase();
   const keywordMatch = keywords.some((keyword) => detailed.includes(keyword));
-  const nameMatch =
-    description.includes("subscription") || description.includes("monthly");
-  const isRecurring = Boolean(keywordMatch || nameMatch);
+  const isRecurring = Boolean(keywordMatch);
   if (!isRecurring) {
     return { isRecurring: false, recurrenceRule: null };
   }

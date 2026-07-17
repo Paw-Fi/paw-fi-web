@@ -2,6 +2,7 @@ import { type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabas
 import { resolvePlaidCountryCode } from "./plaid-country.ts";
 import {
   buildBankExpenseMutationPlan,
+  type BankExpenseMutationRecord,
   type ExistingExpenseProjectionRow,
 } from "./bank-expense-projection.ts";
 import {
@@ -170,7 +171,7 @@ interface RecurrenceGroup {
   rows: RecurrenceCandidateRow[];
 }
 
-interface PlaidRecurringTemplateCandidate {
+export interface PlaidRecurringTemplateCandidate {
   idempotencyKey: string;
   userId: string;
   householdId: string | null;
@@ -190,8 +191,6 @@ interface PlaidRecurringTemplateCandidate {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RECURRING_AMOUNT_RELATIVE_TOLERANCE = 0.01;
-const RECURRING_DESCRIPTION_EDIT_TOLERANCE = 0.1;
-const RECURRING_DESCRIPTION_TOKEN_SIMILARITY = 0.9;
 
 export function sanitizeOptionalUuid(value?: string | null): string | null {
   if (!value) return null;
@@ -506,10 +505,10 @@ function inferPlaidRecurringRules(params: {
 
   const groups: RecurrenceGroup[] = [];
   for (const row of rows.values()) {
-    const merchantKey = normalizeRecurringMerchant(
-      row.merchant || row.raw_text,
-    );
-    if (!merchantKey) continue;
+    const transaction = currentTransactionById.get(row.provider_transaction_id);
+    const providerHint = buildPlaidRecurringProviderHint(transaction);
+    const streamId = String(providerHint?.plaid_stream_id || "").trim();
+    if (!streamId) continue;
     const bankAccountId = row.bank_account_id;
     const currency = (row.currency || "").toUpperCase();
     const existingGroup = groups.find(
@@ -517,7 +516,7 @@ function inferPlaidRecurringRules(params: {
         group.bankAccountId === bankAccountId &&
         group.type === row.type &&
         group.currency === currency &&
-        merchantKeysAreSimilar(group.merchantKey, merchantKey),
+        group.merchantKey === streamId,
     );
     if (existingGroup) {
       existingGroup.rows.push(row);
@@ -527,7 +526,7 @@ function inferPlaidRecurringRules(params: {
       bankAccountId,
       type: row.type,
       currency,
-      merchantKey,
+      merchantKey: streamId,
       rows: [row],
     });
   }
@@ -619,10 +618,7 @@ function buildPlaidRecurringTemplateCandidates(params: {
     const patternIdentity = providerHint?.template_identity
       ? String(providerHint.template_identity).trim()
       : "";
-    const merchantKey = normalizeRecurringMerchant(
-      record.merchant || record.raw_text,
-    );
-    const identity = streamId || patternIdentity || merchantKey;
+    const identity = streamId || patternIdentity;
     if (!identity) continue;
 
     const normalizedCategory = (record.category || "uncategorized")
@@ -781,6 +777,137 @@ async function upsertPlaidRecurringTemplates(params: {
   }
 }
 
+export interface PreparedPlaidTransactionMutations {
+  inserts: BankExpenseMutationRecord[];
+  updates: BankExpenseMutationRecord[];
+  recurringTemplateCandidates: PlaidRecurringTemplateCandidate[];
+  skipped: number;
+  currencyMismatches: number;
+}
+
+export async function preparePlaidTransactionMutations(
+  params: PersistTransactionsParams,
+): Promise<PreparedPlaidTransactionMutations> {
+  if (!params.transactions.length) {
+    return {
+      inserts: [],
+      updates: [],
+      recurringTemplateCandidates: [],
+      skipped: 0,
+      currencyMismatches: 0,
+    };
+  }
+
+  const mapped: ExpenseUpsertRecord[] = params.transactions
+    .filter((transaction) => transaction.transaction_id)
+    .map((transaction) => ({
+      ...mapPlaidTransactionToExpense({
+        userId: params.userId,
+        bankAccountId: params.bankAccountId,
+        defaultCurrency: params.accountCurrency,
+        accountType: params.accountType,
+        transaction,
+      }),
+      household_id: params.householdId ?? null,
+      account_id: params.accountId ?? null,
+    }));
+  const normalized = mapped.map((record) =>
+    normalizeCurrency(record, params.accountCurrency),
+  );
+  const currencyMismatches = normalized.filter(
+    (entry) => entry.mismatch,
+  ).length;
+  const normalizedRecords = normalized.map((entry) => entry.record);
+  if (!mapped.length) {
+    return {
+      inserts: [],
+      updates: [],
+      recurringTemplateCandidates: [],
+      skipped: params.transactions.length,
+      currencyMismatches: 0,
+    };
+  }
+
+  const postedIds = normalizedRecords.map(
+    (record) => record.provider_transaction_id,
+  );
+  const pendingIds = params.transactions
+    .map((transaction) => transaction.pending_transaction_id)
+    .filter((id): id is string => Boolean(id));
+  const lookupIds = Array.from(new Set([...postedIds, ...pendingIds]));
+  const existingRows: ExistingExpenseProjectionRow[] = [];
+  for (
+    let index = 0;
+    index < lookupIds.length;
+    index += PROVIDER_TRANSACTION_LOOKUP_BATCH_SIZE
+  ) {
+    const batch = lookupIds.slice(
+      index,
+      index + PROVIDER_TRANSACTION_LOOKUP_BATCH_SIZE,
+    );
+    if (!batch.length) continue;
+    const { data, error } = await params.supabase
+      .from("expenses")
+      .select(
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
+      )
+      .eq("user_id", params.userId)
+      .eq("provider", PLAID_PROVIDER)
+      .eq("bank_account_id", params.bankAccountId)
+      .in("provider_transaction_id", batch);
+    if (error) throw error;
+    existingRows.push(...((data || []) as ExistingExpenseProjectionRow[]));
+  }
+
+  const providerPendingTransactionIds = new Map<string, string>();
+  for (const transaction of params.transactions) {
+    if (transaction.pending_transaction_id) {
+      providerPendingTransactionIds.set(
+        transaction.transaction_id,
+        transaction.pending_transaction_id,
+      );
+    }
+  }
+  const recurringByProviderTransactionId = inferPlaidRecurringRules({
+    records: normalizedRecords,
+    transactions: params.transactions,
+    existingRows,
+  });
+  const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
+    userId: params.userId,
+    householdId: params.householdId ?? null,
+    bankAccountId: params.bankAccountId,
+    accountId: params.accountId ?? null,
+    records: normalizedRecords,
+    recurringByProviderTransactionId,
+  });
+  const mutationPlan = buildBankExpenseMutationPlan({
+    records: normalizedRecords.map((record) => ({
+      ...record,
+      is_recurring: false,
+      recurrence_rule: null,
+    })),
+    transactions: params.transactions,
+    existingRows,
+    providerPendingTransactionIds,
+    cursorGeneration: params.cursorGeneration ?? 0,
+  });
+  return {
+    inserts: mutationPlan.inserts,
+    updates: mutationPlan.updates,
+    recurringTemplateCandidates,
+    skipped: params.transactions.length - normalizedRecords.length,
+    currencyMismatches,
+  };
+}
+
+export async function persistPreparedPlaidRecurringTemplates(params: {
+  supabase: SupabaseClient;
+  candidates: PlaidRecurringTemplateCandidate[];
+}): Promise<void> {
+  await upsertPlaidRecurringTemplates(params);
+}
+
 function normalizeExistingRecurrenceCandidate(
   row: ExistingExpenseProjectionRow,
 ): RecurrenceCandidateRow | null {
@@ -893,79 +1020,6 @@ function detectRecurrencePattern(
   }
 
   return null;
-}
-
-function normalizeRecurringMerchant(value?: string | null): string | null {
-  const normalized = String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, " ")
-    .replace(/\b\d{2,}\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (normalized.length < 3) {
-    return null;
-  }
-  return normalized;
-}
-
-function merchantKeysAreSimilar(left: string, right: string): boolean {
-  if (left === right) return true;
-
-  const shorter = left.length <= right.length ? left : right;
-  const longer = left.length <= right.length ? right : left;
-  if (shorter.length >= 6 && longer.startsWith(shorter)) return true;
-
-  const leftTokens = merchantTokens(left);
-  const rightTokens = merchantTokens(right);
-  if (!leftTokens.size || !rightTokens.size) {
-    return editDistance(left, right) <= allowedNameDistance(left, right);
-  }
-
-  const shared = [...leftTokens].filter((token) =>
-    rightTokens.has(token),
-  ).length;
-  const union = new Set([...leftTokens, ...rightTokens]).size;
-  if (union > 0 && shared / union >= RECURRING_DESCRIPTION_TOKEN_SIMILARITY) {
-    return true;
-  }
-
-  return editDistance(left, right) <= allowedNameDistance(left, right);
-}
-
-function merchantTokens(value: string): Set<string> {
-  return new Set(value.split(" ").filter((token) => token.length >= 3));
-}
-
-function allowedNameDistance(left: string, right: string): number {
-  const maxLength = Math.max(left.length, right.length);
-  if (maxLength < 6) return 0;
-  return Math.max(
-    1,
-    Math.round(maxLength * RECURRING_DESCRIPTION_EDIT_TOLERANCE),
-  );
-}
-
-function editDistance(left: string, right: string): number {
-  if (left === right) return 0;
-  if (!left) return right.length;
-  if (!right) return left.length;
-
-  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-  for (let i = 0; i < left.length; i += 1) {
-    const current = new Array<number>(right.length + 1).fill(0);
-    current[0] = i + 1;
-    for (let j = 0; j < right.length; j += 1) {
-      const cost = left[i] === right[j] ? 0 : 1;
-      current[j + 1] = Math.min(
-        previous[j + 1] + 1,
-        current[j] + 1,
-        previous[j] + cost,
-      );
-    }
-    previous = current;
-  }
-
-  return previous[right.length];
 }
 
 function buildPlaidRecurringProviderHint(

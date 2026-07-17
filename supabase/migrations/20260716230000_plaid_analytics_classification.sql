@@ -279,12 +279,35 @@ begin
       v_account_type
     );
 
+    if upper(coalesce(new.provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
+      and coalesce(new.provider_transaction_code, '') not in (
+        'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+        'bank charge', 'late fee', 'membership fee', 'returned item fee',
+        'adjustment', 'purchase'
+      ) then
+      new.analytics_class := 'unknown';
+      new.analytics_direction := 'none';
+      new.analytics_is_final := not new.provider_pending;
+      new.analytics_spending_multiplier := 0;
+      new.analytics_counts_toward_income := false;
+      new.classification_source := 'plaid_low_confidence';
+      new.classification_version := 2;
+      return new;
+    end if;
+
     new.analytics_class := v_classification.analytics_class;
     new.analytics_direction := v_classification.analytics_direction;
     new.analytics_is_final := v_classification.analytics_is_final;
     new.analytics_spending_multiplier := v_classification.analytics_spending_multiplier;
     new.analytics_counts_toward_income := v_classification.analytics_counts_toward_income;
-    new.classification_source := 'plaid_pfc_' || coalesce(new.provider_pfc_version, 'v2');
+    new.classification_source := case
+      when coalesce(new.provider_transaction_code, '') in (
+        'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+        'bank charge', 'late fee', 'membership fee', 'returned item fee',
+        'adjustment', 'purchase'
+      ) then 'plaid_transaction_code'
+      else 'plaid_pfc_' || coalesce(new.provider_pfc_version, 'v2')
+    end;
     new.classification_version := 2;
     return new;
   end if;
@@ -525,12 +548,16 @@ begin
   end if;
 
   if v_class = 'provider' then
+    -- classification_source is a watched column on the classification trigger;
+    -- changing it away from user_override recomputes every provider field below.
     update public.expenses
     set
       classification_source = case
         when provider = 'plaid' then 'plaid_pfc_' || coalesce(provider_pfc_version, 'v2')
         else 'manual'
       end,
+      user_overrides = coalesce(user_overrides, '{}'::jsonb)
+        - 'analytics_class' - 'classification_source',
       updated_at = now()
     where id = p_expense_id
       and user_id = p_user_id
@@ -573,6 +600,10 @@ begin
     analytics_counts_toward_income = analytics_is_final and v_class = 'income',
     classification_source = 'user_override',
     classification_version = 2,
+    user_overrides = coalesce(user_overrides, '{}'::jsonb) || jsonb_build_object(
+      'analytics_class', v_class,
+      'classification_source', 'user_override'
+    ),
     updated_at = now()
   where id = p_expense_id
     and user_id = p_user_id
@@ -648,8 +679,23 @@ begin
       e.date,
       e.amount_cents,
       upper(coalesce(e.currency, '')) as currency,
-      lower(coalesce(e.category, 'uncategorized')) as category,
-      e.raw_text,
+      case
+        when p_household_id is not null
+          and e.user_id is distinct from p_user_id
+          and e.privacy_scope = 'balances_only' then 'uncategorized'
+        else lower(coalesce(e.category, 'uncategorized'))
+      end as category,
+      case
+        when p_household_id is not null
+          and e.user_id is distinct from p_user_id
+          and e.privacy_scope = 'balances_only' then null
+        else e.raw_text
+      end as raw_text,
+      not (
+        p_household_id is not null
+        and e.user_id is distinct from p_user_id
+        and e.privacy_scope = 'balances_only'
+      ) as dimensions_visible,
       lower(coalesce(e.type::text, 'expense')) as type,
       e.analytics_class,
       e.analytics_spending_multiplier,
@@ -671,8 +717,18 @@ begin
       and (p_account_id is null or e.account_id = p_account_id or (
         p_include_unassigned_account and e.account_id is null
       ))
-      and (p_category is null or lower(coalesce(e.category, 'uncategorized')) = lower(p_category))
-      and (v_categories is null or lower(coalesce(e.category, 'uncategorized')) = any(v_categories))
+      and (
+        (p_category is null and v_categories is null)
+        or (
+          not (
+            p_household_id is not null
+            and e.user_id is distinct from p_user_id
+            and e.privacy_scope = 'balances_only'
+          )
+          and (p_category is null or lower(coalesce(e.category, 'uncategorized')) = lower(p_category))
+          and (v_categories is null or lower(coalesce(e.category, 'uncategorized')) = any(v_categories))
+        )
+      )
       and (
         coalesce(lower(p_type), 'all') = 'all'
         or (lower(p_type) = 'expense' and e.analytics_spending_multiplier <> 0)
@@ -682,9 +738,18 @@ begin
       and (p_end_date is null or e.date <= p_end_date)
       and (
         coalesce(trim(p_search_query), '') = ''
-        or lower(coalesce(e.category, 'uncategorized')) like '%' || lower(trim(p_search_query)) || '%'
-        or lower(coalesce(e.raw_text, '')) like '%' || lower(trim(p_search_query)) || '%'
-        or ((e.amount_cents::numeric / 100.0)::text like '%' || trim(p_search_query) || '%')
+        or (
+          not (
+            p_household_id is not null
+            and e.user_id is distinct from p_user_id
+            and e.privacy_scope = 'balances_only'
+          )
+          and (
+            lower(coalesce(e.category, 'uncategorized')) like '%' || lower(trim(p_search_query)) || '%'
+            or lower(coalesce(e.raw_text, '')) like '%' || lower(trim(p_search_query)) || '%'
+            or ((e.amount_cents::numeric / 100.0)::text like '%' || trim(p_search_query) || '%')
+          )
+        )
       )
   ), spend_rows as (
     select *, (amount_cents * analytics_spending_multiplier)::bigint as analytics_amount_cents
@@ -694,16 +759,16 @@ begin
     select * from filtered_items where analytics_counts_toward_income
   ), category_rollup as (
     select category, sum(analytics_amount_cents)::bigint as amount_cents, count(*)::integer as transaction_count
-    from spend_rows group by category
+    from spend_rows where dimensions_visible group by category
   ), currency_category_rollup as (
     select category, currency, sum(analytics_amount_cents)::bigint as amount_cents, count(*)::integer as transaction_count
-    from spend_rows group by category, currency
+    from spend_rows where dimensions_visible group by category, currency
   ), yearly_rollup as (
     select date_trunc('year', date)::date as bucket_start, sum(analytics_amount_cents)::bigint as amount_cents
-    from spend_rows group by 1
+    from spend_rows where dimensions_visible group by 1
   ), currency_yearly_rollup as (
     select date_trunc('year', date)::date as bucket_start, currency, sum(analytics_amount_cents)::bigint as amount_cents
-    from spend_rows group by 1, currency
+    from spend_rows where dimensions_visible group by 1, currency
   ), period_rollup as (
     select case coalesce(lower(p_interval_granularity), 'yearly')
       when 'daily' then date_trunc('day', date)::date
@@ -711,7 +776,7 @@ begin
       when 'monthly' then date_trunc('month', date)::date
       else date_trunc('year', date)::date end as bucket_start,
       sum(analytics_amount_cents)::bigint as amount_cents
-    from spend_rows group by 1
+    from spend_rows where dimensions_visible group by 1
   ), currency_period_rollup as (
     select case coalesce(lower(p_interval_granularity), 'yearly')
       when 'daily' then date_trunc('day', date)::date
@@ -719,20 +784,20 @@ begin
       when 'monthly' then date_trunc('month', date)::date
       else date_trunc('year', date)::date end as bucket_start,
       currency, sum(analytics_amount_cents)::bigint as amount_cents
-    from spend_rows group by 1, currency
+    from spend_rows where dimensions_visible group by 1, currency
   ), currency_type_rollup as (
     select
       currency,
       coalesce(sum(analytics_amount_cents) filter (where analytics_spending_multiplier <> 0), 0)::bigint as expense_total_cents,
       coalesce(sum(abs(amount_cents)) filter (where analytics_counts_toward_income), 0)::bigint as income_total_cents,
       count(*)::integer as transaction_count
-    from filtered_items group by currency
+    from filtered_items where dimensions_visible group by currency
   )
   select jsonb_build_object(
-    'transaction_count', (select count(*) from filtered_items),
+    'transaction_count', (select count(*) from filtered_items where dimensions_visible),
     'expense_total_cents', coalesce((select sum(analytics_amount_cents) from spend_rows), 0),
     'income_total_cents', coalesce((select sum(abs(amount_cents)) from income_rows), 0),
-    'has_multiple_currencies', (select count(distinct currency) from spend_rows) > 1,
+    'has_multiple_currencies', (select count(distinct currency) from spend_rows where dimensions_visible) > 1,
     'category_summaries', coalesce((select jsonb_agg(jsonb_build_object(
       'category', category, 'amount_cents', amount_cents, 'transaction_count', transaction_count
     ) order by amount_cents desc) from category_rollup), '[]'::jsonb),
@@ -1099,6 +1164,138 @@ begin
 end;
 $$;
 
+create or replace function public.get_pocket_rollover_history_v2(
+  p_user_id uuid,
+  p_scope text,
+  p_household_id uuid,
+  p_currency text,
+  p_rollover_group_id uuid,
+  p_budget_month date,
+  p_limit_months integer default 12
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_scope text := lower(coalesce(nullif(trim(p_scope), ''), 'personal'));
+  v_currency text := upper(coalesce(nullif(trim(p_currency), ''), 'USD'));
+  v_budget_month date := date_trunc('month', p_budget_month)::date;
+  v_start_day integer := public.user_financial_month_start_day(p_user_id);
+  v_limit integer := greatest(1, least(coalesce(p_limit_months, 12), 36));
+  v_rows jsonb;
+begin
+  if auth.uid() is null or auth.uid() <> p_user_id then
+    raise exception 'Unauthorized pocket rollover history access' using errcode = '42501';
+  end if;
+  if p_rollover_group_id is null or p_budget_month is null then
+    return '[]'::jsonb;
+  end if;
+
+  with envelope_months as (
+    select distinct on (date_trunc('month', b.period_month)::date)
+      b.period_month as budget_month,
+      public.financial_cycle_start_for_month(b.period_month, v_start_day) as period_start,
+      e.id as envelope_id, e.name,
+      coalesce(a.amount_cents, e.budget_amount_cents, 0)::bigint as base_cents,
+      coalesce(e.rollover_enabled, false) as rollover_enabled,
+      coalesce(e.rollover_negative, false) as rollover_negative,
+      e.rollover_cap_cents,
+      coalesce(e.opening_rollover_cents, 0)::bigint as opening_rollover_cents,
+      e.rollover_group_id
+    from public.budgets b
+    join public.budget_envelopes e on e.budget_id = b.id
+    left join public.envelope_allocations a
+      on a.envelope_id = e.id and a.period_month = b.period_month
+    where date_trunc('month', b.period_month)::date <= v_budget_month
+      and upper(b.currency) = v_currency
+      and upper(e.currency) = v_currency
+      and e.rollover_group_id = p_rollover_group_id
+      and (
+        (v_scope = 'personal' and b.household_id is null and b.user_id = p_user_id)
+        or (v_scope = 'portfolio' and b.household_id = p_household_id and b.user_id = p_user_id)
+        or (v_scope = 'household' and b.household_id = p_household_id)
+      )
+    order by date_trunc('month', b.period_month)::date desc,
+      (b.period_month = date_trunc('month', b.period_month)::date) desc,
+      e.updated_at desc nulls last, e.created_at desc nulls last
+    limit v_limit
+  ), spent_by_month as (
+    select em.envelope_id,
+      coalesce(sum(ex.amount_cents * ex.analytics_spending_multiplier), 0)::bigint as spent_cents
+    from envelope_months em
+    left join public.envelope_category_links l on l.envelope_id = em.envelope_id
+    left join public.expenses ex
+      on lower(trim(coalesce(ex.category, ''))) = lower(trim(l.category))
+      and ex.analytics_is_final
+      and ex.analytics_spending_multiplier <> 0
+      and upper(coalesce(ex.currency, '')) = v_currency
+      and ex.deleted_at is null
+      and not (
+        v_scope = 'household'
+        and ex.user_id is distinct from p_user_id
+        and ex.privacy_scope = 'balances_only'
+      )
+      and ex.date >= em.period_start
+      and ex.date < public.next_financial_cycle_start(em.period_start, v_start_day)
+      and (
+        (v_scope = 'household' and ex.household_id = p_household_id)
+        or (v_scope = 'personal' and ex.user_id = p_user_id and ex.household_id is null)
+        or (v_scope = 'portfolio' and ex.user_id = p_user_id and ex.household_id = p_household_id)
+      )
+    group by em.envelope_id
+  ), calculated as (
+    select em.*, coalesce(sbm.spent_cents, 0)::bigint as spent_cents,
+      case when em.rollover_enabled then public.calculate_pocket_rollover_carry_v2(
+        p_user_id, p_scope, p_household_id, v_currency, em.name,
+        em.rollover_group_id, em.budget_month
+      ) else 0 end::bigint as incoming_rollover_cents
+    from envelope_months em
+    left join spent_by_month sbm on sbm.envelope_id = em.envelope_id
+  ), balances as (
+    select c.*,
+      case when c.rollover_enabled
+        then c.base_cents + c.incoming_rollover_cents + c.opening_rollover_cents
+        else c.base_cents
+      end::bigint as available_cents
+    from calculated c
+  ), carry_values as (
+    select b.*, (b.available_cents - b.spent_cents)::bigint as remaining_cents,
+      case
+        when b.rollover_enabled = false then 0
+        when b.available_cents - b.spent_cents < 0 and b.rollover_negative = false then 0
+        when b.rollover_cap_cents is not null
+          and b.available_cents - b.spent_cents > b.rollover_cap_cents then b.rollover_cap_cents
+        else b.available_cents - b.spent_cents
+      end::bigint as carry_to_next_cents
+    from balances b
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'period_month', cv.period_start,
+    'budget_month', cv.budget_month,
+    'name', cv.name,
+    'base_budget_cents', cv.base_cents,
+    'rollover_from_previous_cents', cv.incoming_rollover_cents,
+    'opening_rollover_cents', cv.opening_rollover_cents,
+    'available_budget_cents', cv.available_cents,
+    'spent_cents', cv.spent_cents,
+    'remaining_cents', cv.remaining_cents,
+    'carry_to_next_cents', cv.carry_to_next_cents,
+    'rollover_enabled', cv.rollover_enabled,
+    'rollover_negative', cv.rollover_negative,
+    'rollover_cap_cents', cv.rollover_cap_cents,
+    'cap_applied_cents', greatest(cv.remaining_cents - cv.carry_to_next_cents, 0),
+    'negative_dropped_cents', case
+      when cv.remaining_cents < 0 and cv.rollover_negative = false then abs(cv.remaining_cents)
+      else 0
+    end
+  ) order by cv.budget_month asc), '[]'::jsonb)
+  into v_rows from carry_values cv;
+
+  return v_rows;
+end;
+$$;
+
 create or replace function public.get_user_analytics(p_user_id uuid)
 returns json
 language plpgsql
@@ -1223,6 +1420,13 @@ revoke execute on function public.calculate_pocket_rollover_carry_v2(
 ) from public, anon;
 grant execute on function public.calculate_pocket_rollover_carry_v2(
   uuid, text, uuid, text, text, uuid, date
+) to authenticated;
+
+revoke execute on function public.get_pocket_rollover_history_v2(
+  uuid, text, uuid, text, uuid, date, integer
+) from public, anon;
+grant execute on function public.get_pocket_rollover_history_v2(
+  uuid, text, uuid, text, uuid, date, integer
 ) to authenticated;
 
 revoke execute on function public.get_user_analytics(uuid) from public, anon;
