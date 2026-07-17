@@ -514,6 +514,14 @@ serve(async (req) => {
           );
           break;
         case "invoice.paid":
+          // invoice.payment_succeeded is the canonical receipt event for this
+          // automatic-card integration. Handling both sends two snapshots of
+          // the same invoice through one Resend idempotency key.
+          console.log(
+            "Ignoring invoice.paid; receipt handled by invoice.payment_succeeded",
+            { invoiceId: (event.data.object as Stripe.Invoice).id },
+          );
+          break;
         case "invoice.payment_succeeded":
           await handleInvoicePaymentSucceeded(
             event.data.object as Stripe.Invoice,
