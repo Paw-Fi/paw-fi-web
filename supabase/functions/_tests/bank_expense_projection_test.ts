@@ -111,6 +111,34 @@ Deno.test(
 );
 
 Deno.test(
+  "bank expense projection preserves analytics override on provider updates",
+  () => {
+    const plan = buildBankExpenseMutationPlan({
+      records: [
+        makeExpenseRecord({
+          analytics_class: "consumer_spend",
+          classification_source: "plaid_pfc_v1",
+        }),
+      ],
+      transactions: [makePlaidTransaction()],
+      existingRows: [
+        {
+          id: "expense-1",
+          provider_transaction_id: "txn-1",
+          classification_source: "user_override",
+          analytics_class: "transfer_out",
+        },
+      ],
+      providerPendingTransactionIds: new Map(),
+      cursorGeneration: 2,
+    });
+
+    assertEquals(plan.updates[0].classification_source, "user_override");
+    assertEquals(plan.updates[0].analytics_class, "transfer_out");
+  },
+);
+
+Deno.test(
   "mapPlaidTransactionToExpense uses Plaid merchant_name for merchant field",
   () => {
     const expense = mapPlaidTransactionToExpense({
@@ -126,6 +154,40 @@ Deno.test(
     assertEquals(expense.raw_text, "SQ *COFFEE SHOP 1234");
     assertEquals(expense.merchant, "Coffee Shop");
     assertEquals(expense.source, "Coffee Shop");
+  },
+);
+
+Deno.test(
+  "mapPlaidTransactionToExpense persists provider-authoritative analytics classification",
+  () => {
+    const expense = mapPlaidTransactionToExpense({
+      userId: "user-1",
+      bankAccountId: "bank-account-1",
+      defaultCurrency: "USD",
+      accountType: "depository",
+      transaction: makePlaidTransaction({
+        amount: 500,
+        pending: false,
+        transaction_code: null,
+        personal_finance_category: {
+          primary: "LOAN_PAYMENTS",
+          detailed: "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT",
+        },
+      }),
+    });
+
+    assertEquals(expense.provider_pfc_primary, "LOAN_PAYMENTS");
+    assertEquals(
+      expense.provider_pfc_detailed,
+      "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT",
+    );
+    assertEquals(expense.provider_pending, false);
+    assertEquals(expense.analytics_class, "debt_payment");
+    assertEquals(expense.analytics_is_final, true);
+    assertEquals(expense.analytics_spending_multiplier, 0);
+    assertEquals(expense.analytics_counts_toward_income, false);
+    assertEquals(expense.classification_source, "plaid_pfc_v2");
+    assertEquals(expense.classification_version, 2);
   },
 );
 
@@ -170,6 +232,32 @@ Deno.test(
       "pending-1",
     );
     assertEquals(plan.updates[0].category, "custom category");
+  },
+);
+
+Deno.test(
+  "bank expense projection collapses pending and posted rows in one batch",
+  () => {
+    const plan = buildBankExpenseMutationPlan({
+      records: [
+        makeExpenseRecord({ provider_transaction_id: "pending-1" }),
+        makeExpenseRecord({ provider_transaction_id: "posted-1" }),
+      ],
+      transactions: [
+        makePlaidTransaction({ transaction_id: "pending-1", pending: true }),
+        makePlaidTransaction({
+          transaction_id: "posted-1",
+          pending: false,
+          pending_transaction_id: "pending-1",
+        }),
+      ],
+      existingRows: [],
+      providerPendingTransactionIds: new Map([["posted-1", "pending-1"]]),
+      cursorGeneration: 2,
+    });
+
+    assertEquals(plan.inserts.length, 1);
+    assertEquals(plan.inserts[0].provider_transaction_id, "posted-1");
   },
 );
 

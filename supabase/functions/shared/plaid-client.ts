@@ -1,4 +1,5 @@
 import { normalizeCategory } from "./category-colors.ts";
+import { classifyPlaidTransaction } from "./plaid-transaction-classification.ts";
 import { fetchWithRetry } from "./bank-retry.ts";
 
 export const PLAID_PROVIDER = "plaid";
@@ -273,6 +274,8 @@ export async function getPlaidInstitutionById(params: {
 export interface PlaidPersonalFinanceCategory {
   primary?: string;
   detailed?: string;
+  confidence_level?: string | null;
+  version?: string | null;
 }
 
 export interface PlaidTransaction {
@@ -289,6 +292,7 @@ export interface PlaidTransaction {
   pending_transaction_id?: string | null;
   payment_channel?: string | null;
   transaction_type?: string | null;
+  transaction_code?: string | null;
   personal_finance_category?: PlaidPersonalFinanceCategory;
   payment_meta?: {
     payment_method?: string | null;
@@ -298,7 +302,7 @@ export interface PlaidTransaction {
   };
 }
 
-interface PlaidSyncResponse {
+export interface PlaidSyncResponse {
   added: PlaidTransaction[];
   modified: PlaidTransaction[];
   removed: { transaction_id: string }[];
@@ -324,7 +328,10 @@ export async function syncPlaidTransactions(
     access_token: accessToken,
     cursor: cursor || undefined,
     count: 500,
-    options: { include_personal_finance_category: true },
+    options: {
+      include_personal_finance_category: true,
+      personal_finance_category_version: "v2",
+    },
   });
 }
 
@@ -369,12 +376,26 @@ export interface ExpenseUpsertInput {
   normalized_amount_cents: number;
   base_currency: string | null;
   fx_rate: number | null;
+  provider_pfc_primary: string | null;
+  provider_pfc_detailed: string | null;
+  provider_pfc_confidence: string | null;
+  provider_pfc_version: string | null;
+  provider_transaction_code: string | null;
+  provider_pending: boolean;
+  analytics_class: string;
+  analytics_direction: string;
+  analytics_is_final: boolean;
+  analytics_spending_multiplier: number;
+  analytics_counts_toward_income: boolean;
+  classification_source: string;
+  classification_version: number;
 }
 
 export interface MapPlaidTransactionInput {
   userId: string;
   bankAccountId: string;
   defaultCurrency?: string | null;
+  accountType?: string | null;
   transaction: PlaidTransaction;
 }
 
@@ -415,6 +436,13 @@ export function mapPlaidTransactionToExpense(
     null;
   const description = txn.name || txn.merchant_name || null;
   const { isRecurring, recurrenceRule } = detectRecurring(txn);
+  const classification = classifyPlaidTransaction({
+    amount,
+    pending: txn.pending ?? false,
+    pfcPrimary: txn.personal_finance_category?.primary,
+    transactionCode: txn.transaction_code,
+    accountType: params.accountType,
+  });
 
   return {
     user_id: params.userId,
@@ -438,6 +466,25 @@ export function mapPlaidTransactionToExpense(
     normalized_amount_cents: amountCents,
     base_currency: currency,
     fx_rate: 1,
+    provider_pfc_primary:
+      txn.personal_finance_category?.primary?.trim().toUpperCase() || null,
+    provider_pfc_detailed:
+      txn.personal_finance_category?.detailed?.trim().toUpperCase() || null,
+    provider_pfc_confidence:
+      txn.personal_finance_category?.confidence_level?.trim().toUpperCase() ||
+      null,
+    provider_pfc_version:
+      txn.personal_finance_category?.version?.trim().toLowerCase() || "v2",
+    provider_transaction_code:
+      txn.transaction_code?.trim().toLowerCase() || null,
+    provider_pending: txn.pending ?? false,
+    analytics_class: classification.analyticsClass,
+    analytics_direction: classification.direction,
+    analytics_is_final: classification.isFinal,
+    analytics_spending_multiplier: classification.spendingMultiplier,
+    analytics_counts_toward_income: classification.countsTowardIncome,
+    classification_source: classification.classificationSource,
+    classification_version: 2,
   };
 }
 
