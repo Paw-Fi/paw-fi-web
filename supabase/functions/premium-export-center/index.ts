@@ -76,6 +76,9 @@ interface TransactionRow {
   receipt_image_url: string | null;
   attachments: unknown;
   created_at: string | null;
+  analytics_is_final: boolean;
+  analytics_spending_multiplier: number;
+  analytics_counts_toward_income: boolean;
 }
 
 interface AccountRow {
@@ -779,7 +782,7 @@ async function fetchTransactions(
   let query = supabase
     .from("expenses")
     .select(
-      "id, date, type, amount_cents, currency, category, raw_text, merchant, account_id, receipt_image_url, attachments, created_at",
+      "id, date, type, amount_cents, currency, category, raw_text, merchant, account_id, receipt_image_url, attachments, created_at, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", false)
     .is("deleted_at", null)
@@ -791,6 +794,9 @@ async function fetchTransactions(
   query = filters.householdId
     ? query.eq("household_id", filters.householdId)
     : query.eq("user_id", userId).is("household_id", null);
+  if (filters.householdId) {
+    query = query.or(`user_id.eq.${userId},privacy_scope.eq.full`);
+  }
   if (filters.accountIds.length > 0) {
     query = query.in("account_id", filters.accountIds);
   }
@@ -892,8 +898,8 @@ function buildReportsCsv(
   const displayRows = transactions.filter(
     (row) => normalizeCurrency(row.currency) === displayCurrency,
   );
-  const income = sumByType(displayRows, "income");
-  const expenses = sumByType(displayRows, "expense");
+  const income = sumCanonicalIncome(displayRows);
+  const expenses = sumCanonicalSpending(displayRows);
   return buildCsv([
     ["metric", "amount_cents", "amount", "currency"],
     ["income", income, (income / 100).toFixed(2), displayCurrency],
@@ -919,6 +925,8 @@ function buildCategoryCsv(transactions: TransactionRow[]): string {
     { amount: number; count: number; currency: string }
   >();
   for (const row of transactions) {
+    const analyticsAmount = canonicalSpendingCents(row);
+    if (analyticsAmount === 0) continue;
     const key = `${normalizeCurrency(row.currency)}:${normalizeCategory(
       row.category,
     )}`;
@@ -927,7 +935,7 @@ function buildCategoryCsv(transactions: TransactionRow[]): string {
       count: 0,
       currency: normalizeCurrency(row.currency),
     };
-    current.amount += Math.abs(Number(row.amount_cents ?? 0));
+    current.amount += analyticsAmount;
     current.count += 1;
     categories.set(key, current);
   }
@@ -953,8 +961,11 @@ function buildAccountHistoryCsv(
         row.account_id === account.id &&
         normalizeCurrency(row.currency) === normalizeCurrency(account.currency),
     );
-    const income = sumByType(accountTransactions, "income");
-    const expenses = sumByType(accountTransactions, "expense");
+    const finalAccountTransactions = accountTransactions.filter(
+      (row) => row.analytics_is_final,
+    );
+    const income = sumByType(finalAccountTransactions, "income");
+    const expenses = sumByType(finalAccountTransactions, "expense");
     const opening = Number(account.opening_balance_cents ?? 0);
     return [
       account.id,
@@ -988,6 +999,26 @@ function sumByType(rows: TransactionRow[], type: "income" | "expense"): number {
   return rows
     .filter((row) => normalizeType(row.type) === type)
     .reduce((sum, row) => sum + Math.abs(Number(row.amount_cents ?? 0)), 0);
+}
+
+function sumCanonicalIncome(rows: TransactionRow[]): number {
+  return rows
+    .filter(
+      (row) => row.analytics_is_final && row.analytics_counts_toward_income,
+    )
+    .reduce((sum, row) => sum + Math.abs(Number(row.amount_cents ?? 0)), 0);
+}
+
+function sumCanonicalSpending(rows: TransactionRow[]): number {
+  return rows.reduce((sum, row) => sum + canonicalSpendingCents(row), 0);
+}
+
+function canonicalSpendingCents(row: TransactionRow): number {
+  if (!row.analytics_is_final) return 0;
+  return (
+    Math.abs(Number(row.amount_cents ?? 0)) *
+    Number(row.analytics_spending_multiplier ?? 0)
+  );
 }
 
 function normalizeDate(value?: string | null): string | null {

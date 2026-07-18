@@ -249,8 +249,10 @@ async function queryExpenseRows(
 ) {
   let query = supabase
     .from("expenses")
-    .select("amount_cents, currency, category, date")
-    .eq("type", "expense")
+    .select(
+      "amount_cents, currency, category, date, user_id, privacy_scope, analytics_is_final, analytics_spending_multiplier",
+    )
+    .eq("analytics_is_final", true)
     .is("deleted_at", null)
     .gte("date", startDate)
     .lte("date", endDate)
@@ -274,17 +276,29 @@ async function queryExpenseRows(
     throw new Error(`Failed to load spending data: ${error.message}`);
   }
 
-  return data ?? [];
+  return (data ?? []).filter(
+    (row) =>
+      !scope.householdId ||
+      row.user_id === userId ||
+      row.privacy_scope !== "balances_only",
+  );
 }
 
 function summarizeCategories(
-  rows: Array<{ amount_cents: number; category: string | null }>,
+  rows: Array<{
+    amount_cents: number;
+    category: string | null;
+    analytics_spending_multiplier: number;
+  }>,
 ) {
   const totals = new Map<string, number>();
   let total = 0;
 
   for (const row of rows) {
-    const amount = Number(row.amount_cents) || 0;
+    const amount =
+      Math.abs(Number(row.amount_cents) || 0) *
+      Number(row.analytics_spending_multiplier || 0);
+    if (amount === 0) continue;
     total += amount;
     const category = (row.category || "other").trim().toLowerCase() || "other";
     totals.set(category, (totals.get(category) || 0) + amount);

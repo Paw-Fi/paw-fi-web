@@ -1,4 +1,8 @@
 import { normalizeCategory } from "./category-colors.ts";
+import {
+  classifyPlaidTransaction,
+  derivePlaidClassificationReview,
+} from "./plaid-transaction-classification.ts";
 import { fetchWithRetry } from "./bank-retry.ts";
 
 export const PLAID_PROVIDER = "plaid";
@@ -22,6 +26,7 @@ interface PlaidConfig {
   redirectUri: string;
   androidPackageName: string;
   linkCustomizationName?: string;
+  apiVersion: string;
 }
 
 let cachedConfig: PlaidConfig | null = null;
@@ -58,6 +63,7 @@ export function getPlaidConfig(): PlaidConfig {
     androidPackageName,
     linkCustomizationName:
       Deno.env.get("PLAID_LINK_CUSTOMIZATION_NAME")?.trim() || undefined,
+    apiVersion: Deno.env.get("PLAID_API_VERSION")?.trim() || "2020-09-14",
   };
   return cachedConfig;
 }
@@ -89,7 +95,10 @@ async function plaidRequest<T>(
   const config = getPlaidConfig();
   const response = await fetchWithRetry(`${config.baseUrl}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Plaid-Version": config.apiVersion,
+    },
     body: JSON.stringify({
       ...body,
       client_id: config.clientId,
@@ -151,10 +160,18 @@ export async function createPlaidLinkToken(
   };
 
   if (!params.omitProducts) {
-    request.products =
+    const products =
       params.products && params.products.length > 0
         ? params.products
         : config.products;
+    request.products = products;
+    if (!params.accessToken && products.includes("transactions")) {
+      request.account_filters = {
+        depository: { account_subtypes: ["all"] },
+        credit: { account_subtypes: ["all"] },
+        loan: { account_subtypes: ["mortgage", "student"] },
+      };
+    }
   }
 
   if (platform === "android") {
@@ -216,6 +233,7 @@ export async function exchangePublicToken(
 
 export interface PlaidAccount {
   account_id: string;
+  persistent_account_id?: string | null;
   name: string;
   official_name?: string | null;
   mask?: string | null;
@@ -225,6 +243,8 @@ export interface PlaidAccount {
     iso_currency_code?: string | null;
     unofficial_currency_code?: string | null;
     current?: number | null;
+    available?: number | null;
+    limit?: number | null;
   };
 }
 
@@ -273,6 +293,8 @@ export async function getPlaidInstitutionById(params: {
 export interface PlaidPersonalFinanceCategory {
   primary?: string;
   detailed?: string;
+  confidence_level?: string | null;
+  version?: string | null;
 }
 
 export interface PlaidTransaction {
@@ -289,6 +311,7 @@ export interface PlaidTransaction {
   pending_transaction_id?: string | null;
   payment_channel?: string | null;
   transaction_type?: string | null;
+  transaction_code?: string | null;
   personal_finance_category?: PlaidPersonalFinanceCategory;
   payment_meta?: {
     payment_method?: string | null;
@@ -296,14 +319,46 @@ export interface PlaidTransaction {
     payee?: string | null;
     payer?: string | null;
   };
+  counterparties?: Array<{ type?: string | null }>;
 }
 
-interface PlaidSyncResponse {
+export interface PlaidSyncResponse {
   added: PlaidTransaction[];
   modified: PlaidTransaction[];
-  removed: { transaction_id: string }[];
+  removed: { transaction_id: string; account_id?: string | null }[];
   has_more: boolean;
   next_cursor: string;
+  transactions_update_status?: string | null;
+  request_id?: string;
+}
+
+export interface PlaidRecurringAmount {
+  amount?: number | null;
+  iso_currency_code?: string | null;
+  unofficial_currency_code?: string | null;
+}
+
+export interface PlaidRecurringStream {
+  stream_id: string;
+  account_id: string;
+  merchant_name?: string | null;
+  description?: string | null;
+  frequency?: string | null;
+  status?: string | null;
+  is_active?: boolean | null;
+  first_date?: string | null;
+  last_date?: string | null;
+  predicted_next_date?: string | null;
+  average_amount?: PlaidRecurringAmount | null;
+  last_amount?: PlaidRecurringAmount | null;
+  transaction_ids?: string[] | null;
+  personal_finance_category?: PlaidPersonalFinanceCategory | null;
+}
+
+export interface PlaidRecurringResponse {
+  inflow_streams?: PlaidRecurringStream[];
+  outflow_streams?: PlaidRecurringStream[];
+  updated_datetime?: string | null;
   request_id?: string;
 }
 
@@ -324,7 +379,24 @@ export async function syncPlaidTransactions(
     access_token: accessToken,
     cursor: cursor || undefined,
     count: 500,
-    options: { include_personal_finance_category: true },
+    options: {
+      include_personal_finance_category: true,
+      personal_finance_category_version: "v2",
+    },
+  });
+}
+
+export async function getPlaidRecurringTransactions(
+  accessToken: string,
+  accountIds?: string[],
+): Promise<PlaidRecurringResponse> {
+  return plaidRequest<PlaidRecurringResponse>("/transactions/recurring/get", {
+    access_token: accessToken,
+    account_ids: accountIds?.length ? accountIds : undefined,
+    options: {
+      include_personal_finance_category: true,
+      personal_finance_category_version: "v2",
+    },
   });
 }
 
@@ -369,22 +441,30 @@ export interface ExpenseUpsertInput {
   normalized_amount_cents: number;
   base_currency: string | null;
   fx_rate: number | null;
+  provider_pfc_primary: string | null;
+  provider_pfc_detailed: string | null;
+  provider_pfc_confidence: string | null;
+  provider_pfc_version: string | null;
+  provider_transaction_code: string | null;
+  provider_pending: boolean;
+  analytics_class: string;
+  analytics_direction: string;
+  analytics_is_final: boolean;
+  analytics_spending_multiplier: number;
+  analytics_counts_toward_income: boolean;
+  classification_source: string;
+  classification_version: number;
+  classification_review_state?: string;
+  classification_review_reason?: string | null;
 }
 
 export interface MapPlaidTransactionInput {
   userId: string;
   bankAccountId: string;
   defaultCurrency?: string | null;
+  accountType?: string | null;
   transaction: PlaidTransaction;
 }
-
-type RecurrenceFrequency =
-  | "daily"
-  | "weekly"
-  | "biweekly"
-  | "monthly"
-  | "yearly"
-  | "custom";
 
 export function mapPlaidTransactionToExpense(
   params: MapPlaidTransactionInput,
@@ -414,7 +494,48 @@ export function mapPlaidTransactionToExpense(
     txn.payment_meta?.payer ||
     null;
   const description = txn.name || txn.merchant_name || null;
-  const { isRecurring, recurrenceRule } = detectRecurring(txn);
+  const counterpartyTypes = (txn.counterparties || [])
+    .map((counterparty) => counterparty.type?.trim().toLowerCase())
+    .filter((type): type is string => Boolean(type));
+  const hasFinancialCounterparty = counterpartyTypes.some(
+    (type) => type === "financial_institution" || type === "payment_app",
+  );
+  const hasMerchantCounterparty = counterpartyTypes.some(
+    (type) =>
+      type === "merchant" ||
+      type === "marketplace" ||
+      type === "payment_terminal",
+  );
+  const classification = classifyPlaidTransaction({
+    amount,
+    pending: txn.pending ?? false,
+    pfcPrimary: txn.personal_finance_category?.primary,
+    transactionCode: txn.transaction_code,
+    accountType: params.accountType,
+    hasFinancialCounterparty,
+    hasMerchantCounterparty,
+  });
+  const classificationReview = derivePlaidClassificationReview(
+    {
+      pfcConfidence: txn.personal_finance_category?.confidence_level,
+      pfcPrimary: txn.personal_finance_category?.primary,
+      pfcDetailed: txn.personal_finance_category?.detailed,
+      transactionCode: txn.transaction_code,
+      hasFinancialCounterparty,
+      hasMerchantCounterparty,
+    },
+    classification,
+  );
+  const effectiveClassification =
+    classificationReview.reason === "low_provider_confidence"
+      ? classifyPlaidTransaction({
+          amount,
+          pending: txn.pending ?? false,
+          pfcPrimary: null,
+          transactionCode: txn.transaction_code,
+          accountType: params.accountType,
+        })
+      : classification;
 
   return {
     user_id: params.userId,
@@ -430,55 +551,43 @@ export function mapPlaidTransactionToExpense(
     raw_text: description,
     merchant: merchantLabel || txn.name || null,
     source: merchantLabel || txn.name || null,
-    raw_provider_payload: txn,
-    is_recurring: isRecurring,
-    recurrence_rule: recurrenceRule,
+    raw_provider_payload: {
+      transaction_id: txn.transaction_id,
+      account_id: txn.account_id,
+      amount: txn.amount,
+      pending: txn.pending ?? false,
+      pending_transaction_id: txn.pending_transaction_id ?? null,
+      transaction_code: txn.transaction_code ?? null,
+      personal_finance_category: txn.personal_finance_category ?? null,
+      counterparty_types: counterpartyTypes,
+    },
+    is_recurring: false,
+    recurrence_rule: null,
     household_id: null,
     contact_id: null,
     normalized_amount_cents: amountCents,
     base_currency: currency,
     fx_rate: 1,
+    provider_pfc_primary:
+      txn.personal_finance_category?.primary?.trim().toUpperCase() || null,
+    provider_pfc_detailed:
+      txn.personal_finance_category?.detailed?.trim().toUpperCase() || null,
+    provider_pfc_confidence:
+      txn.personal_finance_category?.confidence_level?.trim().toUpperCase() ||
+      null,
+    provider_pfc_version:
+      txn.personal_finance_category?.version?.trim().toLowerCase() || "v2",
+    provider_transaction_code:
+      txn.transaction_code?.trim().toLowerCase() || null,
+    provider_pending: txn.pending ?? false,
+    analytics_class: effectiveClassification.analyticsClass,
+    analytics_direction: effectiveClassification.direction,
+    analytics_is_final: effectiveClassification.isFinal,
+    analytics_spending_multiplier: effectiveClassification.spendingMultiplier,
+    analytics_counts_toward_income: effectiveClassification.countsTowardIncome,
+    classification_source: effectiveClassification.classificationSource,
+    classification_version: 2,
+    classification_review_state: classificationReview.state,
+    classification_review_reason: classificationReview.reason,
   };
-}
-
-function detectRecurring(transaction: PlaidTransaction): {
-  isRecurring: boolean;
-  recurrenceRule: Record<string, unknown> | null;
-} {
-  const detailed =
-    transaction.personal_finance_category?.detailed?.toUpperCase() || "";
-  const keywords = ["SUBSCRIPTION", "PAYROLL", "RENT", "MORTGAGE", "UTILITIES"];
-  const description = `${transaction.name || ""} ${
-    transaction.merchant_name || ""
-  }`.toLowerCase();
-  const keywordMatch = keywords.some((keyword) => detailed.includes(keyword));
-  const nameMatch =
-    description.includes("subscription") || description.includes("monthly");
-  const isRecurring = Boolean(keywordMatch || nameMatch);
-  if (!isRecurring) {
-    return { isRecurring: false, recurrenceRule: null };
-  }
-  const frequency = guessFrequency(detailed);
-  return {
-    isRecurring: true,
-    recurrenceRule: {
-      frequency,
-      anchor_date: transaction.date || transaction.authorized_date,
-      provider_hint: {
-        category: transaction.personal_finance_category,
-      },
-    },
-  };
-}
-
-function guessFrequency(detailedCategory: string): RecurrenceFrequency {
-  if (detailedCategory.includes("PAYROLL")) return "biweekly";
-  if (
-    detailedCategory.includes("RENT") ||
-    detailedCategory.includes("MORTGAGE") ||
-    detailedCategory.includes("SUBSCRIPTION")
-  ) {
-    return "monthly";
-  }
-  return "monthly";
 }

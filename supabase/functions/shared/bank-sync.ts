@@ -2,6 +2,7 @@ import { type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabas
 import { resolvePlaidCountryCode } from "./plaid-country.ts";
 import {
   buildBankExpenseMutationPlan,
+  type BankExpenseMutationRecord,
   type ExistingExpenseProjectionRow,
 } from "./bank-expense-projection.ts";
 import {
@@ -29,6 +30,7 @@ export interface UpsertAccountsParams {
 
 export interface UpsertAccountsResult {
   records: BankAccountRecord[];
+  allRecords: BankAccountRecord[];
 }
 
 export interface BankAccountRecord {
@@ -40,6 +42,11 @@ export interface BankAccountRecord {
   mask?: string | null;
   type?: string | null;
   subtype?: string | null;
+  status?: string | null;
+  provider_balance_current_cents?: number | null;
+  provider_balance_available_cents?: number | null;
+  provider_balance_limit_cents?: number | null;
+  provider_balance_updated_at?: string | null;
 }
 
 interface BankAccountRecordWithStatus extends BankAccountRecord {
@@ -98,8 +105,10 @@ export interface PersistTransactionsParams {
   householdId?: string | null;
   accountId?: string | null;
   accountCurrency: string;
+  accountType?: string | null;
   transactions: PlaidTransaction[];
   cursorGeneration?: number;
+  hideNewTransactions?: boolean;
 }
 export interface PersistTinkTransactionsParams {
   supabase: SupabaseClient;
@@ -169,7 +178,7 @@ interface RecurrenceGroup {
   rows: RecurrenceCandidateRow[];
 }
 
-interface PlaidRecurringTemplateCandidate {
+export interface PlaidRecurringTemplateCandidate {
   idempotencyKey: string;
   userId: string;
   householdId: string | null;
@@ -189,8 +198,6 @@ interface PlaidRecurringTemplateCandidate {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RECURRING_AMOUNT_RELATIVE_TOLERANCE = 0.01;
-const RECURRING_DESCRIPTION_EDIT_TOLERANCE = 0.1;
-const RECURRING_DESCRIPTION_TOKEN_SIMILARITY = 0.9;
 
 export function sanitizeOptionalUuid(value?: string | null): string | null {
   if (!value) return null;
@@ -212,9 +219,10 @@ export async function upsertBankConnection(params: {
   householdId?: string | null;
   metadata?: Record<string, unknown> | null;
 }): Promise<{ connectionId: string; isNewConnection: boolean }> {
-  const normalizedCountryCode = resolvePlaidCountryCode({
-    requestedCountryCode: params.countryCode,
-  }) ?? null;
+  const normalizedCountryCode =
+    resolvePlaidCountryCode({
+      requestedCountryCode: params.countryCode,
+    }) ?? null;
 
   const selectExisting = async () => {
     const { data, error } = await params.supabase
@@ -255,16 +263,17 @@ export async function upsertBankConnection(params: {
       .update({
         access_token_encrypted: params.accessTokenEncrypted,
         plaid_access_token_encrypted: params.accessTokenEncrypted,
-        refresh_token_encrypted: params.refreshTokenEncrypted === undefined
-          ? undefined
-          : params.refreshTokenEncrypted,
-        expires_at: params.expiresAt === undefined
-          ? undefined
-          : params.expiresAt,
-        country_code: resolvePlaidCountryCode({
-          requestedCountryCode: normalizedCountryCode,
-          connectionCountryCode: existing.country_code,
-        }) ?? null,
+        refresh_token_encrypted:
+          params.refreshTokenEncrypted === undefined
+            ? undefined
+            : params.refreshTokenEncrypted,
+        expires_at:
+          params.expiresAt === undefined ? undefined : params.expiresAt,
+        country_code:
+          resolvePlaidCountryCode({
+            requestedCountryCode: normalizedCountryCode,
+            connectionCountryCode: existing.country_code,
+          }) ?? null,
         duplicate_group_key: params.duplicateGroupKey || undefined,
         idempotency_key: params.idempotencyKey || undefined,
         status: "active",
@@ -334,14 +343,16 @@ export async function upsertBankConnection(params: {
     .update({
       access_token_encrypted: params.accessTokenEncrypted,
       plaid_access_token_encrypted: params.accessTokenEncrypted,
-      refresh_token_encrypted: params.refreshTokenEncrypted === undefined
-        ? undefined
-        : params.refreshTokenEncrypted,
+      refresh_token_encrypted:
+        params.refreshTokenEncrypted === undefined
+          ? undefined
+          : params.refreshTokenEncrypted,
       expires_at: params.expiresAt === undefined ? undefined : params.expiresAt,
-      country_code: resolvePlaidCountryCode({
-        requestedCountryCode: normalizedCountryCode,
-        connectionCountryCode: retry.country_code,
-      }) ?? null,
+      country_code:
+        resolvePlaidCountryCode({
+          requestedCountryCode: normalizedCountryCode,
+          connectionCountryCode: retry.country_code,
+        }) ?? null,
       duplicate_group_key: params.duplicateGroupKey || undefined,
       idempotency_key: params.idempotencyKey || undefined,
       status: "active",
@@ -373,23 +384,21 @@ export async function loadLinkedWalletsForBankAccounts(params: {
     return new Map<string, LinkedWalletRecord>();
   }
 
-  const { data: bankAccountRows, error: bankAccountError } = await params
-    .supabase
-    .from("bank_accounts")
-    .select("id, currency")
-    .in("id", bankAccountIds);
+  const { data: bankAccountRows, error: bankAccountError } =
+    await params.supabase
+      .from("bank_accounts")
+      .select("id, currency")
+      .in("id", bankAccountIds);
 
   if (bankAccountError) {
     throw bankAccountError;
   }
 
   const bankCurrencyById = new Map<string, string>();
-  for (
-    const row of (bankAccountRows || []) as Array<{
-      id?: string | null;
-      currency?: string | null;
-    }>
-  ) {
+  for (const row of (bankAccountRows || []) as Array<{
+    id?: string | null;
+    currency?: string | null;
+  }>) {
     const id = row.id?.trim();
     const currency = row.currency?.trim().toUpperCase();
     if (id && currency) {
@@ -503,10 +512,10 @@ function inferPlaidRecurringRules(params: {
 
   const groups: RecurrenceGroup[] = [];
   for (const row of rows.values()) {
-    const merchantKey = normalizeRecurringMerchant(
-      row.merchant || row.raw_text,
-    );
-    if (!merchantKey) continue;
+    const transaction = currentTransactionById.get(row.provider_transaction_id);
+    const providerHint = buildPlaidRecurringProviderHint(transaction);
+    const streamId = String(providerHint?.plaid_stream_id || "").trim();
+    if (!streamId) continue;
     const bankAccountId = row.bank_account_id;
     const currency = (row.currency || "").toUpperCase();
     const existingGroup = groups.find(
@@ -514,7 +523,7 @@ function inferPlaidRecurringRules(params: {
         group.bankAccountId === bankAccountId &&
         group.type === row.type &&
         group.currency === currency &&
-        merchantKeysAreSimilar(group.merchantKey, merchantKey),
+        group.merchantKey === streamId,
     );
     if (existingGroup) {
       existingGroup.rows.push(row);
@@ -524,7 +533,7 @@ function inferPlaidRecurringRules(params: {
       bankAccountId,
       type: row.type,
       currency,
-      merchantKey,
+      merchantKey: streamId,
       rows: [row],
     });
   }
@@ -532,7 +541,7 @@ function inferPlaidRecurringRules(params: {
   const rules = new Map<string, Record<string, unknown>>();
   for (const group of groups) {
     const currentRows = group.rows.filter((row) =>
-      currentTransactionById.has(row.provider_transaction_id)
+      currentTransactionById.has(row.provider_transaction_id),
     );
     if (!currentRows.length) continue;
 
@@ -602,9 +611,10 @@ function buildPlaidRecurringTemplateCandidates(params: {
     if (!frequency) continue;
 
     const intervalValue = Number(recurrence.interval || 1);
-    const interval = Number.isFinite(intervalValue) && intervalValue > 1
-      ? Math.round(intervalValue)
-      : 1;
+    const interval =
+      Number.isFinite(intervalValue) && intervalValue > 1
+        ? Math.round(intervalValue)
+        : 1;
     const providerHint =
       recurrence.provider_hint && typeof recurrence.provider_hint === "object"
         ? (recurrence.provider_hint as Record<string, unknown>)
@@ -615,10 +625,7 @@ function buildPlaidRecurringTemplateCandidates(params: {
     const patternIdentity = providerHint?.template_identity
       ? String(providerHint.template_identity).trim()
       : "";
-    const merchantKey = normalizeRecurringMerchant(
-      record.merchant || record.raw_text,
-    );
-    const identity = streamId || patternIdentity || merchantKey;
+    const identity = streamId || patternIdentity;
     if (!identity) continue;
 
     const normalizedCategory = (record.category || "uncategorized")
@@ -648,9 +655,8 @@ function buildPlaidRecurringTemplateCandidates(params: {
     };
     const existing = byTemplateKey.get(idempotencyKey);
     const shouldReplace = !existing || record.date > existing.date;
-    const date = existing && existing.date < anchorDate
-      ? existing.date
-      : anchorDate;
+    const date =
+      existing && existing.date < anchorDate ? existing.date : anchorDate;
     const candidate: PlaidRecurringTemplateCandidate = {
       idempotencyKey,
       userId: params.userId,
@@ -693,7 +699,9 @@ async function upsertPlaidRecurringTemplates(params: {
   ) => {
     let existingQuery = params.supabase
       .from("expenses")
-      .select("id, date, account_id")
+      .select(
+        "id, date, account_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, deleted_at, deleted_reason, provider_fields, user_overrides",
+      )
       .eq("user_id", candidate.userId)
       .eq("idempotency_key", candidate.idempotencyKey)
       .limit(1);
@@ -704,13 +712,11 @@ async function upsertPlaidRecurringTemplates(params: {
 
     const { data, error } = await existingQuery;
     if (error) throw error;
-    return data?.[0] as
-      | { id: string; date?: string | null; account_id?: string | null }
-      | undefined;
+    return data?.[0] as PlaidRecurringTemplateRow | undefined;
   };
 
   const updateExistingTemplate = async (
-    existing: { id: string; date?: string | null; account_id?: string | null },
+    existing: PlaidRecurringTemplateRow,
     payload: Record<string, unknown>,
   ) => {
     const { error } = await params.supabase
@@ -722,12 +728,7 @@ async function upsertPlaidRecurringTemplates(params: {
 
   for (const candidate of params.candidates) {
     const existing = await selectExistingTemplate(candidate);
-    const existingDate = existing?.date
-      ? String(existing.date).slice(0, 10)
-      : null;
-    const date = existingDate && existingDate < candidate.date
-      ? existingDate
-      : candidate.date;
+    const date = candidate.date;
     const accountId = candidate.accountId || existing?.account_id || null;
     const recurrenceRule = {
       ...candidate.recurrenceRule,
@@ -752,15 +753,37 @@ async function upsertPlaidRecurringTemplates(params: {
       bank_account_id: null,
       provider_transaction_id: null,
       idempotency_key: candidate.idempotencyKey,
+      deleted_at: null,
+      deleted_reason: null,
       provider_fields: {
         ...candidate.providerFields,
         account_id: accountId,
+        template_fields: {
+          account_id: accountId,
+          amount_cents: candidate.amountCents,
+          currency: candidate.currency,
+          category: candidate.category,
+          date,
+          raw_text: candidate.rawText,
+          merchant: candidate.merchant,
+          source: candidate.merchant || candidate.rawText,
+          type: candidate.type,
+          is_recurring: true,
+          recurrence_rule: recurrenceRule,
+          household_id: candidate.householdId,
+        },
       },
       updated_at: new Date().toISOString(),
     };
 
     if (existing?.id) {
-      await updateExistingTemplate(existing, payload);
+      const mergedPayload = mergePlaidRecurringTemplatePayload(
+        existing,
+        payload,
+      );
+      if (mergedPayload) {
+        await updateExistingTemplate(existing, mergedPayload);
+      }
       continue;
     }
 
@@ -772,17 +795,212 @@ async function upsertPlaidRecurringTemplates(params: {
       if ((error as SupabaseErrorLike).code !== "23505") throw error;
       const racedExisting = await selectExistingTemplate(candidate);
       if (!racedExisting?.id) throw error;
-      await updateExistingTemplate(racedExisting, payload);
+      const mergedPayload = mergePlaidRecurringTemplatePayload(
+        racedExisting,
+        payload,
+      );
+      if (mergedPayload) {
+        await updateExistingTemplate(racedExisting, mergedPayload);
+      }
     }
   }
+}
+
+interface PlaidRecurringTemplateRow extends Record<string, unknown> {
+  id: string;
+  date?: string | null;
+  account_id?: string | null;
+  deleted_at?: string | null;
+  deleted_reason?: string | null;
+  provider_fields?: Record<string, unknown> | null;
+  user_overrides?: Record<string, unknown> | null;
+}
+
+const PLAID_RECURRING_TEMPLATE_VISIBLE_FIELDS = [
+  "account_id",
+  "amount_cents",
+  "currency",
+  "category",
+  "date",
+  "raw_text",
+  "merchant",
+  "source",
+  "type",
+  "is_recurring",
+  "recurrence_rule",
+  "household_id",
+] as const;
+
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+export function mergePlaidRecurringTemplatePayload(
+  existing: PlaidRecurringTemplateRow,
+  providerPayload: Record<string, unknown>,
+): Record<string, unknown> | null {
+  if (existing.deleted_reason === "user_deleted") {
+    return null;
+  }
+  if (
+    existing.deleted_at &&
+    existing.deleted_reason !== "provider_recurring_retired" &&
+    existing.deleted_reason !== "provider_inference_retired"
+  ) {
+    return null;
+  }
+
+  const previousProviderFields = existing.provider_fields || {};
+  const previousTemplateFields =
+    previousProviderFields.template_fields &&
+    typeof previousProviderFields.template_fields === "object"
+      ? (previousProviderFields.template_fields as Record<string, unknown>)
+      : null;
+  const userOverrides = existing.user_overrides || {};
+  const merged = { ...providerPayload };
+
+  for (const field of PLAID_RECURRING_TEMPLATE_VISIBLE_FIELDS) {
+    const hasExplicitOverride = Object.prototype.hasOwnProperty.call(
+      userOverrides,
+      field,
+    );
+    const matchedPreviousProviderValue =
+      previousTemplateFields != null &&
+      sameJsonValue(existing[field], previousTemplateFields[field]);
+    if (hasExplicitOverride || !matchedPreviousProviderValue) {
+      merged[field] = existing[field] ?? null;
+    }
+  }
+
+  return merged;
+}
+
+export interface PreparedPlaidTransactionMutations {
+  inserts: BankExpenseMutationRecord[];
+  updates: BankExpenseMutationRecord[];
+  skipped: number;
+  currencyMismatches: number;
+}
+
+export async function preparePlaidTransactionMutations(
+  params: PersistTransactionsParams,
+): Promise<PreparedPlaidTransactionMutations> {
+  if (!params.transactions.length) {
+    return {
+      inserts: [],
+      updates: [],
+      skipped: 0,
+      currencyMismatches: 0,
+    };
+  }
+
+  const mapped: ExpenseUpsertRecord[] = params.transactions
+    .filter((transaction) => transaction.transaction_id)
+    .map((transaction) => ({
+      ...mapPlaidTransactionToExpense({
+        userId: params.userId,
+        bankAccountId: params.bankAccountId,
+        defaultCurrency: params.accountCurrency,
+        accountType: params.accountType,
+        transaction,
+      }),
+      household_id: params.householdId ?? null,
+      account_id: params.accountId ?? null,
+    }));
+  const normalized = mapped.map((record) =>
+    normalizeCurrency(record, params.accountCurrency),
+  );
+  const currencyMismatches = normalized.filter(
+    (entry) => entry.mismatch,
+  ).length;
+  const normalizedRecords = normalized.map((entry) => entry.record);
+  if (!mapped.length) {
+    return {
+      inserts: [],
+      updates: [],
+      skipped: params.transactions.length,
+      currencyMismatches: 0,
+    };
+  }
+
+  const postedIds = normalizedRecords.map(
+    (record) => record.provider_transaction_id,
+  );
+  const pendingIds = params.transactions
+    .map((transaction) => transaction.pending_transaction_id)
+    .filter((id): id is string => Boolean(id));
+  const lookupIds = Array.from(new Set([...postedIds, ...pendingIds]));
+  const existingRows: ExistingExpenseProjectionRow[] = [];
+  for (
+    let index = 0;
+    index < lookupIds.length;
+    index += PROVIDER_TRANSACTION_LOOKUP_BATCH_SIZE
+  ) {
+    const batch = lookupIds.slice(
+      index,
+      index + PROVIDER_TRANSACTION_LOOKUP_BATCH_SIZE,
+    );
+    if (!batch.length) continue;
+    const { data, error } = await params.supabase
+      .from("expenses")
+      .select(
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
+      )
+      .eq("user_id", params.userId)
+      .eq("provider", PLAID_PROVIDER)
+      .eq("bank_account_id", params.bankAccountId)
+      .in("provider_transaction_id", batch);
+    if (error) throw error;
+    existingRows.push(...((data || []) as ExistingExpenseProjectionRow[]));
+  }
+
+  const providerPendingTransactionIds = new Map<string, string>();
+  for (const transaction of params.transactions) {
+    if (transaction.pending_transaction_id) {
+      providerPendingTransactionIds.set(
+        transaction.transaction_id,
+        transaction.pending_transaction_id,
+      );
+    }
+  }
+  const mutationPlan = buildBankExpenseMutationPlan({
+    records: normalizedRecords.map((record) => ({
+      ...record,
+      is_recurring: false,
+      recurrence_rule: null,
+    })),
+    transactions: params.transactions,
+    existingRows,
+    providerPendingTransactionIds,
+    cursorGeneration: params.cursorGeneration ?? 0,
+  });
+  const inserts = params.hideNewTransactions
+    ? mutationPlan.inserts.map((record) => ({
+        ...record,
+        deleted_at: new Date().toISOString(),
+        deleted_reason: "bank_account_inactive",
+      }))
+    : mutationPlan.inserts;
+  return {
+    inserts,
+    updates: mutationPlan.updates,
+    skipped: params.transactions.length - normalizedRecords.length,
+    currencyMismatches,
+  };
+}
+
+export async function persistPreparedPlaidRecurringTemplates(params: {
+  supabase: SupabaseClient;
+  candidates: PlaidRecurringTemplateCandidate[];
+}): Promise<void> {
+  await upsertPlaidRecurringTemplates(params);
 }
 
 function normalizeExistingRecurrenceCandidate(
   row: ExistingExpenseProjectionRow,
 ): RecurrenceCandidateRow | null {
-  const record = row as
-    & ExistingExpenseProjectionRow
-    & Partial<RecurrenceCandidateRow>;
+  const record = row as ExistingExpenseProjectionRow &
+    Partial<RecurrenceCandidateRow>;
   if (!record.provider_transaction_id || !record.date || !record.amount_cents) {
     return null;
   }
@@ -811,7 +1029,7 @@ function largestAmountCluster(
 
   for (const seed of sorted) {
     const cluster = sorted.filter((row) =>
-      amountsCloseEnough(row.amount_cents, seed.amount_cents)
+      amountsCloseEnough(row.amount_cents, seed.amount_cents),
     );
     if (cluster.length > best.length) {
       best = cluster;
@@ -892,85 +1110,13 @@ function detectRecurrencePattern(
   return null;
 }
 
-function normalizeRecurringMerchant(value?: string | null): string | null {
-  const normalized = String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, " ")
-    .replace(/\b\d{2,}\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (normalized.length < 3) {
-    return null;
-  }
-  return normalized;
-}
-
-function merchantKeysAreSimilar(left: string, right: string): boolean {
-  if (left === right) return true;
-
-  const shorter = left.length <= right.length ? left : right;
-  const longer = left.length <= right.length ? right : left;
-  if (shorter.length >= 6 && longer.startsWith(shorter)) return true;
-
-  const leftTokens = merchantTokens(left);
-  const rightTokens = merchantTokens(right);
-  if (!leftTokens.size || !rightTokens.size) {
-    return editDistance(left, right) <= allowedNameDistance(left, right);
-  }
-
-  const shared =
-    [...leftTokens].filter((token) => rightTokens.has(token)).length;
-  const union = new Set([...leftTokens, ...rightTokens]).size;
-  if (union > 0 && shared / union >= RECURRING_DESCRIPTION_TOKEN_SIMILARITY) {
-    return true;
-  }
-
-  return editDistance(left, right) <= allowedNameDistance(left, right);
-}
-
-function merchantTokens(value: string): Set<string> {
-  return new Set(value.split(" ").filter((token) => token.length >= 3));
-}
-
-function allowedNameDistance(left: string, right: string): number {
-  const maxLength = Math.max(left.length, right.length);
-  if (maxLength < 6) return 0;
-  return Math.max(
-    1,
-    Math.round(maxLength * RECURRING_DESCRIPTION_EDIT_TOLERANCE),
-  );
-}
-
-function editDistance(left: string, right: string): number {
-  if (left === right) return 0;
-  if (!left) return right.length;
-  if (!right) return left.length;
-
-  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-  for (let i = 0; i < left.length; i += 1) {
-    const current = new Array<number>(right.length + 1).fill(0);
-    current[0] = i + 1;
-    for (let j = 0; j < right.length; j += 1) {
-      const cost = left[i] === right[j] ? 0 : 1;
-      current[j + 1] = Math.min(
-        previous[j + 1] + 1,
-        current[j] + 1,
-        previous[j] + cost,
-      );
-    }
-    previous = current;
-  }
-
-  return previous[right.length];
-}
-
 function buildPlaidRecurringProviderHint(
   transaction?: PlaidTransaction,
 ): Record<string, unknown> | null {
   if (!transaction) return null;
   const raw = transaction as PlaidTransaction & Record<string, unknown>;
-  const streamId = raw.recurring_stream_id || raw.stream_id ||
-    raw.recurring_transaction_id;
+  const streamId =
+    raw.recurring_stream_id || raw.stream_id || raw.recurring_transaction_id;
   if (!streamId) return null;
   return {
     plaid_stream_id: streamId,
@@ -982,8 +1128,8 @@ function buildPlaidRecurringRuleFromProviderHint(
   transaction: PlaidTransaction,
 ): Record<string, unknown> | null {
   const raw = transaction as PlaidTransaction & Record<string, unknown>;
-  const streamId = raw.recurring_stream_id || raw.stream_id ||
-    raw.recurring_transaction_id;
+  const streamId =
+    raw.recurring_stream_id || raw.stream_id || raw.recurring_transaction_id;
   if (!streamId) return null;
   const frequency = mapPlaidFrequencyToRecurrence(raw.frequency);
   if (!frequency) return null;
@@ -1043,7 +1189,7 @@ export async function upsertPlaidAccounts(
   params: UpsertAccountsParams,
 ): Promise<UpsertAccountsResult> {
   if (!params.accounts.length) {
-    return { records: [] };
+    return { records: [], allRecords: [] };
   }
 
   const disabledProviderAccountIds = await loadDisabledProviderAccountIds({
@@ -1058,11 +1204,13 @@ export async function upsertPlaidAccounts(
     provider: PLAID_PROVIDER,
     plaid_account_id: account.account_id,
     provider_account_id: account.account_id,
-    name: account.name || account.official_name ||
-      `Account ${account.account_id}`,
+    provider_persistent_account_id: account.persistent_account_id || null,
+    name:
+      account.name || account.official_name || `Account ${account.account_id}`,
     official_name: account.official_name || null,
     mask: account.mask || null,
-    currency: account.balances?.iso_currency_code ||
+    currency:
+      account.balances?.iso_currency_code ||
       account.balances?.unofficial_currency_code ||
       "USD",
     type: account.type || null,
@@ -1070,7 +1218,18 @@ export async function upsertPlaidAccounts(
     status: disabledProviderAccountIds.has(account.account_id)
       ? "disabled"
       : "active",
-    raw_provider_payload: account,
+    provider_balance_current_cents: plaidBalanceToCents(
+      account.balances?.current,
+    ),
+    provider_balance_available_cents: plaidBalanceToCents(
+      account.balances?.available,
+    ),
+    provider_balance_limit_cents: plaidBalanceToCents(account.balances?.limit),
+    provider_balance_updated_at: new Date().toISOString(),
+    raw_provider_payload: {
+      account_id: account.account_id,
+      persistent_account_id: account.persistent_account_id || null,
+    },
   }));
 
   const { data, error } = await params.supabase
@@ -1079,14 +1238,35 @@ export async function upsertPlaidAccounts(
       onConflict: "bank_connection_id,provider,provider_account_id",
     })
     .select(
-      "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype, status",
+      "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype, status, provider_balance_current_cents, provider_balance_available_cents, provider_balance_limit_cents, provider_balance_updated_at",
     );
-
-  if (error) {
-    throw error;
+  if (error) throw error;
+  const allRecords = (data || []) as BankAccountRecord[];
+  const activeAccountIds = allRecords
+    .filter((account) => account.status === "active")
+    .map((account) => account.id);
+  if (activeAccountIds.length > 0) {
+    const { error: restoreError } = await params.supabase
+      .from("expenses")
+      .update({
+        deleted_at: null,
+        deleted_reason: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", params.userId)
+      .eq("provider", PLAID_PROVIDER)
+      .eq("deleted_reason", "bank_account_inactive")
+      .in("bank_account_id", activeAccountIds);
+    if (restoreError) throw restoreError;
   }
+  return {
+    records: activeBankAccountRecords(allRecords),
+    allRecords,
+  };
+}
 
-  return { records: activeBankAccountRecords(data || []) };
+function plaidBalanceToCents(value: number | null | undefined): number | null {
+  return Number.isFinite(value) ? Math.round(Number(value) * 100) : null;
 }
 
 export interface StageTransactionsParams {
@@ -1175,6 +1355,7 @@ export async function persistPlaidTransactions(
         userId: params.userId,
         bankAccountId: params.bankAccountId,
         defaultCurrency: params.accountCurrency,
+        accountType: params.accountType,
         transaction,
       }),
       household_id: params.householdId ?? null,
@@ -1182,7 +1363,7 @@ export async function persistPlaidTransactions(
     }));
 
   const normalized = mapped.map((record) =>
-    normalizeCurrency(record, params.accountCurrency)
+    normalizeCurrency(record, params.accountCurrency),
   );
   const currencyMismatches = normalized.filter(
     (entry) => entry.mismatch,
@@ -1224,7 +1405,7 @@ export async function persistPlaidTransactions(
     const { data, error: selectError } = await params.supabase
       .from("expenses")
       .select(
-        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule",
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
       )
       .eq("user_id", params.userId)
       .eq("provider", PLAID_PROVIDER)
@@ -1248,19 +1429,6 @@ export async function persistPlaidTransactions(
     }
   }
 
-  const recurringByProviderTransactionId = inferPlaidRecurringRules({
-    records: normalizedRecords,
-    transactions: params.transactions,
-    existingRows,
-  });
-  const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
-    userId: params.userId,
-    householdId: params.householdId ?? null,
-    bankAccountId: params.bankAccountId,
-    accountId: params.accountId ?? null,
-    records: normalizedRecords,
-    recurringByProviderTransactionId,
-  });
   const postedOccurrenceRecords = normalizedRecords.map((record) => ({
     ...record,
     is_recurring: false,
@@ -1300,11 +1468,6 @@ export async function persistPlaidTransactions(
     }
   }
 
-  await upsertPlaidRecurringTemplates({
-    supabase: params.supabase,
-    candidates: recurringTemplateCandidates,
-  });
-
   return {
     inserted: mutationPlan.inserts.length,
     updated: mutationPlan.updates.length,
@@ -1318,7 +1481,7 @@ export async function upsertTinkAccounts(
   params: UpsertTinkAccountsParams,
 ): Promise<UpsertAccountsResult> {
   if (!params.accounts.length) {
-    return { records: [] };
+    return { records: [], allRecords: [] };
   }
 
   const disabledProviderAccountIds = await loadDisabledProviderAccountIds({
@@ -1340,7 +1503,8 @@ export async function upsertTinkAccounts(
       name: account.name || `Account ${account.id}`,
       official_name: null,
       mask: account.accountNumber?.iban || null,
-      currency: account.balances?.booked?.currencyCode ||
+      currency:
+        account.balances?.booked?.currencyCode ||
         account.balances?.available?.currencyCode ||
         "USD",
       type: account.type?.name || null,
@@ -1365,7 +1529,10 @@ export async function upsertTinkAccounts(
     throw error;
   }
 
-  return { records: activeBankAccountRecords(data || []) };
+  return {
+    records: activeBankAccountRecords(data || []),
+    allRecords: data || [],
+  };
 }
 
 export async function persistTinkTransactions(
@@ -1400,7 +1567,7 @@ export async function persistTinkTransactions(
     }));
 
   const normalized = mapped.map((record) =>
-    normalizeCurrency(record, params.accountCurrency)
+    normalizeCurrency(record, params.accountCurrency),
   );
   const currencyMismatches = normalized.filter(
     (entry) => entry.mismatch,
@@ -1452,11 +1619,11 @@ export async function persistTinkTransactions(
         ...record,
         ...(existing.split_group_id
           ? {
-            amount_cents: existing.amount_cents ?? record.amount_cents,
-            currency: existing.currency ?? record.currency,
-            household_id: existing.household_id ?? null,
-            account_id: existing.account_id ?? null,
-          }
+              amount_cents: existing.amount_cents ?? record.amount_cents,
+              currency: existing.currency ?? record.currency,
+              household_id: existing.household_id ?? null,
+              account_id: existing.account_id ?? null,
+            }
           : {}),
         id: existing.id,
       });

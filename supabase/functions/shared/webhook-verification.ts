@@ -47,16 +47,25 @@ const PLAID_MAX_WEBHOOK_AGE_SECONDS = 5 * 60;
 async function fetchPlaidJWK(keyId: string): Promise<PlaidJWK> {
   // Check cache first
   const cached = jwkCache.get(keyId);
-  if (cached && cached.expiresAt > Date.now()) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (
+    cached &&
+    cached.expiresAt > Date.now() &&
+    (!cached.key.expired_at || cached.key.expired_at >= nowSeconds)
+  ) {
     return cached.key;
   }
+  jwkCache.delete(keyId);
 
   const config = getPlaidConfig();
   const response = await fetchWithRetry(
     `${config.baseUrl}/webhook_verification_key/get`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Plaid-Version": config.apiVersion,
+      },
       body: JSON.stringify({
         client_id: config.clientId,
         secret: config.secret,
@@ -73,6 +82,7 @@ async function fetchPlaidJWK(keyId: string): Promise<PlaidJWK> {
   }
 
   const data = (await response.json()) as PlaidWebhookVerificationKeyResponse;
+  validatePlaidJWK(data.key, keyId);
 
   // Cache the key
   jwkCache.set(keyId, {
@@ -81,6 +91,20 @@ async function fetchPlaidJWK(keyId: string): Promise<PlaidJWK> {
   });
 
   return data.key;
+}
+
+function validatePlaidJWK(jwk: PlaidJWK, expectedKeyId: string): void {
+  if (
+    jwk.kid !== expectedKeyId ||
+    jwk.alg !== "ES256" ||
+    jwk.kty !== "EC" ||
+    jwk.crv !== "P-256" ||
+    jwk.use !== "sig" ||
+    !jwk.x ||
+    !jwk.y
+  ) {
+    throw new Error("Plaid returned an invalid webhook verification key");
+  }
 }
 
 /**
@@ -273,13 +297,6 @@ export async function verifyPlaidWebhook(
     // Fetch the JWK
     const jwk = await fetchPlaidJWK(header.kid);
 
-    // Check if key is expired
-    if (jwk.expired_at && jwk.expired_at < Math.floor(Date.now() / 1000)) {
-      // Clear cache and refetch
-      jwkCache.delete(header.kid);
-      return { valid: false, error: "JWK has expired" };
-    }
-
     // Import the key
     const cryptoKey = await importPlaidJWK(jwk);
 
@@ -325,9 +342,8 @@ export async function verifyPlaidWebhook(
 
     return { valid: true, keyId: header.kid };
   } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : "Unknown verification error";
+    const message =
+      error instanceof Error ? error.message : "Unknown verification error";
     return { valid: false, error: message };
   }
 }
@@ -576,12 +592,12 @@ export async function generateWebhookEventId(
     const context = payload.context as
       | { userId?: string; externalUserId?: string }
       | undefined;
-    const externalUserId = context?.externalUserId || context?.userId ||
-      "unknown";
+    const externalUserId =
+      context?.externalUserId || context?.userId || "unknown";
     const content = payload.content as
       | {
-        credentialsId?: string;
-      }
+          credentialsId?: string;
+        }
       | undefined;
     const credentialsId = content?.credentialsId || "";
 

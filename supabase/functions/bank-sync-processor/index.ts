@@ -6,6 +6,7 @@ import {
   resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
 import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
+import { requiresPlaidRelinkForError } from "../shared/plaid-update-mode.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   canUsePlaidBankSync,
@@ -157,6 +158,19 @@ Deno.serve(async (req) => {
       console.log(`[bank-sync-processor] Released ${releasedCount} stuck jobs`);
     }
 
+    let recoveryQueued = 0;
+    if (AUTO_BANK_SYNC_ENABLED) {
+      try {
+        recoveryQueued = await enqueueStalePlaidRecoveryJobs(supabase as any);
+      } catch (recoveryError) {
+        await reportEdgeFunctionError({
+          functionName: "bank-sync-processor",
+          error: recoveryError,
+          context: { phase: "enqueue_stale_plaid_recovery" },
+        });
+      }
+    }
+
     // Fetch pending jobs (atomic claim via update with returning)
     // Use FOR UPDATE SKIP LOCKED pattern for atomic job claiming via RPC
     const processorId = crypto.randomUUID();
@@ -186,7 +200,11 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           processed: 0,
-          message: "No pending jobs",
+          recoveryQueued,
+          message:
+            recoveryQueued > 0
+              ? "Queued stale Plaid connections for recovery"
+              : "No pending jobs",
         }),
         {
           status: 200,
@@ -282,6 +300,26 @@ Deno.serve(async (req) => {
               connection: connection as BankConnection,
               removalReason: "subscription_entitlement_expired",
             });
+            const { data: completedRows, error: completeError } = await supabase
+              .from("bank_sync_jobs")
+              .update({
+                status: "completed",
+                processing_started_at: null,
+                updated_at: new Date().toISOString(),
+                processed_at: new Date().toISOString(),
+                last_error_code: null,
+                last_error_at: null,
+              })
+              .eq("id", job.id)
+              .eq("status", "processing")
+              .contains("payload", { processor_id: processorId })
+              .select("id");
+            if (completeError) throw completeError;
+            if (!completedRows?.length) {
+              throw new Error(
+                "Lost sync job ownership after entitlement removal",
+              );
+            }
             results.succeeded++;
             results.processed++;
             continue;
@@ -415,7 +453,6 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: "Failed to process jobs",
-        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,
@@ -424,6 +461,36 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function enqueueStalePlaidRecoveryJobs(
+  supabase: ReturnType<typeof createClient>,
+): Promise<number> {
+  const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: connections, error } = await supabase
+    .from("bank_connections")
+    .select("id")
+    .eq("provider", PLAID_PROVIDER)
+    .eq("status", "active")
+    .is("removed_at", null)
+    .or("item_status.is.null,item_status.eq.active")
+    .or(
+      `needs_resync.eq.true,last_successful_sync_at.is.null,last_successful_sync_at.lt.${staleBefore}`,
+    )
+    .order("last_successful_sync_at", { ascending: true, nullsFirst: true })
+    .limit(BATCH_SIZE);
+  if (error) throw error;
+
+  let queued = 0;
+  for (const connection of connections || []) {
+    const result = await enqueuePlaidSyncJob({
+      supabase,
+      connectionId: String(connection.id),
+      triggerSource: "scheduled_recovery",
+    });
+    if (result.enqueued) queued += 1;
+  }
+  return queued;
+}
 
 async function processTinkJob(
   supabase: any,
@@ -537,20 +604,31 @@ async function processPlaidJob(
   console.log(
     "[bank-sync-processor] Plaid sync response payload",
     JSON.stringify({
-      jobId: job.id,
-      connectionId: connection.id,
-      payload: syncPayload,
+      status: syncPayload?.status ?? null,
+      connectionCount: syncPayload?.connections?.length ?? 0,
     }),
   );
 
+  if (!syncPayload || !Array.isArray(syncPayload.connections)) {
+    throw new Error("Plaid sync returned an invalid response payload");
+  }
+  const connectionSummary = syncPayload.connections.find(
+    (item) => item.connectionId === connection.id,
+  );
   if (
-    syncPayload?.status === "partial_error" ||
-    syncPayload?.connections?.some((item) => item.status !== "succeeded")
+    !connectionSummary ||
+    (syncPayload.status !== "succeeded" &&
+      syncPayload.status !== "partial_error")
   ) {
-    const failedConnection = syncPayload?.connections?.find(
-      (item) =>
-        item.connectionId === connection.id && item.status !== "succeeded",
-    );
+    throw new Error("Plaid sync returned an invalid response payload");
+  }
+
+  if (
+    syncPayload.status === "partial_error" ||
+    connectionSummary.status !== "succeeded"
+  ) {
+    const failedConnection =
+      connectionSummary.status !== "succeeded" ? connectionSummary : null;
     if (
       failedConnection?.errorCode &&
       isPlaidSyncTerminalHandoffError(failedConnection.errorCode)
@@ -572,5 +650,7 @@ async function processPlaidJob(
 }
 
 function isPlaidSyncTerminalHandoffError(errorCode: string): boolean {
-  return errorCode === "ITEM_LOGIN_REQUIRED" || errorCode === "INVALID_CURSOR";
+  return (
+    requiresPlaidRelinkForError(errorCode) || errorCode === "INVALID_CURSOR"
+  );
 }

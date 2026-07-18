@@ -2,6 +2,13 @@ export const PLAID_REQUIRED_RELINK_STATE = "required";
 export const PLAID_NEW_ACCOUNTS_RELINK_STATE = "new_accounts_available";
 
 const PLAID_ACCOUNT_SELECTION_COUNTRY_CODES = new Set(["US", "CA"]);
+const PLAID_RELINK_ERROR_CODES = new Set([
+  "ITEM_LOGIN_REQUIRED",
+  "ACCESS_NOT_GRANTED",
+  "ADDITIONAL_CONSENT_REQUIRED",
+  "ITEM_LOCKED",
+  "USER_SETUP_REQUIRED",
+]);
 
 export interface PlaidSelectedAccountMetadata {
   id: string;
@@ -153,7 +160,7 @@ export function classifyPlaidItemWebhook(params: {
   const webhookCode = normalizeOptionalString(params.webhookCode);
   const errorCode = normalizeOptionalString(params.errorCode);
 
-  if (webhookCode === "ERROR" && errorCode === "ITEM_LOGIN_REQUIRED") {
+  if (webhookCode === "ERROR" && requiresPlaidRelinkForError(errorCode)) {
     return {
       shouldEnqueueSync: false,
       status: "needs_reauth",
@@ -198,6 +205,14 @@ export function classifyPlaidItemWebhook(params: {
   }
 
   return null;
+}
+
+export function requiresPlaidRelinkForError(
+  errorCode?: string | null,
+): boolean {
+  return PLAID_RELINK_ERROR_CODES.has(
+    normalizeOptionalString(errorCode)?.toUpperCase() || "",
+  );
 }
 
 function normalizeOptionalString(value: unknown): string | null {

@@ -161,9 +161,10 @@ Deno.serve(async (req: Request) => {
     let query = supabase
       .from("expenses")
       .select(
-        "amount_cents, currency, category, date, normalized_amount_cents, base_currency",
+        "amount_cents, currency, category, date, normalized_amount_cents, base_currency, analytics_is_final, analytics_counts_toward_income",
       )
-      .eq("type", "income")
+      .eq("analytics_is_final", true)
+      .eq("analytics_counts_toward_income", true)
       .eq("user_id", userId)
       .is("household_id", null) // Personal income only
       .is("deleted_at", null) // Exclude soft-deleted transactions
@@ -234,7 +235,8 @@ Deno.serve(async (req: Request) => {
     const { data: ytdRecords } = await supabase
       .from("expenses")
       .select("amount_cents")
-      .eq("type", "income")
+      .eq("analytics_is_final", true)
+      .eq("analytics_counts_toward_income", true)
       .eq("user_id", userId)
       .is("household_id", null)
       .is("deleted_at", null)

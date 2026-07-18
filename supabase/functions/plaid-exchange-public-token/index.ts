@@ -21,6 +21,7 @@ import {
   buildPlaidDuplicateGroupKey,
   normalizePlaidSelectedAccountIds,
   normalizePlaidSelectedAccounts,
+  type PlaidSelectedAccountMetadata,
 } from "../shared/plaid-update-mode.ts";
 import { encryptSecret } from "../shared/token-encryption.ts";
 import {
@@ -204,6 +205,8 @@ Deno.serve(async (req) => {
         supabase,
         userId: authResult.userId,
         selectedAccountIds,
+        selectedAccounts,
+        institutionId: body.institutionId,
         targetHouseholdId,
       });
 
@@ -251,7 +254,7 @@ Deno.serve(async (req) => {
         const { data: existingAccounts } = await supabase
           .from("bank_accounts")
           .select(
-            "id, name, mask, type, subtype, currency, plaid_account_id, provider_account_id",
+            "id, name, mask, type, subtype, currency, plaid_account_id, provider_account_id, provider_balance_current_cents, provider_balance_available_cents, provider_balance_limit_cents, provider_balance_updated_at",
           )
           .eq("bank_connection_id", existingConnection.id);
 
@@ -291,30 +294,6 @@ Deno.serve(async (req) => {
             },
           );
         }
-      }
-    }
-
-    if (!requestedConnectionId && body.institutionId?.trim()) {
-      const duplicateConnections = await findInstitutionDuplicateConnections({
-        supabase,
-        institutionId: body.institutionId,
-        userId: authResult.userId,
-        targetHouseholdId,
-      });
-
-      if (duplicateConnections.length) {
-        return new Response(
-          JSON.stringify({
-            error:
-              "This institution is already connected. Use the existing bank connection instead of linking it again.",
-            errorCode: "duplicate_item_accounts",
-            duplicateConnectionIds: duplicateConnections,
-          }),
-          {
-            status: 409,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
       }
     }
 
@@ -503,12 +482,7 @@ Deno.serve(async (req) => {
       console.log(
         "[plaid-exchange] Exchange completed",
         JSON.stringify({
-          connectionId,
-          duplicateGroupKey,
           isNewConnection,
-          itemId: plaidResponse.item_id,
-          linkSessionId: body.linkSessionId || null,
-          requestId: plaidResponse.request_id || null,
           selectedAccountCount: selectedAccounts.length,
         }),
       );
@@ -772,38 +746,17 @@ async function findDuplicatePlaidConnections(params: {
   supabase: any;
   userId: string;
   selectedAccountIds: string[];
+  selectedAccounts: PlaidSelectedAccountMetadata[];
+  institutionId?: string;
   targetHouseholdId: string | null;
 }): Promise<string[]> {
-  const { data: bankAccounts, error: bankAccountsError } = await params.supabase
-    .from("bank_accounts")
-    .select("bank_connection_id, provider_account_id")
-    .eq("provider", PLAID_PROVIDER)
-    .in("provider_account_id", params.selectedAccountIds);
-
-  if (bankAccountsError) {
-    throw bankAccountsError;
-  }
-
-  const candidateConnectionIds = Array.from(
-    new Set(
-      ((bankAccounts || []) as { bank_connection_id: string | null }[])
-        .map((row) => row.bank_connection_id)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-
-  if (!candidateConnectionIds.length) {
-    return [];
-  }
-
   let connectionsQuery = params.supabase
     .from("bank_connections")
-    .select("id")
+    .select("id, metadata")
     .eq("user_id", params.userId)
     .eq("provider", PLAID_PROVIDER)
     .is("removed_at", null)
-    .in("status", ["pending", "active", "needs_reauth", "error"])
-    .in("id", candidateConnectionIds);
+    .in("status", ["pending", "active", "needs_reauth", "error"]);
 
   connectionsQuery = params.targetHouseholdId
     ? connectionsQuery.eq("household_id", params.targetHouseholdId)
@@ -815,9 +768,79 @@ async function findDuplicatePlaidConnections(params: {
     throw connectionsError;
   }
 
-  return ((connections || []) as { id: string }[])
-    .map((row) => row.id)
-    .filter(Boolean);
+  const normalizedInstitutionId = params.institutionId?.trim() || null;
+  const candidateConnections = (
+    (connections || []) as Array<{
+      id: string;
+      metadata?: Record<string, unknown> | null;
+    }>
+  ).filter((connection) => {
+    if (!normalizedInstitutionId) return true;
+    const existingInstitutionId = String(
+      connection.metadata?.institution_id || "",
+    ).trim();
+    return (
+      !existingInstitutionId ||
+      existingInstitutionId === normalizedInstitutionId
+    );
+  });
+  if (candidateConnections.length === 0) return [];
+
+  const candidateConnectionIds = candidateConnections.map(({ id }) => id);
+  const { data: bankAccounts, error: bankAccountsError } = await params.supabase
+    .from("bank_accounts")
+    .select(
+      "bank_connection_id, provider_account_id, name, mask, type, subtype",
+    )
+    .eq("provider", PLAID_PROVIDER)
+    .in("bank_connection_id", candidateConnectionIds);
+  if (bankAccountsError) throw bankAccountsError;
+
+  const selectedProviderIds = new Set(params.selectedAccountIds);
+  const selectedSignatures = new Set(
+    normalizedInstitutionId
+      ? params.selectedAccounts
+          .map(plaidAccountDuplicateSignature)
+          .filter((signature): signature is string => signature != null)
+      : [],
+  );
+  const duplicateConnectionIds = new Set<string>();
+  for (const account of (bankAccounts || []) as Array<{
+    bank_connection_id?: string | null;
+    provider_account_id?: string | null;
+    name?: string | null;
+    mask?: string | null;
+    type?: string | null;
+    subtype?: string | null;
+  }>) {
+    const signature = plaidAccountDuplicateSignature(account);
+    if (
+      selectedProviderIds.has(account.provider_account_id || "") ||
+      (signature != null && selectedSignatures.has(signature))
+    ) {
+      if (account.bank_connection_id) {
+        duplicateConnectionIds.add(account.bank_connection_id);
+      }
+    }
+  }
+  return Array.from(duplicateConnectionIds);
+}
+
+function plaidAccountDuplicateSignature(account: {
+  name?: string | null;
+  mask?: string | null;
+  type?: string | null;
+  subtype?: string | null;
+}): string | null {
+  const name = account.name?.trim().toLowerCase() || "";
+  const mask = account.mask?.trim().toLowerCase() || "";
+  if (!name && !mask) return null;
+  return [
+    name,
+    mask,
+    account.type?.trim().toLowerCase() || "",
+    account.subtype?.trim().toLowerCase() || "",
+  ].join("|");
 }
 
 async function cleanupOrphanPlaidItem(params: {
@@ -869,41 +892,6 @@ async function persistOrphanPlaidRemovalJob(params: {
   if (error) {
     throw error;
   }
-}
-
-async function findInstitutionDuplicateConnections(params: {
-  supabase: any;
-  institutionId: string;
-  userId: string;
-  targetHouseholdId: string | null;
-}): Promise<string[]> {
-  const institutionId = params.institutionId.trim();
-  if (!institutionId) {
-    return [];
-  }
-
-  let query = params.supabase
-    .from("bank_connections")
-    .select("id")
-    .eq("user_id", params.userId)
-    .eq("provider", PLAID_PROVIDER)
-    .is("removed_at", null)
-    .in("status", ["pending", "active", "needs_reauth", "error"])
-    .eq("metadata->>institution_id", institutionId);
-
-  query = params.targetHouseholdId
-    ? query.eq("household_id", params.targetHouseholdId)
-    : query.is("household_id", null);
-
-  const { data: connections, error } = await query;
-
-  if (error) {
-    throw error;
-  }
-
-  return ((connections || []) as { id: string }[])
-    .map((row) => row.id)
-    .filter(Boolean);
 }
 
 async function rollbackLocalPlaidExchangeState(params: {

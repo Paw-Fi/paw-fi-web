@@ -55,7 +55,9 @@ function getScenarioPlannerModelNames(): string[] {
 }
 
 function getScenarioVertexTimeoutMs(): number {
-  const configured = Number(Deno.env.get("AI_SCENARIO_VERTEX_TIMEOUT_MS") || "");
+  const configured = Number(
+    Deno.env.get("AI_SCENARIO_VERTEX_TIMEOUT_MS") || "",
+  );
   if (Number.isFinite(configured) && configured >= 5000) {
     return configured;
   }
@@ -63,7 +65,10 @@ function getScenarioVertexTimeoutMs(): number {
 }
 
 function createTimeoutFetch(timeoutMs: number): typeof fetch {
-  return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+  return ((
+    input: Parameters<typeof fetch>[0],
+    init?: Parameters<typeof fetch>[1],
+  ) =>
     fetch(input, {
       ...init,
       signal: init?.signal ?? AbortSignal.timeout(timeoutMs),
@@ -494,15 +499,19 @@ serve(async (req: Request): Promise<Response> => {
     // Build base queries for expenses and budgets (select only fields actually used)
     let expensesQuery = supabaseClient
       .from("expenses")
-      .select("user_id,date,amount_cents,currency,category,owner_type,type")
+      .select(
+        "user_id,date,amount_cents,currency,category,owner_type,type,privacy_scope,analytics_is_final,analytics_spending_multiplier,analytics_counts_toward_income",
+      )
       .gte("date", fromStr)
       .lte("date", toStr)
-      .in("type", ["expense", "income"])
       .in("currency", selectedCurrencies)
+      .eq("analytics_is_final", true)
       .is("deleted_at", null);
 
     if (mode === "household") {
-      expensesQuery = expensesQuery.eq("household_id", householdId);
+      expensesQuery = expensesQuery
+        .eq("household_id", householdId)
+        .or(`user_id.eq.${userId},privacy_scope.eq.full`);
     } else {
       expensesQuery = expensesQuery.eq("user_id", userId);
     }
@@ -615,9 +624,13 @@ serve(async (req: Request): Promise<Response> => {
       const dt = new Date(e.date as string);
       const ym = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
       const rowCurrency = normalizeCurrencyCode(e.currency) || displayCurrency;
-      const amount = centsToAmount(Math.abs(e.amount_cents as number));
-      const transactionType = String(e.type || "expense").toLowerCase();
-      const isIncome = transactionType === "income";
+      const absoluteAmount = centsToAmount(Math.abs(e.amount_cents as number));
+      const isIncome = e.analytics_counts_toward_income === true;
+      const spendingMultiplier = Number(e.analytics_spending_multiplier || 0);
+      if (!isIncome && spendingMultiplier === 0) continue;
+      const amount = isIncome
+        ? absoluteAmount
+        : absoluteAmount * spendingMultiplier;
       observedCurrencies.add(rowCurrency);
       addCurrencyAmount(
         nativeCurrencyTotals,
@@ -636,7 +649,14 @@ serve(async (req: Request): Promise<Response> => {
         day.income += converted;
       } else {
         day.spent += converted;
-        if (e.category) {
+        if (
+          e.category &&
+          !(
+            mode === "household" &&
+            e.user_id !== userId &&
+            e.privacy_scope === "balances_only"
+          )
+        ) {
           const key = String(e.category).toLowerCase();
           const ninetyDaysAgo = new Date(
             today.getTime() - 90 * 24 * 60 * 60 * 1000,

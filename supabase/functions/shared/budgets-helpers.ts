@@ -1010,10 +1010,10 @@ export async function getBudgetStatusDirect(
   let expensesQuery = supabase
     .from("expenses")
     .select(
-      "amount_cents, category, currency, date, household_id, user_id, contact_id, type",
+      "amount_cents, category, currency, date, household_id, user_id, contact_id, type, privacy_scope, analytics_is_final, analytics_spending_multiplier",
     )
-    .eq("type", "expense")
     .eq("currency", currency)
+    .eq("analytics_is_final", true)
     .is("deleted_at", null)
     .gte("date", monthStartStr)
     .lt("date", nextMonthStr);
@@ -1036,8 +1036,18 @@ export async function getBudgetStatusDirect(
   const spentMap: Record<string, number> = {};
   let totalSpent = 0;
   (expenses || []).forEach((e: any) => {
-    const amt = Number(e.amount_cents) || 0;
+    const amt =
+      Math.abs(Number(e.amount_cents) || 0) *
+      Number(e.analytics_spending_multiplier || 0);
+    if (amt === 0) return;
     totalSpent += amt;
+    if (
+      householdId &&
+      e.user_id !== userId &&
+      e.privacy_scope === "balances_only"
+    ) {
+      return;
+    }
     const cat = String(e.category || "").toLowerCase();
     const envList = categoryToEnvelope[cat];
     if (envList && envList.length) {

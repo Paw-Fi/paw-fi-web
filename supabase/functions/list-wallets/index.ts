@@ -103,7 +103,8 @@ Deno.serve(async (req: Request) => {
       );
     }
     const selectedCurrency = normalizeCurrency(body.currency);
-    const selectedCurrencies = normalizeCurrencies(body.currencies) ??
+    const selectedCurrencies =
+      normalizeCurrencies(body.currencies) ??
       (selectedCurrency ? [selectedCurrency] : null);
     if (body.currency && !selectedCurrency) {
       return jsonResponse(
@@ -119,9 +120,10 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(
         {
           success: false,
-          error: body.currencies.length > 20
-            ? "Too many currencies"
-            : "Invalid currencies",
+          error:
+            body.currencies.length > 20
+              ? "Too many currencies"
+              : "Invalid currencies",
           code: "VALIDATION_ERROR",
         },
         400,
@@ -241,14 +243,19 @@ Deno.serve(async (req: Request) => {
 
     const { data: expenseRows } = await supabase
       .from("expenses")
-      .select("account_id, amount_cents, type, is_recurring, currency")
+      .select(
+        "account_id, amount_cents, type, is_recurring, currency, analytics_is_final",
+      )
       .in("account_id", accountIds)
+      .eq("is_recurring", false)
+      .lte("date", new Date().toISOString().slice(0, 10))
       .is("deleted_at", null);
 
     const expenseOut: Record<string, number> = {};
     const incomeIn: Record<string, number> = {};
     for (const row of (expenseRows ?? []) as any[]) {
-      if (row.is_recurring === true) continue;
+      if (row.is_recurring === true || row.analytics_is_final === false)
+        continue;
       const accountId = row.account_id as string;
       const walletCurrency = accountCurrencyById.get(accountId);
       const rowCurrency = String(row.currency ?? "")
@@ -281,8 +288,8 @@ Deno.serve(async (req: Request) => {
         .trim()
         .toUpperCase();
       if (walletCurrency && rowCurrency !== walletCurrency) continue;
-      transferOut[key] = (transferOut[key] ?? 0) +
-        Number(row.amount_cents || 0);
+      transferOut[key] =
+        (transferOut[key] ?? 0) + Number(row.amount_cents || 0);
     }
 
     const transferIn: Record<string, number> = {};
@@ -296,15 +303,40 @@ Deno.serve(async (req: Request) => {
       transferIn[key] = (transferIn[key] ?? 0) + Number(row.amount_cents || 0);
     }
 
+    const linkedBankAccountIds = (accounts ?? [])
+      .map((row: any) => row.linked_bank_account_id as string | null)
+      .filter((id: string | null): id is string => Boolean(id));
+    const providerBalanceByBankAccountId = new Map<string, number>();
+    if (linkedBankAccountIds.length > 0) {
+      const { data: bankAccountRows, error: bankAccountError } = await supabase
+        .from("bank_accounts")
+        .select("id, type, provider_balance_current_cents")
+        .in("id", linkedBankAccountIds);
+      if (bankAccountError) throw bankAccountError;
+      for (const bankAccount of (bankAccountRows ?? []) as any[]) {
+        if (bankAccount.provider_balance_current_cents == null) continue;
+        const current = Number(bankAccount.provider_balance_current_cents);
+        const type = String(bankAccount.type ?? "").toLowerCase();
+        providerBalanceByBankAccountId.set(
+          bankAccount.id,
+          type === "credit" || type === "loan" ? -Math.abs(current) : current,
+        );
+      }
+    }
+
     const payload = (accounts ?? []).map((row: any) => {
       const accountId = row.id as string;
       const opening = Number(row.opening_balance_cents || 0);
-      const fallbackBalanceCents = opening +
+      const fallbackBalanceCents =
+        opening +
         (incomeIn[accountId] ?? 0) -
         (expenseOut[accountId] ?? 0) +
         (transferIn[accountId] ?? 0) -
         (transferOut[accountId] ?? 0);
-      const currentBalanceCents = fallbackBalanceCents;
+      const currentBalanceCents = row.linked_bank_account_id
+        ? (providerBalanceByBankAccountId.get(row.linked_bank_account_id) ??
+          fallbackBalanceCents)
+        : fallbackBalanceCents;
 
       return {
         ...row,
