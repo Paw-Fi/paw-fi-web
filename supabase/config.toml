@@ -134,3 +134,18 @@ port = 54327
 vector_port = 54328
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
+
+# Internal notification endpoints authenticate service-to-service requests in
+# their handlers. Opaque sb_secret keys are sent through the `apikey` header,
+# so the legacy gateway JWT check must not intercept them first.
+[functions.households-send-push-notification]
+verify_jwt = false
+
+[functions.households-process-notifications]
+verify_jwt = false
+
+[functions.households-send-nudge]
+verify_jwt = false
+
+[functions.expense-daily-nudges]
+verify_jwt = false

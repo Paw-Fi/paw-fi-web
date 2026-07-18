@@ -5,12 +5,11 @@
 # Project Dev Ref: qbuynyxyemigtnvdujts
 # Project Prod Ref: pbopcsmrcykdzbilpilf
 #
-# Required migration (apply before running this script):
-#   supabase/migrations/20260716170000_restore_notification_fallback_processing.sql
+# Required migration (apply after the internal functions are deployed):
+#   supabase/migrations/20260718100000_unify_notification_internal_auth.sql
 #
-# The migration installs the notification claim, device registration, and
-# member reminder RPCs used by these functions. It removes any old fallback
-# cron so the updated worker can be deployed safely before scheduling it again.
+# The migration replaces the Database Webhook and notification crons with one
+# Vault-backed sb_secret authentication path.
 #
 # Required Edge Function secrets:
 #   SUPABASE_URL
@@ -21,13 +20,13 @@
 #
 # Required Vault secrets for the fallback cron:
 #   supabase_url
-#   service_role_key
+#   notification_internal_secret_key (an active sb_secret_* API key)
 
 set -euo pipefail
 
 DEV_PROJECT_REF="qbuynyxyemigtnvdujts"
 PROD_PROJECT_REF="pbopcsmrcykdzbilpilf"
-REQUIRED_MIGRATION="20260716170000_restore_notification_fallback_processing.sql"
+REQUIRED_MIGRATION="20260718100000_unify_notification_internal_auth.sql"
 
 if [[ "${1:-}" == "--prod" ]]; then
   PROJECT_REF="$PROD_PROJECT_REF"
@@ -53,12 +52,12 @@ echo "  Environment: $ENV_NAME"
 echo "  Project: $PROJECT_REF"
 echo "============================================================"
 echo ""
-echo "Required migration:"
-echo "  supabase/migrations/$REQUIRED_MIGRATION"
+echo "Required Vault secret:"
+echo "  notification_internal_secret_key (active sb_secret_* key)"
 echo ""
-read -r -p "Type 'migrated' to confirm it is applied: " MIGRATION_CONFIRM
-if [[ "$MIGRATION_CONFIRM" != "migrated" ]]; then
-  echo "Deployment cancelled. Apply the required migration first."
+read -r -p "Type 'secret-configured' to confirm it exists: " SECRET_CONFIRM
+if [[ "$SECRET_CONFIRM" != "secret-configured" ]]; then
+  echo "Deployment cancelled. Configure the Vault secret first."
   exit 1
 fi
 
@@ -73,14 +72,6 @@ if [[ "$ENV_NAME" == "PRODUCTION" ]]; then
   echo ""
 fi
 
-deploy_function() {
-  local NAME=$1
-  echo "Deploying ${NAME}..."
-  supabase functions deploy "${NAME}" --project-ref "$PROJECT_REF"
-  echo "${NAME} deployed"
-  echo ""
-}
-
 deploy_internal_function() {
   local NAME=$1
   echo "Deploying ${NAME} (--no-verify-jwt)..."
@@ -89,60 +80,36 @@ deploy_internal_function() {
   echo ""
 }
 
-# Producers and recipient/device management.
-deploy_function "households-accept-invite"
-deploy_function "households-compute-splits"
-deploy_function "households-register-device"
-deploy_function "households-remind-member"
-deploy_function "households-send-nudge"
+# Internal notification endpoints only. Producers and device registration are
+# deliberately not redeployed by this auth-only correction.
+deploy_internal_function "households-send-nudge"
 
 # Primary Database Webhook consumer and delayed fallback worker.
-deploy_function "households-send-push-notification"
-deploy_function "households-process-notifications"
+deploy_internal_function "households-send-push-notification"
+deploy_internal_function "households-process-notifications"
 
-# Called by pg_cron. JWT verification is disabled at the gateway, but the
-# function requires the exact service-role Authorization header internally.
+# Called by pg_cron. All internal endpoints validate the Vault-backed apikey in
+# their handlers while retaining legacy service-role bearer compatibility.
 deploy_internal_function "expense-daily-nudges"
+
+echo ""
+echo "Apply the required migration now:"
+echo "  supabase/migrations/$REQUIRED_MIGRATION"
+echo ""
+read -r -p "Type 'migrated' after it is applied: " MIGRATION_CONFIRM
+if [[ "$MIGRATION_CONFIRM" != "migrated" ]]; then
+  echo "Deployment incomplete. Apply the migration before testing notifications."
+  exit 1
+fi
 
 echo "============================================================"
 echo "  Notification functions deployed successfully"
 echo "============================================================"
 echo ""
 echo "Post-deployment steps:"
-echo "  1. Confirm the Database Webhook for notification_events sends the"
-echo "     service-role Authorization header to:"
-echo "     /functions/v1/households-send-push-notification"
-echo ""
-echo "  2. Schedule the fallback cron only after all functions are deployed:"
-echo ""
-cat <<'SQL'
-     select cron.schedule(
-       'process-notification-events',
-       '*/5 * * * *',
-       $job$
-         select net.http_post(
-           url := (
-             select decrypted_secret
-             from vault.decrypted_secrets
-             where name = 'supabase_url'
-             limit 1
-           ) || '/functions/v1/households-process-notifications',
-           headers := jsonb_build_object(
-             'Authorization', 'Bearer ' || (
-               select decrypted_secret
-               from vault.decrypted_secrets
-               where name = 'service_role_key'
-               limit 1
-             ),
-             'Content-Type', 'application/json'
-           ),
-           body := '{}'::jsonb
-         ) as request_id;
-       $job$
-     );
-SQL
-echo ""
-echo "  3. Verify the cron is active and new notification events are delivered."
+echo "  1. Verify notification_event_realtime_push is the only INSERT trigger."
+echo "  2. Verify both notification cron jobs are active."
+echo "  3. Create a test event and confirm its pg_net response is HTTP 200."
 echo ""
 echo "Note: mobile notification contract changes require a separate mobile app"
 echo "release and are not deployed by this script."

@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
@@ -9,6 +11,7 @@ import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseSecretKeys = Deno.env.get("SUPABASE_SECRET_KEYS");
 const iosBundleId = Deno.env.get("IOS_BUNDLE_ID") || "com.moneko.mobile";
 
 // Firebase Cloud Messaging V1 API - Modern approach (2025)
@@ -480,7 +483,7 @@ serve(async (req) => {
       });
     }
 
-    if (!isServiceRoleRequest(req, supabaseServiceRoleKey)) {
+    if (!isServiceRoleRequest(req, supabaseServiceRoleKey, supabaseSecretKeys)) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

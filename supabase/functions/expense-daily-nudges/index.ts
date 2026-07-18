@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 // Supabase Edge Function: expense-daily-nudges
 // Sends at-most-once-per-local-day encouragement to log an expense.
 // Runs hourly via pg_cron and triggers only around a target local hour.
@@ -225,6 +227,7 @@ Deno.serve(async (req: Request) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const SUPABASE_SECRET_KEYS = Deno.env.get("SUPABASE_SECRET_KEYS");
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return new Response(JSON.stringify({ error: "Server not configured" }), {
       status: 500,
@@ -232,7 +235,13 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  if (!isServiceRoleRequest(req, SUPABASE_SERVICE_ROLE_KEY)) {
+  if (
+    !isServiceRoleRequest(
+      req,
+      SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_SECRET_KEYS,
+    )
+  ) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
