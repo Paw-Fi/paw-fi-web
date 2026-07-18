@@ -74,6 +74,82 @@ Deno.test("authoritative transaction codes do not require PFC review", () => {
 });
 
 Deno.test(
+  "conflicting transfer code stays zero-spend and requires review",
+  () => {
+    const input = {
+      amount: 3000,
+      pending: false,
+      pfcPrimary: "GENERAL_SERVICES",
+      transactionCode: "transfer",
+      accountType: "depository",
+      pfcConfidence: "VERY_HIGH",
+    };
+    const classification = classifyPlaidTransaction(input);
+
+    assertEquals(classification.analyticsClass, "transfer_out");
+    assertEquals(classification.spendingMultiplier, 0);
+    assertEquals(derivePlaidClassificationReview(input, classification), {
+      state: "needs_review",
+      reason: "structured_provider_signal_conflict",
+    });
+  },
+);
+
+for (const pfcPrimary of [
+  "INCOME",
+  "TRANSFER_IN",
+  "TRANSFER_OUT",
+  "LOAN_PAYMENTS",
+  "LOAN_DISBURSEMENTS",
+  "BANK_FEES",
+]) {
+  Deno.test(
+    `purchase code conflicting with ${pfcPrimary} is excluded and reviewed`,
+    () => {
+      const input = {
+        amount: 3000,
+        pending: false,
+        pfcPrimary,
+        transactionCode: "purchase",
+        accountType: "depository",
+        pfcConfidence: "VERY_HIGH",
+      };
+      const classification = classifyPlaidTransaction(input);
+
+      assertEquals(classification.analyticsClass, "unknown");
+      assertEquals(classification.spendingMultiplier, 0);
+      assertEquals(derivePlaidClassificationReview(input, classification), {
+        state: "needs_review",
+        reason: "structured_provider_signal_conflict",
+      });
+    },
+  );
+}
+
+Deno.test(
+  "financial counterparty type requires review without text heuristics",
+  () => {
+    const input = {
+      amount: 3000,
+      pending: false,
+      pfcPrimary: "GENERAL_SERVICES",
+      transactionCode: null,
+      accountType: "depository",
+      pfcConfidence: "VERY_HIGH",
+      hasFinancialCounterparty: true,
+    };
+    const classification = classifyPlaidTransaction(input);
+
+    assertEquals(classification.analyticsClass, "unknown");
+    assertEquals(classification.spendingMultiplier, 0);
+    assertEquals(derivePlaidClassificationReview(input, classification), {
+      state: "needs_review",
+      reason: "structured_financial_counterparty",
+    });
+  },
+);
+
+Deno.test(
   "Plaid classification keeps pending purchases out of finalized totals",
   () => {
     const result = classifyPlaidTransaction({

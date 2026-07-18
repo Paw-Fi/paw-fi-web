@@ -22,8 +22,6 @@ import {
   type ExpensePreview,
   type LinkedWalletRecord,
   loadLinkedWalletsForBankAccounts,
-  type PlaidRecurringTemplateCandidate,
-  persistPreparedPlaidRecurringTemplates,
   preparePlaidTransactionMutations,
   sanitizeOptionalUuid,
   stagePlaidTransactions,
@@ -316,6 +314,9 @@ Deno.serve(async (req) => {
       const key = `${account.bank_connection_id}:${providerAccountId}`;
       accountMap.set(key, account);
     });
+    const cursorOverride = authResult.isInternalService
+      ? body.cursorOverride
+      : undefined;
 
     const summaries: SyncSummary[] = [];
     let totalInserted = 0;
@@ -331,7 +332,7 @@ Deno.serve(async (req) => {
         supabase: supabase as any,
         userId: authResult.userId,
         accountFilter,
-        cursorOverride: body.cursorOverride,
+        cursorOverride,
         targetHouseholdId: requestedTargetHouseholdId,
         enforceManualCooldown,
       });
@@ -723,7 +724,6 @@ async function syncConnection(params: {
 
     const expenseInserts: BankExpenseMutationRecord[] = [];
     const expenseUpdates: BankExpenseMutationRecord[] = [];
-    const recurringTemplateCandidates: PlaidRecurringTemplateCandidate[] = [];
 
     for (const [plaidAccountId, transactions] of grouped.entries()) {
       const account = accountMap.get(
@@ -757,7 +757,6 @@ async function syncConnection(params: {
 
       expenseInserts.push(...prepared.inserts);
       expenseUpdates.push(...prepared.updates);
-      recurringTemplateCandidates.push(...prepared.recurringTemplateCandidates);
       summary.skipped += prepared.skipped;
       if (isInactiveAccount) {
         summary.inactiveTransactionsHidden += prepared.inserts.filter(
@@ -770,7 +769,15 @@ async function syncConnection(params: {
     const removedIds = batch.removed
       .map((row) => row.transaction_id)
       .filter(Boolean);
-    let removedBankAccountIds: string[] = [];
+    const providerRemovalAccountIds = batch.removed
+      .map((row) => {
+        if (!row.account_id) return null;
+        return params.accountMap.get(
+          `${params.connection.id}:${row.account_id}`,
+        )?.id;
+      })
+      .filter((id): id is string => Boolean(id));
+    let removedBankAccountIds = Array.from(new Set(providerRemovalAccountIds));
     if (removedIds.length && removalScopeAccountIds.length) {
       const { data: removedRows, error: removedRowsError } =
         await params.supabase
@@ -782,18 +789,15 @@ async function syncConnection(params: {
           .in("provider_transaction_id", removedIds);
       if (removedRowsError) throw removedRowsError;
       removedBankAccountIds = Array.from(
-        new Set(
-          (removedRows || [])
+        new Set([
+          ...removedBankAccountIds,
+          ...(removedRows || [])
             .map((row) => row.bank_account_id)
             .filter((id): id is string => Boolean(id)),
-        ),
+        ]),
       );
     }
     const atomicAccountIds = connectionBankAccountIds;
-    await persistPreparedPlaidRecurringTemplates({
-      supabase: params.supabase,
-      candidates: recurringTemplateCandidates,
-    });
     const { data: leaseExtended, error: leaseExtendError } =
       await params.supabase.rpc("extend_bank_sync_lock_v2", {
         p_bank_connection_id: params.connection.id,
@@ -837,7 +841,6 @@ async function syncConnection(params: {
       await rebindLinkedPlaidExpensesForConnection({
         supabase: params.supabase,
         userId: params.userId,
-        connectionId: params.connection.id,
         linkedWalletsByBankAccountId,
       });
     } catch (postProcessingError) {
@@ -877,6 +880,17 @@ async function syncConnection(params: {
           : null;
     summary.errorCode = errorCode;
 
+    if (errorCode === "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION") {
+      summary.error = "Plaid changed transactions during pagination; retrying";
+      await auditUpdate({
+        status: "failed",
+        error_message: summary.error,
+        error_code: errorCode,
+        finished_at: new Date().toISOString(),
+      });
+      return summary;
+    }
+
     if (errorCode === "40001") {
       summary.errorCode = "STALE_CURSOR_GENERATION";
       summary.error = "A newer Plaid sync already advanced this connection";
@@ -893,9 +907,7 @@ async function syncConnection(params: {
     if (error instanceof PlaidError) {
       // ITEM_LOGIN_REQUIRED: User needs to re-authenticate
       if (errorCode === "ITEM_LOGIN_REQUIRED") {
-        console.log(
-          `[plaid-sync] Connection ${params.connection.id} requires re-authentication`,
-        );
+        console.log("[plaid-sync] Bank connection requires re-authentication");
         await params.supabase
           .from("bank_connections")
           .update({
@@ -1096,7 +1108,6 @@ function logPlaidAccountMappingDebug(params: {
 async function rebindLinkedPlaidExpensesForConnection(params: {
   supabase: ReturnType<typeof createClient>;
   userId: string;
-  connectionId: string;
   linkedWalletsByBankAccountId: Map<string, LinkedWalletRecord>;
 }) {
   for (const [
@@ -1116,9 +1127,6 @@ async function rebindLinkedPlaidExpensesForConnection(params: {
       console.log(
         "[plaid-sync] Rebound Plaid expenses to linked wallet",
         JSON.stringify({
-          connectionId: params.connectionId,
-          bankAccountId,
-          walletId: linkedWallet.id,
           scanned: result.scanned,
           updated: result.updated,
         }),

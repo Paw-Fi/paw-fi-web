@@ -294,30 +294,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (!requestedConnectionId && body.institutionId?.trim()) {
-      const duplicateConnections = await findInstitutionDuplicateConnections({
-        supabase,
-        institutionId: body.institutionId,
-        userId: authResult.userId,
-        targetHouseholdId,
-      });
-
-      if (duplicateConnections.length) {
-        return new Response(
-          JSON.stringify({
-            error:
-              "This institution is already connected. Use the existing bank connection instead of linking it again.",
-            errorCode: "duplicate_item_accounts",
-            duplicateConnectionIds: duplicateConnections,
-          }),
-          {
-            status: 409,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
-      }
-    }
-
     const { data: claimedLinkSessions, error: linkSessionError } =
       await supabase.rpc("claim_plaid_link_completion_session", {
         p_user_id: authResult.userId,
@@ -503,12 +479,7 @@ Deno.serve(async (req) => {
       console.log(
         "[plaid-exchange] Exchange completed",
         JSON.stringify({
-          connectionId,
-          duplicateGroupKey,
           isNewConnection,
-          itemId: plaidResponse.item_id,
-          linkSessionId: body.linkSessionId || null,
-          requestId: plaidResponse.request_id || null,
           selectedAccountCount: selectedAccounts.length,
         }),
       );
@@ -869,41 +840,6 @@ async function persistOrphanPlaidRemovalJob(params: {
   if (error) {
     throw error;
   }
-}
-
-async function findInstitutionDuplicateConnections(params: {
-  supabase: any;
-  institutionId: string;
-  userId: string;
-  targetHouseholdId: string | null;
-}): Promise<string[]> {
-  const institutionId = params.institutionId.trim();
-  if (!institutionId) {
-    return [];
-  }
-
-  let query = params.supabase
-    .from("bank_connections")
-    .select("id")
-    .eq("user_id", params.userId)
-    .eq("provider", PLAID_PROVIDER)
-    .is("removed_at", null)
-    .in("status", ["pending", "active", "needs_reauth", "error"])
-    .eq("metadata->>institution_id", institutionId);
-
-  query = params.targetHouseholdId
-    ? query.eq("household_id", params.targetHouseholdId)
-    : query.is("household_id", null);
-
-  const { data: connections, error } = await query;
-
-  if (error) {
-    throw error;
-  }
-
-  return ((connections || []) as { id: string }[])
-    .map((row) => row.id)
-    .filter(Boolean);
 }
 
 async function rollbackLocalPlaidExchangeState(params: {

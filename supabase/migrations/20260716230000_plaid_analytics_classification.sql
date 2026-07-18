@@ -14,10 +14,33 @@ alter table public.expenses
   add column if not exists classification_version integer;
 
 alter table public.bank_accounts
+  add column if not exists provider_persistent_account_id text,
   add column if not exists provider_balance_current_cents bigint,
   add column if not exists provider_balance_available_cents bigint,
   add column if not exists provider_balance_limit_cents bigint,
   add column if not exists provider_balance_updated_at timestamptz;
+
+-- Direct row access cannot safely redact sensitive columns in PostgreSQL RLS.
+-- Coarse balances_only totals must use dedicated aggregate services that do
+-- not expose transaction dimensions.
+drop policy if exists "Users can view expenses and income with privacy"
+  on public.expenses;
+create policy "Users can view expenses and income with privacy"
+on public.expenses
+for select
+using (
+  user_id = (select auth.uid())
+  or (
+    household_id is not null
+    and privacy_scope = 'full'
+    and exists (
+      select 1
+      from public.household_members membership
+      where membership.household_id = expenses.household_id
+        and membership.user_id = (select auth.uid())
+    )
+  )
+);
 
 update public.expenses
 set is_recurring = false,
@@ -26,6 +49,15 @@ set is_recurring = false,
 where provider = 'plaid'
   and coalesce(is_recurring, false)
   and not (coalesce(user_overrides, '{}'::jsonb) ? 'is_recurring');
+
+update public.expenses
+set deleted_at = coalesce(deleted_at, now()),
+    deleted_reason = coalesce(deleted_reason, 'provider_inference_retired'),
+    updated_at = now()
+where coalesce(is_recurring, false)
+  and provider_fields ->> 'source' = 'plaid_recurring_template'
+  and coalesce(user_overrides, '{}'::jsonb) = '{}'::jsonb
+  and deleted_at is null;
 
 create or replace function public.classify_plaid_transaction_v1(
   p_amount numeric,
@@ -63,6 +95,9 @@ as $$
         when transaction_code in ('bank charge', 'late fee', 'membership fee', 'returned item fee') then 'bank_fee'
         when transaction_code = 'adjustment' and amount < 0 then 'refund_or_reversal'
         when transaction_code = 'adjustment' then 'unknown'
+        when transaction_code = 'purchase'
+          and pfc_primary in ('INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS', 'LOAN_DISBURSEMENTS', 'BANK_FEES')
+          then 'unknown'
         when transaction_code = 'purchase' and amount < 0 then 'refund_or_reversal'
         when transaction_code = 'purchase' and account_type in ('credit', 'depository') then 'consumer_spend'
         when transaction_code = 'purchase' then 'unknown'
@@ -156,6 +191,26 @@ where e.provider = 'plaid'
     'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
     'bank charge', 'late fee', 'membership fee', 'returned item fee',
     'adjustment', 'purchase'
+  );
+
+update public.expenses e
+set analytics_class = 'unknown',
+    analytics_direction = 'none',
+    analytics_is_final = not coalesce(e.provider_pending, false),
+    analytics_spending_multiplier = 0,
+    analytics_counts_toward_income = false,
+    classification_source = 'plaid_structured_counterparty',
+    classification_version = 2
+where e.provider = 'plaid'
+  and coalesce(e.classification_source, '') <> 'user_override'
+  and coalesce(e.provider_transaction_code, '') not in (
+    'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+    'bank charge', 'late fee', 'membership fee', 'returned item fee',
+    'adjustment', 'purchase'
+  )
+  and (
+    e.raw_provider_payload @? '$.counterparties[*] ? (@.type == "financial_institution" || @.type == "payment_app")'
+    or e.raw_provider_payload @? '$.counterparty_types[*] ? (@ == "financial_institution" || @ == "payment_app")'
   );
 
 update public.expenses e
@@ -299,6 +354,16 @@ begin
     return new;
   end if;
 
+  if new.classification_source = 'plaid_possible_transfer' then
+    new.analytics_class := 'unknown';
+    new.analytics_direction := 'none';
+    new.analytics_is_final := not new.provider_pending;
+    new.analytics_spending_multiplier := 0;
+    new.analytics_counts_toward_income := false;
+    new.classification_version := 2;
+    return new;
+  end if;
+
   if new.provider = 'plaid' then
 
     select * into v_classification
@@ -309,6 +374,24 @@ begin
       new.provider_transaction_code,
       v_account_type
     );
+
+    if coalesce(new.provider_transaction_code, '') not in (
+        'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+        'bank charge', 'late fee', 'membership fee', 'returned item fee',
+        'adjustment', 'purchase'
+      ) and (
+        new.raw_provider_payload @? '$.counterparties[*] ? (@.type == "financial_institution" || @.type == "payment_app")'
+        or new.raw_provider_payload @? '$.counterparty_types[*] ? (@ == "financial_institution" || @ == "payment_app")'
+      ) then
+      new.analytics_class := 'unknown';
+      new.analytics_direction := 'none';
+      new.analytics_is_final := not new.provider_pending;
+      new.analytics_spending_multiplier := 0;
+      new.analytics_counts_toward_income := false;
+      new.classification_source := 'plaid_structured_counterparty';
+      new.classification_version := 2;
+      return new;
+    end if;
 
     if upper(coalesce(new.provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
       and coalesce(new.provider_transaction_code, '') not in (

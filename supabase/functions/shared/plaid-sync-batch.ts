@@ -3,7 +3,7 @@ import type { PlaidSyncResponse, PlaidTransaction } from "./plaid-client.ts";
 export interface CompletePlaidSyncBatch {
   added: PlaidTransaction[];
   modified: PlaidTransaction[];
-  removed: Array<{ transaction_id: string }>;
+  removed: Array<{ transaction_id: string; account_id?: string | null }>;
   nextCursor: string;
   restartCount: number;
 }
@@ -26,7 +26,10 @@ export async function fetchCompletePlaidSyncBatch(
   while (true) {
     const added: PlaidTransaction[] = [];
     const modified: PlaidTransaction[] = [];
-    const removed: Array<{ transaction_id: string }> = [];
+    const removed: Array<{
+      transaction_id: string;
+      account_id?: string | null;
+    }> = [];
     let cursor = params.initialCursor;
 
     try {

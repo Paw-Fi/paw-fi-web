@@ -235,7 +235,8 @@ Deno.serve(async (req: Request) => {
     const { data: ytdRecords } = await supabase
       .from("expenses")
       .select("amount_cents")
-      .eq("type", "income")
+      .eq("analytics_is_final", true)
+      .eq("analytics_counts_toward_income", true)
       .eq("user_id", userId)
       .is("household_id", null)
       .is("deleted_at", null)

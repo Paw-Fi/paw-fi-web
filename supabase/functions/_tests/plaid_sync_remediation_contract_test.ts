@@ -14,6 +14,10 @@ const walletsOverviewSourceUrl = new URL(
   "../wallets-overview/index.ts",
   import.meta.url,
 );
+const processorSourceUrl = new URL(
+  "../bank-sync-processor/index.ts",
+  import.meta.url,
+);
 
 Deno.test(
   "disabled Plaid accounts consume deltas without new inserts",
@@ -50,7 +54,7 @@ Deno.test(
 );
 
 Deno.test(
-  "Plaid recurring templates require provider stream identity",
+  "Plaid transaction sync does not infer recurring forecasts",
   async () => {
     const source = await Deno.readTextFile(bankSyncSourceUrl);
     const preparationStart = source.indexOf(
@@ -61,11 +65,8 @@ Deno.test(
     );
     assert(preparationStart >= 0 && preparationEnd > preparationStart);
     const preparation = source.slice(preparationStart, preparationEnd);
-    assertStringIncludes(preparation, "inferPlaidRecurringRules");
-    assertStringIncludes(preparation, "recurringTemplateCandidates");
-    assertStringIncludes(source, "plaid_stream_id");
-    assertStringIncludes(source, "mergePlaidRecurringTemplatePayload");
-    assertStringIncludes(source, 'existing.deleted_reason === "user_deleted"');
+    assert(!preparation.includes("inferPlaidRecurringRules"));
+    assert(!preparation.includes("recurringTemplateCandidates"));
   },
 );
 
@@ -76,4 +77,23 @@ Deno.test("wallet spending uses canonical analytics semantics", async () => {
   assertStringIncludes(source, "analyticsCountsTowardIncome");
   assertStringIncludes(source, "analyticsIsFinal");
   assertStringIncludes(source, "provider_balance_current_cents");
+});
+
+Deno.test("Plaid recovery controls are internal and fail closed", async () => {
+  const syncSource = await Deno.readTextFile(
+    new URL("../plaid-sync-transactions/index.ts", import.meta.url),
+  );
+  assertStringIncludes(
+    syncSource,
+    "const cursorOverride = authResult.isInternalService",
+  );
+  assertStringIncludes(syncSource, "? body.cursorOverride");
+});
+
+Deno.test("Plaid processor backfills missed webhook syncs", async () => {
+  const source = await Deno.readTextFile(processorSourceUrl);
+  assertStringIncludes(source, "enqueueStalePlaidRecoveryJobs");
+  assertStringIncludes(source, 'triggerSource: "scheduled_recovery"');
+  assertStringIncludes(source, "last_successful_sync_at");
+  assertStringIncludes(source, 'status: "completed"');
 });

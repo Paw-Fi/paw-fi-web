@@ -875,7 +875,6 @@ export function mergePlaidRecurringTemplatePayload(
 export interface PreparedPlaidTransactionMutations {
   inserts: BankExpenseMutationRecord[];
   updates: BankExpenseMutationRecord[];
-  recurringTemplateCandidates: PlaidRecurringTemplateCandidate[];
   skipped: number;
   currencyMismatches: number;
 }
@@ -887,7 +886,6 @@ export async function preparePlaidTransactionMutations(
     return {
       inserts: [],
       updates: [],
-      recurringTemplateCandidates: [],
       skipped: 0,
       currencyMismatches: 0,
     };
@@ -917,7 +915,6 @@ export async function preparePlaidTransactionMutations(
     return {
       inserts: [],
       updates: [],
-      recurringTemplateCandidates: [],
       skipped: params.transactions.length,
       currencyMismatches: 0,
     };
@@ -963,19 +960,6 @@ export async function preparePlaidTransactionMutations(
       );
     }
   }
-  const recurringByProviderTransactionId = inferPlaidRecurringRules({
-    records: normalizedRecords,
-    transactions: params.transactions,
-    existingRows,
-  });
-  const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
-    userId: params.userId,
-    householdId: params.householdId ?? null,
-    bankAccountId: params.bankAccountId,
-    accountId: params.accountId ?? null,
-    records: normalizedRecords,
-    recurringByProviderTransactionId,
-  });
   const mutationPlan = buildBankExpenseMutationPlan({
     records: normalizedRecords.map((record) => ({
       ...record,
@@ -997,9 +981,6 @@ export async function preparePlaidTransactionMutations(
   return {
     inserts,
     updates: mutationPlan.updates,
-    recurringTemplateCandidates: params.hideNewTransactions
-      ? []
-      : recurringTemplateCandidates,
     skipped: params.transactions.length - normalizedRecords.length,
     currencyMismatches,
   };
@@ -1220,6 +1201,7 @@ export async function upsertPlaidAccounts(
     provider: PLAID_PROVIDER,
     plaid_account_id: account.account_id,
     provider_account_id: account.account_id,
+    provider_persistent_account_id: account.persistent_account_id || null,
     name:
       account.name || account.official_name || `Account ${account.account_id}`,
     official_name: account.official_name || null,
@@ -1241,7 +1223,10 @@ export async function upsertPlaidAccounts(
     ),
     provider_balance_limit_cents: plaidBalanceToCents(account.balances?.limit),
     provider_balance_updated_at: new Date().toISOString(),
-    raw_provider_payload: account,
+    raw_provider_payload: {
+      account_id: account.account_id,
+      persistent_account_id: account.persistent_account_id || null,
+    },
   }));
 
   const { data, error } = await params.supabase
@@ -1441,20 +1426,6 @@ export async function persistPlaidTransactions(
     }
   }
 
-  const recurringByProviderTransactionId = inferPlaidRecurringRules({
-    records: normalizedRecords,
-    transactions: params.transactions,
-    existingRows,
-  });
-  const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
-    userId: params.userId,
-    householdId: params.householdId ?? null,
-    bankAccountId: params.bankAccountId,
-    accountId: params.accountId ?? null,
-    records: normalizedRecords,
-    recurringByProviderTransactionId,
-  });
-
   const postedOccurrenceRecords = normalizedRecords.map((record) => ({
     ...record,
     is_recurring: false,
@@ -1493,11 +1464,6 @@ export async function persistPlaidTransactions(
       throw updateError;
     }
   }
-
-  await upsertPlaidRecurringTemplates({
-    supabase: params.supabase,
-    candidates: recurringTemplateCandidates,
-  });
 
   return {
     inserted: mutationPlan.inserts.length,

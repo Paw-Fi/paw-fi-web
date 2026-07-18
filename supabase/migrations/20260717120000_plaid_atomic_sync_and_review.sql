@@ -34,21 +34,54 @@ create index if not exists expenses_plaid_transfer_match_idx
 alter table public.plaid_sync_events enable row level security;
 
 drop policy if exists plaid_sync_events_owner_select on public.plaid_sync_events;
-create policy plaid_sync_events_owner_select
-  on public.plaid_sync_events for select to authenticated
-  using (exists (
-    select 1 from public.bank_connections bc
-    where bc.id = plaid_sync_events.bank_connection_id
-      and bc.user_id = auth.uid()
-  ));
 
 revoke all on table public.plaid_sync_events from public, anon, authenticated;
+grant select, insert, update, delete on table public.plaid_sync_events
+  to service_role;
 revoke all on table public.bank_sync_audit from public, anon, authenticated;
 grant select, insert, update on table public.bank_sync_audit to service_role;
 
 alter table public.bank_sync_locks
   add column if not exists lock_token uuid,
   add column if not exists heartbeat_at timestamptz;
+
+alter table public.bank_webhook_events
+  add column if not exists processing_started_at timestamptz,
+  add column if not exists processing_lock_token uuid;
+
+create or replace function public.claim_bank_webhook_event_v1(
+  p_event_id uuid,
+  p_lock_token uuid,
+  p_lease_minutes integer default 15
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_event_id is null or p_lock_token is null then
+    return false;
+  end if;
+
+  update public.bank_webhook_events
+  set processing_started_at = now(),
+      processing_lock_token = p_lock_token
+  where id = p_event_id
+    and processed_at is null
+    and (
+      processing_started_at is null
+      or processing_started_at < now() - make_interval(
+        mins => greatest(coalesce(p_lease_minutes, 15), 1)
+      )
+    );
+  return found;
+end;
+$$;
+
+revoke all on function public.claim_bank_webhook_event_v1(uuid, uuid, integer)
+  from public, anon, authenticated;
+grant execute on function public.claim_bank_webhook_event_v1(uuid, uuid, integer)
+  to service_role;
 
 create or replace function public.acquire_bank_sync_lock_v2(
   p_bank_connection_id uuid,
@@ -208,7 +241,7 @@ language plpgsql
 set search_path = public
 as $$
 begin
-  if new.provider <> 'plaid' then
+  if new.provider is distinct from 'plaid' then
     new.classification_review_state := 'not_required';
     new.classification_review_reason := null;
   elsif new.classification_source = 'user_override' then
@@ -221,13 +254,29 @@ begin
   elsif new.classification_review_state = 'needs_review'
     and new.classification_review_reason = 'possible_transfer_match' then
     null;
-  elsif new.analytics_class = 'unknown' then
+  elsif new.classification_source = 'plaid_structured_counterparty' then
     new.classification_review_state := 'needs_review';
-    new.classification_review_reason := 'unknown_provider_intent';
+    new.classification_review_reason := 'structured_financial_counterparty';
+  elsif (
+    new.provider_transaction_code = 'transfer'
+    and coalesce(new.provider_pfc_primary, '') <> ''
+    and new.provider_pfc_primary not in ('TRANSFER_IN', 'TRANSFER_OUT')
+  ) or (
+    new.provider_transaction_code = 'purchase'
+    and new.provider_pfc_primary in (
+      'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+      'LOAN_DISBURSEMENTS', 'BANK_FEES'
+    )
+  ) then
+    new.classification_review_state := 'needs_review';
+    new.classification_review_reason := 'structured_provider_signal_conflict';
   elsif new.classification_source <> 'plaid_transaction_code'
     and upper(coalesce(new.provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN') then
     new.classification_review_state := 'needs_review';
     new.classification_review_reason := 'low_provider_confidence';
+  elsif new.analytics_class = 'unknown' then
+    new.classification_review_state := 'needs_review';
+    new.classification_review_reason := 'unknown_provider_intent';
   else
     new.classification_review_state := 'not_required';
     new.classification_review_reason := null;
@@ -240,7 +289,8 @@ drop trigger if exists expenses_classification_review_v1 on public.expenses;
 drop trigger if exists z_set_expense_classification_review_v1 on public.expenses;
 create trigger z_set_expense_classification_review_v1
 before insert or update of provider, analytics_class, classification_source,
-  provider_pfc_confidence, classification_review_state
+  provider_pfc_primary, provider_pfc_confidence, provider_transaction_code,
+  classification_review_state
 on public.expenses
 for each row execute function public.set_expense_classification_review_v1();
 
@@ -308,6 +358,18 @@ set classification_review_state = case
       when provider = 'plaid' and (
         analytics_class = 'unknown'
         or (
+          provider_transaction_code = 'transfer'
+          and coalesce(provider_pfc_primary, '') <> ''
+          and provider_pfc_primary not in ('TRANSFER_IN', 'TRANSFER_OUT')
+        )
+        or (
+          provider_transaction_code = 'purchase'
+          and provider_pfc_primary in (
+            'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+            'LOAN_DISBURSEMENTS', 'BANK_FEES'
+          )
+        )
+        or (
           classification_source <> 'plaid_transaction_code'
           and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
         )
@@ -316,12 +378,29 @@ set classification_review_state = case
     end,
     classification_review_reason = case
       when classification_source = 'user_override' then null
-      when provider = 'plaid' and analytics_class = 'unknown'
-        then 'unknown_provider_intent'
+      when provider = 'plaid'
+        and classification_source = 'plaid_structured_counterparty'
+        then 'structured_financial_counterparty'
       when provider = 'plaid'
         and classification_source <> 'plaid_transaction_code'
         and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
         then 'low_provider_confidence'
+      when provider = 'plaid' and (
+        (
+          provider_transaction_code = 'transfer'
+          and coalesce(provider_pfc_primary, '') <> ''
+          and provider_pfc_primary not in ('TRANSFER_IN', 'TRANSFER_OUT')
+        )
+        or (
+          provider_transaction_code = 'purchase'
+          and provider_pfc_primary in (
+            'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
+            'LOAN_DISBURSEMENTS', 'BANK_FEES'
+          )
+        )
+      ) then 'structured_provider_signal_conflict'
+      when provider = 'plaid' and analytics_class = 'unknown'
+        then 'unknown_provider_intent'
       else null
     end;
 
@@ -349,9 +428,17 @@ declare
   v_updated integer := 0;
   v_removed integer := 0;
   v_inserted_rows jsonb := '[]'::jsonb;
-  v_expected_inserts integer := jsonb_array_length(coalesce(p_expense_inserts, '[]'::jsonb));
-  v_expected_updates integer := jsonb_array_length(coalesce(p_expense_updates, '[]'::jsonb));
+  v_expected_inserts integer := 0;
+  v_expected_updates integer := 0;
 begin
+  if jsonb_typeof(coalesce(p_expense_inserts, '[]'::jsonb)) <> 'array'
+    or jsonb_typeof(coalesce(p_expense_updates, '[]'::jsonb)) <> 'array' then
+    raise exception 'Plaid sync mutation payloads must be JSON arrays'
+      using errcode = '22023';
+  end if;
+  v_expected_inserts := jsonb_array_length(coalesce(p_expense_inserts, '[]'::jsonb));
+  v_expected_updates := jsonb_array_length(coalesce(p_expense_updates, '[]'::jsonb));
+
   select * into v_connection
   from public.bank_connections
   where id = p_bank_connection_id
@@ -621,7 +708,15 @@ begin
   select count(*)::integer into v_removed from removed;
 
   update public.expenses e
-  set classification_review_state = 'not_required',
+  set classification_source = case
+        when coalesce(e.provider_transaction_code, '') in (
+          'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+          'bank charge', 'late fee', 'membership fee', 'returned item fee',
+          'adjustment', 'purchase'
+        ) then 'plaid_transaction_code'
+        else 'plaid_pfc_' || coalesce(e.provider_pfc_version, 'v2')
+      end,
+      classification_review_state = 'not_required',
       classification_review_reason = null,
       updated_at = v_now
   where e.user_id = p_user_id
@@ -676,7 +771,12 @@ begin
       and m.classification_source <> 'user_override'
   )
   update public.expenses e
-  set classification_review_state = 'needs_review',
+  set analytics_class = 'unknown',
+      analytics_direction = 'none',
+      analytics_spending_multiplier = 0,
+      analytics_counts_toward_income = false,
+      classification_source = 'plaid_possible_transfer',
+      classification_review_state = 'needs_review',
       classification_review_reason = 'possible_transfer_match',
       updated_at = v_now
   where e.id in (select id from transfer_candidates);
@@ -1056,3 +1156,16 @@ revoke all on function public.get_plaid_sync_review_transactions_v2(
 grant execute on function public.get_plaid_sync_review_transactions_v2(
   uuid, uuid, uuid[], uuid, boolean, date, timestamptz, uuid, integer
 ) to authenticated;
+
+-- Recovery now runs inside the scheduled bank-sync processor.
+do $$
+begin
+  if exists (
+    select 1 from cron.job where jobname = 'plaid-stale-reconciler'
+  ) then
+    perform cron.unschedule('plaid-stale-reconciler');
+  end if;
+exception
+  when undefined_table or invalid_schema_name then null;
+end
+$$;

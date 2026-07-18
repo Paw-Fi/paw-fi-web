@@ -49,6 +49,11 @@ Deno.test(
     assert(!body.includes("raw_text"));
     assertStringIncludes(body, "abs(m.amount_cents) = abs(e.amount_cents)");
     assertStringIncludes(body, "abs(m.date - e.date) <= 3");
+    assertStringIncludes(body, "analytics_spending_multiplier = 0");
+    assertStringIncludes(
+      body,
+      "classification_source = 'plaid_possible_transfer'",
+    );
   },
 );
 
@@ -63,6 +68,16 @@ Deno.test("bank sync locks require service role and owner tokens", async () => {
   assertStringIncludes(sql, "from public, anon, authenticated");
   assertStringIncludes(sql, "to service_role");
 });
+
+Deno.test(
+  "Plaid webhook events use a leased single processor claim",
+  async () => {
+    const sql = await Deno.readTextFile(migrationUrl);
+    assertStringIncludes(sql, "function public.claim_bank_webhook_event_v1");
+    assertStringIncludes(sql, "processing_lock_token = p_lock_token");
+    assertStringIncludes(sql, "to service_role");
+  },
+);
 
 Deno.test("review pagination uses a stable keyset cursor", async () => {
   const sql = await Deno.readTextFile(migrationUrl);
@@ -102,4 +117,14 @@ Deno.test("balances-only household rows are totals only", async () => {
     assertStringIncludes(body, "and not (p_household_id is not null");
     assertStringIncludes(body, "e.privacy_scope = 'balances_only'");
   }
+  assertStringIncludes(analyticsMigration, "privacy_scope = 'full'");
+});
+
+Deno.test("Plaid review handles structured signal conflicts", async () => {
+  const sql = await Deno.readTextFile(migrationUrl);
+  assertStringIncludes(sql, "structured_provider_signal_conflict");
+  assertStringIncludes(sql, "new.provider_transaction_code = 'transfer'");
+  assertStringIncludes(sql, "new.provider_transaction_code = 'purchase'");
+  assertStringIncludes(sql, "plaid_structured_counterparty");
+  assertStringIncludes(sql, "structured_financial_counterparty");
 });

@@ -16,6 +16,7 @@ export interface PlaidTransactionClassificationInput {
   pfcPrimary?: string | null;
   transactionCode?: string | null;
   accountType?: string | null;
+  hasFinancialCounterparty?: boolean;
 }
 
 export interface PlaidClassificationReview {
@@ -45,8 +46,40 @@ const BANK_FEE_TRANSACTION_CODES = new Set([
   "membership fee",
   "returned item fee",
 ]);
+const TRUSTED_TRANSACTION_CODES = new Set([
+  ...CASH_TRANSACTION_CODES,
+  ...BANK_FEE_TRANSACTION_CODES,
+  "transfer",
+  "refund",
+  "adjustment",
+  "purchase",
+]);
 
 const CONSUMER_SPEND_ACCOUNT_TYPES = new Set(["credit", "depository"]);
+const TRANSFER_PFC_PRIMARY = new Set(["TRANSFER_IN", "TRANSFER_OUT"]);
+const PURCHASE_CONFLICT_PFC_PRIMARY = new Set([
+  "INCOME",
+  "TRANSFER_IN",
+  "TRANSFER_OUT",
+  "LOAN_PAYMENTS",
+  "LOAN_DISBURSEMENTS",
+  "BANK_FEES",
+]);
+
+function hasStructuredProviderSignalConflict(input: {
+  pfcPrimary?: string | null;
+  transactionCode?: string | null;
+}): boolean {
+  const primary = input.pfcPrimary?.trim().toUpperCase() ?? "";
+  const transactionCode = input.transactionCode?.trim().toLowerCase() ?? "";
+  if (!primary) return false;
+  if (transactionCode === "transfer") {
+    return !TRANSFER_PFC_PRIMARY.has(primary);
+  }
+  return (
+    transactionCode === "purchase" && PURCHASE_CONFLICT_PFC_PRIMARY.has(primary)
+  );
+}
 
 export function classifyPlaidTransaction(
   input: PlaidTransactionClassificationInput,
@@ -103,11 +136,15 @@ export function classifyPlaidTransaction(
       : codeResult("unknown");
   }
   if (transactionCode === "purchase") {
+    if (PURCHASE_CONFLICT_PFC_PRIMARY.has(primary)) {
+      return codeResult("unknown");
+    }
     if (input.amount < 0) return codeResult("refund_or_reversal", -1);
     return CONSUMER_SPEND_ACCOUNT_TYPES.has(accountType)
       ? codeResult("consumer_spend", 1)
       : codeResult("unknown");
   }
+  if (input.hasFinancialCounterparty) return result("unknown");
   if (!primary) return result("unknown");
 
   if (primary === "INCOME") {
@@ -153,18 +190,40 @@ export function classifyUserCategoryOverride(
 export function derivePlaidClassificationReview(
   input: {
     pfcConfidence?: string | null;
+    pfcPrimary?: string | null;
+    transactionCode?: string | null;
+    hasFinancialCounterparty?: boolean;
   },
   classification: PlaidTransactionClassification,
 ): PlaidClassificationReview {
-  if (classification.analyticsClass === "unknown") {
-    return { state: "needs_review", reason: "unknown_provider_intent" };
+  const transactionCode = input.transactionCode?.trim().toLowerCase() ?? "";
+  if (
+    input.hasFinancialCounterparty &&
+    !TRUSTED_TRANSACTION_CODES.has(transactionCode)
+  ) {
+    return {
+      state: "needs_review",
+      reason: "structured_financial_counterparty",
+    };
+  }
+  if (hasStructuredProviderSignalConflict(input)) {
+    return {
+      state: "needs_review",
+      reason: "structured_provider_signal_conflict",
+    };
   }
   if (classification.classificationSource === "plaid_transaction_code") {
+    if (classification.analyticsClass === "unknown") {
+      return { state: "needs_review", reason: "unknown_provider_intent" };
+    }
     return { state: "not_required", reason: null };
   }
   const confidence = input.pfcConfidence?.trim().toUpperCase();
   if (confidence === "LOW" || confidence === "UNKNOWN") {
     return { state: "needs_review", reason: "low_provider_confidence" };
+  }
+  if (classification.analyticsClass === "unknown") {
+    return { state: "needs_review", reason: "unknown_provider_intent" };
   }
   return { state: "not_required", reason: null };
 }

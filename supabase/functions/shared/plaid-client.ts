@@ -228,6 +228,7 @@ export async function exchangePublicToken(
 
 export interface PlaidAccount {
   account_id: string;
+  persistent_account_id?: string | null;
   name: string;
   official_name?: string | null;
   mask?: string | null;
@@ -313,12 +314,13 @@ export interface PlaidTransaction {
     payee?: string | null;
     payer?: string | null;
   };
+  counterparties?: Array<{ type?: string | null }>;
 }
 
 export interface PlaidSyncResponse {
   added: PlaidTransaction[];
   modified: PlaidTransaction[];
-  removed: { transaction_id: string }[];
+  removed: { transaction_id: string; account_id?: string | null }[];
   has_more: boolean;
   next_cursor: string;
   request_id?: string;
@@ -342,7 +344,6 @@ export async function syncPlaidTransactions(
     cursor: cursor || undefined,
     count: 500,
     options: {
-      include_personal_finance_category: true,
       personal_finance_category_version: "v2",
     },
   });
@@ -442,16 +443,26 @@ export function mapPlaidTransactionToExpense(
     txn.payment_meta?.payer ||
     null;
   const description = txn.name || txn.merchant_name || null;
+  const counterpartyTypes = (txn.counterparties || [])
+    .map((counterparty) => counterparty.type?.trim().toLowerCase())
+    .filter((type): type is string => Boolean(type));
+  const hasFinancialCounterparty = counterpartyTypes.some(
+    (type) => type === "financial_institution" || type === "payment_app",
+  );
   const classification = classifyPlaidTransaction({
     amount,
     pending: txn.pending ?? false,
     pfcPrimary: txn.personal_finance_category?.primary,
     transactionCode: txn.transaction_code,
     accountType: params.accountType,
+    hasFinancialCounterparty,
   });
   const classificationReview = derivePlaidClassificationReview(
     {
       pfcConfidence: txn.personal_finance_category?.confidence_level,
+      pfcPrimary: txn.personal_finance_category?.primary,
+      transactionCode: txn.transaction_code,
+      hasFinancialCounterparty,
     },
     classification,
   );
@@ -480,7 +491,16 @@ export function mapPlaidTransactionToExpense(
     raw_text: description,
     merchant: merchantLabel || txn.name || null,
     source: merchantLabel || txn.name || null,
-    raw_provider_payload: txn,
+    raw_provider_payload: {
+      transaction_id: txn.transaction_id,
+      account_id: txn.account_id,
+      amount: txn.amount,
+      pending: txn.pending ?? false,
+      pending_transaction_id: txn.pending_transaction_id ?? null,
+      transaction_code: txn.transaction_code ?? null,
+      personal_finance_category: txn.personal_finance_category ?? null,
+      counterparty_types: counterpartyTypes,
+    },
     is_recurring: false,
     recurrence_rule: null,
     household_id: null,
