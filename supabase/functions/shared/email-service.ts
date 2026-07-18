@@ -27,6 +27,7 @@ export interface EmailOptions {
 
 interface ResendApiResponse {
   id?: string;
+  name?: string;
   message?: string;
   error?: string | { message?: string };
 }
@@ -116,6 +117,36 @@ export async function sendEmail({
             result,
             `Resend API request failed with status ${response.status}`,
           );
+          const errorType = result.name || "";
+          const isModifiedIdempotentRequest =
+            response.status === 409 &&
+            (errorType === "invalid_idempotent_request" ||
+              message.includes(
+                "idempotency key has been used with this HTTP method and endpoint",
+              ) ||
+              message.includes("same idempotency key used with a different"));
+          if (isModifiedIdempotentRequest) {
+            console.warn(
+              "Email already sent for idempotency key; acknowledging modified retry",
+              { idempotencyKey, subject },
+            );
+            return {
+              success: true,
+              id: result.id || "idempotent-request-already-sent",
+              idempotent: true,
+            };
+          }
+
+          const isConcurrentIdempotentRequest =
+            response.status === 409 &&
+            (errorType === "concurrent_idempotent_requests" ||
+              message.includes("original request is still in progress"));
+          if (isConcurrentIdempotentRequest && attempt < maxAttempts - 1) {
+            attempt++;
+            await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+            continue;
+          }
+
           // Check if it's a rate limit error
           if (
             response.status === 429 ||

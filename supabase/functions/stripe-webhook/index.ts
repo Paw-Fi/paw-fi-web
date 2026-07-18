@@ -498,6 +498,9 @@ serve(async (req) => {
             event.data.object as Stripe.Subscription,
             event.id,
             enqueueUserEmail,
+            undefined,
+            event.type,
+            (event.data.previous_attributes as Record<string, any>) || {},
           );
           break;
         case "customer.subscription.deleted":
@@ -1610,6 +1613,8 @@ async function handleSubscriptionUpdated(
   eventId: string,
   enqueueUserEmail: EnqueueUserEmail,
   relatedInvoice?: Stripe.Invoice,
+  sourceEventType?: string,
+  previousAttributes: Record<string, any> = {},
 ) {
   try {
     console.log("Processing subscription update:", subscription.id);
@@ -2128,8 +2133,19 @@ async function handleSubscriptionUpdated(
     const name = user.full_name || "";
     const hasAccessNow = isAccessGrantingStatus(storedStatus);
     const hadAccessBefore = isAccessGrantingStatus(previousSub?.status || "");
+    const isCustomerSubscriptionEvent =
+      sourceEventType?.startsWith("customer.subscription.") === true;
+    const previousStripeStatus = previousAttributes.status;
+    const previousStripeHadAccess =
+      typeof previousStripeStatus === "string" &&
+      isAccessGrantingStatus(previousStripeStatus);
 
-    if (storedStatus === "paused" && previousStoredStatus !== "paused") {
+    if (
+      isCustomerSubscriptionEvent &&
+      storedStatus === "paused" &&
+      (sourceEventType === "customer.subscription.paused" ||
+        previousStripeHadAccess)
+    ) {
       const emailTemplate = subscriptionPausedTemplate({ name });
       enqueueUserEmail(
         user.email,
@@ -2140,7 +2156,12 @@ async function handleSubscriptionUpdated(
       return;
     }
 
-    if (hasAccessNow && previousStoredStatus === "paused") {
+    if (
+      isCustomerSubscriptionEvent &&
+      hasAccessNow &&
+      (sourceEventType === "customer.subscription.resumed" ||
+        previousStripeStatus === "paused")
+    ) {
       const emailTemplate = subscriptionResumedTemplate({ name });
       enqueueUserEmail(
         user.email,
@@ -2152,8 +2173,13 @@ async function handleSubscriptionUpdated(
     }
 
     const isNew =
+      isCustomerSubscriptionEvent &&
       hasAccessNow &&
-      (!hadAccessBefore || previousSub?.last_event_id === eventId);
+      (sourceEventType === "customer.subscription.created" ||
+        (sourceEventType === "customer.subscription.updated" &&
+          (!hadAccessBefore ||
+            (typeof previousStripeStatus === "string" &&
+              !previousStripeHadAccess))));
 
     if (isNew) {
       const emailTemplate = subscriptionCreatedTemplate({
@@ -2176,9 +2202,10 @@ async function handleSubscriptionUpdated(
 
     if (
       hasAccessNow &&
+      isCustomerSubscriptionEvent &&
       cancelAtPeriodEnd &&
       (!previousSub?.cancel_at_period_end ||
-        previousSub?.last_event_id === eventId)
+        previousAttributes.cancel_at_period_end === false)
     ) {
       const emailTemplate = subscriptionCanceledTemplate({
         name,
@@ -2198,17 +2225,29 @@ async function handleSubscriptionUpdated(
       return;
     }
 
+    const previousEventPlanInfo = resolveSubscriptionPlanFromPrice({
+      items: previousAttributes.items,
+    });
+    const emailPreviousPlan =
+      previousPlan !== finalPlan || previousInterval !== finalInterval
+        ? previousPlan
+        : previousEventPlanInfo?.plan || previousPlan;
+    const emailPreviousInterval =
+      previousPlan !== finalPlan || previousInterval !== finalInterval
+        ? previousInterval
+        : previousEventPlanInfo?.interval || previousInterval;
+
     if (
       hasAccessNow &&
-      previousPlan &&
-      (previousPlan !== finalPlan ||
-        previousInterval !== finalInterval ||
-        previousSub?.last_event_id === eventId)
+      isCustomerSubscriptionEvent &&
+      emailPreviousPlan &&
+      (emailPreviousPlan !== finalPlan ||
+        emailPreviousInterval !== finalInterval)
     ) {
       const changeType = getChangeType(
-        previousPlan,
+        emailPreviousPlan,
         finalPlan,
-        previousInterval || undefined,
+        emailPreviousInterval || undefined,
         finalInterval,
       );
 
@@ -2413,6 +2452,7 @@ async function handleInvoicePaymentSucceeded(
         eventId,
         enqueueUserEmail,
         invoice,
+        "invoice.payment_succeeded",
       );
 
       // SEND INVOICE RECEIPT EMAIL WITH PDF
@@ -2480,6 +2520,7 @@ async function handleInvoicePaymentSucceeded(
           `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         invoicePdfUrl: invoice.invoice_pdf || undefined,
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
+        isRenewal: invoice.billing_reason === "subscription_cycle",
       });
 
       enqueueUserEmail(
@@ -2880,6 +2921,7 @@ async function handleInvoicePaymentFailed(
         eventId,
         enqueueUserEmail,
         invoice,
+        "invoice.payment_failed",
       );
 
       const retryLookup = await supabase
@@ -4432,7 +4474,13 @@ async function handleSubscriptionPendingUpdateApplied(
 
     // Reconcile through the canonical subscription path so price, period,
     // status, household access, and user notification logic stay consistent.
-    await handleSubscriptionUpdated(subscription, eventId, enqueueUserEmail);
+    await handleSubscriptionUpdated(
+      subscription,
+      eventId,
+      enqueueUserEmail,
+      undefined,
+      "customer.subscription.pending_update_applied",
+    );
 
     const customerId =
       typeof subscription.customer === "string"

@@ -851,9 +851,13 @@ export const invoicePaymentSucceededTemplate = (data: {
   invoiceUrl: string;
   invoicePdfUrl?: string;
   dashboardUrl: string;
+  isRenewal?: boolean;
 }) => {
+  const title = data.isRenewal
+    ? "Your Subscription Renewal Payment Was Successful"
+    : "Payment Received — Thank You";
   const content = `
-    <h1 class="title">Payment Received — Thank You</h1>
+    <h1 class="title">${escapeHtml(title)}</h1>
     <p class="subtitle">We've successfully received your payment for ${escapeHtml(
       data.planName,
     )}.</p>
@@ -886,7 +890,11 @@ export const invoicePaymentSucceededTemplate = (data: {
       }),
     ),
     text: htmlToText(content),
-    subject: sanitizeSubject(`Payment Received — ${data.planName}`),
+    subject: sanitizeSubject(
+      data.isRenewal
+        ? `Renewal Payment Successful — ${data.planName}`
+        : `Payment Received — ${data.planName}`,
+    ),
   };
 };
 

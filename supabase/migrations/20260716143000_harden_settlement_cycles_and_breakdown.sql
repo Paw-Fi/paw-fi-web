@@ -21,6 +21,16 @@ lock table public.household_settlement_event_allocations_v2
 lock table public.household_settlement_event_allocation_status_v2
   in share row exclusive mode;
 
+-- Acquiring the locks above waits behind any writer that is mid-statement
+-- on these tables. That writer's deferred constraint triggers (e.g. the
+-- expense soft-delete split cleanup, or FK checks queued by an in-flight
+-- split/settlement write) do not fire until COMMIT or SET CONSTRAINTS
+-- IMMEDIATE. If our session inherits/continues any such pending event on
+-- these relations, Postgres refuses the ALTER TABLE statements below with
+-- 55006 ("pending trigger events"). Flushing immediately here is a no-op
+-- when nothing is pending, and otherwise makes the cutover deterministic.
+set constraints all immediate;
+
 create sequence if not exists public.household_settlement_ledger_seq;
 
 revoke all on sequence public.household_settlement_ledger_seq
