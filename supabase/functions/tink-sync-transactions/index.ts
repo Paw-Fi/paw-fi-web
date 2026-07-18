@@ -650,6 +650,16 @@ async function syncConnection(params: {
     p_locked_by: "tink-sync",
   });
 
+  if (lockResult.error) {
+    summary.status = "error";
+    summary.error = "Bank sync lock could not be acquired";
+    await auditUpdate({
+      status: "failed",
+      error_message: summary.error,
+      finished_at: new Date().toISOString(),
+    });
+    return summary;
+  }
   if (!lockResult.data) {
     summary.status = "error";
     summary.error = "Sync already in progress";

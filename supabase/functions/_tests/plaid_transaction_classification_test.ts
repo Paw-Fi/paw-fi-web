@@ -56,27 +56,6 @@ Deno.test("low-confidence Plaid categories require explicit review", () => {
   });
 });
 
-for (const confidence of [null, "UNKNOWN", "LOW", "MEDIUM"]) {
-  Deno.test(`PFC confidence ${confidence ?? "missing"} is excluded`, () => {
-    const classification = classifyPlaidTransaction({
-      amount: 3000,
-      pending: false,
-      pfcPrimary: "GENERAL_SERVICES",
-      transactionCode: null,
-      accountType: "depository",
-    });
-    const review = derivePlaidClassificationReview(
-      { pfcConfidence: confidence },
-      classification,
-    );
-
-    assertEquals(review, {
-      state: "needs_review",
-      reason: "low_provider_confidence",
-    });
-  });
-}
-
 Deno.test("authoritative transaction codes do not require PFC review", () => {
   const input = {
     amount: 25,
@@ -95,38 +74,6 @@ Deno.test("authoritative transaction codes do not require PFC review", () => {
 });
 
 Deno.test(
-  "conflicting Plaid transfer and purchase signals require review",
-  () => {
-    const transferCode = classifyPlaidTransaction({
-      amount: 3000,
-      pending: false,
-      pfcPrimary: "FOOD_AND_DRINK",
-      transactionCode: "transfer",
-      accountType: "depository",
-    });
-    assertEquals(transferCode.analyticsClass, "transfer_out");
-    assertEquals(transferCode.spendingMultiplier, 0);
-    assertEquals(
-      derivePlaidClassificationReview(
-        { pfcConfidence: "VERY_HIGH" },
-        transferCode,
-      ),
-      { state: "needs_review", reason: "conflicting_provider_signals" },
-    );
-
-    const purchaseCode = classifyPlaidTransaction({
-      amount: 3000,
-      pending: false,
-      pfcPrimary: "TRANSFER_OUT",
-      transactionCode: "purchase",
-      accountType: "depository",
-    });
-    assertEquals(purchaseCode.analyticsClass, "unknown");
-    assertEquals(purchaseCode.spendingMultiplier, 0);
-  },
-);
-
-Deno.test(
   "Plaid classification keeps pending purchases out of finalized totals",
   () => {
     const result = classifyPlaidTransaction({
@@ -142,36 +89,6 @@ Deno.test(
     assertEquals(result.spendingMultiplier, 0);
   },
 );
-
-Deno.test("financial counterparties cannot silently become spending", () => {
-  const result = classifyPlaidTransaction({
-    amount: 3000,
-    pending: false,
-    pfcPrimary: "GENERAL_SERVICES",
-    pfcConfidence: "VERY_HIGH",
-    transactionCode: null,
-    accountType: "depository",
-    hasAmbiguousCounterparty: true,
-  });
-
-  assertEquals(result.analyticsClass, "unknown");
-  assertEquals(result.spendingMultiplier, 0);
-});
-
-Deno.test("unenriched depository outflows require review", () => {
-  const result = classifyPlaidTransaction({
-    amount: 3000,
-    pending: false,
-    pfcPrimary: "GENERAL_SERVICES",
-    pfcConfidence: "VERY_HIGH",
-    transactionCode: null,
-    accountType: "depository",
-    hasMerchantEvidence: false,
-  });
-
-  assertEquals(result.analyticsClass, "unknown");
-  assertEquals(result.spendingMultiplier, 0);
-});
 
 for (const testCase of [
   { primary: "TRANSFER_IN", amount: -200, expected: "transfer_in" },
@@ -436,29 +353,6 @@ for (const transactionCode of [
       assertEquals(result.analyticsClass, "unknown");
       assertEquals(result.spendingMultiplier, 0);
       assertEquals(result.countsTowardIncome, false);
-    },
-  );
-}
-
-for (const transactionCode of [
-  "bill payment",
-  "cheque",
-  "payment",
-  "standing order",
-]) {
-  Deno.test(
-    `ambiguous ${transactionCode} cannot become spending from generic PFC`,
-    () => {
-      const result = classifyPlaidTransaction({
-        amount: 3000,
-        pending: false,
-        pfcPrimary: "GENERAL_SERVICES",
-        transactionCode,
-        accountType: "depository",
-      });
-
-      assertEquals(result.analyticsClass, "unknown");
-      assertEquals(result.spendingMultiplier, 0);
     },
   );
 }

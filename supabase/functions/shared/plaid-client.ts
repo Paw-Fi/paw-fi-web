@@ -228,7 +228,6 @@ export async function exchangePublicToken(
 
 export interface PlaidAccount {
   account_id: string;
-  persistent_account_id?: string | null;
   name: string;
   official_name?: string | null;
   mask?: string | null;
@@ -314,9 +313,6 @@ export interface PlaidTransaction {
     payee?: string | null;
     payer?: string | null;
   };
-  counterparties?: Array<{
-    type?: string | null;
-  }>;
 }
 
 export interface PlaidSyncResponse {
@@ -452,20 +448,6 @@ export function mapPlaidTransactionToExpense(
     pfcPrimary: txn.personal_finance_category?.primary,
     transactionCode: txn.transaction_code,
     accountType: params.accountType,
-    pfcConfidence: txn.personal_finance_category?.confidence_level,
-    hasAmbiguousCounterparty:
-      txn.counterparties?.some((counterparty) =>
-        ["financial_institution", "payment_app"].includes(
-          counterparty.type?.trim().toLowerCase() ?? "",
-        ),
-      ) ?? false,
-    hasMerchantEvidence:
-      Boolean(txn.merchant_name?.trim()) ||
-      (txn.counterparties?.some(
-        (counterparty) =>
-          counterparty.type?.trim().toLowerCase() === "merchant",
-      ) ??
-        false),
   });
   const classificationReview = derivePlaidClassificationReview(
     {

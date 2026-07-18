@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
         const { data: existingAccounts } = await supabase
           .from("bank_accounts")
           .select(
-            "id, name, mask, type, subtype, currency, plaid_account_id, provider_account_id, provider_persistent_account_id, provider_balance_current_cents, provider_balance_available_cents, provider_balance_limit_cents, provider_balance_updated_at",
+            "id, name, mask, type, subtype, currency, plaid_account_id, provider_account_id, provider_balance_current_cents, provider_balance_available_cents, provider_balance_limit_cents, provider_balance_updated_at",
           )
           .eq("bank_connection_id", existingConnection.id);
 

@@ -18,6 +18,8 @@ interface DashboardSummaryRequest {
 
 interface TransactionRow {
   id: string;
+  user_id: string;
+  privacy_scope: string | null;
   date: string;
   amount_cents: number;
   currency: string | null;
@@ -178,7 +180,14 @@ Deno.serve(async (req: Request) => {
     const displayTransactions = transactions.filter(
       (row) => normalizeCurrency(row.currency) === filters.displayCurrency,
     );
+    const detailTransactions = displayTransactions.filter(
+      (row) =>
+        row.user_id === auth.userId || row.privacy_scope !== "balances_only",
+    );
     const expenseRows = displayTransactions.filter(
+      (row) => row.analytics_spending_multiplier !== 0,
+    );
+    const detailExpenseRows = detailTransactions.filter(
       (row) => row.analytics_spending_multiplier !== 0,
     );
     const incomeRows = displayTransactions.filter(
@@ -194,8 +203,10 @@ Deno.serve(async (req: Request) => {
       transactions,
       filters.displayCurrency,
     );
-    const receiptCount = transactions.filter(hasReceiptOrAttachment).length;
-    const purchaseRows = expenseRows.filter(
+    const receiptCount = detailTransactions.filter(
+      hasReceiptOrAttachment,
+    ).length;
+    const purchaseRows = detailExpenseRows.filter(
       (row) => row.analytics_spending_multiplier > 0,
     );
     const missingReceiptCount = purchaseRows.filter(
@@ -219,15 +230,15 @@ Deno.serve(async (req: Request) => {
         netCashflowCents: incomeCents - expenseCents,
         profitLossCents: incomeCents - expenseCents,
         receiptCoveragePercent:
-          expenseRows.length === 0
+          detailExpenseRows.length === 0
             ? 100
             : Math.round(
-                ((expenseRows.length - missingReceiptCount) /
-                  expenseRows.length) *
+                ((detailExpenseRows.length - missingReceiptCount) /
+                  detailExpenseRows.length) *
                   100,
               ),
       },
-      trends: buildTrends(displayTransactions),
+      trends: buildTrends(detailTransactions),
       actionItems: buildActionItems({
         uncategorizedCount,
         missingReceiptCount,
@@ -237,28 +248,38 @@ Deno.serve(async (req: Request) => {
       budgetProgress: buildBudgetProgress({
         budgets,
         envelopes,
-        expenseRows,
+        expenseRows: detailExpenseRows,
         displayCurrency: filters.displayCurrency,
       }),
-      topCategories: buildTopCategories(expenseRows, filters.displayCurrency),
-      recentTransactions: transactions.slice(0, 25).map((row) => ({
-        id: row.id,
-        type: normalizeType(row.type),
-        date: row.date,
-        amountCents: Math.abs(Number(row.amount_cents ?? 0)),
-        currency: normalizeCurrency(row.currency),
-        category: row.category || "uncategorized",
-        description: row.raw_text,
-        merchant: row.merchant,
-        accountId: row.account_id,
-        accountName: row.account_id
-          ? (accountNameById.get(row.account_id) ?? null)
-          : null,
-        receiptImageUrl: row.receipt_image_url,
-        attachmentCount: attachmentCount(row.attachments),
-      })),
+      topCategories: buildTopCategories(
+        detailExpenseRows,
+        filters.displayCurrency,
+      ),
+      recentTransactions: transactions
+        .filter(
+          (row) =>
+            row.user_id === auth.userId ||
+            row.privacy_scope !== "balances_only",
+        )
+        .slice(0, 25)
+        .map((row) => ({
+          id: row.id,
+          type: normalizeType(row.type),
+          date: row.date,
+          amountCents: Math.abs(Number(row.amount_cents ?? 0)),
+          currency: normalizeCurrency(row.currency),
+          category: row.category || "uncategorized",
+          description: row.raw_text,
+          merchant: row.merchant,
+          accountId: row.account_id,
+          accountName: row.account_id
+            ? (accountNameById.get(row.account_id) ?? null)
+            : null,
+          receiptImageUrl: row.receipt_image_url,
+          attachmentCount: attachmentCount(row.attachments),
+        })),
       exportReadiness: {
-        transactionCount: transactions.length,
+        transactionCount: detailTransactions.length,
         receiptCount,
         emailAttachmentCount,
         uncategorizedCount,
@@ -344,7 +365,7 @@ async function fetchTransactions(
   let query = supabase
     .from("expenses")
     .select(
-      "id, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
+      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", false)
     .is("deleted_at", null)
@@ -355,9 +376,6 @@ async function fetchTransactions(
     .limit(500);
 
   query = applyScope(query, userId, filters.householdId);
-  if (filters.householdId) {
-    query = query.or(`user_id.eq.${userId},privacy_scope.eq.full`);
-  }
   if (filters.accountId) query = query.eq("account_id", filters.accountId);
   if (filters.category) query = query.ilike("category", filters.category);
   if (filters.search) {
@@ -381,16 +399,13 @@ async function fetchRecurring(
   let query = supabase
     .from("expenses")
     .select(
-      "id, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
+      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", true)
     .is("deleted_at", null)
     .in("currency", filters.selectedCurrencies)
     .limit(50);
   query = applyScope(query, userId, filters.householdId);
-  if (filters.householdId) {
-    query = query.or(`user_id.eq.${userId},privacy_scope.eq.full`);
-  }
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as TransactionRow[];

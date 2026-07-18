@@ -221,23 +221,11 @@ begin
   elsif new.classification_review_state = 'needs_review'
     and new.classification_review_reason = 'possible_transfer_match' then
     null;
-  elsif (
-    new.provider_transaction_code = 'transfer'
-    and coalesce(new.provider_pfc_primary, '') not in ('', 'TRANSFER_IN', 'TRANSFER_OUT')
-  ) or (
-    new.provider_transaction_code = 'purchase'
-    and new.provider_pfc_primary in (
-      'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
-      'LOAN_DISBURSEMENTS', 'BANK_FEES'
-    )
-  ) then
-    new.classification_review_state := 'needs_review';
-    new.classification_review_reason := 'conflicting_provider_signals';
   elsif new.analytics_class = 'unknown' then
     new.classification_review_state := 'needs_review';
     new.classification_review_reason := 'unknown_provider_intent';
   elsif new.classification_source <> 'plaid_transaction_code'
-    and upper(coalesce(new.provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH') then
+    and upper(coalesce(new.provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN') then
     new.classification_review_state := 'needs_review';
     new.classification_review_reason := 'low_provider_confidence';
   else
@@ -252,8 +240,7 @@ drop trigger if exists expenses_classification_review_v1 on public.expenses;
 drop trigger if exists z_set_expense_classification_review_v1 on public.expenses;
 create trigger z_set_expense_classification_review_v1
 before insert or update of provider, analytics_class, classification_source,
-  provider_pfc_primary, provider_pfc_confidence, provider_transaction_code,
-  classification_review_state
+  provider_pfc_confidence, classification_review_state
 on public.expenses
 for each row execute function public.set_expense_classification_review_v1();
 
@@ -313,7 +300,7 @@ where provider = 'plaid'
     'bank charge', 'late fee', 'membership fee', 'returned item fee',
     'adjustment', 'purchase'
   )
-  and upper(coalesce(provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH');
+  and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN');
 
 update public.expenses
 set classification_review_state = case
@@ -321,43 +308,19 @@ set classification_review_state = case
       when provider = 'plaid' and (
         analytics_class = 'unknown'
         or (
-          provider_transaction_code = 'transfer'
-          and coalesce(provider_pfc_primary, '') not in ('', 'TRANSFER_IN', 'TRANSFER_OUT')
-        )
-        or (
-          provider_transaction_code = 'purchase'
-          and provider_pfc_primary in (
-            'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
-            'LOAN_DISBURSEMENTS', 'BANK_FEES'
-          )
-        )
-        or (
           classification_source <> 'plaid_transaction_code'
-          and upper(coalesce(provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH')
+          and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
         )
       ) then 'needs_review'
       else 'not_required'
     end,
     classification_review_reason = case
       when classification_source = 'user_override' then null
-      when provider = 'plaid' and (
-        (
-          provider_transaction_code = 'transfer'
-          and coalesce(provider_pfc_primary, '') not in ('', 'TRANSFER_IN', 'TRANSFER_OUT')
-        )
-        or (
-          provider_transaction_code = 'purchase'
-          and provider_pfc_primary in (
-            'INCOME', 'TRANSFER_IN', 'TRANSFER_OUT', 'LOAN_PAYMENTS',
-            'LOAN_DISBURSEMENTS', 'BANK_FEES'
-          )
-        )
-      ) then 'conflicting_provider_signals'
       when provider = 'plaid' and analytics_class = 'unknown'
         then 'unknown_provider_intent'
       when provider = 'plaid'
         and classification_source <> 'plaid_transaction_code'
-        and upper(coalesce(provider_pfc_confidence, '')) not in ('HIGH', 'VERY_HIGH')
+        and upper(coalesce(provider_pfc_confidence, '')) in ('LOW', 'UNKNOWN')
         then 'low_provider_confidence'
       else null
     end;
@@ -372,6 +335,7 @@ create or replace function public.apply_plaid_sync_batch_v1(
   p_removed_provider_transaction_ids text[],
   p_removed_bank_account_ids uuid[],
   p_processed_bank_account_ids uuid[],
+  p_lock_token uuid,
   p_audit_id uuid default null
 ) returns jsonb
 language plpgsql
@@ -401,6 +365,15 @@ begin
   end if;
   if coalesce(v_connection.cursor_generation, 0) <> coalesce(p_expected_cursor_generation, 0) then
     raise exception 'Plaid cursor generation changed during sync' using errcode = '40001';
+  end if;
+  perform 1
+  from public.bank_sync_locks
+  where bank_connection_id = p_bank_connection_id
+    and lock_token = p_lock_token
+    and locked_until > v_now
+  for update;
+  if not found then
+    raise exception 'Plaid sync lock lease was lost' using errcode = '40001';
   end if;
   if exists (
     select 1 from unnest(coalesce(p_processed_bank_account_ids, '{}'::uuid[])) account_id
@@ -667,7 +640,7 @@ begin
       and m.analytics_is_final
       and m.bank_account_id is distinct from e.bank_account_id
       and m.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
-      and m.household_id is not distinct from v_connection_household_id
+      and m.household_id is not distinct from v_connection.household_id
       and upper(coalesce(m.currency, '')) = upper(coalesce(e.currency, ''))
       and abs(m.amount_cents) = abs(e.amount_cents)
       and m.type is distinct from e.type
@@ -677,7 +650,7 @@ begin
       and e.deleted_at is null
       and e.analytics_is_final
       and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
-      and e.household_id is not distinct from v_connection_household_id
+      and e.household_id is not distinct from v_connection.household_id
       and e.classification_source <> 'user_override'
     union
     select m.id
@@ -689,7 +662,7 @@ begin
       and m.analytics_is_final
       and m.bank_account_id is distinct from e.bank_account_id
       and m.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
-      and m.household_id is not distinct from v_connection_household_id
+      and m.household_id is not distinct from v_connection.household_id
       and upper(coalesce(m.currency, '')) = upper(coalesce(e.currency, ''))
       and abs(m.amount_cents) = abs(e.amount_cents)
       and m.type is distinct from e.type
@@ -699,7 +672,7 @@ begin
       and e.deleted_at is null
       and e.analytics_is_final
       and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
-      and e.household_id is not distinct from v_connection_household_id
+      and e.household_id is not distinct from v_connection.household_id
       and m.classification_source <> 'user_override'
   )
   update public.expenses e
@@ -777,10 +750,10 @@ end;
 $$;
 
 revoke all on function public.apply_plaid_sync_batch_v1(
-  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], uuid
+  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], uuid, uuid
 ) from public, anon, authenticated;
 grant execute on function public.apply_plaid_sync_batch_v1(
-  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], uuid
+  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], uuid, uuid
 ) to service_role;
 
 create or replace function public.get_plaid_transfer_suggestions_v1(

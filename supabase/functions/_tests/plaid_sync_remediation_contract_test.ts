@@ -49,19 +49,25 @@ Deno.test(
   },
 );
 
-Deno.test("Plaid Transactions never creates recurring forecasts", async () => {
-  const source = await Deno.readTextFile(bankSyncSourceUrl);
-  const preparationStart = source.indexOf(
-    "export async function preparePlaidTransactionMutations",
-  );
-  const preparationEnd = source.indexOf(
-    "export async function persistPreparedPlaidTransactionMutations",
-  );
-  assert(preparationStart >= 0 && preparationEnd > preparationStart);
-  const preparation = source.slice(preparationStart, preparationEnd);
-  assert(!preparation.includes("recurringTemplateCandidates"));
-  assert(!preparation.includes("inferPlaidRecurringRules"));
-});
+Deno.test(
+  "Plaid recurring templates require provider stream identity",
+  async () => {
+    const source = await Deno.readTextFile(bankSyncSourceUrl);
+    const preparationStart = source.indexOf(
+      "export async function preparePlaidTransactionMutations",
+    );
+    const preparationEnd = source.indexOf(
+      "export async function persistPreparedPlaidRecurringTemplates",
+    );
+    assert(preparationStart >= 0 && preparationEnd > preparationStart);
+    const preparation = source.slice(preparationStart, preparationEnd);
+    assertStringIncludes(preparation, "inferPlaidRecurringRules");
+    assertStringIncludes(preparation, "recurringTemplateCandidates");
+    assertStringIncludes(source, "plaid_stream_id");
+    assertStringIncludes(source, "mergePlaidRecurringTemplatePayload");
+    assertStringIncludes(source, 'existing.deleted_reason === "user_deleted"');
+  },
+);
 
 Deno.test("wallet spending uses canonical analytics semantics", async () => {
   const source = await Deno.readTextFile(walletsOverviewSourceUrl);

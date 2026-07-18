@@ -22,6 +22,8 @@ import {
   type ExpensePreview,
   type LinkedWalletRecord,
   loadLinkedWalletsForBankAccounts,
+  type PlaidRecurringTemplateCandidate,
+  persistPreparedPlaidRecurringTemplates,
   preparePlaidTransactionMutations,
   sanitizeOptionalUuid,
   stagePlaidTransactions,
@@ -493,6 +495,18 @@ async function syncConnection(params: {
     p_locked_by: "plaid-sync",
   });
 
+  if (lockResult.error) {
+    summary.status = "error";
+    summary.errorCode = "LOCK_ACQUIRE_FAILED";
+    summary.error = "Bank sync lock could not be acquired";
+    await auditUpdate({
+      status: "failed",
+      error_message: summary.error,
+      error_code: summary.errorCode,
+      finished_at: new Date().toISOString(),
+    });
+    return summary;
+  }
   if (!lockResult.data) {
     summary.status = "error";
     summary.error = "Sync already in progress";
@@ -709,6 +723,7 @@ async function syncConnection(params: {
 
     const expenseInserts: BankExpenseMutationRecord[] = [];
     const expenseUpdates: BankExpenseMutationRecord[] = [];
+    const recurringTemplateCandidates: PlaidRecurringTemplateCandidate[] = [];
 
     for (const [plaidAccountId, transactions] of grouped.entries()) {
       const account = accountMap.get(
@@ -742,6 +757,7 @@ async function syncConnection(params: {
 
       expenseInserts.push(...prepared.inserts);
       expenseUpdates.push(...prepared.updates);
+      recurringTemplateCandidates.push(...prepared.recurringTemplateCandidates);
       summary.skipped += prepared.skipped;
       if (isInactiveAccount) {
         summary.inactiveTransactionsHidden += prepared.inserts.filter(
@@ -774,6 +790,19 @@ async function syncConnection(params: {
       );
     }
     const atomicAccountIds = connectionBankAccountIds;
+    await persistPreparedPlaidRecurringTemplates({
+      supabase: params.supabase,
+      candidates: recurringTemplateCandidates,
+    });
+    const { data: leaseExtended, error: leaseExtendError } =
+      await params.supabase.rpc("extend_bank_sync_lock_v2", {
+        p_bank_connection_id: params.connection.id,
+        p_lock_token: lockToken,
+        p_lock_seconds: 900,
+      });
+    if (leaseExtendError || leaseExtended !== true) {
+      throw new Error("Plaid sync lock lease was lost before commit");
+    }
     const { data: atomicResult, error: atomicError } =
       await params.supabase.rpc("apply_plaid_sync_batch_v1", {
         p_user_id: params.userId,
@@ -785,6 +814,7 @@ async function syncConnection(params: {
         p_removed_provider_transaction_ids: removedIds,
         p_removed_bank_account_ids: removedBankAccountIds,
         p_processed_bank_account_ids: atomicAccountIds,
+        p_lock_token: lockToken,
         p_audit_id: auditId ?? null,
       });
     if (atomicError) throw atomicError;
@@ -810,18 +840,15 @@ async function syncConnection(params: {
         connectionId: params.connection.id,
         linkedWalletsByBankAccountId,
       });
-    } catch (rebindError) {
+    } catch (postProcessingError) {
       summary.status = "error";
-      summary.errorCode = "WALLET_REBIND_FAILED";
-      summary.error =
-        "Transactions synced, but linked-wallet reconciliation failed";
+      summary.errorCode = "POST_PROCESSING_FAILED";
+      summary.error = "Transactions synced, but post-processing failed";
       await reportEdgeFunctionError({
         functionName: "plaid-sync-transactions",
-        error: rebindError,
+        error: postProcessingError,
         context: {
-          phase: "rebind_linked_wallets_after_atomic_batch",
-          connection_id: params.connection.id,
-          user_id: params.userId,
+          phase: "post_process_after_atomic_batch",
         },
       });
     }
@@ -978,24 +1005,16 @@ async function syncConnection(params: {
 }
 
 function formatUnknownErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  if (error && typeof error === "object") {
-    const map = error as Record<string, unknown>;
-    const message = map.message ?? map.error ?? map.details;
-    if (typeof message === "string" && message.trim()) {
-      return message;
+  if (error instanceof PlaidError) {
+    if (error.code === "ITEM_LOGIN_REQUIRED") {
+      return "Bank re-authentication is required";
     }
-    try {
-      return JSON.stringify(map);
-    } catch {
-      return "[unserializable error]";
+    if (error.code === "INVALID_CURSOR") {
+      return "Transaction history needs a safe replay";
     }
+    return "Plaid transaction sync failed";
   }
-
-  return String(error);
+  return "Bank transaction sync failed";
 }
 
 function shouldLogPlaidTransactionSample(): boolean {

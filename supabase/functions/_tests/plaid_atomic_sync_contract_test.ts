@@ -28,6 +28,8 @@ Deno.test(
     assertStringIncludes(body, "cursor = p_next_cursor");
     assertStringIncludes(body, "insert into public.plaid_sync_events");
     assertStringIncludes(body, "Plaid batch update target changed");
+    assertStringIncludes(body, "lock_token = p_lock_token");
+    assertStringIncludes(body, "locked_until > v_now");
   },
 );
 

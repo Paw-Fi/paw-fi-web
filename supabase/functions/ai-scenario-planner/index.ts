@@ -509,7 +509,9 @@ serve(async (req: Request): Promise<Response> => {
       .is("deleted_at", null);
 
     if (mode === "household") {
-      expensesQuery = expensesQuery.eq("household_id", householdId);
+      expensesQuery = expensesQuery
+        .eq("household_id", householdId)
+        .or(`user_id.eq.${userId},privacy_scope.eq.full`);
     } else {
       expensesQuery = expensesQuery.eq("user_id", userId);
     }
