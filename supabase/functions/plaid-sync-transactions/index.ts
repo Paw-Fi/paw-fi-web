@@ -841,10 +841,10 @@ async function syncConnection(params: {
         p_expense_inserts: expenseInserts,
         p_expense_updates: expenseUpdates,
         p_removed_provider_transaction_ids: removedIds,
-        p_removed_bank_account_ids: removedBankAccountIds,
-        p_processed_bank_account_ids: atomicAccountIds,
-        p_account_upserts: refreshedAccounts.payload,
-        p_inactive_bank_account_ids: inactiveAccountIds,
+        p_removed_bank_account_ids: isReady ? removedBankAccountIds : [],
+        p_processed_bank_account_ids: isReady ? atomicAccountIds : [],
+        p_account_upserts: isReady ? refreshedAccounts.payload : [],
+        p_inactive_bank_account_ids: isReady ? inactiveAccountIds : [],
         p_raw_transactions: rawTransactions,
         p_sync_status: responseSyncStatus
           ? {
@@ -937,30 +937,40 @@ async function syncConnection(params: {
             recurringEventError,
           );
         }
-        const { data: recurringCompleteRows, error: recurringCompleteError } =
-          await params.supabase
-            .from("bank_connections")
-            .update({
-              plaid_recurring_refresh_pending: false,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", params.connection.id)
-            .eq("cursor_generation", Number(result.cursor_generation || 0))
-            .select("id");
-        if (recurringCompleteError) throw recurringCompleteError;
-        if (recurringCompleteRows?.length !== 1) {
-          console.warn(
-            "[plaid-sync] A newer sync kept recurring reconciliation pending",
-          );
+        if (!recurringResult.providerAvailable) {
           await params.supabase.from("plaid_sync_events").insert({
             bank_connection_id: params.connection.id,
             bank_sync_audit_id: auditId,
-            event_type: "recurring_refresh_superseded",
+            event_type: "recurring_refresh_deferred",
             severity: "warning",
-            payload: {
-              cursor_generation: Number(result.cursor_generation || 0),
-            },
+            payload: { reason: "provider_unavailable" },
           });
+        } else {
+          const { data: recurringCompleteRows, error: recurringCompleteError } =
+            await params.supabase
+              .from("bank_connections")
+              .update({
+                plaid_recurring_refresh_pending: false,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", params.connection.id)
+              .eq("cursor_generation", Number(result.cursor_generation || 0))
+              .select("id");
+          if (recurringCompleteError) throw recurringCompleteError;
+          if (recurringCompleteRows?.length !== 1) {
+            console.warn(
+              "[plaid-sync] A newer sync kept recurring reconciliation pending",
+            );
+            await params.supabase.from("plaid_sync_events").insert({
+              bank_connection_id: params.connection.id,
+              bank_sync_audit_id: auditId,
+              event_type: "recurring_refresh_superseded",
+              severity: "warning",
+              payload: {
+                cursor_generation: Number(result.cursor_generation || 0),
+              },
+            });
+          }
         }
       } catch (recurringError) {
         console.warn("[plaid-sync] Recurring refresh failed", recurringError);

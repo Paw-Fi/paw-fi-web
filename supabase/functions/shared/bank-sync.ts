@@ -26,6 +26,7 @@ export interface UpsertAccountsParams {
   userId: string;
   bankConnectionId: string;
   accounts: PlaidAccount[];
+  reactivateExistingAccounts?: boolean;
 }
 
 export interface UpsertAccountsResult {
@@ -1287,7 +1288,10 @@ export async function preparePlaidAccounts(
         "USD",
       type: account.type || null,
       subtype: account.subtype || null,
-      status: existing?.status === "disabled" ? "disabled" : "active",
+      status:
+        existing?.status === "disabled" && !params.reactivateExistingAccounts
+          ? "disabled"
+          : "active",
       provider_balance_current_cents: plaidBalanceToCents(
         account.balances?.current,
       ),

@@ -51,7 +51,7 @@ async function fetchPlaidJWK(keyId: string): Promise<PlaidJWK> {
   if (
     cached &&
     cached.expiresAt > Date.now() &&
-    (!cached.key.expired_at || cached.key.expired_at >= nowSeconds)
+    (!cached.key.expired_at || cached.key.expired_at > nowSeconds)
   ) {
     return cached.key;
   }
@@ -82,18 +82,27 @@ async function fetchPlaidJWK(keyId: string): Promise<PlaidJWK> {
   }
 
   const data = (await response.json()) as PlaidWebhookVerificationKeyResponse;
-  validatePlaidJWK(data.key, keyId);
+  validatePlaidJWK(data.key, keyId, nowSeconds);
 
   // Cache the key
   jwkCache.set(keyId, {
     key: data.key,
-    expiresAt: Date.now() + JWK_CACHE_TTL_MS,
+    expiresAt: Math.min(
+      Date.now() + JWK_CACHE_TTL_MS,
+      data.key.expired_at == null
+        ? Number.POSITIVE_INFINITY
+        : data.key.expired_at * 1000,
+    ),
   });
 
   return data.key;
 }
 
-function validatePlaidJWK(jwk: PlaidJWK, expectedKeyId: string): void {
+function validatePlaidJWK(
+  jwk: PlaidJWK,
+  expectedKeyId: string,
+  nowSeconds: number,
+): void {
   if (
     jwk.kid !== expectedKeyId ||
     jwk.alg !== "ES256" ||
@@ -101,7 +110,8 @@ function validatePlaidJWK(jwk: PlaidJWK, expectedKeyId: string): void {
     jwk.crv !== "P-256" ||
     jwk.use !== "sig" ||
     !jwk.x ||
-    !jwk.y
+    !jwk.y ||
+    (jwk.expired_at != null && jwk.expired_at <= nowSeconds)
   ) {
     throw new Error("Plaid returned an invalid webhook verification key");
   }
@@ -142,58 +152,6 @@ async function importPlaidJWK(jwk: PlaidJWK): Promise<CryptoKey> {
     false,
     ["verify"],
   );
-}
-
-/**
- * Converts a DER-encoded ECDSA signature to raw format (r || s)
- */
-function derToRaw(der: Uint8Array): Uint8Array {
-  // DER format: 0x30 [total-length] 0x02 [r-length] [r] 0x02 [s-length] [s]
-  if (der[0] !== 0x30) {
-    throw new Error("Invalid DER signature: missing sequence tag");
-  }
-
-  let offset = 2; // Skip sequence tag and length
-
-  // Parse r
-  if (der[offset] !== 0x02) {
-    throw new Error("Invalid DER signature: missing integer tag for r");
-  }
-  offset++;
-  const rLen = der[offset];
-  offset++;
-  let r = der.slice(offset, offset + rLen);
-  offset += rLen;
-
-  // Parse s
-  if (der[offset] !== 0x02) {
-    throw new Error("Invalid DER signature: missing integer tag for s");
-  }
-  offset++;
-  const sLen = der[offset];
-  offset++;
-  let s = der.slice(offset, offset + sLen);
-
-  // Remove leading zeros if present (ASN.1 uses them to indicate positive numbers)
-  if (r.length > 32 && r[0] === 0) {
-    r = r.slice(1);
-  }
-  if (s.length > 32 && s[0] === 0) {
-    s = s.slice(1);
-  }
-
-  // Pad to 32 bytes if needed
-  const rPadded = new Uint8Array(32);
-  const sPadded = new Uint8Array(32);
-  rPadded.set(r, 32 - r.length);
-  sPadded.set(s, 32 - s.length);
-
-  // Concatenate r and s
-  const raw = new Uint8Array(64);
-  raw.set(rPadded, 0);
-  raw.set(sPadded, 32);
-
-  return raw;
 }
 
 export interface PlaidWebhookVerificationResult {
@@ -304,19 +262,15 @@ export async function verifyPlaidWebhook(
     const signedData = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
     const signatureBytes = base64UrlDecode(signatureB64);
 
-    // JWT uses raw format (r || s), but we need to try both formats
-    let signature = signatureBytes;
-
-    // If signature looks like DER format, convert it
-    if (signatureBytes[0] === 0x30) {
-      signature = derToRaw(signatureBytes);
+    if (signatureBytes.length !== 64) {
+      return { valid: false, error: "Invalid ES256 signature length" };
     }
 
     // Verify signature
     const isValid = await crypto.subtle.verify(
       { name: "ECDSA", hash: "SHA-256" },
       cryptoKey,
-      signature,
+      signatureBytes,
       signedData,
     );
 

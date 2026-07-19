@@ -4,6 +4,7 @@
 
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { authenticateUser } from "../shared/auth.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -81,6 +82,19 @@ Deno.serve(async (req: Request) => {
       },
       global: { headers: { "X-Client-Info": "moneko-income-summary" } },
     });
+    const authResult = await authenticateUser(req, supabase);
+    if (!authResult.success || !authResult.userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: authResult.statusCode || 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (authResult.userId !== userId) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Default date range: start of current month to today
     const now = new Date();
@@ -94,8 +108,9 @@ Deno.serve(async (req: Request) => {
     // If household summary requested, use database function
     if (body.householdId) {
       const { data, error } = await supabase.rpc(
-        "get_household_income_summary",
+        "get_household_income_summary_v2",
         {
+          p_user_id: userId,
           p_household_id: body.householdId,
           p_start_date: startDate,
           p_end_date: endDate,
@@ -122,7 +137,6 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             error: "Failed to fetch household income summary",
-            details: error.message,
           }),
           {
             status: 500,
@@ -189,8 +203,20 @@ Deno.serve(async (req: Request) => {
     }
 
     // Calculate totals
+    const aggregateAmountCents = (record: {
+      amount_cents: number;
+      normalized_amount_cents?: number | null;
+    }) =>
+      Number(
+        body.currency
+          ? record.amount_cents
+          : (record.normalized_amount_cents ?? record.amount_cents),
+      ) || 0;
     const totalIncome =
-      incomeRecords.reduce((sum, record) => sum + record.amount_cents, 0) / 100;
+      incomeRecords.reduce(
+        (sum, record) => sum + aggregateAmountCents(record),
+        0,
+      ) / 100;
 
     // Category breakdown
     const categoryBreakdown = incomeRecords.reduce(
@@ -199,7 +225,7 @@ Deno.serve(async (req: Request) => {
         if (!acc[cat]) {
           acc[cat] = 0;
         }
-        acc[cat] += record.amount_cents / 100;
+        acc[cat] += aggregateAmountCents(record) / 100;
         return acc;
       },
       {} as Record<string, number>,
@@ -226,15 +252,15 @@ Deno.serve(async (req: Request) => {
     const mtdIncome =
       incomeRecords
         .filter((r) => r.date >= mtdStart)
-        .reduce((sum, record) => sum + record.amount_cents, 0) / 100;
+        .reduce((sum, record) => sum + aggregateAmountCents(record), 0) / 100;
 
     // YTD calculation
     const ytdStart = new Date(now.getFullYear(), 0, 1)
       .toISOString()
       .split("T")[0];
-    const { data: ytdRecords } = await supabase
+    let ytdQuery = supabase
       .from("expenses")
-      .select("amount_cents")
+      .select("amount_cents, normalized_amount_cents")
       .eq("analytics_is_final", true)
       .eq("analytics_counts_toward_income", true)
       .eq("user_id", userId)
@@ -242,10 +268,22 @@ Deno.serve(async (req: Request) => {
       .is("deleted_at", null)
       .gte("date", ytdStart)
       .lte("date", endDate);
+    if (body.currency) {
+      ytdQuery = ytdQuery.eq("currency", body.currency);
+    }
+    const { data: ytdRecords, error: ytdError } = await ytdQuery;
+    if (ytdError) throw ytdError;
 
     const ytdIncome =
-      (ytdRecords || []).reduce((sum, record) => sum + record.amount_cents, 0) /
-      100;
+      (ytdRecords || []).reduce(
+        (sum, record) => sum + aggregateAmountCents(record),
+        0,
+      ) / 100;
+    const aggregateCurrency =
+      body.currency ||
+      incomeRecords.find((record) => record.base_currency)?.base_currency ||
+      incomeRecords[0]?.currency ||
+      "USD";
 
     return new Response(
       JSON.stringify({
@@ -254,7 +292,7 @@ Deno.serve(async (req: Request) => {
           totalIncome: totalIncome,
           mtdIncome: mtdIncome,
           ytdIncome: ytdIncome,
-          currency: body.currency || "mixed",
+          currency: aggregateCurrency,
           categoryBreakdown: categoryBreakdown,
           currencyBreakdown: currencyBreakdown,
           transactionCount: incomeRecords.length,

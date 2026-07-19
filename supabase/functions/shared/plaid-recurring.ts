@@ -714,7 +714,6 @@ function sameRecurringSeries(
 ): boolean {
   if (
     left.bankAccountId !== right.bankAccountId ||
-    left.type !== right.type ||
     left.currency !== right.currency
   ) {
     return false;
@@ -724,6 +723,7 @@ function sameRecurringSeries(
   for (const transactionId of leftTransactionIds) {
     if (rightTransactionIds.has(transactionId)) return true;
   }
+  if (left.type !== right.type) return false;
   const leftLabel = normalizeMerchant(left.merchant || left.rawText);
   const rightLabel = normalizeMerchant(right.merchant || right.rawText);
   if (!leftLabel || leftLabel !== rightLabel) return false;

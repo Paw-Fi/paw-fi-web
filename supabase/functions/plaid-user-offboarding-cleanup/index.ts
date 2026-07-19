@@ -33,6 +33,9 @@ interface PlaidOffboardingJob extends OffboardingConnectionPayload {
   max_attempts?: number;
   alerted_at?: string | null;
   reason?: string | null;
+  provider_item_id?: string | null;
+  link_completion_session_id?: string | null;
+  link_completion_nonce?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -128,9 +131,20 @@ Deno.serve(async (req) => {
     }
 
     for (const job of (jobs || []) as PlaidOffboardingJob[]) {
+      const escrowResolution = await resolvePlaidExchangeEscrow({
+        supabase,
+        job,
+      });
+      if (escrowResolution.preserved) {
+        continue;
+      }
+      const connectionId =
+        job.connection_id ||
+        job.connectionId ||
+        escrowResolution.rollbackConnectionId;
       const result = await removePlaidConnectionPayload({
         connection: {
-          connectionId: job.connection_id || job.connectionId,
+          connectionId,
           accessTokenEncrypted:
             job.access_token_encrypted || job.accessTokenEncrypted,
           plaidAccessTokenEncrypted:
@@ -140,11 +154,11 @@ Deno.serve(async (req) => {
       });
 
       if (result.success) {
-        if (job.connection_id || job.connectionId) {
+        if (connectionId) {
           try {
             await cleanupRemovedPlaidConnection({
               supabase,
-              connectionId: job.connection_id || job.connectionId!,
+              connectionId,
               removalReason: job.reason || "offboarding_cleanup",
             });
           } catch (cleanupError) {
@@ -170,13 +184,10 @@ Deno.serve(async (req) => {
               throw failureUpdateError;
             }
 
-            if (
-              update.status === "failed" &&
-              (job.connection_id || job.connectionId)
-            ) {
+            if (update.status === "failed" && connectionId) {
               await sanitizeExhaustedOffboardingConnectionSecrets({
                 supabase,
-                connectionId: job.connection_id || job.connectionId!,
+                connectionId,
               });
             }
 
@@ -185,7 +196,7 @@ Deno.serve(async (req) => {
                 functionName: "plaid-user-offboarding-cleanup",
                 error: cleanupError,
                 context: {
-                  connection_id: job.connection_id || job.connectionId || null,
+                  connection_id: connectionId || null,
                   user_id: job.user_id || body.userId || null,
                 },
               });
@@ -231,13 +242,10 @@ Deno.serve(async (req) => {
           throw failureUpdateError;
         }
 
-        if (
-          update.status === "failed" &&
-          (job.connection_id || job.connectionId)
-        ) {
+        if (update.status === "failed" && connectionId) {
           await sanitizeExhaustedOffboardingConnectionSecrets({
             supabase,
-            connectionId: job.connection_id || job.connectionId!,
+            connectionId,
           });
         }
 
@@ -246,7 +254,7 @@ Deno.serve(async (req) => {
             functionName: "plaid-user-offboarding-cleanup",
             error: new Error(result.error || "Plaid offboarding exhausted"),
             context: {
-              connection_id: job.connection_id || job.connectionId || null,
+              connection_id: connectionId || null,
               user_id: job.user_id || body.userId || null,
             },
           });
@@ -314,13 +322,104 @@ async function removePlaidConnectionPayload(params: {
   }
 }
 
+async function resolvePlaidExchangeEscrow(params: {
+  supabase: ReturnType<typeof createClient>;
+  job: PlaidOffboardingJob;
+}): Promise<{ preserved: boolean; rollbackConnectionId?: string }> {
+  if (
+    params.job.reason !== "orphan_exchange_escrow" ||
+    !params.job.provider_item_id ||
+    !params.job.user_id
+  ) {
+    return { preserved: false };
+  }
+
+  const { data: connection, error: connectionError } = await params.supabase
+    .from("bank_connections")
+    .select("id, metadata")
+    .eq("user_id", params.job.user_id)
+    .eq("provider", "plaid")
+    .eq("provider_item_id", params.job.provider_item_id)
+    .is("removed_at", null)
+    .in("status", ["pending", "active", "needs_reauth", "error"])
+    .or("item_status.is.null,item_status.not.in.(removed,pending_removal)")
+    .maybeSingle();
+  if (connectionError) throw connectionError;
+  if (!connection?.id) return { preserved: false };
+
+  const metadata =
+    connection.metadata && typeof connection.metadata === "object"
+      ? (connection.metadata as Record<string, unknown>)
+      : {};
+  const sessionId = String(params.job.link_completion_session_id || "").trim();
+  const nonce = String(params.job.link_completion_nonce || "").trim();
+  const hasExactCompletionIdentity =
+    sessionId.length > 0 &&
+    nonce.length > 0 &&
+    String(metadata.plaid_link_completion_session_id || "") === sessionId &&
+    String(metadata.plaid_link_completion_nonce || "") === nonce;
+
+  if (hasExactCompletionIdentity) {
+    const { data: completed, error: completionError } =
+      await params.supabase.rpc("complete_plaid_link_exchange_v1", {
+        p_user_id: params.job.user_id,
+        p_connection_id: connection.id,
+        p_provider_item_id: params.job.provider_item_id,
+        p_link_session_id: sessionId,
+        p_link_completion_nonce: nonce,
+        p_link_request_id: null,
+        p_provider_link_session_id: null,
+      });
+    if (completionError) throw completionError;
+    if (completed !== true) {
+      throw new Error("Live Plaid exchange escrow could not be completed");
+    }
+    return { preserved: true };
+  }
+
+  // A live, user-scoped connection is sufficient to make provider removal
+  // unsafe. Quarantine legacy or mismatched escrow instead of guessing.
+  const { data: preserved, error: completionError } = await params.supabase.rpc(
+    "preserve_live_plaid_exchange_escrow_v1",
+    {
+      p_user_id: params.job.user_id,
+      p_connection_id: connection.id,
+      p_provider_item_id: params.job.provider_item_id,
+      p_reason: "preserved_live_connection_without_exact_session_identity",
+    },
+  );
+  if (completionError) throw completionError;
+  if (preserved !== true) {
+    throw new Error("Live Plaid exchange escrow could not be quarantined");
+  }
+  if (!params.job.alerted_at) {
+    await params.supabase
+      .from("plaid_offboarding_jobs")
+      .update({ alerted_at: new Date().toISOString() })
+      .eq("id", params.job.id)
+      .is("alerted_at", null);
+    await reportEdgeFunctionError({
+      functionName: "plaid-user-offboarding-cleanup",
+      error: new Error(
+        "Preserved live Plaid Item because exchange escrow identity was incomplete",
+      ),
+      context: {
+        connection_id: connection.id,
+        provider_item_id: params.job.provider_item_id,
+        escrow_job_id: params.job.id,
+      },
+    });
+  }
+  return { preserved: true };
+}
+
 function buildOffboardingFailureUpdate(params: {
   attemptCount: number;
   maxAttempts: number;
   error: string;
 }): Record<string, unknown> {
   const now = new Date();
-  const nextAttemptCount = params.attemptCount + 1;
+  const nextAttemptCount = params.attemptCount;
   const isExhausted = nextAttemptCount >= params.maxAttempts;
   const backoffMinutes = [5, 15, 60, 360, 720, 1440, 1440][
     Math.min(nextAttemptCount - 1, 6)
@@ -337,6 +436,12 @@ function buildOffboardingFailureUpdate(params: {
     last_error_at: now.toISOString(),
     updated_at: now.toISOString(),
     processed_at: isExhausted ? now.toISOString() : null,
+    ...(isExhausted
+      ? {
+          access_token_encrypted: null,
+          plaid_access_token_encrypted: null,
+        }
+      : {}),
     should_alert: isExhausted,
   };
 }

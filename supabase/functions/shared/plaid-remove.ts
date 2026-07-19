@@ -83,6 +83,13 @@ async function enqueuePlaidRemovalRetry(params: {
 export async function removePlaidConnection(params: {
   supabase: {
     from: (table: string) => any;
+    rpc: (
+      name: string,
+      params: Record<string, unknown>,
+    ) => PromiseLike<{
+      data: unknown;
+      error: unknown;
+    }>;
   };
   connection: PlaidRemovableConnection;
   removalReason: string;
@@ -90,6 +97,18 @@ export async function removePlaidConnection(params: {
   const encryptedToken =
     params.connection.access_token_encrypted ||
     params.connection.plaid_access_token_encrypted;
+
+  const { data: removalQueued, error: queueError } = await params.supabase.rpc(
+    "queue_plaid_connection_removal_v1",
+    {
+      p_connection_id: params.connection.id,
+      p_reason: params.removalReason,
+    },
+  );
+  if (queueError) throw queueError;
+  if (removalQueued !== true) {
+    throw new Error("Plaid connection is not eligible for removal");
+  }
 
   if (encryptedToken) {
     try {
@@ -258,5 +277,22 @@ export async function cleanupRemovedPlaidConnection(params: {
 
   if (jobUpdateError) {
     throw jobUpdateError;
+  }
+
+  const { error: offboardingJobError } = await params.supabase
+    .from("plaid_offboarding_jobs")
+    .update({
+      status: "completed",
+      processed_at: nowIso,
+      processing_started_at: null,
+      access_token_encrypted: null,
+      plaid_access_token_encrypted: null,
+      updated_at: nowIso,
+    })
+    .eq("connection_id", params.connectionId)
+    .in("status", ["pending", "processing", "failed"]);
+
+  if (offboardingJobError) {
+    throw offboardingJobError;
   }
 }

@@ -12,12 +12,16 @@ import { computePlaidBillingWindow } from "../shared/plaid-lifecycle.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   exchangePublicToken,
-  getPlaidAccounts,
+  getPlaidAccountsWithItem,
   type PlaidAccount,
   PLAID_PROVIDER,
   removePlaidItem,
 } from "../shared/plaid-client.ts";
 import { fetchAndStorePlaidInstitutionLogo } from "../shared/plaid-institution-logo.ts";
+import {
+  classifyPlaidDuplicateIdentity,
+  type PlaidDuplicateAccountIdentity,
+} from "../shared/plaid-duplicate-identity.ts";
 import {
   buildPlaidDuplicateGroupKey,
   normalizePlaidSelectedAccountIds,
@@ -119,6 +123,8 @@ Deno.serve(async (req) => {
         },
       );
     }
+    const idempotencyKey =
+      body.idempotencyKey?.trim() || `plaid-link:${linkCompletionNonce}`;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
@@ -176,10 +182,11 @@ Deno.serve(async (req) => {
         },
       );
     }
-    const duplicateGroupKey = buildPlaidDuplicateGroupKey({
+    let duplicateGroupKey = buildPlaidDuplicateGroupKey({
       institutionId: body.institutionId,
       selectedAccountIds,
     });
+    let resolvedInstitutionId = body.institutionId?.trim() || null;
     const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
     if (body.targetHouseholdId && !targetHouseholdId) {
       return new Response(
@@ -202,15 +209,17 @@ Deno.serve(async (req) => {
     }
 
     // Check idempotency - return existing connection if found
-    if (body.idempotencyKey) {
-      const { data: existingConnection } = await supabase
-        .from("bank_connections")
-        .select(
-          "id, household_id, metadata, access_token_encrypted, plaid_access_token_encrypted, status, item_status, removed_at",
-        )
-        .eq("user_id", authResult.userId)
-        .eq("idempotency_key", body.idempotencyKey)
-        .maybeSingle();
+    {
+      const { data: existingConnection, error: idempotencyLookupError } =
+        await supabase
+          .from("bank_connections")
+          .select(
+            "id, household_id, metadata, provider_item_id, access_token_encrypted, plaid_access_token_encrypted, status, item_status, removed_at",
+          )
+          .eq("user_id", authResult.userId)
+          .eq("idempotency_key", idempotencyKey)
+          .maybeSingle();
+      if (idempotencyLookupError) throw idempotencyLookupError;
 
       if (existingConnection) {
         if (
@@ -279,6 +288,15 @@ Deno.serve(async (req) => {
           .eq("bank_connection_id", existingConnection.id);
 
         if (canReusePlaidExchangeSnapshot((existingAccounts || []).length)) {
+          await completePlaidExchangeSuccess({
+            supabase,
+            userId: authResult.userId,
+            connectionId: existingConnection.id,
+            itemId: existingConnection.provider_item_id,
+            linkSessionId:
+              existingConnection.metadata?.plaid_link_completion_session_id,
+            linkCompletionNonce,
+          });
           console.log(
             `[plaid-exchange] Idempotent request detected, returning existing connection: ${existingConnection.id}`,
           );
@@ -329,23 +347,44 @@ Deno.serve(async (req) => {
         }
 
         const existingAccessToken = await decryptSecret(encryptedExistingToken);
-        const recoveredAccounts = (
-          await getPlaidAccounts(existingAccessToken)
-        ).filter((account) => selectedAccountIds.includes(account.account_id));
+        const recoveredAccountsResponse = await getPlaidAccountsWithItem(
+          existingAccessToken,
+        );
+        if (
+          !recoveredAccountsResponse.itemId ||
+          recoveredAccountsResponse.itemId !==
+            existingConnection.provider_item_id
+        ) {
+          throw new Error(
+            "Plaid idempotency recovery Item identity did not match the stored connection",
+          );
+        }
+        const recoveredAccounts = recoveredAccountsResponse.accounts.filter(
+          (account) => selectedAccountIds.includes(account.account_id),
+        );
         if (recoveredAccounts.length === 0) {
           throw new Error("Plaid idempotency recovery returned no accounts");
         }
-        const recoveredDuplicates = await findDuplicatePlaidConnections({
-          supabase,
-          userId: authResult.userId,
-          selectedAccountIds,
-          selectedAccounts: recoveredAccounts,
-          institutionId: body.institutionId,
-          targetHouseholdId,
-          excludeConnectionId: existingConnection.id,
-        });
-        if (recoveredDuplicates.length > 0) {
-          return duplicatePlaidAccountsResponse(recoveredDuplicates, headers);
+        const recoveredDuplicates =
+          await findResolvedAuthoritativePlaidDuplicates({
+            supabase,
+            userId: authResult.userId,
+            selectedAccountIds,
+            selectedAccounts: recoveredAccounts,
+            institutionId:
+              recoveredAccountsResponse.institutionId || undefined,
+            targetHouseholdId,
+            excludeConnectionId: existingConnection.id,
+          });
+        if (hasBlockingPlaidDuplicateMatch(recoveredDuplicates)) {
+          return duplicatePlaidAccountsResponse(
+            blockingPlaidDuplicateConnectionIds(
+              recoveredDuplicates,
+              authResult.userId,
+            ),
+            headers,
+            recoveredDuplicates.ambiguousConnectionIds.length > 0,
+          );
         }
         const recovered = await upsertPlaidAccounts({
           supabase,
@@ -364,6 +403,15 @@ Deno.serve(async (req) => {
           connectionId: existingConnection.id,
           triggerSource: "exchange_idempotency_recovery",
           payload: { initialSync: true, targetHouseholdId },
+        });
+        await completePlaidExchangeSuccess({
+          supabase,
+          userId: authResult.userId,
+          connectionId: existingConnection.id,
+          itemId: existingConnection.provider_item_id,
+          linkSessionId:
+            existingConnection.metadata?.plaid_link_completion_session_id,
+          linkCompletionNonce,
         });
         return new Response(
           JSON.stringify({
@@ -395,10 +443,26 @@ Deno.serve(async (req) => {
         selectedAccounts,
         institutionId: body.institutionId,
         targetHouseholdId,
+        phase: "link",
       });
 
-      if (duplicateConnections.length) {
-        return duplicatePlaidAccountsResponse(duplicateConnections, headers);
+      if (duplicateConnections.duplicateConnectionIds.length) {
+        return duplicatePlaidAccountsResponse(
+          blockingPlaidDuplicateConnectionIds(
+            duplicateConnections,
+            authResult.userId,
+          ),
+          headers,
+        );
+      }
+      if (duplicateConnections.candidateConnectionIds.length) {
+        console.info(
+          "[plaid-exchange] Link metadata matched existing account candidates; deferring the decision until authoritative /accounts/get identity is available",
+          JSON.stringify({
+            candidateConnectionCount:
+              duplicateConnections.candidateConnectionIds.length,
+          }),
+        );
       }
     }
 
@@ -436,9 +500,32 @@ Deno.serve(async (req) => {
 
     try {
       encryptedToken = await encryptSecret(plaidResponse.access_token);
-      accountsToUpsert = (
-        await getPlaidAccounts(plaidResponse.access_token)
-      ).filter((account) => selectedAccountIds.includes(account.account_id));
+      await persistOrphanPlaidRemovalJob({
+        supabase,
+        userId: authResult.userId,
+        encryptedToken,
+        itemId: plaidResponse.item_id,
+        stage: "exchange_escrow",
+        linkSessionId: linkSession.id,
+        linkCompletionNonce,
+      });
+      const accountsResponse = await getPlaidAccountsWithItem(
+        plaidResponse.access_token,
+      );
+      if (
+        !accountsResponse.itemId ||
+        accountsResponse.itemId !== plaidResponse.item_id
+      ) {
+        throw new Error("Plaid exchange Item identity did not match /accounts/get");
+      }
+      accountsToUpsert = accountsResponse.accounts.filter((account) =>
+        selectedAccountIds.includes(account.account_id)
+      );
+      resolvedInstitutionId = accountsResponse.institutionId;
+      duplicateGroupKey = buildPlaidDuplicateGroupKey({
+        institutionId: resolvedInstitutionId,
+        selectedAccountIds,
+      });
       if (accountsToUpsert.length === 0) {
         throw new Error("No selected Plaid accounts were returned by Plaid");
       }
@@ -458,15 +545,16 @@ Deno.serve(async (req) => {
       shouldCompensateOrphanItem = !existingConnectionForItem?.id;
 
       if (shouldCompensateOrphanItem) {
-        const authoritativeDuplicates = await findDuplicatePlaidConnections({
-          supabase,
-          userId: authResult.userId,
-          selectedAccountIds,
-          selectedAccounts: accountsToUpsert,
-          institutionId: body.institutionId,
-          targetHouseholdId,
-        });
-        if (authoritativeDuplicates.length > 0) {
+        const authoritativeDuplicates =
+          await findResolvedAuthoritativePlaidDuplicates({
+            supabase,
+            userId: authResult.userId,
+            selectedAccountIds,
+            selectedAccounts: accountsToUpsert,
+            institutionId: resolvedInstitutionId || undefined,
+            targetHouseholdId,
+          });
+        if (hasBlockingPlaidDuplicateMatch(authoritativeDuplicates)) {
           const cleanedUp = await cleanupOrphanPlaidItem({
             accessToken: plaidResponse.access_token,
             itemId: plaidResponse.item_id,
@@ -483,8 +571,12 @@ Deno.serve(async (req) => {
           }
           shouldCompensateOrphanItem = false;
           return duplicatePlaidAccountsResponse(
-            authoritativeDuplicates,
+            blockingPlaidDuplicateConnectionIds(
+              authoritativeDuplicates,
+              authResult.userId,
+            ),
             headers,
+            authoritativeDuplicates.ambiguousConnectionIds.length > 0,
           );
         }
       }
@@ -562,7 +654,7 @@ Deno.serve(async (req) => {
         const storedLogo = await fetchAndStorePlaidInstitutionLogo({
           supabase,
           userId: authResult.userId,
-          institutionId: body.institutionId,
+          institutionId: resolvedInstitutionId || undefined,
           countryCode: body.countryCode,
         });
         institutionLogoUrl = storedLogo?.publicUrl ?? null;
@@ -571,7 +663,7 @@ Deno.serve(async (req) => {
         console.warn(
           "[plaid-exchange] Failed to fetch/store institution logo",
           JSON.stringify({
-            institutionId: body.institutionId || null,
+            institutionId: resolvedInstitutionId,
             error:
               logoError instanceof Error
                 ? logoError.message
@@ -583,7 +675,7 @@ Deno.serve(async (req) => {
           error: logoError,
           context: {
             stage: "institution_logo_fetch_store",
-            institution_id: body.institutionId || null,
+            institution_id: resolvedInstitutionId,
             country_code: body.countryCode || null,
             link_request_id: body.linkRequestId || null,
             link_session_id: body.linkSessionId || null,
@@ -601,10 +693,10 @@ Deno.serve(async (req) => {
         refreshTokenEncrypted: null,
         expiresAt: null,
         countryCode: body.countryCode?.toUpperCase() || "US",
-        idempotencyKey: body.idempotencyKey || null,
+        idempotencyKey,
         householdId: targetHouseholdId,
         metadata: {
-          institution_id: body.institutionId || null,
+          institution_id: resolvedInstitutionId,
           institution_name: body.institutionName || null,
           institution_logo: body.institutionLogo || null,
           ...(institutionLogoUrl
@@ -619,6 +711,8 @@ Deno.serve(async (req) => {
           plaid_last_public_token_exchange_request_id:
             plaidResponse.request_id || null,
           plaid_selected_account_ids: selectedAccountIds,
+          plaid_link_completion_session_id: linkSession.id,
+          plaid_link_completion_nonce: linkCompletionNonce,
         },
       });
 
@@ -795,10 +889,21 @@ Deno.serve(async (req) => {
     } catch (postExchangeError) {
       if (shouldCompensateOrphanItem) {
         if (connectionId) {
-          await rollbackLocalPlaidExchangeState({
-            connectionId,
-            supabase,
-          });
+          try {
+            await rollbackLocalPlaidExchangeState({
+              connectionId,
+              supabase,
+            });
+          } catch (rollbackError) {
+            await reportEdgeFunctionError({
+              functionName: "plaid-exchange-public-token",
+              error: rollbackError,
+              context: {
+                stage: "post_exchange_local_rollback",
+                connection_id: connectionId,
+              },
+            });
+          }
         }
         const cleanedUp = await cleanupOrphanPlaidItem({
           accessToken: plaidResponse.access_token,
@@ -831,22 +936,16 @@ Deno.serve(async (req) => {
       throw postExchangeError;
     }
 
-    const completionIso = new Date().toISOString();
-    const { error: linkCompletionError } = await supabase
-      .from("plaid_link_update_sessions")
-      .update({
-        consumed_at: completionIso,
-        completed_at: completionIso,
-        processing_started_at: null,
-        link_request_id: body.linkRequestId || null,
-        link_session_id: body.linkSessionId || null,
-        updated_at: completionIso,
-      })
-      .eq("id", linkSession.id);
-
-    if (linkCompletionError) {
-      throw linkCompletionError;
-    }
+    await completePlaidExchangeSuccess({
+      supabase,
+      userId: authResult.userId,
+      connectionId,
+      itemId: plaidResponse.item_id,
+      linkSessionId: linkSession.id,
+      linkCompletionNonce,
+      linkRequestId: body.linkRequestId,
+      providerLinkSessionId: body.linkSessionId,
+    });
 
     return new Response(
       JSON.stringify({
@@ -891,6 +990,46 @@ Deno.serve(async (req) => {
   }
 });
 
+interface PlaidDuplicateAccountRecord extends PlaidDuplicateAccountIdentity {
+  bankAccountId: string;
+  bankConnectionId: string;
+  ownerUserId: string;
+}
+
+interface PlaidDuplicateMatchResult {
+  duplicateConnectionIds: string[];
+  candidateConnectionIds: string[];
+  ambiguousConnectionIds: string[];
+  ambiguousAccounts: PlaidDuplicateAccountRecord[];
+  ownerUserIdByConnectionId: Record<string, string>;
+}
+
+async function findResolvedAuthoritativePlaidDuplicates(params: {
+  supabase: any;
+  userId: string;
+  selectedAccountIds: string[];
+  selectedAccounts: PlaidAccount[];
+  institutionId?: string;
+  targetHouseholdId: string | null;
+  excludeConnectionId?: string;
+}): Promise<PlaidDuplicateMatchResult> {
+  let matches = await findDuplicatePlaidConnections({
+    ...params,
+    phase: "authoritative",
+  });
+  if (matches.ambiguousAccounts.length === 0) return matches;
+
+  await refreshAmbiguousExistingPlaidIdentities({
+    supabase: params.supabase,
+    ambiguousAccounts: matches.ambiguousAccounts,
+  });
+  matches = await findDuplicatePlaidConnections({
+    ...params,
+    phase: "authoritative",
+  });
+  return matches;
+}
+
 async function findDuplicatePlaidConnections(params: {
   supabase: any;
   userId: string;
@@ -899,18 +1038,20 @@ async function findDuplicatePlaidConnections(params: {
   institutionId?: string;
   targetHouseholdId: string | null;
   excludeConnectionId?: string;
-}): Promise<string[]> {
+  phase: "link" | "authoritative";
+}): Promise<PlaidDuplicateMatchResult> {
   let connectionsQuery = params.supabase
     .from("bank_connections")
-    .select("id, metadata")
-    .eq("user_id", params.userId)
+    .select("id, user_id, metadata")
     .eq("provider", PLAID_PROVIDER)
     .is("removed_at", null)
     .in("status", ["pending", "active", "needs_reauth", "error"]);
 
   connectionsQuery = params.targetHouseholdId
     ? connectionsQuery.eq("household_id", params.targetHouseholdId)
-    : connectionsQuery.is("household_id", null);
+    : connectionsQuery
+      .eq("user_id", params.userId)
+      .is("household_id", null);
 
   const { data: connections, error: connectionsError } = await connectionsQuery;
 
@@ -922,75 +1063,97 @@ async function findDuplicatePlaidConnections(params: {
   const candidateConnections = (
     (connections || []) as Array<{
       id: string;
+      user_id: string;
       metadata?: Record<string, unknown> | null;
     }>
   ).filter((connection) => {
     if (connection.id === params.excludeConnectionId) return false;
-    if (!normalizedInstitutionId) return true;
-    const existingInstitutionId = String(
-      connection.metadata?.institution_id || "",
-    ).trim();
-    return (
-      !existingInstitutionId ||
-      existingInstitutionId === normalizedInstitutionId
-    );
+    return true;
   });
-  if (candidateConnections.length === 0) return [];
+  if (candidateConnections.length === 0) return emptyPlaidDuplicateMatches();
 
-  const candidateConnectionIds = candidateConnections.map(({ id }) => id);
+  const candidateBankConnectionIds = candidateConnections.map(({ id }) => id);
   const { data: bankAccounts, error: bankAccountsError } = await params.supabase
     .from("bank_accounts")
     .select(
-      "bank_connection_id, provider_account_id, provider_persistent_account_id, name, mask, type, subtype",
+      "id, bank_connection_id, provider_account_id, provider_persistent_account_id, name, mask, currency, type, subtype",
     )
     .eq("provider", PLAID_PROVIDER)
-    .in("bank_connection_id", candidateConnectionIds);
+    .in("bank_connection_id", candidateBankConnectionIds);
   if (bankAccountsError) throw bankAccountsError;
 
-  const selectedProviderIds = new Set(params.selectedAccountIds);
-  const selectedPersistentIds = new Set(
-    params.selectedAccounts
-      .map((account) =>
-        "persistent_account_id" in account
-          ? account.persistent_account_id?.trim() || null
-          : null,
-      )
-      .filter((value): value is string => value != null),
+  const institutionByConnectionId = new Map(
+    candidateConnections.map((connection) => [
+      connection.id,
+      String(connection.metadata?.institution_id || "").trim() || null,
+    ]),
   );
-  const selectedSignatures = new Set(
-    normalizedInstitutionId
-      ? params.selectedAccounts
-          .map(plaidAccountDuplicateSignature)
-          .filter((signature): signature is string => signature != null)
-      : [],
+  const ownerByConnectionId = new Map(
+    candidateConnections.map((connection) => [
+      connection.id,
+      connection.user_id,
+    ]),
   );
   const duplicateConnectionIds = new Set<string>();
+  const candidateConnectionIds = new Set<string>();
+  const ambiguousConnectionIds = new Set<string>();
+  const ambiguousAccounts = new Map<string, PlaidDuplicateAccountRecord>();
   for (const account of (bankAccounts || []) as Array<{
+    id?: string | null;
     bank_connection_id?: string | null;
     provider_account_id?: string | null;
     provider_persistent_account_id?: string | null;
     name?: string | null;
     mask?: string | null;
+    currency?: string | null;
     type?: string | null;
     subtype?: string | null;
   }>) {
-    const signature = plaidAccountDuplicateSignature(account);
-    if (
-      selectedProviderIds.has(account.provider_account_id || "") ||
-      selectedPersistentIds.has(account.provider_persistent_account_id || "") ||
-      (signature != null && selectedSignatures.has(signature))
-    ) {
-      if (account.bank_connection_id) {
+    if (!account.id || !account.bank_connection_id) continue;
+    const existingIdentity = plaidExistingAccountIdentity({
+      account,
+      institutionId:
+        institutionByConnectionId.get(account.bank_connection_id) || null,
+    });
+    for (const selectedAccount of params.selectedAccounts) {
+      const decision = classifyPlaidDuplicateIdentity({
+        selected: plaidSelectedAccountIdentity({
+          account: selectedAccount,
+          institutionId: normalizedInstitutionId,
+        }),
+        existing: existingIdentity,
+        phase: params.phase,
+      });
+      if (decision === "duplicate") {
         duplicateConnectionIds.add(account.bank_connection_id);
+      } else if (decision === "candidate") {
+        candidateConnectionIds.add(account.bank_connection_id);
+      } else if (decision === "ambiguous") {
+        ambiguousConnectionIds.add(account.bank_connection_id);
+        ambiguousAccounts.set(account.id, {
+          ...existingIdentity,
+          bankAccountId: account.id,
+          bankConnectionId: account.bank_connection_id,
+          ownerUserId:
+            ownerByConnectionId.get(account.bank_connection_id) ||
+            params.userId,
+        });
       }
     }
   }
-  return Array.from(duplicateConnectionIds);
+  return {
+    duplicateConnectionIds: Array.from(duplicateConnectionIds).sort(),
+    candidateConnectionIds: Array.from(candidateConnectionIds).sort(),
+    ambiguousConnectionIds: Array.from(ambiguousConnectionIds).sort(),
+    ambiguousAccounts: Array.from(ambiguousAccounts.values()),
+    ownerUserIdByConnectionId: Object.fromEntries(ownerByConnectionId),
+  };
 }
 
 function duplicatePlaidAccountsResponse(
   duplicateConnectionIds: string[],
   headers: Record<string, string>,
+  identityIncomplete = false,
 ): Response {
   return new Response(
     JSON.stringify({
@@ -998,6 +1161,7 @@ function duplicatePlaidAccountsResponse(
         "These bank accounts are already connected. Use the existing bank connection instead of linking them again.",
       errorCode: "duplicate_item_accounts",
       duplicateConnectionIds,
+      identityResolution: identityIncomplete ? "incomplete" : "confirmed",
     }),
     {
       status: 409,
@@ -1006,21 +1170,207 @@ function duplicatePlaidAccountsResponse(
   );
 }
 
-function plaidAccountDuplicateSignature(account: {
-  name?: string | null;
-  mask?: string | null;
-  type?: string | null;
-  subtype?: string | null;
-}): string | null {
-  const name = account.name?.trim().toLowerCase() || "";
-  const mask = account.mask?.trim().toLowerCase() || "";
-  if (!name && !mask) return null;
-  return [
-    name,
-    mask,
-    account.type?.trim().toLowerCase() || "",
-    account.subtype?.trim().toLowerCase() || "",
-  ].join("|");
+function emptyPlaidDuplicateMatches(): PlaidDuplicateMatchResult {
+  return {
+    duplicateConnectionIds: [],
+    candidateConnectionIds: [],
+    ambiguousConnectionIds: [],
+    ambiguousAccounts: [],
+    ownerUserIdByConnectionId: {},
+  };
+}
+
+function hasBlockingPlaidDuplicateMatch(
+  matches: PlaidDuplicateMatchResult,
+): boolean {
+  return (
+    matches.duplicateConnectionIds.length > 0 ||
+    matches.ambiguousConnectionIds.length > 0
+  );
+}
+
+function blockingPlaidDuplicateConnectionIds(
+  matches: PlaidDuplicateMatchResult,
+  visibleToUserId?: string,
+): string[] {
+  return Array.from(
+    new Set([
+      ...matches.duplicateConnectionIds,
+      ...matches.ambiguousConnectionIds,
+    ]),
+  )
+    .filter(
+      (connectionId) =>
+        !visibleToUserId ||
+        matches.ownerUserIdByConnectionId[connectionId] === visibleToUserId,
+    )
+    .sort();
+}
+
+function plaidSelectedAccountIdentity(params: {
+  account: PlaidSelectedAccountMetadata | PlaidAccount;
+  institutionId: string | null;
+}): PlaidDuplicateAccountIdentity {
+  const account = params.account;
+  return {
+    providerAccountId:
+      "account_id" in account ? account.account_id : account.id,
+    persistentAccountId:
+      "persistent_account_id" in account
+        ? account.persistent_account_id
+        : null,
+    institutionId: params.institutionId,
+    name: account.name,
+    mask: account.mask,
+    currency:
+      "balances" in account
+        ? account.balances?.iso_currency_code ||
+          account.balances?.unofficial_currency_code
+        : null,
+    type: account.type,
+    subtype: account.subtype,
+  };
+}
+
+function plaidExistingAccountIdentity(params: {
+  account: {
+    provider_account_id?: string | null;
+    provider_persistent_account_id?: string | null;
+    name?: string | null;
+    mask?: string | null;
+    currency?: string | null;
+    type?: string | null;
+    subtype?: string | null;
+  };
+  institutionId: string | null;
+}): PlaidDuplicateAccountIdentity {
+  return {
+    providerAccountId: params.account.provider_account_id,
+    persistentAccountId: params.account.provider_persistent_account_id,
+    institutionId: params.institutionId,
+    name: params.account.name,
+    mask: params.account.mask,
+    currency: params.account.currency,
+    type: params.account.type,
+    subtype: params.account.subtype,
+  };
+}
+
+async function refreshAmbiguousExistingPlaidIdentities(params: {
+  supabase: any;
+  ambiguousAccounts: PlaidDuplicateAccountRecord[];
+}): Promise<void> {
+  const connectionIds = Array.from(
+    new Set(params.ambiguousAccounts.map((account) => account.bankConnectionId)),
+  );
+  if (connectionIds.length === 0) return;
+
+  const { data: connections, error: connectionsError } = await params.supabase
+    .from("bank_connections")
+    .select(
+      "id, user_id, provider_item_id, metadata, access_token_encrypted, plaid_access_token_encrypted, removed_at, status, item_status",
+    )
+    .eq("provider", PLAID_PROVIDER)
+    .in("id", connectionIds);
+  if (connectionsError) throw connectionsError;
+
+  const { data: tokenRows, error: tokenRowsError } = await params.supabase
+    .from("bank_connection_tokens")
+    .select("bank_connection_id, token_encrypted")
+    .eq("token_type", "access")
+    .in("bank_connection_id", connectionIds);
+  if (tokenRowsError) throw tokenRowsError;
+
+  const tokenByConnectionId = new Map(
+    (tokenRows || []).map((row: Record<string, unknown>) => [
+      String(row.bank_connection_id || ""),
+      String(row.token_encrypted || ""),
+    ]),
+  );
+
+  for (const connection of (connections || []) as Array<{
+    id: string;
+    user_id: string;
+    provider_item_id?: string | null;
+    metadata?: Record<string, unknown> | null;
+    access_token_encrypted?: string | null;
+    plaid_access_token_encrypted?: string | null;
+    removed_at?: string | null;
+    status?: string | null;
+    item_status?: string | null;
+  }>) {
+    if (
+      connection.removed_at ||
+      connection.status === "disabled" ||
+      ["removed", "pending_removal"].includes(connection.item_status || "")
+    ) {
+      continue;
+    }
+    const encryptedToken =
+      tokenByConnectionId.get(connection.id) ||
+      connection.access_token_encrypted ||
+      connection.plaid_access_token_encrypted;
+    if (!encryptedToken) continue;
+
+    try {
+      const accessToken = await decryptSecret(encryptedToken);
+      const refreshedResult = await getPlaidAccountsWithItem(accessToken);
+      if (
+        !refreshedResult.itemId ||
+        refreshedResult.itemId !== connection.provider_item_id
+      ) {
+        throw new Error("Stored Plaid token Item identity mismatch");
+      }
+      const refreshedAccounts = refreshedResult.accounts;
+      if (refreshedResult.institutionId) {
+        const { error: institutionUpdateError } = await params.supabase
+          .from("bank_connections")
+          .update({
+            metadata: {
+              ...(connection.metadata || {}),
+              institution_id: refreshedResult.institutionId,
+            },
+          })
+          .eq("id", connection.id)
+          .eq("user_id", connection.user_id)
+          .eq("provider", PLAID_PROVIDER);
+        if (institutionUpdateError) throw institutionUpdateError;
+      }
+      const ambiguousForConnection = params.ambiguousAccounts.filter(
+        (account) => account.bankConnectionId === connection.id,
+      );
+      for (const existingAccount of ambiguousForConnection) {
+        if (existingAccount.persistentAccountId) continue;
+        const refreshed = refreshedAccounts.find(
+          (account) =>
+            account.account_id.trim() ===
+            existingAccount.providerAccountId?.trim(),
+        );
+        const persistentAccountId =
+          refreshed?.persistent_account_id?.trim() || null;
+        if (!persistentAccountId) continue;
+
+        const { error: updateError } = await params.supabase
+          .from("bank_accounts")
+          .update({ provider_persistent_account_id: persistentAccountId })
+          .eq("id", existingAccount.bankAccountId)
+          .eq("user_id", existingAccount.ownerUserId)
+          .eq("bank_connection_id", connection.id)
+          .eq("provider", PLAID_PROVIDER)
+          .eq("provider_account_id", refreshed.account_id);
+        if (updateError) throw updateError;
+      }
+    } catch (error) {
+      console.warn(
+        "[plaid-exchange] Could not refresh an existing ambiguous Plaid account identity; duplicate protection will fail closed",
+        JSON.stringify({
+          connectionId: connection.id,
+          errorType:
+            error instanceof Error ? error.constructor.name : "UnknownError",
+        }),
+      );
+    }
+  }
 }
 
 async function cleanupOrphanPlaidItem(params: {
@@ -1061,6 +1411,8 @@ async function persistOrphanPlaidRemovalJob(params: {
   encryptedToken: string;
   itemId: string;
   stage: string;
+  linkSessionId?: string;
+  linkCompletionNonce?: string;
 }): Promise<void> {
   const orphanDedupeKey = `orphan:${params.itemId}:${params.stage}`;
   const { error } = await params.supabase.from("plaid_offboarding_jobs").upsert(
@@ -1070,9 +1422,14 @@ async function persistOrphanPlaidRemovalJob(params: {
       orphan_dedupe_key: orphanDedupeKey,
       access_token_encrypted: params.encryptedToken,
       reason: `orphan_${params.stage}`,
+      link_completion_session_id: params.linkSessionId || null,
+      link_completion_nonce: params.linkCompletionNonce || null,
       status: "pending",
       attempt_count: 0,
-      next_attempt_at: null,
+      next_attempt_at:
+        params.stage === "exchange_escrow"
+          ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+          : null,
       token_expires_at: new Date(
         Date.now() + 30 * 24 * 60 * 60 * 1000,
       ).toISOString(),
@@ -1082,6 +1439,56 @@ async function persistOrphanPlaidRemovalJob(params: {
 
   if (error) {
     throw error;
+  }
+}
+
+async function completePlaidExchangeSuccess(params: {
+  supabase: any;
+  userId: string;
+  connectionId: string;
+  itemId: string;
+  linkSessionId: unknown;
+  linkCompletionNonce: string;
+  linkRequestId?: string;
+  providerLinkSessionId?: string;
+}): Promise<void> {
+  const linkSessionId = String(params.linkSessionId || "").trim();
+  const itemId = String(params.itemId || "").trim();
+  if (!itemId) {
+    throw new Error("Plaid exchange provider Item identity is unavailable");
+  }
+  if (!linkSessionId) {
+    const { data, error } = await params.supabase.rpc(
+      "preserve_live_plaid_exchange_escrow_v1",
+      {
+        p_user_id: params.userId,
+        p_connection_id: params.connectionId,
+        p_provider_item_id: itemId,
+        p_reason: "idempotent_legacy_connection_without_session_identity",
+      },
+    );
+    if (error) throw error;
+    if (data !== true) {
+      throw new Error("Plaid exchange connection is no longer active");
+    }
+    return;
+  }
+
+  const { data, error } = await params.supabase.rpc(
+    "complete_plaid_link_exchange_v1",
+    {
+      p_user_id: params.userId,
+      p_connection_id: params.connectionId,
+      p_provider_item_id: itemId,
+      p_link_session_id: linkSessionId,
+      p_link_completion_nonce: params.linkCompletionNonce,
+      p_link_request_id: params.linkRequestId || null,
+      p_provider_link_session_id: params.providerLinkSessionId || null,
+    },
+  );
+  if (error) throw error;
+  if (data !== true) {
+    throw new Error("Plaid exchange completion could not be committed");
   }
 }
 

@@ -263,16 +263,36 @@ interface InstitutionGetByIdResponse {
 
 interface AccountsGetResponse {
   accounts: PlaidAccount[];
+  item?: {
+    item_id?: string | null;
+    institution_id?: string | null;
+  };
   request_id?: string;
+}
+
+export interface PlaidAccountsGetResult {
+  accounts: PlaidAccount[];
+  itemId: string | null;
+  institutionId: string | null;
 }
 
 export async function getPlaidAccounts(
   accessToken: string,
 ): Promise<PlaidAccount[]> {
+  return (await getPlaidAccountsWithItem(accessToken)).accounts;
+}
+
+export async function getPlaidAccountsWithItem(
+  accessToken: string,
+): Promise<PlaidAccountsGetResult> {
   const response = await plaidRequest<AccountsGetResponse>("/accounts/get", {
     access_token: accessToken,
   });
-  return response.accounts || [];
+  return {
+    accounts: response.accounts || [],
+    itemId: response.item?.item_id?.trim() || null,
+    institutionId: response.item?.institution_id?.trim() || null,
+  };
 }
 
 export async function getPlaidInstitutionById(params: {

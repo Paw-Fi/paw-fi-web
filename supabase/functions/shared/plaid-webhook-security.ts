@@ -1,5 +1,7 @@
 export interface PlaidWebhookReplayIdentityParams {
   rawBody: string;
+  verificationToken?: string | null;
+  receivedAtMs?: number;
 }
 
 export interface PlaidWebhookTerminalConnection {
@@ -16,8 +18,15 @@ export async function buildPlaidWebhookReplayIdentity(
   const webhookType = normalizeReplayPart(payload.webhook_type);
   const webhookCode = normalizeReplayPart(payload.webhook_code);
   const bodyHash = await sha256Hex(JSON.stringify(canonicalizeJson(payload)));
+  if (params.verificationToken) {
+    const tokenHash = await sha256Hex(params.verificationToken);
+    return `plaid:${itemId}:${webhookType}:${webhookCode}:jwt:${tokenHash}:${bodyHash}`;
+  }
+  const replayWindow = Math.floor(
+    (params.receivedAtMs ?? Date.now()) / (5 * 60 * 1000),
+  );
 
-  return `plaid:${itemId}:${webhookType}:${webhookCode}:${bodyHash}`;
+  return `plaid:${itemId}:${webhookType}:${webhookCode}:${replayWindow}:${bodyHash}`;
 }
 
 function canonicalizeJson(value: unknown): unknown {

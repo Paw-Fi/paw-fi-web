@@ -562,7 +562,10 @@ async function cleanupRetentionData(
   const { error: webhookError } = await supabase
     .from("bank_webhook_events")
     .delete()
-    .lt("received_at", webhookCutoff);
+    .lt("received_at", webhookCutoff)
+    .or(
+      "processed_at.not.is.null,and(recovery_status.eq.dead_letter,dead_letter_alerted_at.not.is.null)",
+    );
 
   if (webhookError) {
     throw webhookError;

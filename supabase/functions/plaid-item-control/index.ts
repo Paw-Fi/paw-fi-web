@@ -9,9 +9,9 @@ import {
   loadPlaidUserAccessState,
 } from "../shared/plaid-access.ts";
 import { canRequestPlaidManualRefresh } from "../shared/plaid-lifecycle.ts";
-import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   getPlaidAccounts,
+  PlaidError,
   PLAID_PROVIDER,
   requestPlaidTransactionsRefresh,
 } from "../shared/plaid-client.ts";
@@ -24,8 +24,8 @@ import {
 } from "../shared/plaid-update-mode.ts";
 import {
   loadLinkedWalletsForBankAccounts,
+  preparePlaidAccounts,
   sanitizeOptionalUuid,
-  upsertPlaidAccounts,
 } from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -352,7 +352,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      const nowIso = new Date().toISOString();
       const { data: claimedUpdateSessions, error: updateSessionError } =
         await supabase.rpc("claim_plaid_link_completion_session", {
           p_user_id: authResult.userId,
@@ -561,45 +560,18 @@ Deno.serve(async (req) => {
           },
         );
       }
-      const upsertAccountsResult = await upsertPlaidAccounts({
+      const preparedAccounts = await preparePlaidAccounts({
         supabase,
         userId: authResult.userId,
         bankConnectionId: connection.id,
         accounts: accountsToUpsert,
+        reactivateExistingAccounts: true,
       });
       const accountIdsToDisable = resolvePlaidAccountsToDisableAfterUpdate({
         requiresAccountSelection,
         existingAccountIds,
         returnedAccountIds,
       });
-
-      if (accountIdsToDisable.length > 0) {
-        const disableAccountUpdate = {
-          status: "disabled",
-          updated_at: nowIso,
-        };
-        const { error: disableByProviderAccountIdError } = await supabase
-          .from("bank_accounts")
-          .update(disableAccountUpdate)
-          .eq("bank_connection_id", connection.id)
-          .eq("provider", PLAID_PROVIDER)
-          .in("provider_account_id", accountIdsToDisable);
-
-        if (disableByProviderAccountIdError) {
-          throw disableByProviderAccountIdError;
-        }
-
-        const { error: disableByPlaidAccountIdError } = await supabase
-          .from("bank_accounts")
-          .update(disableAccountUpdate)
-          .eq("bank_connection_id", connection.id)
-          .eq("provider", PLAID_PROVIDER)
-          .in("plaid_account_id", accountIdsToDisable);
-
-        if (disableByPlaidAccountIdError) {
-          throw disableByPlaidAccountIdError;
-        }
-      }
 
       const nextMetadata = {
         ...metadata,
@@ -617,60 +589,32 @@ Deno.serve(async (req) => {
           ? { institution_primary_color: institutionPrimaryColor }
           : {}),
       };
-      const { error: updateError } = await supabase
-        .from("bank_connections")
-        .update({
-          household_id: connectionHouseholdId,
-          status: "active",
-          item_status: requiresAccountSelection
-            ? "accounts_updated"
-            : "reconnected",
-          item_health_state: "healthy",
-          relink_state: null,
-          error_code: null,
-          error_message: null,
-          metadata: nextMetadata,
-          updated_at: nowIso,
-        })
-        .eq("id", connection.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      const completionIso = new Date().toISOString();
-      const { error: linkCompletionError } = await supabase
-        .from("plaid_link_update_sessions")
-        .update({
-          consumed_at: completionIso,
-          completed_at: completionIso,
-          processing_started_at: null,
-          updated_at: completionIso,
-        })
-        .eq("id", updateSession.id);
-
-      if (linkCompletionError) {
-        throw linkCompletionError;
-      }
-
       const linkedWallets = await loadLinkedWalletsForBankAccounts({
         supabase,
         userId: authResult.userId,
         targetHouseholdId: connectionHouseholdId,
-        bankAccountIds: upsertAccountsResult.records.map((record) => record.id),
+        bankAccountIds: preparedAccounts.records.map((record) => record.id),
       });
-
-      const enqueueResult = await enqueuePlaidSyncJob({
-        supabase,
-        connectionId: connection.id,
-        triggerSource: requiresAccountSelection
-          ? "new_accounts_update"
-          : "reconnect",
-        payload: {
-          updateModeComplete: true,
-          targetHouseholdId: connectionHouseholdId,
-        },
-      });
+      const { data: completionResult, error: completionError } =
+        await supabase.rpc("complete_plaid_update_mode_v1", {
+          p_user_id: authResult.userId,
+          p_connection_id: connection.id,
+          p_link_session_id: updateSession.id,
+          p_mode: body.mode === "reconnect" ? "reconnect" : "update",
+          p_household_id: connectionHouseholdId,
+          p_account_upserts: preparedAccounts.payload,
+          p_disabled_provider_account_ids: accountIdsToDisable,
+          p_metadata: nextMetadata,
+          p_item_status: requiresAccountSelection
+            ? "accounts_updated"
+            : "reconnected",
+          p_link_request_id: body.linkRequestId || null,
+          p_plaid_link_session_id: body.linkSessionId || null,
+        });
+      if (completionError) throw completionError;
+      if (completionResult !== true) {
+        throw new Error("Plaid update-mode completion was not committed");
+      }
 
       return new Response(
         JSON.stringify({
@@ -678,13 +622,13 @@ Deno.serve(async (req) => {
           action: body.action,
           connectionId: connection.id,
           targetHouseholdId: connectionHouseholdId,
-          accounts: upsertAccountsResult.records.map((record) => ({
+          accounts: preparedAccounts.records.map((record) => ({
             ...record,
             institutionLogoUrl,
             institutionPrimaryColor,
             linkedWallet: linkedWallets.get(record.id) || null,
           })),
-          initialSyncQueued: enqueueResult.enqueued || enqueueResult.duplicate,
+          initialSyncQueued: true,
         }),
         {
           status: 200,
@@ -766,6 +710,14 @@ Deno.serve(async (req) => {
       connection.access_token_encrypted ||
       connection.plaid_access_token_encrypted;
     if (!encryptedToken) {
+      const { error: releaseError } = await supabase.rpc(
+        "release_plaid_manual_refresh_v1",
+        {
+          p_connection_id: connection.id,
+          p_requested_at: requestedAt.toISOString(),
+        },
+      );
+      if (releaseError) throw releaseError;
       return new Response(
         JSON.stringify({ error: "Missing Plaid access token" }),
         {
@@ -775,8 +727,41 @@ Deno.serve(async (req) => {
       );
     }
 
-    const accessToken = await decryptSecret(encryptedToken);
-    const refreshResponse = await requestPlaidTransactionsRefresh(accessToken);
+    let accessToken: string;
+    try {
+      accessToken = await decryptSecret(encryptedToken);
+    } catch (decryptError) {
+      const { error: releaseError } = await supabase.rpc(
+        "release_plaid_manual_refresh_v1",
+        {
+          p_connection_id: connection.id,
+          p_requested_at: requestedAt.toISOString(),
+        },
+      );
+      if (releaseError) {
+        throw releaseError;
+      }
+      throw decryptError;
+    }
+
+    let refreshResponse: Awaited<
+      ReturnType<typeof requestPlaidTransactionsRefresh>
+    >;
+    try {
+      refreshResponse = await requestPlaidTransactionsRefresh(accessToken);
+    } catch (refreshError) {
+      if (refreshError instanceof PlaidError) {
+        const { error: releaseError } = await supabase.rpc(
+          "release_plaid_manual_refresh_v1",
+          {
+            p_connection_id: connection.id,
+            p_requested_at: requestedAt.toISOString(),
+          },
+        );
+        if (releaseError) throw releaseError;
+      }
+      throw refreshError;
+    }
     const metadata =
       connection.metadata && typeof connection.metadata === "object"
         ? (connection.metadata as Record<string, unknown>)

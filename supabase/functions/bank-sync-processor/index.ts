@@ -159,8 +159,10 @@ Deno.serve(async (req) => {
     }
 
     let recoveryQueued = 0;
+    let webhooksRecovered = 0;
     if (AUTO_BANK_SYNC_ENABLED) {
       try {
+        webhooksRecovered = await recoverStalePlaidWebhookEvents(supabase);
         recoveryQueued = await enqueueStalePlaidRecoveryJobs(supabase as any);
       } catch (recoveryError) {
         await reportEdgeFunctionError({
@@ -201,6 +203,7 @@ Deno.serve(async (req) => {
           success: true,
           processed: 0,
           recoveryQueued,
+          webhooksRecovered,
           message:
             recoveryQueued > 0
               ? "Queued stale Plaid connections for recovery"
@@ -468,9 +471,9 @@ async function enqueueStalePlaidRecoveryJobs(
   const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: connections, error } = await supabase
     .from("bank_connections")
-    .select("id")
+    .select("id, status, error_code, plaid_not_ready_retry_at")
     .eq("provider", PLAID_PROVIDER)
-    .in("status", ["active", "pending"])
+    .in("status", ["active", "pending", "error"])
     .is("removed_at", null)
     .or("item_status.is.null,item_status.not.in.(removed,pending_removal)")
     .or(
@@ -482,6 +485,19 @@ async function enqueueStalePlaidRecoveryJobs(
 
   let queued = 0;
   for (const connection of connections || []) {
+    if (
+      connection.plaid_not_ready_retry_at &&
+      Date.parse(String(connection.plaid_not_ready_retry_at)) > Date.now()
+    ) {
+      continue;
+    }
+    if (
+      connection.status === "error" &&
+      connection.error_code &&
+      requiresPlaidRelinkForError(String(connection.error_code))
+    ) {
+      continue;
+    }
     const result = await enqueuePlaidSyncJob({
       supabase,
       connectionId: String(connection.id),
@@ -490,6 +506,76 @@ async function enqueueStalePlaidRecoveryJobs(
     if (result.enqueued) queued += 1;
   }
   return queued;
+}
+
+async function recoverStalePlaidWebhookEvents(
+  supabase: ReturnType<typeof createClient>,
+): Promise<number> {
+  const lockToken = crypto.randomUUID();
+  const { data: events, error } = await supabase.rpc(
+    "claim_pending_bank_webhook_events_v2",
+    {
+      p_provider: PLAID_PROVIDER,
+      p_batch_size: BATCH_SIZE,
+      p_lock_token: lockToken,
+      p_lease_minutes: 15,
+    },
+  );
+  if (error) throw error;
+
+  let recovered = 0;
+  for (const event of events || []) {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/plaid-webhook`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...buildInternalInvokeHeaders(RESOLVED_INTERNAL_FUNCTION_KEY),
+      },
+      body: JSON.stringify({ eventId: event.id, lockToken }),
+    });
+    if (response.ok) recovered += 1;
+  }
+  await alertPlaidWebhookDeadLetters(supabase);
+  return recovered;
+}
+
+async function alertPlaidWebhookDeadLetters(
+  supabase: ReturnType<typeof createClient>,
+): Promise<void> {
+  const { data: deadLetters, error } = await supabase
+    .from("bank_webhook_events")
+    .select("id, provider_item_id, processing_error")
+    .eq("provider", PLAID_PROVIDER)
+    .eq("recovery_status", "dead_letter")
+    .is("dead_letter_alerted_at", null)
+    .order("dead_lettered_at", { ascending: true })
+    .limit(BATCH_SIZE);
+  if (error) throw error;
+
+  for (const event of deadLetters || []) {
+    const alertedAt = new Date().toISOString();
+    const { data: claimedAlert, error: claimError } = await supabase
+      .from("bank_webhook_events")
+      .update({ dead_letter_alerted_at: alertedAt })
+      .eq("id", event.id)
+      .is("dead_letter_alerted_at", null)
+      .select("id")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimedAlert?.id) continue;
+
+    await reportEdgeFunctionError({
+      functionName: "bank-sync-processor",
+      error: new Error(
+        String(event.processing_error || "Plaid webhook recovery exhausted"),
+      ),
+      context: {
+        phase: "plaid_webhook_dead_letter",
+        webhook_event_id: event.id,
+        provider_item_id: event.provider_item_id || null,
+      },
+    });
+  }
 }
 
 async function processTinkJob(

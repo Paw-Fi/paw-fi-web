@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { authenticateInternalSecret } from "../shared/auth.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { mergePlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
@@ -69,34 +70,84 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Get raw body for signature verification
-  const rawBody = await req.text();
-  const plaidVerificationHeader = req.headers.get("Plaid-Verification");
-
-  // Production webhooks always require Plaid signature verification.
-  if (!SKIP_WEBHOOK_VERIFICATION) {
-    const verificationResult = await verifyPlaidWebhook(
-      rawBody,
-      plaidVerificationHeader,
-    );
-
-    if (!verificationResult.valid) {
-      console.error(
-        "[plaid-webhook] Signature verification failed:",
-        verificationResult.error,
-      );
-      return new Response(
-        JSON.stringify({ error: "Invalid webhook signature" }),
-        {
-          status: 401,
-          headers: { ...headers, "Content-Type": "application/json" },
-        },
-      );
-    }
-  }
-
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: { headers: { "X-Client-Info": "moneko-plaid-webhook" } },
+  });
+  let rawBody = "";
+  let verificationToken: string | null = null;
+  let recoveryWebhookEventId: string | null = null;
   let claimedWebhookLockToken: string | null = null;
+  let deferWebhookCompletion = false;
+  let deferredReason = "deferred_active_sync";
   try {
+    const hasInternalSecret =
+      req.headers.has("X-Moneko-Internal-Key") ||
+      req.headers.has("X-Internal-Service-Secret");
+    if (hasInternalSecret) {
+      const internalAuth = await authenticateInternalSecret(req);
+      if (!internalAuth.success) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: internalAuth.statusCode || 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        });
+      }
+      const recoveryRequest = (await req.json()) as {
+        eventId?: string;
+        lockToken?: string;
+      };
+      recoveryWebhookEventId = String(recoveryRequest.eventId || "").trim();
+      claimedWebhookLockToken = String(recoveryRequest.lockToken || "").trim();
+      if (!recoveryWebhookEventId || !claimedWebhookLockToken) {
+        return new Response(
+          JSON.stringify({ error: "Invalid recovery claim" }),
+          {
+            status: 400,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+      const { data: storedEvent, error: storedEventError } = await supabase
+        .from("bank_webhook_events")
+        .select("id, payload")
+        .eq("id", recoveryWebhookEventId)
+        .eq("provider", PLAID_PROVIDER)
+        .eq("recovery_status", "processing")
+        .eq("processing_lock_token", claimedWebhookLockToken)
+        .is("processed_at", null)
+        .maybeSingle();
+      if (storedEventError) throw storedEventError;
+      if (!storedEvent?.id) {
+        return new Response(JSON.stringify({ received: true, missing: true }), {
+          status: 200,
+          headers: { ...headers, "Content-Type": "application/json" },
+        });
+      }
+      rawBody = JSON.stringify(storedEvent.payload);
+    } else {
+      rawBody = await req.text();
+      verificationToken = req.headers.get("Plaid-Verification");
+      if (!SKIP_WEBHOOK_VERIFICATION) {
+        const verificationResult = await verifyPlaidWebhook(
+          rawBody,
+          verificationToken,
+        );
+        if (!verificationResult.valid) {
+          return new Response(
+            JSON.stringify({ error: "Invalid webhook signature" }),
+            {
+              status: 401,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
+    }
+
     const payload = JSON.parse(rawBody) as PlaidWebhookPayload | null;
 
     if (!payload?.item_id) {
@@ -106,17 +157,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-      global: { headers: { "X-Client-Info": "moneko-plaid-webhook" } },
-    });
-
     // Look up the connection
-    const { data: connection } = await supabase
+    const { data: connection, error: connectionLookupError } = await supabase
       .from("bank_connections")
       .select(
         "id, status, item_status, item_health_state, metadata, provider_item_id, cursor_generation, last_webhook_received_at, removed_at",
@@ -124,6 +166,7 @@ Deno.serve(async (req) => {
       .eq("provider", PLAID_PROVIDER)
       .eq("provider_item_id", payload.item_id)
       .maybeSingle();
+    if (connectionLookupError) throw connectionLookupError;
 
     if (!connection?.id && payload.webhook_type === "TRANSACTIONS") {
       console.warn(
@@ -133,58 +176,70 @@ Deno.serve(async (req) => {
 
     const verificationReplayKey = await buildPlaidWebhookReplayIdentity({
       rawBody,
+      verificationToken,
     });
 
-    let webhookEventId: string | null = null;
-    const { data: insertedWebhookEvent, error: webhookInsertError } =
-      await supabase
-        .from("bank_webhook_events")
-        .insert({
-          provider: PLAID_PROVIDER,
-          event_type: payload.webhook_type || null,
-          event_code: payload.webhook_code || null,
-          provider_item_id: payload.item_id,
-          bank_connection_id: connection?.id || null,
-          payload,
-          verification_replay_key: verificationReplayKey,
-          processing_error: null,
-        })
-        .select("id, processed_at")
-        .single();
+    let webhookEventId: string | null = recoveryWebhookEventId;
+    if (!webhookEventId) {
+      const { data: insertedWebhookEvent, error: webhookInsertError } =
+        await supabase
+          .from("bank_webhook_events")
+          .insert({
+            provider: PLAID_PROVIDER,
+            event_type: payload.webhook_type || null,
+            event_code: payload.webhook_code || null,
+            provider_item_id: payload.item_id,
+            bank_connection_id: connection?.id || null,
+            payload,
+            verification_replay_key: verificationReplayKey,
+            processing_error: null,
+          })
+          .select("id, processed_at")
+          .single();
 
-    if (webhookInsertError) {
-      if (webhookInsertError.code === "23505") {
-        const { data: existingWebhookEvent, error: existingWebhookError } =
-          await supabase
-            .from("bank_webhook_events")
-            .select("id, processed_at")
-            .eq("provider", PLAID_PROVIDER)
-            .eq("verification_replay_key", verificationReplayKey)
-            .maybeSingle();
+      if (webhookInsertError) {
+        if (webhookInsertError.code === "23505") {
+          const { data: existingWebhookEvent, error: existingWebhookError } =
+            await supabase
+              .from("bank_webhook_events")
+              .select("id, processed_at, recovery_status")
+              .eq("provider", PLAID_PROVIDER)
+              .eq("verification_replay_key", verificationReplayKey)
+              .maybeSingle();
 
-        if (existingWebhookError) {
-          throw existingWebhookError;
+          if (existingWebhookError) {
+            throw existingWebhookError;
+          }
+
+          if (existingWebhookEvent?.processed_at) {
+            return new Response(
+              JSON.stringify({ received: true, duplicate: true }),
+              {
+                status: 200,
+                headers: { ...headers, "Content-Type": "application/json" },
+              },
+            );
+          }
+          if (existingWebhookEvent?.recovery_status === "dead_letter") {
+            return new Response(
+              JSON.stringify({ received: true, deadLettered: true }),
+              {
+                status: 200,
+                headers: { ...headers, "Content-Type": "application/json" },
+              },
+            );
+          }
+
+          webhookEventId = existingWebhookEvent?.id || null;
+        } else {
+          throw webhookInsertError;
         }
-
-        if (existingWebhookEvent?.processed_at) {
-          return new Response(
-            JSON.stringify({ received: true, duplicate: true }),
-            {
-              status: 200,
-              headers: { ...headers, "Content-Type": "application/json" },
-            },
-          );
-        }
-
-        webhookEventId = existingWebhookEvent?.id || null;
       } else {
-        throw webhookInsertError;
+        webhookEventId = insertedWebhookEvent?.id || null;
       }
-    } else {
-      webhookEventId = insertedWebhookEvent?.id || null;
     }
 
-    if (webhookEventId) {
+    if (webhookEventId && !recoveryWebhookEventId) {
       claimedWebhookLockToken = crypto.randomUUID();
       const { data: claimed, error: claimError } = await supabase.rpc(
         "claim_bank_webhook_event_v1",
@@ -196,14 +251,27 @@ Deno.serve(async (req) => {
       );
       if (claimError) throw claimError;
       if (claimed !== true) {
-        return new Response(
-          JSON.stringify({ received: true, duplicate: true }),
-          {
-            status: 200,
-            headers: { ...headers, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ received: false, retry: true }), {
+          status: 503,
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+            "Retry-After": "60",
           },
-        );
+        });
       }
+    }
+
+    if (!connection?.id) {
+      deferWebhookCompletion = true;
+      deferredReason = "deferred_missing_connection";
+    } else if (recoveryWebhookEventId) {
+      const { error: eventConnectionError } = await supabase
+        .from("bank_webhook_events")
+        .update({ bank_connection_id: connection.id })
+        .eq("id", recoveryWebhookEventId)
+        .is("bank_connection_id", null);
+      if (eventConnectionError) throw eventConnectionError;
     }
 
     if (connection?.id && isPlaidConnectionTerminalForWebhook(connection)) {
@@ -221,16 +289,13 @@ Deno.serve(async (req) => {
       );
 
       if (webhookEventId) {
-        await supabase
-          .from("bank_webhook_events")
-          .update({
-            processed_at: new Date().toISOString(),
-            processing_started_at: null,
-            processing_lock_token: null,
-            processing_error: "ignored_terminal_connection",
-          })
-          .eq("id", webhookEventId)
-          .eq("processing_lock_token", claimedWebhookLockToken);
+        await transitionBankWebhookEvent({
+          supabase,
+          eventId: webhookEventId,
+          lockToken: claimedWebhookLockToken,
+          outcome: "completed",
+          error: "ignored_terminal_connection",
+        });
       }
 
       return new Response(JSON.stringify({ received: true, ignored: true }), {
@@ -274,6 +339,8 @@ Deno.serve(async (req) => {
           },
           webhookEventId,
         });
+        deferWebhookCompletion =
+          enqueueResult.duplicate && enqueueResult.needsResyncQueued;
 
         console.log(
           "[plaid-webhook] Queued transactions sync",
@@ -341,7 +408,7 @@ Deno.serve(async (req) => {
         );
 
         if (action.shouldEnqueueSync && updatedConnections?.length === 1) {
-          await enqueuePlaidSyncJob({
+          const enqueueResult = await enqueuePlaidSyncJob({
             supabase,
             connectionId: connection.id,
             triggerSource: "plaid_item_webhook",
@@ -350,21 +417,28 @@ Deno.serve(async (req) => {
             },
             webhookEventId,
           });
+          deferWebhookCompletion =
+            deferWebhookCompletion ||
+            (enqueueResult.duplicate && enqueueResult.needsResyncQueued);
         }
       }
     }
 
-    if (webhookEventId) {
-      await supabase
-        .from("bank_webhook_events")
-        .update({
-          processed_at: new Date().toISOString(),
-          processing_started_at: null,
-          processing_lock_token: null,
-          processing_error: null,
-        })
-        .eq("id", webhookEventId)
-        .eq("processing_lock_token", claimedWebhookLockToken);
+    if (webhookEventId && deferWebhookCompletion) {
+      await transitionBankWebhookEvent({
+        supabase,
+        eventId: webhookEventId,
+        lockToken: claimedWebhookLockToken,
+        outcome: "retry",
+        error: deferredReason,
+      });
+    } else if (webhookEventId) {
+      await transitionBankWebhookEvent({
+        supabase,
+        eventId: webhookEventId,
+        lockToken: claimedWebhookLockToken,
+        outcome: "completed",
+      });
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -375,36 +449,31 @@ Deno.serve(async (req) => {
     console.error("[plaid-webhook] Failed to handle webhook", error);
     try {
       const parsed = JSON.parse(rawBody) as PlaidWebhookPayload;
-      const replayKey = await buildPlaidWebhookReplayIdentity({ rawBody });
-      if (parsed.item_id) {
-        const supabase = createClient(
-          SUPABASE_URL!,
-          SUPABASE_SERVICE_ROLE_KEY!,
-          {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false,
-              detectSessionInUrl: false,
-            },
-          },
-        );
-        let failureUpdate = supabase
-          .from("bank_webhook_events")
-          .update({
-            processing_error:
-              error instanceof Error ? error.message : String(error),
-            processing_started_at: null,
-            processing_lock_token: null,
-          })
-          .eq("provider", PLAID_PROVIDER)
-          .eq("verification_replay_key", replayKey);
-        if (claimedWebhookLockToken) {
-          failureUpdate = failureUpdate.eq(
-            "processing_lock_token",
-            claimedWebhookLockToken,
-          );
+      const replayKey = await buildPlaidWebhookReplayIdentity({
+        rawBody,
+        verificationToken,
+      });
+      if (parsed.item_id && claimedWebhookLockToken) {
+        let failedEventId = recoveryWebhookEventId;
+        if (!failedEventId) {
+          const { data: failedEvent } = await supabase
+            .from("bank_webhook_events")
+            .select("id")
+            .eq("provider", PLAID_PROVIDER)
+            .eq("verification_replay_key", replayKey)
+            .eq("processing_lock_token", claimedWebhookLockToken)
+            .maybeSingle();
+          failedEventId = failedEvent?.id || null;
         }
-        await failureUpdate;
+        if (failedEventId) {
+          await transitionBankWebhookEvent({
+            supabase,
+            eventId: failedEventId,
+            lockToken: claimedWebhookLockToken,
+            outcome: "retry",
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
     } catch {
       // Best-effort failure annotation only.
@@ -425,6 +494,53 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function transitionBankWebhookEvent(params: {
+  supabase: ReturnType<typeof createClient>;
+  eventId: string;
+  lockToken: string | null;
+  outcome: "completed" | "retry";
+  error?: string;
+  retryDelaySeconds?: number;
+}): Promise<void> {
+  if (!params.lockToken) {
+    throw new Error("Webhook transition requires a live claim");
+  }
+  const { data: status, error } = await params.supabase.rpc(
+    "complete_bank_webhook_event_v2",
+    {
+      p_event_id: params.eventId,
+      p_lock_token: params.lockToken,
+      p_outcome: params.outcome,
+      p_error: params.error || null,
+      p_retry_delay_seconds: params.retryDelaySeconds || null,
+    },
+  );
+  if (error) throw error;
+  if (status === "lost_claim") {
+    throw new Error("Webhook processing claim was lost before completion");
+  }
+  if (status === "dead_letter") {
+    const { data: claimedAlert, error: alertClaimError } = await params.supabase
+      .from("bank_webhook_events")
+      .update({ dead_letter_alerted_at: new Date().toISOString() })
+      .eq("id", params.eventId)
+      .is("dead_letter_alerted_at", null)
+      .select("id")
+      .maybeSingle();
+    if (alertClaimError) throw alertClaimError;
+    if (claimedAlert?.id) {
+      await reportEdgeFunctionError({
+        functionName: "plaid-webhook",
+        error: new Error(params.error || "Plaid webhook recovery exhausted"),
+        context: {
+          phase: "webhook_dead_letter",
+          webhook_event_id: params.eventId,
+        },
+      });
+    }
+  }
+}
 
 async function applyPlaidAccountRevokedWebhook(params: {
   supabase: {
