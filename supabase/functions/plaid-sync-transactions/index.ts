@@ -26,10 +26,9 @@ import {
   type ExpensePreview,
   type LinkedWalletRecord,
   loadLinkedWalletsForBankAccounts,
+  preparePlaidAccounts,
   preparePlaidTransactionMutations,
   sanitizeOptionalUuid,
-  stagePlaidTransactions,
-  upsertPlaidAccounts,
 } from "../shared/bank-sync.ts";
 import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
 import type { BankExpenseMutationRecord } from "../shared/bank-expense-projection.ts";
@@ -49,6 +48,7 @@ interface SyncRequest {
   bankAccountId?: string;
   cursorOverride?: string;
   targetHouseholdId?: string;
+  expectedCursorGeneration?: number;
 }
 
 interface SyncSummary {
@@ -60,7 +60,7 @@ interface SyncSummary {
   currencyMismatches: number;
   accountsProcessed: number;
   inactiveTransactionsHidden: number;
-  status: "succeeded" | "error";
+  status: "succeeded" | "pending" | "error";
   error?: string;
   errorCode?: string;
   nextEligibleAt?: string;
@@ -341,6 +341,9 @@ Deno.serve(async (req) => {
         cursorOverride,
         targetHouseholdId: requestedTargetHouseholdId,
         enforceManualCooldown,
+        expectedCursorGeneration: authResult.isInternalService
+          ? body.expectedCursorGeneration
+          : undefined,
       });
       summaries.push(summary);
       totalInserted += summary.inserted;
@@ -380,7 +383,9 @@ Deno.serve(async (req) => {
         success: true,
         status: summaries.every((item) => item.status === "succeeded")
           ? "succeeded"
-          : "partial_error",
+          : summaries.every((item) => item.status === "pending")
+            ? "pending"
+            : "partial_error",
         summary: {
           connections: summaries.length,
           inserted: totalInserted,
@@ -427,6 +432,7 @@ async function syncConnection(params: {
   cursorOverride?: string;
   targetHouseholdId?: string | null;
   enforceManualCooldown: boolean;
+  expectedCursorGeneration?: number;
 }): Promise<SyncSummary> {
   const summary: SyncSummary = {
     connectionId: params.connection.id,
@@ -441,6 +447,17 @@ async function syncConnection(params: {
     addedTransactions: [],
     syncStatus: readPlaidSyncStatusMetadata(params.connection.metadata),
   };
+
+  if (
+    params.expectedCursorGeneration != null &&
+    params.expectedCursorGeneration !==
+      (params.connection.cursor_generation ?? 0)
+  ) {
+    summary.status = "error";
+    summary.errorCode = "STALE_CURSOR_GENERATION";
+    summary.error = "A newer Plaid sync already repaired this cursor";
+    return summary;
+  }
 
   const cooldownExemptItemStatuses = new Set([
     "newly_connected",
@@ -541,17 +558,6 @@ async function syncConnection(params: {
       });
     if (syncStartedEventError) throw syncStartedEventError;
 
-    await params.supabase
-      .from("bank_connections")
-      .update({
-        last_sync_attempt_at: new Date().toISOString(),
-        item_status: params.connection.last_successful_sync_at
-          ? "active"
-          : "initial_sync_in_progress",
-        item_health_state: "healthy",
-      })
-      .eq("id", params.connection.id);
-
     const encryptedToken =
       params.connection.access_token_encrypted ||
       params.connection.plaid_access_token_encrypted;
@@ -567,7 +573,7 @@ async function syncConnection(params: {
         (account.type === "loan" &&
           (account.subtype === "mortgage" || account.subtype === "student")),
     );
-    const refreshedAccounts = await upsertPlaidAccounts({
+    const refreshedAccounts = await preparePlaidAccounts({
       supabase: params.supabase,
       userId: params.userId,
       bankConnectionId: params.connection.id,
@@ -576,28 +582,17 @@ async function syncConnection(params: {
     const removalScopeAccountIds = Array.from(params.accountMap.values())
       .filter((account) => account.bank_connection_id === params.connection.id)
       .map((account) => account.id);
-    const refreshedProviderAccountIds = new Set(
-      refreshedAccounts.allRecords.map(
-        (account) => account.provider_account_id,
-      ),
+    const refreshedBankAccountIds = new Set(
+      refreshedAccounts.allRecords.map((account) => account.id),
     );
     const inactiveAccountIds = Array.from(params.accountMap.values())
       .filter(
         (account) =>
           account.bank_connection_id === params.connection.id &&
           (account.status == null || account.status === "active") &&
-          !refreshedProviderAccountIds.has(
-            account.provider_account_id || account.plaid_account_id,
-          ),
+          !refreshedBankAccountIds.has(account.id),
       )
       .map((account) => account.id);
-    if (inactiveAccountIds.length > 0) {
-      const { error: inactiveAccountsError } = await params.supabase
-        .from("bank_accounts")
-        .update({ status: "inactive" })
-        .in("id", inactiveAccountIds);
-      if (inactiveAccountsError) throw inactiveAccountsError;
-    }
     const inactiveAccountIdSet = new Set(inactiveAccountIds);
     const accountMap = new Map<string, BankAccountRow>(
       Array.from(params.accountMap.entries())
@@ -628,9 +623,15 @@ async function syncConnection(params: {
           undefined;
     // Plaid cursors belong to the Item, not an individual account. A request
     // started from one account must apply every account update for that Item.
-    const connectionBankAccountIds = Array.from(accountMap.values())
-      .filter((account) => account.bank_connection_id === params.connection.id)
-      .map((account) => account.id);
+    const connectionBankAccountIds = Array.from(
+      new Set(
+        Array.from(accountMap.values())
+          .filter(
+            (account) => account.bank_connection_id === params.connection.id,
+          )
+          .map((account) => account.id),
+      ),
+    );
     const connectionHouseholdId = params.connection.household_id || null;
     if (
       params.targetHouseholdId &&
@@ -732,6 +733,7 @@ async function syncConnection(params: {
 
     const expenseInserts: BankExpenseMutationRecord[] = [];
     const expenseUpdates: BankExpenseMutationRecord[] = [];
+    const rawTransactions: Array<Record<string, unknown>> = [];
 
     for (const [plaidAccountId, transactions] of grouped.entries()) {
       const account = accountMap.get(
@@ -743,12 +745,17 @@ async function syncConnection(params: {
         linkedWallet?.household_id ?? effectiveTargetHouseholdId;
 
       const isInactiveAccount = !isActivePlaidAccount(account);
-      await stagePlaidTransactions({
-        supabase: params.supabase,
-        bankConnectionId: params.connection.id,
-        bankAccountId: account.id,
-        transactions,
-      });
+      rawTransactions.push(
+        ...transactions
+          .filter((transaction) => transaction.transaction_id)
+          .map((transaction) => ({
+            bank_connection_id: params.connection.id,
+            bank_account_id: account.id,
+            provider: PLAID_PROVIDER,
+            provider_transaction_id: transaction.transaction_id,
+            payload: transaction,
+          })),
+      );
 
       const prepared = await preparePlaidTransactionMutations({
         supabase: params.supabase,
@@ -780,9 +787,7 @@ async function syncConnection(params: {
     const providerRemovalAccountIds = batch.removed
       .map((row) => {
         if (!row.account_id) return null;
-        return params.accountMap.get(
-          `${params.connection.id}:${row.account_id}`,
-        )?.id;
+        return accountMap.get(`${params.connection.id}:${row.account_id}`)?.id;
       })
       .filter((id): id is string => Boolean(id));
     let removedBankAccountIds = Array.from(new Set(providerRemovalAccountIds));
@@ -806,6 +811,18 @@ async function syncConnection(params: {
       );
     }
     const atomicAccountIds = connectionBankAccountIds;
+    const responseSyncStatus = plaidSyncStatusFromTransactionsUpdateStatus(
+      batch.transactionsUpdateStatus,
+    );
+    const mergedSyncMetadata = responseSyncStatus
+      ? mergePlaidSyncStatusMetadata(
+          params.connection.metadata as Record<string, unknown> | null,
+          responseSyncStatus,
+        )
+      : (params.connection.metadata as Record<string, unknown> | null);
+    summary.syncStatus = readPlaidSyncStatusMetadata(mergedSyncMetadata);
+    const isReady =
+      batch.transactionsUpdateStatus?.trim().toUpperCase() !== "NOT_READY";
     const { data: leaseExtended, error: leaseExtendError } =
       await params.supabase.rpc("extend_bank_sync_lock_v2", {
         p_bank_connection_id: params.connection.id,
@@ -816,7 +833,7 @@ async function syncConnection(params: {
       throw new Error("Plaid sync lock lease was lost before commit");
     }
     const { data: atomicResult, error: atomicError } =
-      await params.supabase.rpc("apply_plaid_sync_batch_v1", {
+      await params.supabase.rpc("apply_plaid_sync_batch_v2", {
         p_user_id: params.userId,
         p_bank_connection_id: params.connection.id,
         p_expected_cursor_generation: params.connection.cursor_generation ?? 0,
@@ -826,6 +843,20 @@ async function syncConnection(params: {
         p_removed_provider_transaction_ids: removedIds,
         p_removed_bank_account_ids: removedBankAccountIds,
         p_processed_bank_account_ids: atomicAccountIds,
+        p_account_upserts: refreshedAccounts.payload,
+        p_inactive_bank_account_ids: inactiveAccountIds,
+        p_raw_transactions: rawTransactions,
+        p_sync_status: responseSyncStatus
+          ? {
+              initial_update_complete: responseSyncStatus.initialUpdateComplete,
+              historical_update_complete:
+                responseSyncStatus.historicalUpdateComplete,
+              transactions_update_status: batch.transactionsUpdateStatus,
+            }
+          : {},
+        p_is_ready: isReady,
+        p_recurring_refresh_required:
+          isReady && summary.syncStatus?.historicalUpdateComplete === true,
         p_lock_token: lockToken,
         p_audit_id: auditId ?? null,
       });
@@ -839,55 +870,37 @@ async function syncConnection(params: {
     summary.addedTransactions = Array.isArray(result.inserted_records)
       ? (result.inserted_records as ExpensePreview[])
       : [];
-    cursor = batch.nextCursor;
-
-    const responseSyncStatus = plaidSyncStatusFromTransactionsUpdateStatus(
-      batch.transactionsUpdateStatus,
-    );
-    if (responseSyncStatus) {
-      const { data: currentConnection, error: currentConnectionError } =
-        await params.supabase
-          .from("bank_connections")
-          .select("metadata")
-          .eq("id", params.connection.id)
-          .single();
-      if (currentConnectionError) throw currentConnectionError;
-      const metadata = mergePlaidSyncStatusMetadata(
-        currentConnection?.metadata,
-        responseSyncStatus,
-      );
-      const { error: statusUpdateError } = await params.supabase
-        .from("bank_connections")
-        .update({ metadata, updated_at: new Date().toISOString() })
-        .eq("id", params.connection.id);
-      if (statusUpdateError) throw statusUpdateError;
-      summary.syncStatus = readPlaidSyncStatusMetadata(metadata);
+    if (!isReady) {
+      summary.status = "pending";
     }
+    cursor = batch.nextCursor;
 
     await auditUpdate({
       skipped_transactions: summary.skipped,
     });
 
-    try {
-      await rebindLinkedPlaidExpensesForConnection({
-        supabase: params.supabase,
-        userId: params.userId,
-        linkedWalletsByBankAccountId,
-      });
-    } catch (postProcessingError) {
-      summary.status = "error";
-      summary.errorCode = "POST_PROCESSING_FAILED";
-      summary.error = "Transactions synced, but post-processing failed";
-      await reportEdgeFunctionError({
-        functionName: "plaid-sync-transactions",
-        error: postProcessingError,
-        context: {
-          phase: "post_process_after_atomic_batch",
-        },
-      });
+    if (isReady) {
+      try {
+        await rebindLinkedPlaidExpensesForConnection({
+          supabase: params.supabase,
+          userId: params.userId,
+          linkedWalletsByBankAccountId,
+        });
+      } catch (postProcessingError) {
+        summary.status = "error";
+        summary.errorCode = "POST_PROCESSING_FAILED";
+        summary.error = "Transactions synced, but post-processing failed";
+        await reportEdgeFunctionError({
+          functionName: "plaid-sync-transactions",
+          error: postProcessingError,
+          context: {
+            phase: "post_process_after_atomic_batch",
+          },
+        });
+      }
     }
 
-    if (summary.syncStatus?.historicalUpdateComplete === true) {
+    if (isReady && summary.syncStatus?.historicalUpdateComplete === true) {
       try {
         const recurringResult = await refreshPlaidRecurringTemplates({
           supabase: params.supabase,
@@ -923,6 +936,31 @@ async function syncConnection(params: {
             "[plaid-sync] Failed to record recurring refresh event",
             recurringEventError,
           );
+        }
+        const { data: recurringCompleteRows, error: recurringCompleteError } =
+          await params.supabase
+            .from("bank_connections")
+            .update({
+              plaid_recurring_refresh_pending: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", params.connection.id)
+            .eq("cursor_generation", Number(result.cursor_generation || 0))
+            .select("id");
+        if (recurringCompleteError) throw recurringCompleteError;
+        if (recurringCompleteRows?.length !== 1) {
+          console.warn(
+            "[plaid-sync] A newer sync kept recurring reconciliation pending",
+          );
+          await params.supabase.from("plaid_sync_events").insert({
+            bank_connection_id: params.connection.id,
+            bank_sync_audit_id: auditId,
+            event_type: "recurring_refresh_superseded",
+            severity: "warning",
+            payload: {
+              cursor_generation: Number(result.cursor_generation || 0),
+            },
+          });
         }
       } catch (recurringError) {
         console.warn("[plaid-sync] Recurring refresh failed", recurringError);

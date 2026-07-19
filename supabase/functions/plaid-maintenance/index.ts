@@ -46,6 +46,7 @@ interface PlaidConnectionRow {
   last_successful_sync_at?: string | null;
   last_webhook_received_at?: string | null;
   needs_resync?: boolean | null;
+  plaid_recurring_refresh_pending?: boolean | null;
   updated_at?: string | null;
   removed_at?: string | null;
 }
@@ -284,10 +285,10 @@ async function reconcileStaleItems(
   const { data: connections, error } = await supabase
     .from("bank_connections")
     .select(
-      "id, last_successful_sync_at, last_webhook_received_at, needs_resync, item_status, item_health_state",
+      "id, status, last_successful_sync_at, last_webhook_received_at, needs_resync, plaid_recurring_refresh_pending, item_status, item_health_state",
     )
     .eq("provider", PLAID_PROVIDER)
-    .eq("status", "active")
+    .in("status", ["active", "pending"])
     .is("removed_at", null);
 
   if (error) {
@@ -298,6 +299,7 @@ async function reconcileStaleItems(
   for (const connection of connections || []) {
     const shouldEnqueue =
       connection.needs_resync === true ||
+      connection.plaid_recurring_refresh_pending === true ||
       !connection.last_successful_sync_at ||
       connection.last_successful_sync_at < staleBefore ||
       !connection.last_webhook_received_at ||
@@ -317,13 +319,15 @@ async function reconcileStaleItems(
       enqueued += 1;
     }
 
-    await supabase
-      .from("bank_connections")
-      .update({
-        item_status: "stale_but_healthy",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", connection.id);
+    if (connection.status === "active") {
+      await supabase
+        .from("bank_connections")
+        .update({
+          item_status: "stale_but_healthy",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id);
+    }
   }
 
   return { enqueued };
@@ -533,6 +537,27 @@ async function cleanupRetentionData(
   const staleLinkSessionLeaseCutoff = new Date(
     Date.now() - 15 * 60 * 1000,
   ).toISOString();
+
+  const { error: offboardingTokenError } = await supabase
+    .from("plaid_offboarding_jobs")
+    .update({
+      access_token_encrypted: null,
+      plaid_access_token_encrypted: null,
+      status: "failed",
+      next_attempt_at: null,
+      processing_started_at: null,
+      last_error: "Plaid removal credential reached its retention limit.",
+      last_error_at: new Date().toISOString(),
+      processed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .in("status", ["pending", "processing", "failed"])
+    .not("token_expires_at", "is", null)
+    .lte("token_expires_at", new Date().toISOString());
+
+  if (offboardingTokenError) {
+    throw offboardingTokenError;
+  }
 
   const { error: webhookError } = await supabase
     .from("bank_webhook_events")

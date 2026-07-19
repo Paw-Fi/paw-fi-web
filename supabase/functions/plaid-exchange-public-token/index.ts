@@ -13,6 +13,7 @@ import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   exchangePublicToken,
   getPlaidAccounts,
+  type PlaidAccount,
   PLAID_PROVIDER,
   removePlaidItem,
 } from "../shared/plaid-client.ts";
@@ -23,7 +24,7 @@ import {
   normalizePlaidSelectedAccounts,
   type PlaidSelectedAccountMetadata,
 } from "../shared/plaid-update-mode.ts";
-import { encryptSecret } from "../shared/token-encryption.ts";
+import { decryptSecret, encryptSecret } from "../shared/token-encryption.ts";
 import {
   loadLinkedWalletsForBankAccounts,
   sanitizeOptionalUuid,
@@ -200,42 +201,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!requestedConnectionId && selectedAccountIds.length) {
-      const duplicateConnections = await findDuplicatePlaidConnections({
-        supabase,
-        userId: authResult.userId,
-        selectedAccountIds,
-        selectedAccounts,
-        institutionId: body.institutionId,
-        targetHouseholdId,
-      });
-
-      if (duplicateConnections.length) {
-        return new Response(
-          JSON.stringify({
-            error:
-              "These bank accounts are already connected. Use the existing bank connection instead of linking them again.",
-            errorCode: "duplicate_item_accounts",
-            duplicateConnectionIds: duplicateConnections,
-          }),
-          {
-            status: 409,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
-      }
-    }
-
     // Check idempotency - return existing connection if found
     if (body.idempotencyKey) {
       const { data: existingConnection } = await supabase
         .from("bank_connections")
-        .select("id, household_id")
+        .select(
+          "id, household_id, metadata, access_token_encrypted, plaid_access_token_encrypted, status, item_status, removed_at",
+        )
         .eq("user_id", authResult.userId)
         .eq("idempotency_key", body.idempotencyKey)
         .maybeSingle();
 
       if (existingConnection) {
+        if (
+          existingConnection.removed_at ||
+          existingConnection.status === "disabled" ||
+          ["removed", "pending_removal"].includes(
+            existingConnection.item_status || "",
+          )
+        ) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "The previous bank connection attempt is closed. Please restart Link.",
+              errorCode: "idempotency_connection_closed",
+            }),
+            {
+              status: 409,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
         const existingHouseholdId = existingConnection.household_id ?? null;
         if (existingHouseholdId !== targetHouseholdId) {
           return new Response(
@@ -243,6 +239,30 @@ Deno.serve(async (req) => {
               error:
                 "This bank connection attempt belongs to a different wallet space. Please restart bank connection from the current space.",
               errorCode: "idempotency_scope_mismatch",
+            }),
+            {
+              status: 409,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+        const existingSelectedAccountIds = Array.isArray(
+          existingConnection.metadata?.plaid_selected_account_ids,
+        )
+          ? existingConnection.metadata.plaid_selected_account_ids
+              .map((value: unknown) => String(value || "").trim())
+              .filter(Boolean)
+              .sort()
+          : [];
+        if (
+          existingSelectedAccountIds.length > 0 &&
+          existingSelectedAccountIds.join("|") !==
+            [...selectedAccountIds].sort().join("|")
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: "This bank connection attempt used different accounts.",
+              errorCode: "idempotency_account_mismatch",
             }),
             {
               status: 409,
@@ -258,11 +278,7 @@ Deno.serve(async (req) => {
           )
           .eq("bank_connection_id", existingConnection.id);
 
-        if (!canReusePlaidExchangeSnapshot((existingAccounts || []).length)) {
-          console.warn(
-            `[plaid-exchange] Idempotent connection ${existingConnection.id} has no stored accounts; continuing with fresh exchange attempt`,
-          );
-        } else {
+        if (canReusePlaidExchangeSnapshot((existingAccounts || []).length)) {
           console.log(
             `[plaid-exchange] Idempotent request detected, returning existing connection: ${existingConnection.id}`,
           );
@@ -294,6 +310,95 @@ Deno.serve(async (req) => {
             },
           );
         }
+
+        const encryptedExistingToken =
+          existingConnection.access_token_encrypted ||
+          existingConnection.plaid_access_token_encrypted;
+        if (!encryptedExistingToken) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "The previous bank connection attempt cannot be resumed. Please restart Link.",
+              errorCode: "idempotency_recovery_unavailable",
+            }),
+            {
+              status: 409,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const existingAccessToken = await decryptSecret(encryptedExistingToken);
+        const recoveredAccounts = (
+          await getPlaidAccounts(existingAccessToken)
+        ).filter((account) => selectedAccountIds.includes(account.account_id));
+        if (recoveredAccounts.length === 0) {
+          throw new Error("Plaid idempotency recovery returned no accounts");
+        }
+        const recoveredDuplicates = await findDuplicatePlaidConnections({
+          supabase,
+          userId: authResult.userId,
+          selectedAccountIds,
+          selectedAccounts: recoveredAccounts,
+          institutionId: body.institutionId,
+          targetHouseholdId,
+          excludeConnectionId: existingConnection.id,
+        });
+        if (recoveredDuplicates.length > 0) {
+          return duplicatePlaidAccountsResponse(recoveredDuplicates, headers);
+        }
+        const recovered = await upsertPlaidAccounts({
+          supabase,
+          userId: authResult.userId,
+          bankConnectionId: existingConnection.id,
+          accounts: recoveredAccounts,
+        });
+        const recoveredWallets = await loadLinkedWalletsForBankAccounts({
+          supabase,
+          userId: authResult.userId,
+          targetHouseholdId,
+          bankAccountIds: recovered.records.map((account) => account.id),
+        });
+        const recoveredEnqueue = await enqueuePlaidSyncJob({
+          supabase,
+          connectionId: existingConnection.id,
+          triggerSource: "exchange_idempotency_recovery",
+          payload: { initialSync: true, targetHouseholdId },
+        });
+        return new Response(
+          JSON.stringify({
+            success: true,
+            connectionId: existingConnection.id,
+            targetHouseholdId,
+            accounts: recovered.records.map((account) => ({
+              ...account,
+              linkedWallet: recoveredWallets.get(account.id) || null,
+            })),
+            initialSyncQueued:
+              recoveredEnqueue.enqueued || recoveredEnqueue.duplicate,
+            idempotent: true,
+            recovered: true,
+          }),
+          {
+            status: 200,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
+    if (!requestedConnectionId && selectedAccountIds.length) {
+      const duplicateConnections = await findDuplicatePlaidConnections({
+        supabase,
+        userId: authResult.userId,
+        selectedAccountIds,
+        selectedAccounts,
+        institutionId: body.institutionId,
+        targetHouseholdId,
+      });
+
+      if (duplicateConnections.length) {
+        return duplicatePlaidAccountsResponse(duplicateConnections, headers);
       }
     }
 
@@ -327,9 +432,16 @@ Deno.serve(async (req) => {
     const plaidResponse = await exchangePublicToken(publicToken);
     let encryptedToken = "";
     let shouldCompensateOrphanItem = true;
+    let accountsToUpsert: PlaidAccount[] = [];
 
     try {
       encryptedToken = await encryptSecret(plaidResponse.access_token);
+      accountsToUpsert = (
+        await getPlaidAccounts(plaidResponse.access_token)
+      ).filter((account) => selectedAccountIds.includes(account.account_id));
+      if (accountsToUpsert.length === 0) {
+        throw new Error("No selected Plaid accounts were returned by Plaid");
+      }
       const { data: existingConnectionForItem, error: existingItemError } =
         await supabase
           .from("bank_connections")
@@ -344,6 +456,38 @@ Deno.serve(async (req) => {
       }
 
       shouldCompensateOrphanItem = !existingConnectionForItem?.id;
+
+      if (shouldCompensateOrphanItem) {
+        const authoritativeDuplicates = await findDuplicatePlaidConnections({
+          supabase,
+          userId: authResult.userId,
+          selectedAccountIds,
+          selectedAccounts: accountsToUpsert,
+          institutionId: body.institutionId,
+          targetHouseholdId,
+        });
+        if (authoritativeDuplicates.length > 0) {
+          const cleanedUp = await cleanupOrphanPlaidItem({
+            accessToken: plaidResponse.access_token,
+            itemId: plaidResponse.item_id,
+            stage: "persistent_account_duplicate",
+          });
+          if (!cleanedUp) {
+            await persistOrphanPlaidRemovalJob({
+              supabase,
+              userId: authResult.userId,
+              encryptedToken,
+              itemId: plaidResponse.item_id,
+              stage: "persistent_account_duplicate",
+            });
+          }
+          shouldCompensateOrphanItem = false;
+          return duplicatePlaidAccountsResponse(
+            authoritativeDuplicates,
+            headers,
+          );
+        }
+      }
 
       if (!accessState.isConvertedPaidUser && shouldCompensateOrphanItem) {
         const { count, error: connectionCountError } = await supabase
@@ -369,6 +513,7 @@ Deno.serve(async (req) => {
               supabase,
               userId: authResult.userId,
               encryptedToken,
+              itemId: plaidResponse.item_id,
               stage: "connection_limit_guard",
             });
           }
@@ -397,6 +542,7 @@ Deno.serve(async (req) => {
             supabase,
             userId: authResult.userId,
             encryptedToken,
+            itemId: plaidResponse.item_id,
             stage: "post_exchange_setup_failure",
           });
         }
@@ -531,7 +677,7 @@ Deno.serve(async (req) => {
           third_billing_month_start: billingWindow.thirdBillingMonthStart,
           scheduled_removal_at: billingWindow.scheduledRemovalAt,
           removed_at: null,
-          status: "active",
+          status: "pending",
           item_status: isNewConnection ? "newly_connected" : "reconnected",
           item_health_state: "healthy",
           relink_state: null,
@@ -546,16 +692,6 @@ Deno.serve(async (req) => {
         throw connectionUpdateError;
       }
 
-      const accounts = await getPlaidAccounts(plaidResponse.access_token);
-      const accountsToUpsert =
-        selectedAccountIds.length > 0
-          ? accounts.filter((account) =>
-              selectedAccountIds.includes(account.account_id),
-            )
-          : accounts;
-      if (accountsToUpsert.length === 0) {
-        throw new Error("No selected Plaid accounts were returned by Plaid");
-      }
       const upsertAccountsResult = await upsertPlaidAccounts({
         supabase,
         userId: authResult.userId,
@@ -674,9 +810,22 @@ Deno.serve(async (req) => {
             supabase,
             userId: authResult.userId,
             encryptedToken,
+            itemId: plaidResponse.item_id,
             stage: "post_exchange_failure",
           });
         }
+      }
+
+      if (
+        postExchangeError &&
+        typeof postExchangeError === "object" &&
+        "code" in postExchangeError &&
+        String((postExchangeError as { code?: unknown }).code) === "23505" &&
+        String(
+          (postExchangeError as { message?: unknown }).message || "",
+        ).includes("already connected")
+      ) {
+        return duplicatePlaidAccountsResponse([], headers);
       }
 
       throw postExchangeError;
@@ -746,9 +895,10 @@ async function findDuplicatePlaidConnections(params: {
   supabase: any;
   userId: string;
   selectedAccountIds: string[];
-  selectedAccounts: PlaidSelectedAccountMetadata[];
+  selectedAccounts: Array<PlaidSelectedAccountMetadata | PlaidAccount>;
   institutionId?: string;
   targetHouseholdId: string | null;
+  excludeConnectionId?: string;
 }): Promise<string[]> {
   let connectionsQuery = params.supabase
     .from("bank_connections")
@@ -775,6 +925,7 @@ async function findDuplicatePlaidConnections(params: {
       metadata?: Record<string, unknown> | null;
     }>
   ).filter((connection) => {
+    if (connection.id === params.excludeConnectionId) return false;
     if (!normalizedInstitutionId) return true;
     const existingInstitutionId = String(
       connection.metadata?.institution_id || "",
@@ -790,13 +941,22 @@ async function findDuplicatePlaidConnections(params: {
   const { data: bankAccounts, error: bankAccountsError } = await params.supabase
     .from("bank_accounts")
     .select(
-      "bank_connection_id, provider_account_id, name, mask, type, subtype",
+      "bank_connection_id, provider_account_id, provider_persistent_account_id, name, mask, type, subtype",
     )
     .eq("provider", PLAID_PROVIDER)
     .in("bank_connection_id", candidateConnectionIds);
   if (bankAccountsError) throw bankAccountsError;
 
   const selectedProviderIds = new Set(params.selectedAccountIds);
+  const selectedPersistentIds = new Set(
+    params.selectedAccounts
+      .map((account) =>
+        "persistent_account_id" in account
+          ? account.persistent_account_id?.trim() || null
+          : null,
+      )
+      .filter((value): value is string => value != null),
+  );
   const selectedSignatures = new Set(
     normalizedInstitutionId
       ? params.selectedAccounts
@@ -808,6 +968,7 @@ async function findDuplicatePlaidConnections(params: {
   for (const account of (bankAccounts || []) as Array<{
     bank_connection_id?: string | null;
     provider_account_id?: string | null;
+    provider_persistent_account_id?: string | null;
     name?: string | null;
     mask?: string | null;
     type?: string | null;
@@ -816,6 +977,7 @@ async function findDuplicatePlaidConnections(params: {
     const signature = plaidAccountDuplicateSignature(account);
     if (
       selectedProviderIds.has(account.provider_account_id || "") ||
+      selectedPersistentIds.has(account.provider_persistent_account_id || "") ||
       (signature != null && selectedSignatures.has(signature))
     ) {
       if (account.bank_connection_id) {
@@ -824,6 +986,24 @@ async function findDuplicatePlaidConnections(params: {
     }
   }
   return Array.from(duplicateConnectionIds);
+}
+
+function duplicatePlaidAccountsResponse(
+  duplicateConnectionIds: string[],
+  headers: Record<string, string>,
+): Response {
+  return new Response(
+    JSON.stringify({
+      error:
+        "These bank accounts are already connected. Use the existing bank connection instead of linking them again.",
+      errorCode: "duplicate_item_accounts",
+      duplicateConnectionIds,
+    }),
+    {
+      status: 409,
+      headers: { ...headers, "Content-Type": "application/json" },
+    },
+  );
 }
 
 function plaidAccountDuplicateSignature(account: {
@@ -879,15 +1059,26 @@ async function persistOrphanPlaidRemovalJob(params: {
   supabase: any;
   userId: string;
   encryptedToken: string;
+  itemId: string;
   stage: string;
 }): Promise<void> {
-  const { error } = await params.supabase
-    .from("plaid_offboarding_jobs")
-    .insert({
+  const orphanDedupeKey = `orphan:${params.itemId}:${params.stage}`;
+  const { error } = await params.supabase.from("plaid_offboarding_jobs").upsert(
+    {
       user_id: params.userId,
+      provider_item_id: params.itemId,
+      orphan_dedupe_key: orphanDedupeKey,
       access_token_encrypted: params.encryptedToken,
       reason: `orphan_${params.stage}`,
-    });
+      status: "pending",
+      attempt_count: 0,
+      next_attempt_at: null,
+      token_expires_at: new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    },
+    { onConflict: "orphan_dedupe_key" },
+  );
 
   if (error) {
     throw error;

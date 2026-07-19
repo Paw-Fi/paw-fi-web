@@ -470,11 +470,11 @@ async function enqueueStalePlaidRecoveryJobs(
     .from("bank_connections")
     .select("id")
     .eq("provider", PLAID_PROVIDER)
-    .eq("status", "active")
+    .in("status", ["active", "pending"])
     .is("removed_at", null)
-    .or("item_status.is.null,item_status.eq.active")
+    .or("item_status.is.null,item_status.not.in.(removed,pending_removal)")
     .or(
-      `needs_resync.eq.true,last_successful_sync_at.is.null,last_successful_sync_at.lt.${staleBefore}`,
+      `needs_resync.eq.true,plaid_recurring_refresh_pending.eq.true,last_successful_sync_at.is.null,last_successful_sync_at.lt.${staleBefore}`,
     )
     .order("last_successful_sync_at", { ascending: true, nullsFirst: true })
     .limit(BATCH_SIZE);
@@ -577,6 +577,7 @@ async function processPlaidJob(
       body: JSON.stringify({
         connectionId: connection.id,
         cursorOverride: jobPayload.cursorOverride,
+        expectedCursorGeneration: jobPayload.cursorGeneration,
         targetHouseholdId: jobPayload.targetHouseholdId,
       }),
     },
@@ -618,9 +619,17 @@ async function processPlaidJob(
   if (
     !connectionSummary ||
     (syncPayload.status !== "succeeded" &&
+      syncPayload.status !== "pending" &&
       syncPayload.status !== "partial_error")
   ) {
     throw new Error("Plaid sync returned an invalid response payload");
+  }
+
+  if (
+    syncPayload.status === "pending" &&
+    connectionSummary.status === "pending"
+  ) {
+    return;
   }
 
   if (
@@ -651,6 +660,8 @@ async function processPlaidJob(
 
 function isPlaidSyncTerminalHandoffError(errorCode: string): boolean {
   return (
-    requiresPlaidRelinkForError(errorCode) || errorCode === "INVALID_CURSOR"
+    requiresPlaidRelinkForError(errorCode) ||
+    errorCode === "INVALID_CURSOR" ||
+    errorCode === "STALE_CURSOR_GENERATION"
   );
 }

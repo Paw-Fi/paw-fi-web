@@ -1,8 +1,8 @@
 import { normalizeCategory } from "./category-colors.ts";
 import {
   type LinkedWalletRecord,
-  type PlaidRecurringTemplateCandidate,
   persistPreparedPlaidRecurringTemplates,
+  type PlaidRecurringTemplateCandidate,
   type SupabaseClient,
 } from "./bank-sync.ts";
 import {
@@ -104,22 +104,24 @@ export async function refreshPlaidRecurringTemplates(params: {
         })),
       ];
       providerStreamCount = providerStreams.length;
-      providerCandidates = providerStreams
-        .map(({ stream, type }) =>
-          providerStreamCandidate({
-            stream,
-            type,
-            userId: params.userId,
-            householdId: params.householdId,
-            accountByProviderId,
-            linkedWalletsByBankAccountId: params.linkedWalletsByBankAccountId,
-            updatedDatetime: recurring.updated_datetime ?? null,
-          }),
-        )
-        .filter(
-          (candidate): candidate is PlaidRecurringTemplateCandidate =>
-            candidate != null,
-        );
+      providerCandidates = deduplicatePlaidRecurringCandidates(
+        providerStreams
+          .map(({ stream, type }) =>
+            providerStreamCandidate({
+              stream,
+              type,
+              userId: params.userId,
+              householdId: params.householdId,
+              accountByProviderId,
+              linkedWalletsByBankAccountId: params.linkedWalletsByBankAccountId,
+              updatedDatetime: recurring.updated_datetime ?? null,
+            }),
+          )
+          .filter(
+            (candidate): candidate is PlaidRecurringTemplateCandidate =>
+              candidate != null,
+          ),
+      );
     }
   } catch (error) {
     console.warn("[plaid-recurring] Provider streams unavailable", {
@@ -227,7 +229,9 @@ async function retireMissingGeneratedTemplates(params: {
 }): Promise<void> {
   let query = params.supabase
     .from("expenses")
-    .select("id, idempotency_key, provider_fields, user_overrides")
+    .select(
+      "id, idempotency_key, provider_fields, user_overrides, deleted_at, deleted_reason, account_id, amount_cents, currency, category, date, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id",
+    )
     .eq("user_id", params.userId)
     .eq("is_recurring", true)
     .is("deleted_at", null)
@@ -240,25 +244,14 @@ async function retireMissingGeneratedTemplates(params: {
 
   const accountIds = new Set(params.bankAccountIds);
   const retiredIds = (data || [])
-    .filter((row) => {
-      const providerFields = row.provider_fields as Record<
-        string,
-        unknown
-      > | null;
-      const userOverrides = row.user_overrides as Record<
-        string,
-        unknown
-      > | null;
-      return (
-        generatedRecurringSource({
-          idempotencyKey: String(row.idempotency_key || ""),
-          providerFields,
-        }) === params.source &&
-        accountIds.has(String(providerFields?.bank_account_id || "")) &&
-        !params.activeKeys.has(String(row.idempotency_key || "")) &&
-        Object.keys(userOverrides || {}).length === 0
-      );
-    })
+    .filter((row) =>
+      shouldRetireMissingGeneratedTemplate({
+        row: row as MissingGeneratedTemplateRow,
+        source: params.source,
+        bankAccountIds: accountIds,
+        activeKeys: params.activeKeys,
+      }),
+    )
     .map((row) => row.id as string);
   if (retiredIds.length === 0) return;
 
@@ -274,6 +267,68 @@ async function retireMissingGeneratedTemplates(params: {
     })
     .in("id", retiredIds);
   if (retireError) throw retireError;
+}
+
+interface MissingGeneratedTemplateRow extends Record<string, unknown> {
+  idempotency_key?: string | null;
+  provider_fields?: Record<string, unknown> | null;
+  user_overrides?: Record<string, unknown> | null;
+  deleted_at?: string | null;
+  deleted_reason?: string | null;
+}
+
+const GENERATED_TEMPLATE_VISIBLE_FIELDS = [
+  "account_id",
+  "amount_cents",
+  "currency",
+  "category",
+  "date",
+  "raw_text",
+  "merchant",
+  "source",
+  "type",
+  "is_recurring",
+  "recurrence_rule",
+  "household_id",
+] as const;
+
+export function shouldRetireMissingGeneratedTemplate(params: {
+  row: MissingGeneratedTemplateRow;
+  source: "plaid" | "pattern";
+  bankAccountIds: Set<string>;
+  activeKeys: Set<string>;
+}): boolean {
+  if (params.row.deleted_at || params.row.deleted_reason === "user_deleted") {
+    return false;
+  }
+  const providerFields = params.row.provider_fields || null;
+  const idempotencyKey = String(params.row.idempotency_key || "");
+  if (
+    generatedRecurringSource({ idempotencyKey, providerFields }) !==
+      params.source ||
+    !params.bankAccountIds.has(String(providerFields?.bank_account_id || "")) ||
+    params.activeKeys.has(idempotencyKey)
+  ) {
+    return false;
+  }
+  const userOverrides = params.row.user_overrides || {};
+  if (Object.keys(userOverrides).length > 0) return false;
+  return !hasUserEditedGeneratedTemplate(params.row);
+}
+
+function hasUserEditedGeneratedTemplate(row: MissingGeneratedTemplateRow) {
+  const templateFields = row.provider_fields?.template_fields;
+  if (!templateFields || typeof templateFields !== "object") return true;
+  const previous = templateFields as Record<string, unknown>;
+  return GENERATED_TEMPLATE_VISIBLE_FIELDS.some(
+    (field) =>
+      Object.prototype.hasOwnProperty.call(previous, field) &&
+      !sameJsonValue(row[field], previous[field]),
+  );
+}
+
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
 
 async function activeProviderTemplateCount(params: {
@@ -297,11 +352,13 @@ async function activeProviderTemplateCount(params: {
   const accountIds = new Set(params.bankAccountIds);
   return (data || []).filter((row) => {
     const fields = row.provider_fields as Record<string, unknown> | null;
+    const source = generatedRecurringSource({
+      idempotencyKey: String(row.idempotency_key || ""),
+      providerFields: fields,
+    });
     return (
-      generatedRecurringSource({
-        idempotencyKey: String(row.idempotency_key || ""),
-        providerFields: fields,
-      }) === "plaid" && accountIds.has(String(fields?.bank_account_id || ""))
+      source === "plaid" &&
+      accountIds.has(String(fields?.bank_account_id || ""))
     );
   }).length;
 }
@@ -380,7 +437,7 @@ function providerStreamCandidate(params: {
   return {
     idempotencyKey: `bank-recurring:v1:plaid:${account.id}:${stream.stream_id}`,
     userId: params.userId,
-    householdId: params.householdId,
+    householdId: linkedWallet?.household_id ?? params.householdId,
     accountId: linkedWallet?.id ?? null,
     bankAccountId: account.id,
     amountCents,
@@ -678,6 +735,70 @@ function sameRecurringSeries(
   );
 }
 
+export function deduplicatePlaidRecurringCandidates(
+  candidates: PlaidRecurringTemplateCandidate[],
+): PlaidRecurringTemplateCandidate[] {
+  const groups: PlaidRecurringTemplateCandidate[][] = [];
+  for (const candidate of candidates) {
+    const group = groups.find((existingGroup) =>
+      existingGroup.some(
+        (existingCandidate) =>
+          existingCandidate.idempotencyKey === candidate.idempotencyKey ||
+          sameRecurringSeries(existingCandidate, candidate),
+      ),
+    );
+    if (group) {
+      group.push(candidate);
+    } else {
+      groups.push([candidate]);
+    }
+  }
+  return groups
+    .map((group) => mergePlaidRecurringCandidateGroup(group))
+    .sort((left, right) =>
+      left.idempotencyKey.localeCompare(right.idempotencyKey),
+    );
+}
+
+function mergePlaidRecurringCandidateGroup(
+  group: PlaidRecurringTemplateCandidate[],
+): PlaidRecurringTemplateCandidate {
+  const sorted = [...group].sort(
+    (left, right) =>
+      left.idempotencyKey.localeCompare(right.idempotencyKey) ||
+      left.type.localeCompare(right.type),
+  );
+  const winner = sorted[0];
+  const transactionIds = Array.from(
+    new Set(
+      sorted.flatMap((candidate) =>
+        Array.from(recurringTransactionIds(candidate)),
+      ),
+    ),
+  ).sort();
+  const hasDirectionConflict = sorted.some(
+    (candidate) => candidate.type !== winner.type,
+  );
+  return {
+    ...winner,
+    recurrenceRule: {
+      ...winner.recurrenceRule,
+      ...(hasDirectionConflict ? { projection_enabled: false } : {}),
+    },
+    providerFields: {
+      ...winner.providerFields,
+      transaction_ids: transactionIds,
+      ...(hasDirectionConflict
+        ? {
+            projection_enabled: false,
+            analytics_class: "unknown",
+            provider_direction_conflict: true,
+          }
+        : {}),
+    },
+  };
+}
+
 function recurringTransactionIds(
   candidate: PlaidRecurringTemplateCandidate,
 ): Set<string> {
@@ -692,7 +813,9 @@ function recurringTransactionIds(
 }
 
 function recurrenceFrequencyKey(rule: Record<string, unknown>): string {
-  return `${String(rule.frequency || "").toLowerCase()}:${Number(rule.interval || 1)}`;
+  return `${String(rule.frequency || "").toLowerCase()}:${Number(
+    rule.interval || 1,
+  )}`;
 }
 
 function nextProjectionAnchor(params: {

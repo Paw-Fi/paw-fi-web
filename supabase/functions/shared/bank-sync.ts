@@ -49,6 +49,12 @@ export interface BankAccountRecord {
   provider_balance_updated_at?: string | null;
 }
 
+export interface PreparedPlaidAccounts {
+  payload: Array<Record<string, unknown>>;
+  records: BankAccountRecord[];
+  allRecords: BankAccountRecord[];
+}
+
 interface BankAccountRecordWithStatus extends BankAccountRecord {
   status?: string | null;
 }
@@ -1191,51 +1197,12 @@ export async function upsertPlaidAccounts(
   if (!params.accounts.length) {
     return { records: [], allRecords: [] };
   }
-
-  const disabledProviderAccountIds = await loadDisabledProviderAccountIds({
-    supabase: params.supabase,
-    bankConnectionId: params.bankConnectionId,
-    provider: PLAID_PROVIDER,
-  });
-
-  const payload = params.accounts.map((account) => ({
-    user_id: params.userId,
-    bank_connection_id: params.bankConnectionId,
-    provider: PLAID_PROVIDER,
-    plaid_account_id: account.account_id,
-    provider_account_id: account.account_id,
-    provider_persistent_account_id: account.persistent_account_id || null,
-    name:
-      account.name || account.official_name || `Account ${account.account_id}`,
-    official_name: account.official_name || null,
-    mask: account.mask || null,
-    currency:
-      account.balances?.iso_currency_code ||
-      account.balances?.unofficial_currency_code ||
-      "USD",
-    type: account.type || null,
-    subtype: account.subtype || null,
-    status: disabledProviderAccountIds.has(account.account_id)
-      ? "disabled"
-      : "active",
-    provider_balance_current_cents: plaidBalanceToCents(
-      account.balances?.current,
-    ),
-    provider_balance_available_cents: plaidBalanceToCents(
-      account.balances?.available,
-    ),
-    provider_balance_limit_cents: plaidBalanceToCents(account.balances?.limit),
-    provider_balance_updated_at: new Date().toISOString(),
-    raw_provider_payload: {
-      account_id: account.account_id,
-      persistent_account_id: account.persistent_account_id || null,
-    },
-  }));
+  const prepared = await preparePlaidAccounts(params);
 
   const { data, error } = await params.supabase
     .from("bank_accounts")
-    .upsert(payload, {
-      onConflict: "bank_connection_id,provider,provider_account_id",
+    .upsert(prepared.payload, {
+      onConflict: "id",
     })
     .select(
       "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype, status, provider_balance_current_cents, provider_balance_available_cents, provider_balance_limit_cents, provider_balance_updated_at",
@@ -1263,6 +1230,108 @@ export async function upsertPlaidAccounts(
     records: activeBankAccountRecords(allRecords),
     allRecords,
   };
+}
+
+export async function preparePlaidAccounts(
+  params: UpsertAccountsParams,
+): Promise<PreparedPlaidAccounts> {
+  if (!params.accounts.length) {
+    return { payload: [], records: [], allRecords: [] };
+  }
+
+  const { data: existingRows, error: existingError } = await params.supabase
+    .from("bank_accounts")
+    .select("id, provider_account_id, provider_persistent_account_id, status")
+    .eq("bank_connection_id", params.bankConnectionId)
+    .eq("provider", PLAID_PROVIDER);
+  if (existingError) throw existingError;
+
+  const existingByProviderId = new Map<string, ExistingPlaidAccountIdentity>();
+  const existingByPersistentId = new Map<
+    string,
+    ExistingPlaidAccountIdentity
+  >();
+  for (const row of (existingRows || []) as ExistingPlaidAccountIdentity[]) {
+    if (row.provider_account_id) {
+      existingByProviderId.set(row.provider_account_id, row);
+    }
+    if (row.provider_persistent_account_id) {
+      existingByPersistentId.set(row.provider_persistent_account_id, row);
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  const payload = params.accounts.map((account) => {
+    const existing =
+      existingByProviderId.get(account.account_id) ||
+      (account.persistent_account_id
+        ? existingByPersistentId.get(account.persistent_account_id)
+        : null);
+    return {
+      id: existing?.id || crypto.randomUUID(),
+      user_id: params.userId,
+      bank_connection_id: params.bankConnectionId,
+      provider: PLAID_PROVIDER,
+      plaid_account_id: account.account_id,
+      provider_account_id: account.account_id,
+      provider_persistent_account_id: account.persistent_account_id || null,
+      name:
+        account.name ||
+        account.official_name ||
+        `Account ${account.account_id}`,
+      official_name: account.official_name || null,
+      mask: account.mask || null,
+      currency:
+        account.balances?.iso_currency_code ||
+        account.balances?.unofficial_currency_code ||
+        "USD",
+      type: account.type || null,
+      subtype: account.subtype || null,
+      status: existing?.status === "disabled" ? "disabled" : "active",
+      provider_balance_current_cents: plaidBalanceToCents(
+        account.balances?.current,
+      ),
+      provider_balance_available_cents: plaidBalanceToCents(
+        account.balances?.available,
+      ),
+      provider_balance_limit_cents: plaidBalanceToCents(
+        account.balances?.limit,
+      ),
+      provider_balance_updated_at: nowIso,
+      raw_provider_payload: {
+        account_id: account.account_id,
+        persistent_account_id: account.persistent_account_id || null,
+      },
+    };
+  });
+  const allRecords = payload.map((row) => ({
+    id: row.id,
+    plaid_account_id: row.plaid_account_id,
+    provider_account_id: row.provider_account_id,
+    name: row.name,
+    currency: row.currency,
+    mask: row.mask,
+    type: row.type,
+    subtype: row.subtype,
+    status: row.status,
+    provider_balance_current_cents: row.provider_balance_current_cents,
+    provider_balance_available_cents: row.provider_balance_available_cents,
+    provider_balance_limit_cents: row.provider_balance_limit_cents,
+    provider_balance_updated_at: row.provider_balance_updated_at,
+  }));
+
+  return {
+    payload,
+    records: activeBankAccountRecords(allRecords),
+    allRecords,
+  };
+}
+
+interface ExistingPlaidAccountIdentity {
+  id: string;
+  provider_account_id?: string | null;
+  provider_persistent_account_id?: string | null;
+  status?: string | null;
 }
 
 function plaidBalanceToCents(value: number | null | undefined): number | null {
