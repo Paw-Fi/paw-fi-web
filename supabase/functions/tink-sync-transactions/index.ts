@@ -178,9 +178,10 @@ Deno.serve(async (req) => {
         `[tink-sync] Validated callback for user ${stateRecord.external_user_id} in market ${stateRecord.market}`,
       );
 
-      const stateTargetHouseholdId = stateRecord.target_household_id == null
-        ? null
-        : String(stateRecord.target_household_id);
+      const stateTargetHouseholdId =
+        stateRecord.target_household_id == null
+          ? null
+          : String(stateRecord.target_household_id);
       const resolvedStateHouseholdId = sanitizeOptionalUuid(
         stateTargetHouseholdId,
       );
@@ -276,8 +277,8 @@ Deno.serve(async (req) => {
               name: matched.providerName,
               accessToken: tokenResponse.access_token,
             });
-            institutionLogo = provider?.images?.icon ||
-              provider?.images?.banner || null;
+            institutionLogo =
+              provider?.images?.icon || provider?.images?.banner || null;
           } catch (error) {
             console.warn(
               "[tink-sync] Unable to resolve provider image",
@@ -327,9 +328,10 @@ Deno.serve(async (req) => {
           },
         });
       } catch (upsertError) {
-        const upsertMessage = upsertError instanceof Error
-          ? upsertError.message
-          : String(upsertError);
+        const upsertMessage =
+          upsertError instanceof Error
+            ? upsertError.message
+            : String(upsertError);
         const isScopeMismatch = upsertMessage.includes("different space");
         console.error("[tink-sync] Failed to create connection", {
           error: upsertError,
@@ -571,9 +573,10 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    const errorObject = error instanceof Error
-      ? { message: error.message, name: error.name, stack: error.stack }
-      : error;
+    const errorObject =
+      error instanceof Error
+        ? { message: error.message, name: error.name, stack: error.stack }
+        : error;
     console.error("[tink-sync] Unexpected error", errorObject);
     try {
       console.error(
@@ -639,12 +642,24 @@ async function syncConnection(params: {
       .eq("id", auditId);
   };
 
-  const lockResult = await params.supabase.rpc("acquire_bank_sync_lock", {
+  const lockToken = crypto.randomUUID();
+  const lockResult = await params.supabase.rpc("acquire_bank_sync_lock_v2", {
     p_bank_connection_id: params.connection.id,
+    p_lock_token: lockToken,
     p_lock_seconds: 900,
     p_locked_by: "tink-sync",
   });
 
+  if (lockResult.error) {
+    summary.status = "error";
+    summary.error = "Bank sync lock could not be acquired";
+    await auditUpdate({
+      status: "failed",
+      error_message: summary.error,
+      finished_at: new Date().toISOString(),
+    });
+    return summary;
+  }
   if (!lockResult.data) {
     summary.status = "error";
     summary.error = "Sync already in progress";
@@ -662,7 +677,8 @@ async function syncConnection(params: {
       .update({ last_sync_attempt_at: new Date().toISOString() })
       .eq("id", params.connection.id);
 
-    const accessTokenEncryptedRaw = params.connection.access_token_encrypted ||
+    const accessTokenEncryptedRaw =
+      params.connection.access_token_encrypted ||
       params.connection.plaid_access_token_encrypted;
     if (!accessTokenEncryptedRaw) {
       throw new Error("Missing Tink access token");
@@ -679,7 +695,8 @@ async function syncConnection(params: {
     ) {
       const expiresAt = new Date(params.connection.expires_at);
       // Refresh if expired or expiring within 5 minutes
-      const shouldRefresh = Number.isFinite(expiresAt.getTime()) &&
+      const shouldRefresh =
+        Number.isFinite(expiresAt.getTime()) &&
         expiresAt.getTime() <= Date.now() + 5 * 60 * 1000;
 
       if (shouldRefresh) {
@@ -717,8 +734,8 @@ async function syncConnection(params: {
               .from("bank_connections")
               .update({
                 access_token_encrypted: encryptedAccess,
-                refresh_token_encrypted: encryptedRefresh ||
-                  params.connection.refresh_token_encrypted,
+                refresh_token_encrypted:
+                  encryptedRefresh || params.connection.refresh_token_encrypted,
                 expires_at: expiresAtNext,
               })
               .eq("id", params.connection.id);
@@ -732,12 +749,12 @@ async function syncConnection(params: {
               },
               ...(encryptedRefresh
                 ? [
-                  {
-                    bank_connection_id: params.connection.id,
-                    token_type: "refresh",
-                    token_encrypted: encryptedRefresh,
-                  },
-                ]
+                    {
+                      bank_connection_id: params.connection.id,
+                      token_type: "refresh",
+                      token_encrypted: encryptedRefresh,
+                    },
+                  ]
                 : []),
             ]);
 
@@ -795,13 +812,14 @@ async function syncConnection(params: {
       });
     }
 
-    let cursor: string | undefined = params.cursorOverride === "reset"
-      ? undefined
-      : params.cursorOverride ||
-        params.connection.cursor ||
-        params.connection.plaid_cursor ||
-        undefined ||
-        undefined;
+    let cursor: string | undefined =
+      params.cursorOverride === "reset"
+        ? undefined
+        : params.cursorOverride ||
+          params.connection.cursor ||
+          params.connection.plaid_cursor ||
+          undefined ||
+          undefined;
     const processedAccounts = new Set<string>();
     let nextPage = cursor;
     let didLogSample = false;
@@ -857,8 +875,8 @@ async function syncConnection(params: {
         }
 
         const linkedWallet = linkedWalletsByBankAccountId.get(account.id);
-        const resolvedHouseholdId = linkedWallet?.household_id ??
-          effectiveTargetHouseholdId;
+        const resolvedHouseholdId =
+          linkedWallet?.household_id ?? effectiveTargetHouseholdId;
 
         const { error: rebindError } = await params.supabase
           .from("expenses")
@@ -970,8 +988,9 @@ async function syncConnection(params: {
       finished_at: new Date().toISOString(),
     });
   } finally {
-    await params.supabase.rpc("release_bank_sync_lock", {
+    await params.supabase.rpc("release_bank_sync_lock_v2", {
       p_bank_connection_id: params.connection.id,
+      p_lock_token: lockToken,
     });
   }
 

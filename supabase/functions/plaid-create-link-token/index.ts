@@ -7,7 +7,10 @@ import {
   canUsePlaidBankSync,
   loadPlaidUserAccessState,
 } from "../shared/plaid-access.ts";
-import { derivePlaidLinkProducts } from "../shared/plaid-lifecycle.ts";
+import {
+  derivePlaidLinkProducts,
+  resolvePlaidTransactionsDaysRequested,
+} from "../shared/plaid-lifecycle.ts";
 import { resolvePlaidCountryCode } from "../shared/plaid-country.ts";
 import { sanitizeOptionalUuid } from "../shared/bank-sync.ts";
 import {
@@ -286,7 +289,9 @@ Deno.serve(async (req) => {
       userId: authResult.userId,
       accessToken,
       products,
-      transactionsDaysRequested: body.transactionsDaysRequested,
+      transactionsDaysRequested: accessToken
+        ? undefined
+        : resolvePlaidTransactionsDaysRequested(body.transactionsDaysRequested),
       countryCodes: countryCode ? [countryCode] : undefined,
       platform: body.platform,
       omitProducts: accessToken != null,

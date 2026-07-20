@@ -8,6 +8,13 @@ export interface PlaidRemovableConnection {
   plaid_access_token_encrypted?: string | null;
 }
 
+export function buildPlaidTokenSanitizationUpdate(): Record<string, null> {
+  return {
+    access_token_encrypted: null,
+    plaid_access_token_encrypted: null,
+  };
+}
+
 export async function markPlaidConnectionRemovalPending(params: {
   supabase: {
     from: (table: string) => any;
@@ -24,8 +31,8 @@ export async function markPlaidConnectionRemovalPending(params: {
       item_health_state: "removal_pending",
       scheduled_removal_at: nowIso,
       error_code: params.errorCode || "PLAID_REMOVE_RETRY_PENDING",
-      error_message: params.errorMessage ||
-        "Plaid item removal is queued for retry.",
+      error_message:
+        params.errorMessage || "Plaid item removal is queued for retry.",
       updated_at: nowIso,
     })
     .eq("id", params.connectionId)
@@ -54,8 +61,7 @@ async function enqueuePlaidRemovalRetry(params: {
     .insert({
       user_id: params.connection.user_id,
       connection_id: params.connection.id,
-      access_token_encrypted:
-        params.connection.access_token_encrypted ?? null,
+      access_token_encrypted: params.connection.access_token_encrypted ?? null,
       plaid_access_token_encrypted:
         params.connection.plaid_access_token_encrypted ?? null,
       reason: params.removalReason,
@@ -69,20 +75,40 @@ async function enqueuePlaidRemovalRetry(params: {
     supabase: params.supabase,
     connectionId: params.connection.id,
     errorCode: params.errorCode || "PLAID_REMOVE_RETRY_PENDING",
-    errorMessage: params.errorMessage ||
-      "Plaid item removal is queued for retry.",
+    errorMessage:
+      params.errorMessage || "Plaid item removal is queued for retry.",
   });
 }
 
 export async function removePlaidConnection(params: {
   supabase: {
     from: (table: string) => any;
+    rpc: (
+      name: string,
+      params: Record<string, unknown>,
+    ) => PromiseLike<{
+      data: unknown;
+      error: unknown;
+    }>;
   };
   connection: PlaidRemovableConnection;
   removalReason: string;
 }): Promise<void> {
-  const encryptedToken = params.connection.access_token_encrypted ||
+  const encryptedToken =
+    params.connection.access_token_encrypted ||
     params.connection.plaid_access_token_encrypted;
+
+  const { data: removalQueued, error: queueError } = await params.supabase.rpc(
+    "queue_plaid_connection_removal_v1",
+    {
+      p_connection_id: params.connection.id,
+      p_reason: params.removalReason,
+    },
+  );
+  if (queueError) throw queueError;
+  if (removalQueued !== true) {
+    throw new Error("Plaid connection is not eligible for removal");
+  }
 
   if (encryptedToken) {
     try {
@@ -101,9 +127,10 @@ export async function removePlaidConnection(params: {
           supabase: params.supabase,
           connection: params.connection,
           removalReason: params.removalReason,
-          errorCode: error instanceof PlaidError
-            ? error.code
-            : "PLAID_REMOVE_RETRY_PENDING",
+          errorCode:
+            error instanceof PlaidError
+              ? error.code
+              : "PLAID_REMOVE_RETRY_PENDING",
           errorMessage: error instanceof Error ? error.message : null,
         });
         throw error;
@@ -131,9 +158,10 @@ export async function removePlaidConnection(params: {
       connection: params.connection,
       removalReason: params.removalReason,
       errorCode: "LOCAL_CLEANUP_RETRY_PENDING",
-      errorMessage: error instanceof Error
-        ? error.message
-        : "Local bank cleanup is queued for retry.",
+      errorMessage:
+        error instanceof Error
+          ? error.message
+          : "Local bank cleanup is queued for retry.",
     });
     throw error;
   }
@@ -147,6 +175,26 @@ export async function cleanupRemovedPlaidConnection(params: {
   removalReason: string;
 }): Promise<void> {
   const nowIso = new Date().toISOString();
+  const { error: connectionUpdateError } = await params.supabase
+    .from("bank_connections")
+    .update({
+      status: "disabled",
+      item_status: "removed",
+      item_health_state: "removed",
+      relink_state: null,
+      removed_at: nowIso,
+      ...buildPlaidTokenSanitizationUpdate(),
+      next_manual_refresh_eligible_at: null,
+      error_code: null,
+      error_message: null,
+      updated_at: nowIso,
+    })
+    .eq("id", params.connectionId);
+
+  if (connectionUpdateError) {
+    throw connectionUpdateError;
+  }
+
   const { data: bankAccounts, error: bankAccountsError } = await params.supabase
     .from("bank_accounts")
     .select("id")
@@ -203,30 +251,6 @@ export async function cleanupRemovedPlaidConnection(params: {
     throw bankAccountCleanupError;
   }
 
-  const { error: connectionUpdateError } = await params.supabase
-    .from("bank_connections")
-    .update({
-      status: "disabled",
-      item_status: "removed",
-      item_health_state: "removed",
-      relink_state: null,
-      removed_at: nowIso,
-      access_token_encrypted: null,
-      // Legacy deployments created this provider-specific column as NOT NULL.
-      // Use a non-secret sentinel so cleanup can finish even before the
-      // nullable-column migration has reached every environment.
-      plaid_access_token_encrypted: "",
-      next_manual_refresh_eligible_at: null,
-      error_code: null,
-      error_message: null,
-      updated_at: nowIso,
-    })
-    .eq("id", params.connectionId);
-
-  if (connectionUpdateError) {
-    throw connectionUpdateError;
-  }
-
   const { error: tokenDeleteError } = await params.supabase
     .from("bank_connection_tokens")
     .delete()
@@ -253,5 +277,22 @@ export async function cleanupRemovedPlaidConnection(params: {
 
   if (jobUpdateError) {
     throw jobUpdateError;
+  }
+
+  const { error: offboardingJobError } = await params.supabase
+    .from("plaid_offboarding_jobs")
+    .update({
+      status: "completed",
+      processed_at: nowIso,
+      processing_started_at: null,
+      access_token_encrypted: null,
+      plaid_access_token_encrypted: null,
+      updated_at: nowIso,
+    })
+    .eq("connection_id", params.connectionId)
+    .in("status", ["pending", "processing", "failed"]);
+
+  if (offboardingJobError) {
+    throw offboardingJobError;
   }
 }

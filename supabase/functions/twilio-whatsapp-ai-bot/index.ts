@@ -739,7 +739,9 @@ async function buildFinancialSnapshot(
   // Expenses and incomes
   const { data: rows, error } = await supabase
     .from("expenses")
-    .select("amount_cents, type, category, date, currency")
+    .select(
+      "amount_cents, type, category, date, currency, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
+    )
     .gte("date", startDate)
     .lte("date", endDate)
     .eq("currency", currency)
@@ -751,10 +753,13 @@ async function buildFinancialSnapshot(
   let totalIncome = 0;
   const catMap = new Map<string, number>();
   for (const r of rows || []) {
-    const amt = Number(r.amount_cents) || 0;
-    if ((r.type || "expense") === "income") {
-      totalIncome += amt;
-    } else {
+    if (r.analytics_is_final === false) continue;
+    const absoluteAmount = Math.abs(Number(r.amount_cents) || 0);
+    if (r.analytics_counts_toward_income === true) {
+      totalIncome += absoluteAmount;
+    }
+    const amt = absoluteAmount * Number(r.analytics_spending_multiplier || 0);
+    if (amt !== 0) {
       totalExpense += amt;
       const cat = (r.category || "other").toString().toLowerCase();
       catMap.set(cat, (catMap.get(cat) || 0) + amt);

@@ -250,6 +250,9 @@ Deno.serve(async (req: Request) => {
         privacy_scope,
         household_id,
         split_group_id,
+        bank_account_id,
+        analytics_is_final,
+        analytics_counts_toward_income,
         acknowledged_by,
         normalized_amount_cents,
         base_currency,
@@ -263,8 +266,11 @@ Deno.serve(async (req: Request) => {
       `,
         { count: "exact" },
       )
-      .eq("type", "income")
+      .or(
+        "analytics_counts_toward_income.eq.true,and(provider.eq.plaid,provider_pending.eq.true,analytics_class.eq.income)",
+      )
       .is("deleted_at", null)
+      .or(`user_id.eq.${callerId},privacy_scope.in.(full,balances_only)`)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
@@ -325,6 +331,58 @@ Deno.serve(async (req: Request) => {
       ? incomeRecordsRaw
       : [];
 
+    let summaryQuery = supabaseAdmin
+      .from("expenses")
+      .select(
+        "user_id, amount_cents, currency, category, privacy_scope, normalized_amount_cents, is_recurring",
+      )
+      .eq("analytics_is_final", true)
+      .eq("analytics_counts_toward_income", true)
+      .is("deleted_at", null)
+      .or(`user_id.eq.${callerId},privacy_scope.in.(full,balances_only)`);
+    if (body.includeRecurring === true) {
+      summaryQuery = summaryQuery.eq("is_recurring", true);
+    } else if (body.excludeRecurring === true) {
+      summaryQuery = summaryQuery.or(
+        "is_recurring.is.false,is_recurring.is.null",
+      );
+    }
+    if (body.personalOnly === true) {
+      summaryQuery = summaryQuery
+        .eq("user_id", callerId)
+        .is("split_group_id", null);
+    } else if (body.householdOnly === true) {
+      summaryQuery = summaryQuery.not("split_group_id", "is", null);
+      summaryQuery = householdId
+        ? summaryQuery.eq("household_id", householdId)
+        : summaryQuery.in("household_id", sharedHouseholdIds);
+    } else if (householdId) {
+      summaryQuery = summaryQuery.eq("household_id", householdId);
+    } else if (portfolioHouseholdIds.length > 0) {
+      summaryQuery = summaryQuery
+        .eq("user_id", callerId)
+        .or(
+          `household_id.is.null,household_id.in.(${portfolioHouseholdIds.join(",")})`,
+        );
+    } else {
+      summaryQuery = summaryQuery
+        .eq("user_id", callerId)
+        .is("household_id", null);
+    }
+    if (body.startDate) summaryQuery = summaryQuery.gte("date", body.startDate);
+    if (body.endDate) summaryQuery = summaryQuery.lte("date", body.endDate);
+    if (body.currency) {
+      summaryQuery = summaryQuery.eq(
+        "currency",
+        validateCurrency(body.currency),
+      );
+    }
+    if (body.ownerType)
+      summaryQuery = summaryQuery.eq("owner_type", body.ownerType);
+    const { data: summaryRecordsRaw, error: summaryError } = await summaryQuery;
+    if (summaryError) throw summaryError;
+    const summaryRecords = summaryRecordsRaw || [];
+
     const data = incomeRecords.map((record: any) => {
       const acknowledgedBy = record.acknowledged_by || [];
       const isAcknowledged = Array.isArray(acknowledgedBy)
@@ -369,6 +427,8 @@ Deno.serve(async (req: Request) => {
         privacyScope: record.privacy_scope,
         householdId: record.household_id,
         splitGroupId: record.split_group_id,
+        bankAccountId: record.bank_account_id,
+        analyticsIsFinal: record.analytics_is_final === true,
         isAcknowledged,
         acknowledgedCount: Array.isArray(acknowledgedBy)
           ? acknowledgedBy.length
@@ -388,32 +448,46 @@ Deno.serve(async (req: Request) => {
       };
     });
 
-    const totalIncome = data.reduce((sum, record) => {
-      const amount = record.normalizedAmountMajor || record.amountMajor;
+    const totalIncome = summaryRecords.reduce((sum, record) => {
+      const amount =
+        Number(
+          body.currency
+            ? record.amount_cents
+            : (record.normalized_amount_cents ?? record.amount_cents),
+        ) / 100;
       return sum + amount;
     }, 0);
 
-    const currencyBreakdown = data.reduce(
+    const currencyBreakdown = summaryRecords.reduce(
       (acc, record) => {
         const curr = record.currency;
         if (!acc[curr]) {
           acc[curr] = { count: 0, total: 0 };
         }
         acc[curr].count += 1;
-        acc[curr].total += record.amountMajor;
+        acc[curr].total += Number(record.amount_cents || 0) / 100;
         return acc;
       },
       {} as Record<string, { count: number; total: number }>,
     );
 
-    const categoryBreakdown = data.reduce(
+    const categoryBreakdown = summaryRecords.reduce(
       (acc, record) => {
-        const cat = record.category;
+        const cat =
+          record.user_id !== callerId &&
+          record.privacy_scope === "balances_only"
+            ? "other"
+            : record.category;
         if (!acc[cat]) {
           acc[cat] = { count: 0, total: 0 };
         }
         acc[cat].count += 1;
-        acc[cat].total += record.normalizedAmountMajor || record.amountMajor;
+        acc[cat].total +=
+          Number(
+            body.currency
+              ? record.amount_cents
+              : (record.normalized_amount_cents ?? record.amount_cents),
+          ) / 100;
         return acc;
       },
       {} as Record<string, { count: number; total: number }>,
@@ -424,7 +498,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         data,
         summary: {
-          count: data.length,
+          count: summaryRecords.length,
           totalIncome,
           currencyBreakdown,
           categoryBreakdown,
