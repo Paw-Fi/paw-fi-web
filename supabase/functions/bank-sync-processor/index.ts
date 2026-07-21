@@ -502,6 +502,7 @@ async function enqueueStalePlaidRecoveryJobs(
       supabase,
       connectionId: String(connection.id),
       triggerSource: "scheduled_recovery",
+      setNeedsResyncOnDuplicate: false,
     });
     if (result.enqueued) queued += 1;
   }

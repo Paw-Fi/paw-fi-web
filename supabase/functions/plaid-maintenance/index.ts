@@ -313,6 +313,7 @@ async function reconcileStaleItems(
       supabase,
       connectionId: connection.id,
       triggerSource: "stale_reconciler",
+      setNeedsResyncOnDuplicate: false,
     });
 
     if (result.enqueued || result.duplicate) {
