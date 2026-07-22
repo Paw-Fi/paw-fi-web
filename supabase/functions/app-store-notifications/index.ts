@@ -24,6 +24,7 @@ import {
   matchesVerifiedAppStoreTransaction,
 } from "../shared/app-store-api.ts";
 import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
+import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
 import {
   type AppStoreCandidateUserSource,
   shouldReportMissingCandidateUser,
@@ -60,8 +61,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 const stripe = stripeSecretKey
   ? new Stripe(stripeSecretKey, {
-      httpClient: Stripe.createFetchHttpClient(),
-    })
+    httpClient: Stripe.createFetchHttpClient(),
+  })
   : null;
 
 function readBooleanEnv(name: string, defaultValue: boolean): boolean {
@@ -133,14 +134,14 @@ function normalizePrivateKey(value: string): string {
     const beginMarker = normalized.includes("-----BEGIN PRIVATE KEY-----")
       ? "-----BEGIN PRIVATE KEY-----"
       : normalized.includes("-----BEGIN EC PRIVATE KEY-----")
-        ? "-----BEGIN EC PRIVATE KEY-----"
-        : null;
+      ? "-----BEGIN EC PRIVATE KEY-----"
+      : null;
 
     const endMarker = normalized.includes("-----END PRIVATE KEY-----")
       ? "-----END PRIVATE KEY-----"
       : normalized.includes("-----END EC PRIVATE KEY-----")
-        ? "-----END EC PRIVATE KEY-----"
-        : null;
+      ? "-----END EC PRIVATE KEY-----"
+      : null;
 
     if (beginMarker && endMarker) {
       const beginIndex = normalized.indexOf(beginMarker);
@@ -168,8 +169,9 @@ function summarizePrivateKeyMaterial(
     normalizedHasEnd: normalized.includes("-----END"),
     normalizedHasPrivateKeyMarker: normalized.includes("PRIVATE KEY"),
     rawHasEscapedNewline: raw.includes("\\n"),
-    normalizedLineCount:
-      normalized.length > 0 ? normalized.split("\n").length : 0,
+    normalizedLineCount: normalized.length > 0
+      ? normalized.split("\n").length
+      : 0,
   };
 }
 
@@ -291,15 +293,13 @@ function deriveLifecycleStatus(
   const baseStatus = deriveStatus(transaction);
   if (baseStatus === "canceled") return "canceled";
 
-  const offerDiscountType =
-    typeof transaction.offerDiscountType === "string"
-      ? transaction.offerDiscountType.toUpperCase()
-      : "";
+  const offerDiscountType = typeof transaction.offerDiscountType === "string"
+    ? transaction.offerDiscountType.toUpperCase()
+    : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
-  const isTrialLike =
-    offerDiscountType === "FREE_TRIAL" ||
+  const isTrialLike = offerDiscountType === "FREE_TRIAL" ||
     (offerType === 1 && offerIdentifier.includes("trial"));
 
   return isTrialLike ? "trialing" : "active";
@@ -311,10 +311,9 @@ function isFreeTrialTransaction(
     "offerDiscountType" | "offerType" | "offerIdentifier"
   >,
 ): boolean {
-  const offerDiscountType =
-    typeof transaction.offerDiscountType === "string"
-      ? transaction.offerDiscountType.toUpperCase()
-      : "";
+  const offerDiscountType = typeof transaction.offerDiscountType === "string"
+    ? transaction.offerDiscountType.toUpperCase()
+    : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
@@ -433,12 +432,12 @@ async function cancelStripeSubscriptionIfPresent(
     return;
   }
 
-  const provider =
-    typeof existing?.provider === "string" ? existing.provider : null;
+  const provider = typeof existing?.provider === "string"
+    ? existing.provider
+    : null;
   const stripeSubscriptionId = existing?.stripe_subscription_id;
 
-  const shouldCancelStripe =
-    provider === "stripe" ||
+  const shouldCancelStripe = provider === "stripe" ||
     (provider == null && looksLikeStripeSubscriptionId(stripeSubscriptionId));
 
   if (!shouldCancelStripe) return;
@@ -674,16 +673,16 @@ async function resolveNotificationUserWithRetry(params: {
 
 async function decodeNotification(signedPayload: string): Promise<
   | {
-      kind: "test";
-      notificationType: string;
-      subtype: string | null;
-      environment: AppStoreEnvironment;
-    }
+    kind: "test";
+    notificationType: string;
+    subtype: string | null;
+    environment: AppStoreEnvironment;
+  }
   | {
-      kind: "transaction";
-      transaction: JWSTransactionDecodedPayload;
-      environment: AppStoreEnvironment;
-    }
+    kind: "transaction";
+    transaction: JWSTransactionDecodedPayload;
+    environment: AppStoreEnvironment;
+  }
 > {
   if (!isAppleServerApiConfigured()) {
     throw new Error(
@@ -711,8 +710,9 @@ async function decodeNotification(signedPayload: string): Promise<
     throw error;
   }
 
-  const decoded =
-    decodeJwsPayload<AppStoreNotificationDecodedPayload>(signedPayload);
+  const decoded = decodeJwsPayload<AppStoreNotificationDecodedPayload>(
+    signedPayload,
+  );
 
   const notificationType = asString(decoded.notificationType) ?? "UNKNOWN";
   const subtype = asString(decoded.subtype);
@@ -733,8 +733,9 @@ async function decodeNotification(signedPayload: string): Promise<
     throw new Error("Notification missing signedTransactionInfo");
   }
 
-  const transactionHint =
-    decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
+  const transactionHint = decodeJwsPayload<JWSTransactionDecodedPayload>(
+    signedTransaction,
+  );
   const envHint = toAppleEnvironment(
     asString(transactionHint.environment) ??
       asString(decoded.data?.environment),
@@ -788,8 +789,8 @@ async function decodeNotification(signedPayload: string): Promise<
       },
       verified: {
         transactionId: verifiedTransaction.transactionId,
-        originalTransactionId:
-          verifiedTransaction.originalTransactionId ?? undefined,
+        originalTransactionId: verifiedTransaction.originalTransactionId ??
+          undefined,
         bundleId: verifiedTransaction.bundleId,
       },
     })
@@ -1056,8 +1057,9 @@ serve(async (req: Request): Promise<Response> => {
         transactionId,
         storeProductId,
         environment,
-        appAccountToken:
-          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
+        appAccountToken: appAccountToken && isUuid(appAccountToken)
+          ? appAccountToken
+          : null,
         userIdSource,
         lastError: "unknown_user_mapping",
       });
@@ -1076,21 +1078,22 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const shouldEnforceOwnershipBinding =
-      shouldEnforceAppStoreOwnershipBinding(inAppOwnershipType);
+    const shouldEnforceOwnershipBinding = shouldEnforceAppStoreOwnershipBinding(
+      inAppOwnershipType,
+    );
 
     const bindingDecision =
       iapOwnershipBindingEnabled && shouldEnforceOwnershipBinding
         ? await ensureAppStoreOwnership({
-            supabase,
-            provider: "app_store",
-            originalTransactionId,
-            currentUserId: userId,
-            transactionId,
-            storeProductId,
-            environment,
-            claimSource: "app_store_notification",
-          })
+          supabase,
+          provider: "app_store",
+          originalTransactionId,
+          currentUserId: userId,
+          transactionId,
+          storeProductId,
+          environment,
+          claimSource: "app_store_notification",
+        })
         : null;
 
     if (iapOwnershipBindingEnabled && !shouldEnforceOwnershipBinding) {
@@ -1116,13 +1119,11 @@ serve(async (req: Request): Promise<Response> => {
 
     const resolvedUserId = bindingDecision?.binding.user_id ?? userId;
 
-    await cancelStripeSubscriptionIfPresent(resolvedUserId);
-
     const { data: existingSubscription, error: existingSubscriptionError } =
       await supabase
         .from("subscriptions")
         .select(
-          "provider, current_period_end, status, billing_interval, store_product_id, app_store_original_transaction_id, trial_start, trial_end",
+          "provider, plan, current_period_end, status, billing_interval, store_product_id, stripe_subscription_id, app_store_original_transaction_id, trial_start, trial_end, lifetime_source, lifetime_source_id",
         )
         .eq("user_id", resolvedUserId)
         .maybeSingle();
@@ -1158,7 +1159,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!resolvedExpiresIso && effectiveTransaction.revocationDate) {
       resolvedExpiresIso =
         asIsoMillisUnknown(effectiveTransaction.revocationDate) ??
-        new Date().toISOString();
+          new Date().toISOString();
       periodEndSource = "revocation_date";
     }
     let resolvedLifecycleStatus: string | null = null;
@@ -1213,8 +1214,8 @@ serve(async (req: Request): Promise<Response> => {
               storeProductId,
               statusTransactionProductId:
                 subscriptionStatus.transaction?.productId ?? null,
-              renewalProductId:
-                subscriptionStatus.renewalInfo?.productId ?? null,
+              renewalProductId: subscriptionStatus.renewalInfo?.productId ??
+                null,
               autoRenewProductId:
                 subscriptionStatus.renewalInfo?.autoRenewProductId ?? null,
             },
@@ -1343,16 +1344,16 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    const status =
-      resolvedLifecycleStatus ?? deriveLifecycleStatus(effectiveTransaction);
+    const status = resolvedLifecycleStatus ??
+      deriveLifecycleStatus(effectiveTransaction);
     const existingTrialStart = asString(existingSubscription?.trial_start);
     const existingTrialEnd = asString(existingSubscription?.trial_end);
-    let trialStartIso =
-      status === "trialing"
-        ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
-        : existingTrialStart;
-    let trialEndIso =
-      status === "trialing" ? resolvedExpiresIso : existingTrialEnd;
+    let trialStartIso = status === "trialing"
+      ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
+      : existingTrialStart;
+    let trialEndIso = status === "trialing"
+      ? resolvedExpiresIso
+      : existingTrialEnd;
 
     if (
       status !== "trialing" &&
@@ -1420,6 +1421,115 @@ serve(async (req: Request): Promise<Response> => {
       trialEndIso,
     });
 
+    const existingIsActiveLifetime =
+      existingSubscription?.plan === "lifetime" &&
+      existingSubscription?.status === "active";
+    const incomingRevokesLifetime = catalogProduct.plan === "lifetime" &&
+      status === "canceled";
+
+    if (existingIsActiveLifetime && incomingRevokesLifetime) {
+      const { data: revoked, error: revocationError } = await supabase.rpc(
+        "revoke_lifetime_entitlement_v1",
+        {
+          p_user_id: resolvedUserId,
+          p_source: "app_store",
+          p_source_id: originalTransactionId,
+          p_event_id: `app_store_revoke:${
+            transactionId ?? originalTransactionId
+          }`,
+        },
+      );
+      if (revocationError) {
+        throw new Error(
+          `Failed to apply source-verified App Store Lifetime revocation: ${revocationError.message}`,
+        );
+      }
+      if (revoked === true) {
+        return new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    const entitlementDecision = decideSubscriptionEntitlementMutation(
+      existingSubscription
+        ? {
+          provider: existingSubscription.provider,
+          plan: existingSubscription.plan,
+          status: existingSubscription.status,
+          stripeSubscriptionId: existingSubscription.stripe_subscription_id,
+          appStoreOriginalTransactionId:
+            existingSubscription.app_store_original_transaction_id,
+        }
+        : null,
+      {
+        provider: "app_store",
+        plan: catalogProduct.plan,
+        status,
+        appStoreOriginalTransactionId: originalTransactionId,
+      },
+    );
+
+    if (entitlementDecision.kind === "preserve") {
+      const isUnrepresentedLifetimeGrant = catalogProduct.plan === "lifetime" &&
+        status === "active" &&
+        existingSubscription?.plan === "lifetime" &&
+        existingSubscription?.status === "active" &&
+        !(
+          existingSubscription?.lifetime_source === "app_store" &&
+          existingSubscription?.lifetime_source_id === originalTransactionId
+        );
+      if (isUnrepresentedLifetimeGrant) {
+        await reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error: new Error(
+            "App Store Lifetime grant cannot be represented alongside the current active Lifetime grant",
+          ),
+          context: getAppStoreDiagnosticsContext({
+            phase: "multiple_active_lifetime_grants_detected",
+            userId: resolvedUserId,
+            storeProductId,
+            originalTransactionId,
+            transactionId,
+            environment: resolvedEnvironment,
+            currentLifetimeSource: existingSubscription?.lifetime_source ??
+              null,
+          }),
+        });
+      }
+      console.log(
+        "[app-store-notifications] preserving higher-priority/current entitlement",
+        {
+          userId: resolvedUserId,
+          reason: entitlementDecision.reason,
+          existingProvider: existingSubscription?.provider ?? null,
+          existingPlan: existingSubscription?.plan ?? null,
+          existingStatus: existingSubscription?.status ?? null,
+          incomingPlan: catalogProduct.plan,
+          incomingStatus: status,
+          originalTransactionId,
+        },
+      );
+      return new Response(
+        JSON.stringify({
+          status: "ignored",
+          reason: entitlementDecision.reason,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Switching from an active Stripe recurring purchase to a verified,
+    // access-granting App Store purchase is intentional. Terminal or stale App
+    // Store events never cancel Stripe as a side effect.
+    if (status === "active" || status === "trialing" || status === "past_due") {
+      await cancelStripeSubscriptionIfPresent(resolvedUserId);
+    }
+
     const subscriptionUpdate: Record<string, unknown> = {
       user_id: resolvedUserId,
       provider: "app_store",
@@ -1427,8 +1537,9 @@ serve(async (req: Request): Promise<Response> => {
       plan: catalogProduct.plan,
       status,
       billing_interval: catalogProduct.billing_interval,
-      current_period_end:
-        catalogProduct.plan === "lifetime" ? null : resolvedExpiresIso,
+      current_period_end: catalogProduct.plan === "lifetime"
+        ? null
+        : resolvedExpiresIso,
       trial_start: trialStartIso,
       trial_end: trialEndIso,
       ended_at: status === "canceled" ? new Date().toISOString() : null,
@@ -1444,6 +1555,10 @@ serve(async (req: Request): Promise<Response> => {
       app_store_original_transaction_id: originalTransactionId,
       app_store_environment: toStoredAppStoreEnvironment(resolvedEnvironment),
       app_store_in_app_ownership_type: inAppOwnershipType,
+      lifetime_source: catalogProduct.plan === "lifetime" ? "app_store" : null,
+      lifetime_source_id: catalogProduct.plan === "lifetime"
+        ? originalTransactionId
+        : null,
       updated_at: new Date().toISOString(),
     };
 
@@ -1478,18 +1593,16 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     try {
-      const rpcName =
-        status === "canceled"
-          ? "cascade_subscription_cancellation"
-          : "cascade_subscription_upgrade";
-      const rpcParams =
-        status === "canceled"
-          ? { p_owner_user_id: resolvedUserId }
-          : {
-              p_owner_user_id: resolvedUserId,
-              p_new_plan: catalogProduct.plan,
-              p_new_status: status,
-            };
+      const rpcName = status === "canceled"
+        ? "cascade_subscription_cancellation"
+        : "cascade_subscription_upgrade";
+      const rpcParams = status === "canceled"
+        ? { p_owner_user_id: resolvedUserId }
+        : {
+          p_owner_user_id: resolvedUserId,
+          p_new_plan: catalogProduct.plan,
+          p_new_status: status,
+        };
       const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
         rpcName,
         rpcParams,

@@ -173,6 +173,8 @@ async function downgradeToFree() {
       trial_end: null,
       stripe_subscription_id: null,
       stripe_customer_id: stripeCustomerId,
+      lifetime_source: null,
+      lifetime_source_id: null,
       last_event_id: 'manual_downgrade_script',
       updated_at: new Date().toISOString(),
     }

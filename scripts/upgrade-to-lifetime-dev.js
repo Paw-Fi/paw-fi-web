@@ -76,6 +76,8 @@ async function main() {
       trial_end: null,
       stripe_subscription_id: null,
       stripe_customer_id: `manual_lifetime_${userId}`,
+      lifetime_source: 'manual',
+      lifetime_source_id: userId,
       last_event_id: 'manual_upgrade_script_dev',
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })

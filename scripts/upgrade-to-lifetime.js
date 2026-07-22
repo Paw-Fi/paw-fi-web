@@ -205,31 +205,7 @@ async function upgradeToLifetime() {
     // Step 4: Update database to Lifetime
     console.log('\n📋 Step 4: Updating database to Lifetime plan...')
 
-    if (currentSub?.current_period_end) {
-      const { error: clearPeriodEndError } = await supabase
-        .from('subscriptions')
-        .update({ current_period_end: null })
-        .eq('user_id', userId)
-
-      if (clearPeriodEndError) {
-        throw new Error(`Failed to clear current_period_end: ${clearPeriodEndError.message}`)
-      }
-
-      console.log('   - Cleared existing current_period_end value')
-    }
-
-    if (currentSub && currentSub.status !== 'active') {
-      const { error: activateStatusError } = await supabase
-        .from('subscriptions')
-        .update({ status: 'active' })
-        .eq('user_id', userId)
-
-      if (activateStatusError) {
-        throw new Error(`Failed to update status to active: ${activateStatusError.message}`)
-      }
-
-      console.log('   - Updated subscription status to active')
-    } else if (!currentSub) {
+    if (!currentSub) {
       console.log('   - No existing subscription row found; preparing to create a lifetime record')
     }
 
@@ -246,6 +222,8 @@ async function upgradeToLifetime() {
       trial_end: null,
       stripe_subscription_id: null,
       stripe_customer_id: stripeCustomerId,
+      lifetime_source: 'manual',
+      lifetime_source_id: userId,
       last_event_id: 'manual_upgrade_script',
       updated_at: new Date().toISOString(),
     }

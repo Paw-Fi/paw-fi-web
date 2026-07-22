@@ -23,6 +23,7 @@ import {
   matchesVerifiedAppStoreTransaction,
 } from "../shared/app-store-api.ts";
 import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
+import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
 import {
   ensureAppStoreOwnership,
   getAppStoreOwnershipBinding,
@@ -507,7 +508,7 @@ serve(async (req: Request) => {
     const { data: existingSub } = await supabase
       .from("subscriptions")
       .select(
-        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, trial_start, trial_end, current_period_end, billing_interval, store_product_id, app_store_original_transaction_id",
+        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, trial_start, trial_end, current_period_end, billing_interval, store_product_id, app_store_original_transaction_id, lifetime_source, lifetime_source_id",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -1801,6 +1802,89 @@ serve(async (req: Request) => {
         ? "Sandbox"
         : "Production";
 
+      const currentIsActiveLifetime =
+        (existingSub as any)?.plan === "lifetime" &&
+        (existingSub as any)?.status === "active";
+      if (currentIsActiveLifetime) {
+        if (
+          plan === "lifetime" &&
+          status === "canceled" &&
+          originalTransactionId
+        ) {
+          const { data: revoked, error: revocationError } = await supabase.rpc(
+            "revoke_lifetime_entitlement_v1",
+            {
+              p_user_id: userId,
+              p_source: "app_store",
+              p_source_id: originalTransactionId,
+              p_event_id: `app_store_verify_revoke:${
+                transactionId ?? originalTransactionId
+              }`,
+            },
+          );
+          if (revocationError) {
+            throw new Error(
+              `Failed to apply source-verified App Store Lifetime revocation: ${revocationError.message}`,
+            );
+          }
+          if (revoked === true) {
+            const { data: revokedSubscription } = await supabase
+              .from("subscriptions")
+              .select("*")
+              .eq("user_id", userId)
+              .maybeSingle();
+            return new Response(
+              JSON.stringify({
+                verified: true,
+                subscription: revokedSubscription,
+              }),
+              {
+                status: 200,
+                headers: {
+                  ...corsHeaders,
+                  "Content-Type": "application/json",
+                },
+              },
+            );
+          }
+        }
+
+        const isSameLifetimeGrant = plan === "lifetime" &&
+          status === "active" &&
+          (existingSub as any)?.lifetime_source === "app_store" &&
+          Boolean(originalTransactionId) &&
+          (existingSub as any)?.lifetime_source_id === originalTransactionId;
+        if (
+          plan === "lifetime" &&
+          status === "active" &&
+          !isSameLifetimeGrant
+        ) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: new Error(
+              "Verified App Store Lifetime purchase cannot be represented alongside the current active Lifetime grant",
+            ),
+            context: {
+              ...verificationLogContext,
+              phase: "multiple_active_lifetime_grants_detected",
+              currentLifetimeSource: (existingSub as any)?.lifetime_source ??
+                null,
+              incomingLifetimeSource: "app_store",
+            },
+          });
+        }
+
+        // Do not transfer purchase ownership or replace provenance when this
+        // account already owns Lifetime from another purchase/provider.
+        return new Response(
+          JSON.stringify({ verified: true, subscription: existingSub }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       const shouldEnforceOwnershipBinding =
         shouldEnforceAppStoreOwnershipBinding(appStoreInAppOwnershipType);
 
@@ -1921,6 +2005,47 @@ serve(async (req: Request) => {
         );
       }
 
+      const entitlementDecision = decideSubscriptionEntitlementMutation(
+        existingSub
+          ? {
+            provider: (existingSub as any).provider,
+            plan: (existingSub as any).plan,
+            status: (existingSub as any).status,
+            stripeSubscriptionId: (existingSub as any).stripe_subscription_id,
+            appStoreOriginalTransactionId:
+              (existingSub as any).app_store_original_transaction_id,
+          }
+          : null,
+        {
+          provider: "app_store",
+          plan,
+          status,
+          appStoreOriginalTransactionId: originalTransactionId,
+          allowProviderSwitch: true,
+        },
+      );
+
+      if (entitlementDecision.kind === "preserve") {
+        console.log(
+          "Preserving current entitlement during App Store verification",
+          {
+            userId,
+            reason: entitlementDecision.reason,
+            currentProvider: (existingSub as any)?.provider ?? null,
+            currentPlan: (existingSub as any)?.plan ?? null,
+            incomingPlan: plan,
+            incomingStatus: status,
+          },
+        );
+        return new Response(
+          JSON.stringify({ verified: true, subscription: existingSub }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       const subscriptionUpdate: Record<string, unknown> = {
         user_id: userId,
         provider: "app_store",
@@ -1944,6 +2069,8 @@ serve(async (req: Request) => {
         app_store_original_transaction_id: originalTransactionId,
         app_store_environment: environmentString,
         app_store_in_app_ownership_type: appStoreInAppOwnershipType,
+        lifetime_source: plan === "lifetime" ? "app_store" : null,
+        lifetime_source_id: plan === "lifetime" ? originalTransactionId : null,
         updated_at: nowIso(),
       };
 
@@ -2004,43 +2131,77 @@ serve(async (req: Request) => {
       }
 
       if (transferredOwnershipFromUserId) {
-        const { error: resetPreviousOwnerError } = await supabase
-          .from("subscriptions")
-          .update({
-            plan: "free",
-            status: "active",
-            billing_interval: null,
-            current_period_end: null,
-            trial_start: null,
-            trial_end: null,
-            cancel_at_period_end: false,
-            store_product_id: null,
-            app_store_transaction_id: null,
-            app_store_original_transaction_id: null,
-            app_store_in_app_ownership_type: null,
-            stripe_subscription_id: null,
-            stripe_customer_id: null,
-            play_purchase_token: null,
-            play_order_id: null,
-            play_package_name: null,
-            ended_at: nowIso(),
-            updated_at: nowIso(),
-          })
-          .eq("user_id", transferredOwnershipFromUserId)
-          .eq("provider", "app_store")
-          .eq("app_store_original_transaction_id", originalTransactionId);
+        if (plan === "lifetime" && originalTransactionId) {
+          const { data: revokedPreviousOwner, error: revocationError } =
+            await supabase.rpc("revoke_lifetime_entitlement_v1", {
+              p_user_id: transferredOwnershipFromUserId,
+              p_source: "app_store",
+              p_source_id: originalTransactionId,
+              p_event_id: `app_store_ownership_transfer:${
+                transactionId ?? originalTransactionId
+              }`,
+            });
+          if (revocationError) {
+            throw new Error(
+              `Failed to source-verify previous App Store Lifetime owner: ${revocationError.message}`,
+            );
+          }
+          if (revokedPreviousOwner !== true) {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error(
+                "Transferred App Store Lifetime ownership did not revoke the expected previous entitlement",
+              ),
+              context: {
+                ...verificationLogContext,
+                phase: "lifetime_ownership_transfer_source_mismatch",
+                previousOwnerUserId: transferredOwnershipFromUserId,
+                originalTransactionId,
+                transactionId,
+              },
+            });
+          }
+        } else {
+          const { error: resetPreviousOwnerError } = await supabase
+            .from("subscriptions")
+            .update({
+              plan: "free",
+              status: "active",
+              billing_interval: null,
+              current_period_end: null,
+              trial_start: null,
+              trial_end: null,
+              cancel_at_period_end: false,
+              store_product_id: null,
+              app_store_transaction_id: null,
+              app_store_original_transaction_id: null,
+              app_store_in_app_ownership_type: null,
+              stripe_subscription_id: null,
+              stripe_customer_id: null,
+              play_purchase_token: null,
+              play_order_id: null,
+              play_package_name: null,
+              lifetime_source: null,
+              lifetime_source_id: null,
+              ended_at: nowIso(),
+              updated_at: nowIso(),
+            })
+            .eq("user_id", transferredOwnershipFromUserId)
+            .eq("provider", "app_store")
+            .eq("app_store_original_transaction_id", originalTransactionId);
 
-        if (resetPreviousOwnerError) {
-          await reportEdgeFunctionError({
-            functionName: "verify-iap-purchase",
-            error: resetPreviousOwnerError,
-            context: {
-              ...verificationLogContext,
-              phase: "reset_previous_owner_subscription_after_transfer",
-              previousOwnerUserId: transferredOwnershipFromUserId,
-              originalTransactionId,
-            },
-          });
+          if (resetPreviousOwnerError) {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: resetPreviousOwnerError,
+              context: {
+                ...verificationLogContext,
+                phase: "reset_previous_owner_subscription_after_transfer",
+                previousOwnerUserId: transferredOwnershipFromUserId,
+                originalTransactionId,
+              },
+            });
+          }
         }
       }
 
@@ -2269,6 +2430,104 @@ serve(async (req: Request) => {
       );
     }
 
+    if (
+      (existingSub as any)?.plan === "lifetime" &&
+      (existingSub as any)?.status === "active" &&
+      isLifetime &&
+      status === "canceled"
+    ) {
+      const { data: revoked, error: revocationError } = await supabase.rpc(
+        "revoke_lifetime_entitlement_v1",
+        {
+          p_user_id: userId,
+          p_source: "play_store",
+          p_source_id: purchaseToken,
+          p_event_id: `play_store_verify_revoke:${orderId ?? purchaseToken}`,
+        },
+      );
+      if (revocationError) {
+        throw new Error(
+          `Failed to apply source-verified Play Lifetime revocation: ${revocationError.message}`,
+        );
+      }
+      if (revoked === true) {
+        const { data: revokedSubscription } = await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
+        return new Response(
+          JSON.stringify({ verified: true, subscription: revokedSubscription }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
+    if (
+      (existingSub as any)?.plan === "lifetime" &&
+      (existingSub as any)?.status === "active" &&
+      isLifetime &&
+      status === "active" &&
+      !(
+        (existingSub as any)?.lifetime_source === "play_store" &&
+        (existingSub as any)?.lifetime_source_id === purchaseToken
+      )
+    ) {
+      await reportEdgeFunctionError({
+        functionName: "verify-iap-purchase",
+        error: new Error(
+          "Verified Play Lifetime purchase cannot be represented alongside the current active Lifetime grant",
+        ),
+        context: {
+          ...errorReportContext,
+          phase: "multiple_active_lifetime_grants_detected",
+          currentLifetimeSource: (existingSub as any)?.lifetime_source ?? null,
+          incomingLifetimeSource: "play_store",
+          orderId,
+        },
+      });
+    }
+
+    const entitlementDecision = decideSubscriptionEntitlementMutation(
+      existingSub
+        ? {
+          provider: (existingSub as any).provider,
+          plan: (existingSub as any).plan,
+          status: (existingSub as any).status,
+          stripeSubscriptionId: (existingSub as any).stripe_subscription_id,
+          appStoreOriginalTransactionId:
+            (existingSub as any).app_store_original_transaction_id,
+        }
+        : null,
+      {
+        provider: "play_store",
+        plan,
+        status,
+        allowProviderSwitch: true,
+      },
+    );
+
+    if (entitlementDecision.kind === "preserve") {
+      console.log("Preserving current entitlement during Play verification", {
+        userId,
+        reason: entitlementDecision.reason,
+        currentProvider: (existingSub as any)?.provider ?? null,
+        currentPlan: (existingSub as any)?.plan ?? null,
+        incomingPlan: plan,
+        incomingStatus: status,
+      });
+      return new Response(
+        JSON.stringify({ verified: true, subscription: existingSub }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const subscriptionUpdate: Record<string, unknown> = {
       user_id: userId,
       provider: "play_store",
@@ -2290,6 +2549,8 @@ serve(async (req: Request) => {
       play_purchase_token: purchaseToken,
       play_order_id: orderId,
       play_package_name: androidPackageName,
+      lifetime_source: isLifetime ? "play_store" : null,
+      lifetime_source_id: isLifetime ? purchaseToken : null,
       updated_at: nowIso(),
     };
 

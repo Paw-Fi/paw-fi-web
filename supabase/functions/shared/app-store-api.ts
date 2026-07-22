@@ -111,14 +111,14 @@ export function normalizeAppStorePrivateKey(value: string): string {
     const beginMarker = normalized.includes("-----BEGIN PRIVATE KEY-----")
       ? "-----BEGIN PRIVATE KEY-----"
       : normalized.includes("-----BEGIN EC PRIVATE KEY-----")
-        ? "-----BEGIN EC PRIVATE KEY-----"
-        : null;
+      ? "-----BEGIN EC PRIVATE KEY-----"
+      : null;
 
     const endMarker = normalized.includes("-----END PRIVATE KEY-----")
       ? "-----END PRIVATE KEY-----"
       : normalized.includes("-----END EC PRIVATE KEY-----")
-        ? "-----END EC PRIVATE KEY-----"
-        : null;
+      ? "-----END EC PRIVATE KEY-----"
+      : null;
 
     if (beginMarker && endMarker) {
       const beginIndex = normalized.indexOf(beginMarker);
@@ -145,11 +145,10 @@ export function getValidatedAppStorePrivateKey(value: string): string {
     );
   }
 
-  const hasBegin =
-    normalized.includes("-----BEGIN") &&
+  const hasBegin = normalized.includes("-----BEGIN") &&
     normalized.includes("PRIVATE KEY-----");
-  const hasEnd =
-    normalized.includes("-----END") && normalized.includes("PRIVATE KEY-----");
+  const hasEnd = normalized.includes("-----END") &&
+    normalized.includes("PRIVATE KEY-----");
 
   if (!hasBegin || !hasEnd) {
     throw new Error("APPLE_APP_STORE_PRIVATE_KEY is missing PEM markers");
@@ -194,9 +193,13 @@ export async function createAppStoreBearerToken(
     exp: issuedAt + 300,
   };
 
-  const unsignedToken = `${base64UrlEncode(utf8Encode(JSON.stringify(header)))}.${base64UrlEncode(
-    utf8Encode(JSON.stringify(payload)),
-  )}`;
+  const unsignedToken = `${
+    base64UrlEncode(utf8Encode(JSON.stringify(header)))
+  }.${
+    base64UrlEncode(
+      utf8Encode(JSON.stringify(payload)),
+    )
+  }`;
 
   const signature = new Uint8Array(
     await crypto.subtle.sign(
@@ -304,7 +307,8 @@ export async function fetchLatestAppStoreTransactionByOriginalId(params: {
       revision?: string | null;
     }>({
       config: params.config,
-      path: `/inApps/${GetTransactionHistoryVersion.V2}/history/${params.originalTransactionId}`,
+      path:
+        `/inApps/${GetTransactionHistoryVersion.V2}/history/${params.originalTransactionId}`,
       environment: params.environment,
       query: {
         sort: historyRequest.sort,
@@ -324,8 +328,9 @@ export async function fetchLatestAppStoreTransactionByOriginalId(params: {
     }
 
     for (const signedTransaction of signedTransactions) {
-      const decoded =
-        decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
+      const decoded = decodeJwsPayload<JWSTransactionDecodedPayload>(
+        signedTransaction,
+      );
       if (decoded.transactionId === params.transactionId) {
         return decoded;
       }
@@ -358,13 +363,18 @@ export async function fetchAppStoreTransactionHistoryByOriginalId(params: {
       return transactions;
     }
 
-    const historyResponse = await makeAppStoreApiRequest<{
+    const historyResponse: {
+      signedTransactions?: string[];
+      hasMore?: boolean;
+      revision?: string | null;
+    } = await makeAppStoreApiRequest<{
       signedTransactions?: string[];
       hasMore?: boolean;
       revision?: string | null;
     }>({
       config: params.config,
-      path: `/inApps/${GetTransactionHistoryVersion.V2}/history/${params.originalTransactionId}`,
+      path:
+        `/inApps/${GetTransactionHistoryVersion.V2}/history/${params.originalTransactionId}`,
       environment: params.environment,
       query: {
         sort: Order.DESCENDING,
@@ -542,10 +552,9 @@ export async function findAppStoreTransactionWithEnvironmentFallback(params: {
     };
   }
 
-  const fallbackEnvironment =
-    params.environmentHint === Environment.SANDBOX
-      ? Environment.PRODUCTION
-      : Environment.SANDBOX;
+  const fallbackEnvironment = params.environmentHint === Environment.SANDBOX
+    ? Environment.PRODUCTION
+    : Environment.SANDBOX;
   const fallbackTransaction = await lookupInEnvironment(fallbackEnvironment);
 
   return {
@@ -556,14 +565,16 @@ export async function findAppStoreTransactionWithEnvironmentFallback(params: {
   };
 }
 
-export async function findAppStoreSubscriptionStatusWithEnvironmentFallback(params: {
-  config: AppStoreApiConfig;
-  environmentHint: Environment;
-  transactionId: string;
-  originalTransactionId?: string | null;
-  productId?: string | null;
-  fetchImpl?: typeof fetch;
-}): Promise<{
+export async function findAppStoreSubscriptionStatusWithEnvironmentFallback(
+  params: {
+    config: AppStoreApiConfig;
+    environmentHint: Environment;
+    transactionId: string;
+    originalTransactionId?: string | null;
+    productId?: string | null;
+    fetchImpl?: typeof fetch;
+  },
+): Promise<{
   subscription: AppStoreSubscriptionStatusLookup | null;
   environment: Environment;
 }> {
@@ -595,10 +606,9 @@ export async function findAppStoreSubscriptionStatusWithEnvironmentFallback(para
     };
   }
 
-  const fallbackEnvironment =
-    params.environmentHint === Environment.SANDBOX
-      ? Environment.PRODUCTION
-      : Environment.SANDBOX;
+  const fallbackEnvironment = params.environmentHint === Environment.SANDBOX
+    ? Environment.PRODUCTION
+    : Environment.SANDBOX;
   const fallbackSubscription = await lookupInEnvironment(fallbackEnvironment);
 
   return {
@@ -671,8 +681,8 @@ function decodeSubscriptionStatusItem(
   try {
     const transaction = item.signedTransactionInfo
       ? decodeJwsPayload<JWSTransactionDecodedPayload>(
-          item.signedTransactionInfo,
-        )
+        item.signedTransactionInfo,
+      )
       : null;
     const renewalInfo = item.signedRenewalInfo
       ? decodeJwsPayload<JWSRenewalInfoDecodedPayload>(item.signedRenewalInfo)
@@ -680,8 +690,7 @@ function decodeSubscriptionStatusItem(
 
     return {
       status: typeof item.status === "number" ? item.status : null,
-      originalTransactionId:
-        asString(item.originalTransactionId) ??
+      originalTransactionId: asString(item.originalTransactionId) ??
         asString(transaction?.originalTransactionId),
       transaction,
       renewalInfo,
@@ -689,7 +698,13 @@ function decodeSubscriptionStatusItem(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Failed to decode App Store subscription status item ${index}: ${message}; status=${item.status ?? "null"}; originalTransactionId=${item.originalTransactionId ?? "null"}; hasSignedTransactionInfo=${Boolean(item.signedTransactionInfo)}; hasSignedRenewalInfo=${Boolean(item.signedRenewalInfo)}`,
+      `Failed to decode App Store subscription status item ${index}: ${message}; status=${
+        item.status ?? "null"
+      }; originalTransactionId=${
+        item.originalTransactionId ?? "null"
+      }; hasSignedTransactionInfo=${
+        Boolean(item.signedTransactionInfo)
+      }; hasSignedRenewalInfo=${Boolean(item.signedRenewalInfo)}`,
     );
   }
 }

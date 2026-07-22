@@ -50,7 +50,7 @@ type VerifyPaymentResponse = {
   verified: boolean;
   message?: string;
   subscription?: {
-    provider: "stripe";
+    provider: "stripe" | "app_store" | "play_store";
     plan: string;
     status: string;
     billing_interval: string | null;
@@ -383,6 +383,84 @@ serve(async (req: Request) => {
 
       const plan = "lifetime";
 
+      // A completed historical checkout must never change the provenance of an
+      // already-active Lifetime grant. This also makes repeated verification
+      // idempotent when the current grant came from Apple or an administrator.
+      const { data: currentEntitlement, error: currentEntitlementError } =
+        await supabase
+          .from("subscriptions")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
+      if (currentEntitlementError) {
+        await reportEdgeFunctionError({
+          functionName: "verify-payment",
+          error: currentEntitlementError,
+          context: {
+            phase: "load_current_lifetime_entitlement",
+            userId,
+            sessionId,
+          },
+        });
+        console.error(
+          "Failed to load current entitlement before Lifetime verification:",
+          currentEntitlementError,
+        );
+        return new Response(
+          JSON.stringify(
+            {
+              verified: false,
+              message: "Failed to verify current entitlement",
+            } satisfies VerifyPaymentResponse,
+          ),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+      if (
+        currentEntitlement?.plan === "lifetime" &&
+        currentEntitlement?.status === "active"
+      ) {
+        const incomingPaymentIntentId =
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null;
+        const isSameLifetimeGrant =
+          currentEntitlement.lifetime_source === "stripe" &&
+          incomingPaymentIntentId !== null &&
+          currentEntitlement.lifetime_source_id === incomingPaymentIntentId;
+        if (!isSameLifetimeGrant) {
+          await reportEdgeFunctionError({
+            functionName: "verify-payment",
+            error: new Error(
+              "Verified Stripe Lifetime purchase cannot be represented alongside the current active Lifetime grant",
+            ),
+            context: {
+              phase: "multiple_active_lifetime_grants_detected",
+              userId,
+              sessionId,
+              currentLifetimeSource: currentEntitlement.lifetime_source ?? null,
+              incomingLifetimeSource: "stripe",
+            },
+          });
+        }
+        return new Response(
+          JSON.stringify(
+            {
+              verified: true,
+              message: "Lifetime payment successful",
+              subscription: currentEntitlement,
+            } satisfies VerifyPaymentResponse,
+          ),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       let persistenceError: unknown = null;
       let stripeCustomerId: string | null = null;
 
@@ -414,6 +492,10 @@ serve(async (req: Request) => {
           bound_to_household_id: null,
           trial_start: null,
           trial_end: null,
+          lifetime_source: "stripe",
+          lifetime_source_id: typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? `checkout:${sessionId}`,
           updated_at: now.toISOString(),
         };
 
@@ -423,12 +505,30 @@ serve(async (req: Request) => {
 
         if (upsertError) {
           persistenceError = upsertError;
+          await reportEdgeFunctionError({
+            functionName: "verify-payment",
+            error: upsertError,
+            context: {
+              phase: "persist_lifetime_entitlement",
+              userId,
+              sessionId,
+            },
+          });
           console.error("Failed to upsert lifetime subscription:", upsertError);
         } else {
           console.log("Lifetime subscription upserted for user:", userId);
         }
       } catch (dbError) {
         persistenceError = dbError;
+        await reportEdgeFunctionError({
+          functionName: "verify-payment",
+          error: dbError,
+          context: {
+            phase: "persist_lifetime_entitlement_unexpected",
+            userId,
+            sessionId,
+          },
+        });
         console.error("Failed to upsert lifetime subscription:", dbError);
       }
 
@@ -572,10 +672,30 @@ serve(async (req: Request) => {
 
       if (upsertError) {
         persistenceError = upsertError;
+        await reportEdgeFunctionError({
+          functionName: "verify-payment",
+          error: upsertError,
+          context: {
+            phase: "persist_recurring_entitlement",
+            userId,
+            sessionId,
+            subscriptionId,
+          },
+        });
         console.error("Error upserting subscription:", upsertError);
       }
     } catch (dbError) {
       persistenceError = dbError;
+      await reportEdgeFunctionError({
+        functionName: "verify-payment",
+        error: dbError,
+        context: {
+          phase: "persist_recurring_entitlement_unexpected",
+          userId,
+          sessionId,
+          subscriptionId,
+        },
+      });
       console.error("Database error:", dbError);
     }
 
@@ -607,6 +727,13 @@ serve(async (req: Request) => {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    await reportEdgeFunctionError({
+      functionName: "verify-payment",
+      error,
+      context: {
+        phase: "serve_handler",
+      },
+    });
     console.error("Error verifying payment:", error);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,

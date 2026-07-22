@@ -44,6 +44,7 @@ import {
   allowZeroAmountLifetimeGrants,
   isPositiveStripeAmount,
 } from "../shared/lifetime-grant-policy.ts";
+import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
 
 interface EmailTemplate {
   html: string;
@@ -109,9 +110,10 @@ function isPermanentWebhookError(
 function isUuid(value: unknown): value is string {
   return (
     typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(
+        value,
+      )
   );
 }
 
@@ -314,8 +316,8 @@ serve(async (req) => {
       email,
       name,
       template,
-      idempotencyKey:
-        idempotencyKey || `${webhookEventId}:${queuedEmails.length}`,
+      idempotencyKey: idempotencyKey ||
+        `${webhookEventId}:${queuedEmails.length}`,
     });
   };
 
@@ -642,8 +644,9 @@ serve(async (req) => {
         eventType: event.type,
       });
       const processingTime = Date.now() - startTime;
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
 
       console.error(`Error handling webhook ${event.id}:`, {
@@ -712,14 +715,12 @@ async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
     console.log("Processing charge.refunded:", charge.id);
 
     // Get customer and payment intent info
-    const customerId =
-      typeof charge.customer === "string"
-        ? charge.customer
-        : charge.customer?.id;
-    const paymentIntentId =
-      typeof charge.payment_intent === "string"
-        ? charge.payment_intent
-        : charge.payment_intent?.id;
+    const customerId = typeof charge.customer === "string"
+      ? charge.customer
+      : charge.customer?.id;
+    const paymentIntentId = typeof charge.payment_intent === "string"
+      ? charge.payment_intent
+      : charge.payment_intent?.id;
 
     if (!customerId || !paymentIntentId) {
       console.log(
@@ -743,8 +744,7 @@ async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
       return;
     }
 
-    const isFullRefund =
-      charge.refunded === true ||
+    const isFullRefund = charge.refunded === true ||
       (typeof charge.amount_refunded === "number" &&
         typeof charge.amount === "number" &&
         charge.amount_refunded >= charge.amount);
@@ -764,6 +764,7 @@ async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
     await revokeLifetimeAccess({
       userId,
       eventId,
+      paymentIntentId,
     });
   } catch (error: any) {
     reportStripeWebhookError("handle_charge_refunded", error, {
@@ -790,10 +791,9 @@ async function handleChargeDispute(
     {
       eventType,
       disputeId: dispute.id,
-      chargeId:
-        typeof dispute.charge === "string"
-          ? dispute.charge
-          : dispute.charge?.id,
+      chargeId: typeof dispute.charge === "string"
+        ? dispute.charge
+        : dispute.charge?.id,
       status: dispute.status,
       amount: dispute.amount,
       currency: dispute.currency,
@@ -804,88 +804,39 @@ async function handleChargeDispute(
 async function revokeLifetimeAccess(params: {
   userId: string;
   eventId: string;
+  paymentIntentId: string;
 }): Promise<void> {
-  const { userId, eventId } = params;
+  const { userId, eventId, paymentIntentId } = params;
 
-  const { data: existing, error: existingError } = await supabase
-    .from("subscriptions")
-    .select("plan, status, last_event_id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data: revoked, error: revocationError } = await supabase.rpc(
+    "revoke_lifetime_entitlement_v1",
+    {
+      p_user_id: userId,
+      p_source: "stripe",
+      p_source_id: paymentIntentId,
+      p_event_id: eventId,
+    },
+  );
 
-  if (existingError) {
-    throw new Error(`subscriptions lookup failed: ${existingError.message}`);
+  if (revocationError) {
+    throw new Error(
+      `failed to source-verify Lifetime refund: ${revocationError.message}`,
+    );
   }
 
-  if (existing?.plan !== "lifetime") {
+  if (revoked !== true) {
     console.log(
-      "Skipping Lifetime refund revocation because current entitlement is not Lifetime",
+      "Skipping Stripe Lifetime refund because it does not own the current Lifetime entitlement",
       {
         userId: redactUserId(userId),
-        currentPlan: existing?.plan || null,
-        currentStatus: existing?.status || null,
+        paymentIntentId,
       },
     );
     return;
   }
 
-  const alreadyRevoked =
-    existing?.plan === "free" && existing?.status === "canceled";
-
-  if (!alreadyRevoked) {
-    const nowIso = new Date().toISOString();
-    const { error: updateError } = await supabase
-      .from("subscriptions")
-      .update({
-        provider: "stripe",
-        plan: "free",
-        status: "canceled",
-        billing_interval: null,
-        stripe_subscription_id: null,
-        // Provider hygiene: clear IAP identifiers.
-        store_product_id: null,
-        app_store_transaction_id: null,
-        app_store_original_transaction_id: null,
-        app_store_environment: null,
-        play_purchase_token: null,
-        play_order_id: null,
-        play_package_name: null,
-        ended_at: nowIso,
-        last_event_id: eventId,
-        updated_at: nowIso,
-      })
-      .eq("user_id", userId);
-
-    if (updateError) {
-      console.error("Error downgrading user after refund:", updateError);
-      throw new Error(
-        `failed to revoke lifetime access: ${updateError.message}`,
-      );
-    }
-
-    // CRITICAL: Cascade cancellation to all household members bound to this lifetime subscription
-    try {
-      const { error: cascadeError } = await supabase.rpc(
-        "cascade_subscription_cancellation",
-        { p_owner_user_id: userId },
-      );
-      if (cascadeError) {
-        throw new Error(
-          `failed to cascade lifetime revocation: ${cascadeError.message}`,
-        );
-      }
-    } catch (error) {
-      reportStripeWebhookError("revoke_lifetime_access_cascade", error, {
-        userId,
-        eventId,
-      });
-      console.error(
-        "Unexpected error during lifetime refund cascade cancellation:",
-        error,
-      );
-      throw error;
-    }
-  }
+  // The source verification RPC atomically cascades cancellation to borrowed
+  // household entitlements before it commits.
 }
 
 async function handleRefundCreatedOrUpdated(
@@ -909,8 +860,9 @@ async function handleRefundCreatedOrUpdated(
     );
 
     const refundCustomer = (refund as any).customer;
-    const customerId =
-      typeof refundCustomer === "string" ? refundCustomer : refundCustomer?.id;
+    const customerId = typeof refundCustomer === "string"
+      ? refundCustomer
+      : refundCustomer?.id;
     if (!customerId) {
       await reportStripeWebhookError(
         "handle_refund_failed_missing_customer",
@@ -956,8 +908,9 @@ async function handleRefundCreatedOrUpdated(
 
   if (shouldSendConfirmation) {
     const refundCustomer = (refund as any).customer;
-    const customerId =
-      typeof refundCustomer === "string" ? refundCustomer : refundCustomer?.id;
+    const customerId = typeof refundCustomer === "string"
+      ? refundCustomer
+      : refundCustomer?.id;
 
     if (!customerId) {
       const error = new Error(
@@ -1004,10 +957,9 @@ async function handleRefundCreatedOrUpdated(
     return;
   }
 
-  const paymentIntentId =
-    typeof (refund as any).payment_intent === "string"
-      ? (refund as any).payment_intent
-      : (refund as any).payment_intent?.id;
+  const paymentIntentId = typeof (refund as any).payment_intent === "string"
+    ? (refund as any).payment_intent
+    : (refund as any).payment_intent?.id;
 
   if (!paymentIntentId) {
     console.log("Refund missing payment_intent; skipping", {
@@ -1026,13 +978,13 @@ async function handleRefundCreatedOrUpdated(
     return;
   }
 
-  const piAmount =
-    typeof (pi as any).amount_received === "number" &&
-    (pi as any).amount_received > 0
-      ? (pi as any).amount_received
-      : (pi as any).amount;
-  const refundAmount =
-    typeof (refund as any).amount === "number" ? (refund as any).amount : 0;
+  const piAmount = typeof (pi as any).amount_received === "number" &&
+      (pi as any).amount_received > 0
+    ? (pi as any).amount_received
+    : (pi as any).amount;
+  const refundAmount = typeof (refund as any).amount === "number"
+    ? (refund as any).amount
+    : 0;
 
   // Only revoke on full refunds.
   if (typeof piAmount === "number" && piAmount > 0 && refundAmount < piAmount) {
@@ -1047,6 +999,7 @@ async function handleRefundCreatedOrUpdated(
   await revokeLifetimeAccess({
     userId,
     eventId,
+    paymentIntentId,
   });
 }
 
@@ -1060,15 +1013,14 @@ async function restoreLifetimeAccessAfterFailedRefund(params: {
     typeof (params.refund as any).payment_intent === "string"
       ? (params.refund as any).payment_intent
       : (params.refund as any).payment_intent?.id;
-  const chargeId =
-    typeof params.refund.charge === "string"
-      ? params.refund.charge
-      : params.refund.charge?.id;
+  const chargeId = typeof params.refund.charge === "string"
+    ? params.refund.charge
+    : params.refund.charge?.id;
   if (!paymentIntentId || !chargeId) return false;
 
   const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-  const paymentUserId =
-    paymentIntent.metadata?.user_id || paymentIntent.metadata?.userId;
+  const paymentUserId = paymentIntent.metadata?.user_id ||
+    paymentIntent.metadata?.userId;
   if (paymentIntent.metadata?.plan !== "lifetime") return false;
 
   if (isUuid(paymentUserId) && paymentUserId !== params.userId) {
@@ -1088,8 +1040,7 @@ async function restoreLifetimeAccessAfterFailedRefund(params: {
   }
 
   const charge = await stripe.charges.retrieve(chargeId);
-  const chargeStillFullyRefunded =
-    charge.refunded === true ||
+  const chargeStillFullyRefunded = charge.refunded === true ||
     (typeof charge.amount_refunded === "number" &&
       typeof charge.amount === "number" &&
       charge.amount_refunded >= charge.amount);
@@ -1097,7 +1048,7 @@ async function restoreLifetimeAccessAfterFailedRefund(params: {
 
   const { data: existing, error: existingError } = await supabase
     .from("subscriptions")
-    .select("plan, status, provider")
+    .select("plan, status, provider, lifetime_source, lifetime_source_id")
     .eq("user_id", params.userId)
     .maybeSingle();
   if (existingError) {
@@ -1107,7 +1058,9 @@ async function restoreLifetimeAccessAfterFailedRefund(params: {
   if (
     existing?.plan !== "free" ||
     existing?.status !== "canceled" ||
-    existing?.provider !== "stripe"
+    existing?.provider !== "stripe" ||
+    existing?.lifetime_source !== "stripe" ||
+    existing?.lifetime_source_id !== paymentIntentId
   ) {
     return false;
   }
@@ -1119,6 +1072,7 @@ async function restoreLifetimeAccessAfterFailedRefund(params: {
         params.userId,
         params.customerId,
         params.eventId,
+        paymentIntentId,
       ),
       { onConflict: "user_id", ignoreDuplicates: false },
     );
@@ -1192,8 +1146,8 @@ async function handlePaymentIntentFailed(
 ): Promise<void> {
   try {
     const plan = paymentIntent.metadata?.plan;
-    const userId =
-      paymentIntent.metadata?.user_id || paymentIntent.metadata?.userId;
+    const userId = paymentIntent.metadata?.user_id ||
+      paymentIntent.metadata?.userId;
 
     // Recurring invoice failures have their own canonical notification path.
     // This handler is for one-time Lifetime checkout failures only.
@@ -1211,8 +1165,7 @@ async function handlePaymentIntentFailed(
 
     if (!userData?.email) return;
 
-    const failureReason =
-      paymentIntent.last_payment_error?.message ||
+    const failureReason = paymentIntent.last_payment_error?.message ||
       paymentIntent.last_payment_error?.decline_code ||
       paymentIntent.last_payment_error?.code ||
       "Your payment method was declined or could not be charged.";
@@ -1243,8 +1196,8 @@ async function handlePaymentIntentFailed(
 // Helper function to safely extract product ID from price object
 // Handles both string and expanded object formats
 function getProductIdFromPrice(price: any): string | null {
-  const product =
-    price?.product ?? price?.pricing?.price_details?.product ?? null;
+  const product = price?.product ?? price?.pricing?.price_details?.product ??
+    null;
   if (!product) return null;
   return typeof product === "string" ? product : product.id || null;
 }
@@ -1415,6 +1368,7 @@ function createLifetimeSubscriptionPayload(
   userId: string,
   customerId: string | null | undefined,
   eventId: string,
+  lifetimeSourceId: string,
 ) {
   return {
     user_id: userId,
@@ -1438,6 +1392,8 @@ function createLifetimeSubscriptionPayload(
     cancel_at_period_end: false,
     trial_start: null,
     trial_end: null,
+    lifetime_source: "stripe" as const,
+    lifetime_source_id: lifetimeSourceId,
     last_event_id: eventId,
     updated_at: new Date().toISOString(),
   };
@@ -1557,8 +1513,8 @@ async function completeReferralAcceptance(params: {
       status: "completed",
       completed_at: nowIso,
       referral_code_text: referralCodeRow.code,
-      stripe_checkout_session_id:
-        acceptance.stripe_checkout_session_id ?? stripeCheckoutSessionId,
+      stripe_checkout_session_id: acceptance.stripe_checkout_session_id ??
+        stripeCheckoutSessionId,
     })
     .eq("referral_code_id", referralCodeId)
     .eq("referee_user_id", refereeUserId);
@@ -1599,8 +1555,9 @@ async function completeReferralAcceptance(params: {
       referrerUserId,
       refereeUserId,
     });
-    const msg =
-      emailError instanceof Error ? emailError.message : String(emailError);
+    const msg = emailError instanceof Error
+      ? emailError.message
+      : String(emailError);
     console.error("Referral email send failed (non-fatal):", msg);
   }
 
@@ -1632,10 +1589,9 @@ async function handleSubscriptionUpdated(
       throw retrieveError;
     }
 
-    const customerId =
-      typeof subscription.customer === "string"
-        ? subscription.customer
-        : subscription.customer?.id;
+    const customerId = typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
@@ -1668,7 +1624,7 @@ async function handleSubscriptionUpdated(
     const { data: previousSub, error: previousSubError } = await supabase
       .from("subscriptions")
       .select(
-        "plan, billing_interval, status, stripe_subscription_id, current_price_id, cancel_at_period_end, current_period_end, ended_at, last_event_id, pending_plan, pending_interval, pending_effective_date",
+        "provider, plan, billing_interval, status, stripe_subscription_id, app_store_original_transaction_id, current_price_id, cancel_at_period_end, current_period_end, ended_at, last_event_id, pending_plan, pending_interval, pending_effective_date",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -1694,10 +1650,44 @@ async function handleSubscriptionUpdated(
       return;
     }
 
+    const entitlementDecision = decideSubscriptionEntitlementMutation(
+      previousSub
+        ? {
+          provider: previousSub.provider,
+          plan: previousSub.plan,
+          status: previousSub.status,
+          stripeSubscriptionId: previousSub.stripe_subscription_id,
+          appStoreOriginalTransactionId:
+            previousSub.app_store_original_transaction_id,
+        }
+        : null,
+      {
+        provider: "stripe",
+        plan: "plus",
+        status,
+        stripeSubscriptionId: subscription.id,
+      },
+    );
+    if (entitlementDecision.kind === "preserve") {
+      console.log(
+        "Ignoring Stripe lifecycle event that does not own the current entitlement",
+        {
+          userId: redactUserId(userId),
+          subscriptionId: subscription.id,
+          reason: entitlementDecision.reason,
+          existingProvider: previousSub?.provider ?? null,
+          existingPlan: previousSub?.plan ?? null,
+          incomingStatus: status,
+        },
+      );
+      return;
+    }
+
     const previousStoredStatus = previousSub?.status || "";
     const previousPlan = previousSub?.plan as PlanType | null;
-    const previousInterval =
-      previousSub?.billing_interval as BillingInterval | null;
+    const previousInterval = previousSub?.billing_interval as
+      | BillingInterval
+      | null;
     const previousCurrentPriceId = previousSub?.current_price_id as
       | string
       | null;
@@ -1710,8 +1700,8 @@ async function handleSubscriptionUpdated(
 
       if (isAccessGrantingStatus(status)) {
         try {
-          const existingStripeSubscription =
-            await stripe.subscriptions.retrieve(
+          const existingStripeSubscription = await stripe.subscriptions
+            .retrieve(
               previousSub.stripe_subscription_id,
             );
           const existingStripeStatus = existingStripeSubscription.status;
@@ -1810,10 +1800,9 @@ async function handleSubscriptionUpdated(
       await downgradeOwnerSubscriptionToFree({
         userId,
         eventId,
-        status:
-          mapStripeStatusToStoredStatus(status) === "unpaid"
-            ? "unpaid"
-            : "canceled",
+        status: mapStripeStatusToStoredStatus(status) === "unpaid"
+          ? "unpaid"
+          : "canceled",
         stripeSubscriptionId: subscription.id,
       });
 
@@ -1822,10 +1811,9 @@ async function handleSubscriptionUpdated(
           previousSub?.status !== "unpaid") ||
         previousSub?.last_event_id === eventId
       ) {
-        const productId =
-          subscription.items?.data?.length > 0
-            ? getProductIdFromPrice(subscription.items.data[0]?.price)
-            : null;
+        const productId = subscription.items?.data?.length > 0
+          ? getProductIdFromPrice(subscription.items.data[0]?.price)
+          : null;
         const planName = await getPlanNameFromProductId(productId);
 
         const emailTemplate = subscriptionCanceledTemplate({
@@ -1853,8 +1841,7 @@ async function handleSubscriptionUpdated(
         `⚠️ Subscription ${subscription.id} is paused - preserving subscription data`,
       );
 
-      const hasDiscount =
-        subscription.discount ||
+      const hasDiscount = subscription.discount ||
         (subscription.discounts && subscription.discounts.length > 0);
 
       if (hasDiscount) {
@@ -1928,8 +1915,8 @@ async function handleSubscriptionUpdated(
     ) {
       const historicalPlan = previousPlan;
       const historicalInterval = previousInterval;
-      const subscriptionPriceId =
-        subscription.items?.data?.[0]?.price?.id ?? null;
+      const subscriptionPriceId = subscription.items?.data?.[0]?.price?.id ??
+        null;
       if (
         previousSub?.stripe_subscription_id === subscription.id &&
         previousCurrentPriceId &&
@@ -1961,20 +1948,17 @@ async function handleSubscriptionUpdated(
     }
     const finalPlan = pricePlanInfo.plan;
     const finalInterval = pricePlanInfo.interval as BillingInterval;
-    const pendingChangeApplied =
-      previousSub?.pending_plan === finalPlan &&
+    const pendingChangeApplied = previousSub?.pending_plan === finalPlan &&
       previousSub?.pending_interval === finalInterval;
 
-    const trialStart =
-      typeof subscription.trial_start === "number" &&
-      !Number.isNaN(subscription.trial_start)
-        ? new Date(subscription.trial_start * 1000).toISOString()
-        : null;
-    const trialEnd =
-      typeof subscription.trial_end === "number" &&
-      !Number.isNaN(subscription.trial_end)
-        ? new Date(subscription.trial_end * 1000).toISOString()
-        : null;
+    const trialStart = typeof subscription.trial_start === "number" &&
+        !Number.isNaN(subscription.trial_start)
+      ? new Date(subscription.trial_start * 1000).toISOString()
+      : null;
+    const trialEnd = typeof subscription.trial_end === "number" &&
+        !Number.isNaN(subscription.trial_end)
+      ? new Date(subscription.trial_end * 1000).toISOString()
+      : null;
 
     let periodResolution = resolveStripeCurrentPeriodEnd({
       subscription,
@@ -2073,10 +2057,10 @@ async function handleSubscriptionUpdated(
           current_price_id: subscription.items.data[0]?.price?.id,
           ...(pendingChangeApplied
             ? {
-                pending_plan: null,
-                pending_interval: null,
-                pending_effective_date: null,
-              }
+              pending_plan: null,
+              pending_interval: null,
+              pending_effective_date: null,
+            }
             : {}),
           previous_plan: previousPlan,
           previous_interval: previousInterval,
@@ -2124,10 +2108,9 @@ async function handleSubscriptionUpdated(
       throw error;
     }
 
-    const productId =
-      subscription.items?.data?.length > 0
-        ? getProductIdFromPrice(subscription.items.data[0]?.price)
-        : null;
+    const productId = subscription.items?.data?.length > 0
+      ? getProductIdFromPrice(subscription.items.data[0]?.price)
+      : null;
     const planName = await getPlanNameFromProductId(productId);
     const endDate = formatUnixTimestampDate(subscriptionPeriodEnd) || "N/A";
     const name = user.full_name || "";
@@ -2136,8 +2119,7 @@ async function handleSubscriptionUpdated(
     const isCustomerSubscriptionEvent =
       sourceEventType?.startsWith("customer.subscription.") === true;
     const previousStripeStatus = previousAttributes.status;
-    const previousStripeHadAccess =
-      typeof previousStripeStatus === "string" &&
+    const previousStripeHadAccess = typeof previousStripeStatus === "string" &&
       isAccessGrantingStatus(previousStripeStatus);
 
     if (
@@ -2167,13 +2149,14 @@ async function handleSubscriptionUpdated(
         user.email,
         name,
         emailTemplate,
-        `subscription_resumed:${subscription.id}:${subscriptionPeriodEnd ?? "unknown"}`,
+        `subscription_resumed:${subscription.id}:${
+          subscriptionPeriodEnd ?? "unknown"
+        }`,
       );
       return;
     }
 
-    const isNew =
-      isCustomerSubscriptionEvent &&
+    const isNew = isCustomerSubscriptionEvent &&
       hasAccessNow &&
       (sourceEventType === "customer.subscription.created" ||
         (sourceEventType === "customer.subscription.updated" &&
@@ -2251,14 +2234,13 @@ async function handleSubscriptionUpdated(
         finalInterval,
       );
 
-      const templateChangeType =
-        changeType === "upgraded"
-          ? "upgrade"
-          : changeType === "downgraded"
-            ? "downgrade"
-            : changeType === "interval_changed"
-              ? "interval_changed"
-              : "renewal";
+      const templateChangeType = changeType === "upgraded"
+        ? "upgrade"
+        : changeType === "downgraded"
+        ? "downgrade"
+        : changeType === "interval_changed"
+        ? "interval_changed"
+        : "renewal";
 
       const emailTemplate = subscriptionUpdatedTemplate({
         name,
@@ -2272,7 +2254,9 @@ async function handleSubscriptionUpdated(
         user.email,
         name,
         emailTemplate,
-        `subscription_change_applied:${subscription.id}:${finalPlan}:${finalInterval}:${previousSub?.current_period_end ?? subscriptionPeriodEnd ?? "unknown"}`,
+        `subscription_change_applied:${subscription.id}:${finalPlan}:${finalInterval}:${
+          previousSub?.current_period_end ?? subscriptionPeriodEnd ?? "unknown"
+        }`,
       );
       console.log(
         `Subscription ${templateChangeType} email queued for ${user.email}`,
@@ -2301,10 +2285,9 @@ async function handleSubscriptionDeleted(
   try {
     console.log("Processing subscription deletion:", subscription.id);
 
-    const customerId =
-      typeof subscription.customer === "string"
-        ? subscription.customer
-        : subscription.customer?.id;
+    const customerId = typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
@@ -2357,11 +2340,10 @@ async function handleSubscriptionDeleted(
       eventId,
       status: "canceled",
       stripeSubscriptionId: subscription.id,
-      endedAt:
-        typeof subscription.ended_at === "number" &&
-        !Number.isNaN(subscription.ended_at)
-          ? new Date(subscription.ended_at * 1000).toISOString()
-          : new Date().toISOString(),
+      endedAt: typeof subscription.ended_at === "number" &&
+          !Number.isNaN(subscription.ended_at)
+        ? new Date(subscription.ended_at * 1000).toISOString()
+        : new Date().toISOString(),
     });
 
     if (wasAlreadyTerminal && !wasHandledByThisEvent) {
@@ -2388,10 +2370,9 @@ async function handleSubscriptionDeleted(
       return;
     }
 
-    const planId =
-      subscription.items?.data?.length > 0
-        ? getProductIdFromPrice(subscription.items.data[0]?.price)
-        : null;
+    const planId = subscription.items?.data?.length > 0
+      ? getProductIdFromPrice(subscription.items.data[0]?.price)
+      : null;
 
     const planName = await getPlanNameFromProductId(planId);
     const name = affectedUser.full_name || "";
@@ -2457,10 +2438,9 @@ async function handleInvoicePaymentSucceeded(
 
       // SEND INVOICE RECEIPT EMAIL WITH PDF
       // Get customer ID safely
-      const customerId =
-        typeof invoice.customer === "string"
-          ? invoice.customer
-          : invoice.customer?.id;
+      const customerId = typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
 
       if (!customerId) {
         console.error("No customer ID in invoice:", invoice.id);
@@ -2486,26 +2466,24 @@ async function handleInvoicePaymentSucceeded(
       }
 
       // Get plan name from invoice line items - use safe extraction
-      const productId =
-        invoice.lines?.data?.length > 0
-          ? getProductIdFromInvoiceLine(invoice.lines.data[0])
-          : null;
+      const productId = invoice.lines?.data?.length > 0
+        ? getProductIdFromInvoiceLine(invoice.lines.data[0])
+        : null;
       const planName = await getPlanNameFromProductId(productId);
 
       // Format payment date
-      const paymentDate =
-        invoice.status_transitions?.paid_at &&
-        !isNaN(invoice.status_transitions.paid_at)
-          ? new Intl.DateTimeFormat("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }).format(new Date(invoice.status_transitions.paid_at * 1000))
-          : new Date().toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            });
+      const paymentDate = invoice.status_transitions?.paid_at &&
+          !isNaN(invoice.status_transitions.paid_at)
+        ? new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(invoice.status_transitions.paid_at * 1000))
+        : new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
 
       // Prepare invoice receipt email with PDF
       const emailTemplate = invoicePaymentSucceededTemplate({
@@ -2515,8 +2493,7 @@ async function handleInvoicePaymentSucceeded(
         currency: invoice.currency.toUpperCase(),
         invoiceNumber: invoice.number || invoice.id,
         paymentDate,
-        invoiceUrl:
-          invoice.hosted_invoice_url ||
+        invoiceUrl: invoice.hosted_invoice_url ||
           `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         invoicePdfUrl: invoice.invoice_pdf || undefined,
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
@@ -2541,10 +2518,9 @@ async function handleInvoicePaymentSucceeded(
       );
 
       // Get customer and mapped user
-      const customerId =
-        typeof invoice.customer === "string"
-          ? invoice.customer
-          : invoice.customer?.id;
+      const customerId = typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
 
       if (!customerId) {
         console.error(
@@ -2567,8 +2543,9 @@ async function handleInvoicePaymentSucceeded(
 
       if (paymentIntentId) {
         try {
-          const paymentIntent =
-            await stripe.paymentIntents.retrieve(paymentIntentId);
+          const paymentIntent = await stripe.paymentIntents.retrieve(
+            paymentIntentId,
+          );
           const piPlan = paymentIntent.metadata?.plan as PlanType | undefined;
           const piUserId = paymentIntent.metadata?.user_id as
             | string
@@ -2751,17 +2728,18 @@ async function handleInvoicePaymentSucceeded(
               eventId,
             },
           );
-          const msg =
-            sidecarErr instanceof Error
-              ? sidecarErr.message
-              : String(sidecarErr);
+          const msg = sidecarErr instanceof Error
+            ? sidecarErr.message
+            : String(sidecarErr);
           console.error("Referral sidecar error:", msg);
         }
 
         // Check existing sub
         const { data: existingSub, error: existingSubError } = await supabase
           .from("subscriptions")
-          .select("plan, status, stripe_subscription_id, last_event_id")
+          .select(
+            "plan, status, stripe_subscription_id, last_event_id, lifetime_source, lifetime_source_id",
+          )
           .eq("user_id", userId)
           .maybeSingle();
 
@@ -2771,13 +2749,31 @@ async function handleInvoicePaymentSucceeded(
           );
         }
 
-        const payerAlreadyLifetime =
-          existingSub?.plan === "lifetime" && existingSub?.status === "active";
+        const payerAlreadyLifetime = existingSub?.plan === "lifetime" &&
+          existingSub?.status === "active";
         const invoiceLifetimeEventId = `invoice_${eventId}`;
-        const shouldSendLifetimeWelcome =
-          !payerAlreadyLifetime ||
+        const shouldSendLifetimeWelcome = !payerAlreadyLifetime ||
           existingSub?.last_event_id === invoiceLifetimeEventId;
         if (payerAlreadyLifetime) {
+          const incomingLifetimeSourceId = paymentIntentId ??
+            `invoice:${invoice.id}`;
+          const isSameLifetimeGrant =
+            existingSub?.lifetime_source === "stripe" &&
+            existingSub?.lifetime_source_id === incomingLifetimeSourceId;
+          if (!isSameLifetimeGrant) {
+            await reportStripeWebhookError(
+              "multiple_active_lifetime_grants_detected",
+              new Error(
+                "Stripe invoice Lifetime grant cannot be represented alongside the current active Lifetime grant",
+              ),
+              {
+                userId,
+                invoiceId: invoice.id,
+                currentLifetimeSource: existingSub?.lifetime_source ?? null,
+                incomingLifetimeSource: "stripe",
+              },
+            );
+          }
           console.log(
             `✅ User ${userId} already has active lifetime subscription`,
           );
@@ -2819,6 +2815,8 @@ async function handleInvoicePaymentSucceeded(
             cancel_at_period_end: false,
             trial_start: null,
             trial_end: null,
+            lifetime_source: "stripe",
+            lifetime_source_id: paymentIntentId ?? `invoice:${invoice.id}`,
             last_event_id: invoiceLifetimeEventId,
             updated_at: new Date().toISOString(),
           };
@@ -2914,8 +2912,9 @@ async function handleInvoicePaymentFailed(
     }
 
     if (!subData?.user_id) {
-      const stripeSubscription =
-        await stripe.subscriptions.retrieve(subscriptionId);
+      const stripeSubscription = await stripe.subscriptions.retrieve(
+        subscriptionId,
+      );
       await handleSubscriptionUpdated(
         stripeSubscription,
         eventId,
@@ -2954,12 +2953,12 @@ async function handleInvoicePaymentFailed(
 
     let latestStripeStatus = "past_due";
     let paymentIntentStatus: string | null = null;
-    let failureReason =
-      (invoice as any).last_finalization_error?.message ||
+    let failureReason = (invoice as any).last_finalization_error?.message ||
       "Your payment method was declined or could not be charged.";
     try {
-      const latestSubscription =
-        await stripe.subscriptions.retrieve(subscriptionId);
+      const latestSubscription = await stripe.subscriptions.retrieve(
+        subscriptionId,
+      );
       latestStripeStatus = latestSubscription.status;
     } catch (retrieveError: any) {
       reportStripeWebhookError(
@@ -2984,22 +2983,21 @@ async function handleInvoicePaymentFailed(
         expand: ["payments.data.payment.payment_intent"],
       });
       const payments = (latestInvoice as any).payments?.data || [];
-      const latestPayment =
-        payments.find((payment: any) => payment.is_default) ?? payments[0];
-      const paymentIntent =
-        latestPayment?.payment?.payment_intent ||
+      const latestPayment = payments.find((payment: any) =>
+        payment.is_default
+      ) ?? payments[0];
+      const paymentIntent = latestPayment?.payment?.payment_intent ||
         (latestInvoice as any).payment_intent;
       const paymentIntentObject =
         typeof paymentIntent === "object" && paymentIntent !== null
           ? paymentIntent
           : paymentIntent
-            ? await stripe.paymentIntents.retrieve(paymentIntent)
-            : null;
+          ? await stripe.paymentIntents.retrieve(paymentIntent)
+          : null;
       paymentIntentStatus = paymentIntentObject?.status ?? null;
       const paymentError = paymentIntentObject?.last_payment_error;
 
-      failureReason =
-        paymentError?.message ||
+      failureReason = paymentError?.message ||
         paymentError?.decline_code ||
         paymentError?.code ||
         (latestInvoice as any).last_finalization_error?.message ||
@@ -3074,8 +3072,8 @@ async function handleInvoicePaymentFailed(
     const shouldNotify = isTerminalDowngradeStatus(latestStripeStatus)
       ? !isTerminalDowngradeStatus(previousStatus || "") || handledByThisInvoice
       : typeof attemptCount === "number"
-        ? attemptCount === 1
-        : previousStatus !== "past_due";
+      ? attemptCount === 1
+      : previousStatus !== "past_due";
 
     if (!shouldNotify) {
       console.log("Skipping repeated payment failure notification", {
@@ -3129,8 +3127,8 @@ async function handleInvoicePaymentFailed(
         "Could not fetch subscription details for payment-failed email",
         {
           subscriptionId,
-          error:
-            subscriptionFetchError?.message || String(subscriptionFetchError),
+          error: subscriptionFetchError?.message ||
+            String(subscriptionFetchError),
         },
       );
     }
@@ -3177,10 +3175,9 @@ async function handleInvoicePaymentActionRequired(
   try {
     console.log("Processing payment action required for invoice:", invoice.id);
 
-    const customerId =
-      typeof invoice.customer === "string"
-        ? invoice.customer
-        : invoice.customer?.id;
+    const customerId = typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in invoice:", invoice.id);
@@ -3199,8 +3196,9 @@ async function handleInvoicePaymentActionRequired(
     if (!user) {
       const subscriptionId = getInvoiceSubscriptionId(invoice);
       if (subscriptionId) {
-        const subscription =
-          await stripe.subscriptions.retrieve(subscriptionId);
+        const subscription = await stripe.subscriptions.retrieve(
+          subscriptionId,
+        );
         user = await getUserForStripeSubscription(subscription, customerId);
       }
     }
@@ -3236,10 +3234,9 @@ async function handleInvoicePaymentActionRequired(
     const name = userData.full_name || "there";
 
     // Get plan name from invoice - use safe extraction
-    const productId =
-      invoice.lines?.data?.length > 0
-        ? getProductIdFromInvoiceLine(invoice.lines.data[0])
-        : null;
+    const productId = invoice.lines?.data?.length > 0
+      ? getProductIdFromInvoiceLine(invoice.lines.data[0])
+      : null;
     const planName = await getPlanNameFromProductId(productId);
 
     // Send 3DS authentication required email
@@ -3251,8 +3248,7 @@ async function handleInvoicePaymentActionRequired(
       planName,
       amount: invoice.amount_due / 100,
       currency: invoice.currency.toUpperCase(),
-      authenticationUrl:
-        invoice.hosted_invoice_url ||
+      authenticationUrl: invoice.hosted_invoice_url ||
         `${DASHBOARD_URL}/dashboard/user-settings/membership?tab=payment`,
       dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
     });
@@ -3305,10 +3301,9 @@ async function handleSubscriptionTrialEnding(
       return;
     }
 
-    const customerId =
-      typeof subscription.customer === "string"
-        ? subscription.customer
-        : subscription.customer?.id;
+    const customerId = typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
@@ -3346,10 +3341,10 @@ async function handleSubscriptionTrialEnding(
     const trialEndDate =
       subscription.trial_end && !isNaN(subscription.trial_end)
         ? new Intl.DateTimeFormat("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }).format(new Date(subscription.trial_end * 1000))
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(subscription.trial_end * 1000))
         : "N/A";
 
     // Send trial ending email
@@ -3386,10 +3381,9 @@ async function handleCheckoutSessionCompleted(
     console.log("Processing checkout session completed:", session.id);
 
     const sessionId = session.id;
-    const customerId =
-      typeof session.customer === "string"
-        ? session.customer
-        : session.customer?.id;
+    const customerId = typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id;
 
     if (!customerId) {
       throw new PermanentWebhookError(
@@ -3415,8 +3409,9 @@ async function handleCheckoutSessionCompleted(
     const userIdFromVerification = isUuid(verificationRow?.user_id)
       ? (verificationRow!.user_id as string)
       : null;
-    const planFromVerification =
-      typeof verificationRow?.plan === "string" ? verificationRow.plan : null;
+    const planFromVerification = typeof verificationRow?.plan === "string"
+      ? verificationRow.plan
+      : null;
 
     const { data: customerMapping, error: customerMappingError } =
       await supabase
@@ -3435,8 +3430,7 @@ async function handleCheckoutSessionCompleted(
       ? (customerMapping!.user_id as string)
       : null;
 
-    const rawUserIdFromSession =
-      session.metadata?.user_id ||
+    const rawUserIdFromSession = session.metadata?.user_id ||
       (session.metadata as any)?.userId ||
       session.client_reference_id;
     const userIdFromSession = isUuid(rawUserIdFromSession)
@@ -3451,10 +3445,9 @@ async function handleCheckoutSessionCompleted(
       !userIdFromSession
     ) {
       if (session.payment_intent) {
-        const paymentIntentId =
-          typeof session.payment_intent === "string"
-            ? session.payment_intent
-            : session.payment_intent.id;
+        const paymentIntentId = typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent.id;
         const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
         const piUserId = (pi.metadata?.user_id ||
           (pi.metadata as any)?.userId) as string | undefined;
@@ -3469,16 +3462,18 @@ async function handleCheckoutSessionCompleted(
     ) {
       throw new PermanentWebhookError(
         "CUSTOMER_MAPPING_MISMATCH",
-        `Checkout session user_id mismatch (verification ${redactUserId(
-          userIdFromVerification,
-        )} vs mapping ${redactUserId(userIdFromCustomerMapping)})`,
+        `Checkout session user_id mismatch (verification ${
+          redactUserId(
+            userIdFromVerification,
+          )
+        } vs mapping ${redactUserId(userIdFromCustomerMapping)})`,
       );
     }
 
-    const authoritativeUserId =
-      userIdFromVerification || userIdFromCustomerMapping;
-    const userId =
-      authoritativeUserId || userIdFromSession || userIdFromPaymentIntent;
+    const authoritativeUserId = userIdFromVerification ||
+      userIdFromCustomerMapping;
+    const userId = authoritativeUserId || userIdFromSession ||
+      userIdFromPaymentIntent;
 
     if (!userId) {
       throw new PermanentWebhookError(
@@ -3533,16 +3528,14 @@ async function handleCheckoutSessionCompleted(
       // Resolve plan (server-side record preferred).
       let plan: string | null = planFromVerification;
       if (!plan) {
-        plan =
-          typeof session.metadata?.plan === "string"
-            ? session.metadata.plan
-            : null;
+        plan = typeof session.metadata?.plan === "string"
+          ? session.metadata.plan
+          : null;
       }
       if (!plan && session.payment_intent) {
-        const paymentIntentId =
-          typeof session.payment_intent === "string"
-            ? session.payment_intent
-            : session.payment_intent.id;
+        const paymentIntentId = typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent.id;
         const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
         plan = typeof pi.metadata?.plan === "string" ? pi.metadata.plan : null;
       }
@@ -3560,8 +3553,7 @@ async function handleCheckoutSessionCompleted(
           expand: ["payment_intent"],
         });
 
-        const paymentStatus =
-          (fullSession as any).payment_status ||
+        const paymentStatus = (fullSession as any).payment_status ||
           (session as any).payment_status;
         const amountTotal =
           typeof (fullSession as any).amount_total === "number"
@@ -3640,7 +3632,9 @@ async function handleCheckoutSessionCompleted(
         // We need to cancel any existing Stripe subscription when user upgrades to lifetime
         const { data: oldSubData, error: oldSubError } = await supabase
           .from("subscriptions")
-          .select("stripe_subscription_id, plan, status, last_event_id")
+          .select(
+            "stripe_subscription_id, plan, status, last_event_id, lifetime_source, lifetime_source_id",
+          )
           .eq("user_id", lifetimeUserId)
           .maybeSingle();
 
@@ -3651,10 +3645,33 @@ async function handleCheckoutSessionCompleted(
         }
 
         const oldStripeSubscriptionId = oldSubData?.stripe_subscription_id;
-        const payerAlreadyLifetime =
-          oldSubData?.plan === "lifetime" && oldSubData?.status === "active";
-        const shouldSendLifetimeWelcome =
-          !payerAlreadyLifetime || oldSubData?.last_event_id === eventId;
+        const payerAlreadyLifetime = oldSubData?.plan === "lifetime" &&
+          oldSubData?.status === "active";
+        const shouldSendLifetimeWelcome = !payerAlreadyLifetime ||
+          oldSubData?.last_event_id === eventId;
+        const lifetimeSourceId = typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id ?? `checkout:${sessionId}`;
+        if (
+          payerAlreadyLifetime &&
+          !(
+            oldSubData?.lifetime_source === "stripe" &&
+            oldSubData?.lifetime_source_id === lifetimeSourceId
+          )
+        ) {
+          await reportStripeWebhookError(
+            "multiple_active_lifetime_grants_detected",
+            new Error(
+              "Stripe checkout Lifetime grant cannot be represented alongside the current active Lifetime grant",
+            ),
+            {
+              userId: lifetimeUserId,
+              sessionId,
+              currentLifetimeSource: oldSubData?.lifetime_source ?? null,
+              incomingLifetimeSource: "stripe",
+            },
+          );
+        }
         console.log("Existing subscription before lifetime upgrade:", {
           oldPlan: oldSubData?.plan,
           oldStatus: oldSubData?.status,
@@ -3662,6 +3679,7 @@ async function handleCheckoutSessionCompleted(
         });
 
         if (
+          !payerAlreadyLifetime &&
           oldStripeSubscriptionId &&
           oldStripeSubscriptionId !== "null" &&
           oldStripeSubscriptionId.startsWith("sub_")
@@ -3679,6 +3697,7 @@ async function handleCheckoutSessionCompleted(
           lifetimeUserId,
           customerId,
           eventId,
+          lifetimeSourceId,
         );
 
         console.log(
@@ -3686,12 +3705,14 @@ async function handleCheckoutSessionCompleted(
           lifetimeSubscriptionData,
         );
 
-        const { error: upsertError } = await supabase
-          .from("subscriptions")
-          .upsert(lifetimeSubscriptionData, {
-            onConflict: "user_id",
-            ignoreDuplicates: false,
-          });
+        const { error: upsertError } = payerAlreadyLifetime
+          ? { error: null }
+          : await supabase
+            .from("subscriptions")
+            .upsert(lifetimeSubscriptionData, {
+              onConflict: "user_id",
+              ignoreDuplicates: false,
+            });
 
         if (upsertError) {
           console.error("Error creating Lifetime subscription:", {
@@ -3956,7 +3977,8 @@ async function handleCheckoutSessionAsyncPaymentFailed(
         name,
         planName: session.metadata?.plan || "Subscription",
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-        updatePaymentUrl: `${DASHBOARD_URL}/checkout?plan=${session.metadata?.plan}`,
+        updatePaymentUrl:
+          `${DASHBOARD_URL}/checkout?plan=${session.metadata?.plan}`,
       });
 
       enqueueUserEmail(
@@ -4012,10 +4034,9 @@ async function handleInvoiceFinalizationFailed(
     ),
     {
       invoiceId: invoice.id,
-      customerId:
-        typeof invoice.customer === "string"
-          ? invoice.customer
-          : invoice.customer?.id,
+      customerId: typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id,
       automaticTaxStatus,
       errorCode: finalizationError?.code || null,
     },
@@ -4023,10 +4044,9 @@ async function handleInvoiceFinalizationFailed(
 
   if (automaticTaxStatus !== "requires_location_inputs") return;
 
-  const customerId =
-    typeof invoice.customer === "string"
-      ? invoice.customer
-      : invoice.customer?.id;
+  const customerId = typeof invoice.customer === "string"
+    ? invoice.customer
+    : invoice.customer?.id;
   if (!customerId) return;
 
   const user = await getUserByCustomerId(customerId);
@@ -4055,10 +4075,9 @@ async function handleInvoiceFinalized(
       return;
     }
 
-    const customerId =
-      typeof invoice.customer === "string"
-        ? invoice.customer
-        : invoice.customer?.id;
+    const customerId = typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in invoice:", invoice.id);
@@ -4106,10 +4125,9 @@ async function handleInvoiceFinalized(
     const name = userData.full_name || "there";
 
     // Get plan name from subscription - use safe extraction
-    const productId =
-      invoice.lines?.data?.length > 0
-        ? getProductIdFromInvoiceLine(invoice.lines.data[0])
-        : null;
+    const productId = invoice.lines?.data?.length > 0
+      ? getProductIdFromInvoiceLine(invoice.lines.data[0])
+      : null;
     const planName = await getPlanNameFromProductId(productId);
 
     const emailTemplate = invoiceFinalizedTemplate({
@@ -4153,10 +4171,9 @@ async function handleInvoiceUpcoming(
   try {
     console.log("Processing upcoming invoice:", invoice.id);
 
-    const customerId =
-      typeof invoice.customer === "string"
-        ? invoice.customer
-        : invoice.customer?.id;
+    const customerId = typeof invoice.customer === "string"
+      ? invoice.customer
+      : invoice.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in invoice:", invoice.id);
@@ -4190,10 +4207,10 @@ async function handleInvoiceUpcoming(
     }
 
     const chargeDate = new Date(invoice.next_payment_attempt * 1000);
-    const upcomingSubscriptionKey =
-      getInvoiceSubscriptionId(invoice) || customerId;
-    const upcomingPeriodKey =
-      invoice.lines?.data?.[0]?.period?.end || invoice.next_payment_attempt;
+    const upcomingSubscriptionKey = getInvoiceSubscriptionId(invoice) ||
+      customerId;
+    const upcomingPeriodKey = invoice.lines?.data?.[0]?.period?.end ||
+      invoice.next_payment_attempt;
     const now = new Date();
     const daysUntil = Math.ceil(
       (chargeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
@@ -4244,18 +4261,17 @@ async function handleInvoiceUpcoming(
 
       const totalDiscountAmount = Array.isArray(invoice.total_discount_amounts)
         ? invoice.total_discount_amounts.reduce(
-            (sum: number, item: { amount?: number } | null) =>
-              sum + (typeof item?.amount === "number" ? item.amount : 0),
-            0,
-          )
+          (sum: number, item: { amount?: number } | null) =>
+            sum + (typeof item?.amount === "number" ? item.amount : 0),
+          0,
+        )
         : 0;
 
-      const discountPercent =
-        typeof invoice.subtotal === "number" &&
-        invoice.subtotal > 0 &&
-        totalDiscountAmount > 0
-          ? Math.round((totalDiscountAmount / invoice.subtotal) * 100)
-          : 0;
+      const discountPercent = typeof invoice.subtotal === "number" &&
+          invoice.subtotal > 0 &&
+          totalDiscountAmount > 0
+        ? Math.round((totalDiscountAmount / invoice.subtotal) * 100)
+        : 0;
 
       const emailTemplate = discountExpiringTemplate({
         name: user.full_name || "there",
@@ -4285,9 +4301,11 @@ async function handleInvoiceUpcoming(
       `Upcoming invoice for ${user.email}, charging in ${daysUntil} days`,
     );
     console.log(
-      `Amount: ${(invoice.amount_due / 100).toFixed(
-        2,
-      )} ${invoice.currency.toUpperCase()}`,
+      `Amount: ${
+        (invoice.amount_due / 100).toFixed(
+          2,
+        )
+      } ${invoice.currency.toUpperCase()}`,
     );
 
     const { data: userData, error: userError } = await supabase
@@ -4312,10 +4330,9 @@ async function handleInvoiceUpcoming(
 
     const name = userData.full_name || "there";
 
-    const productId =
-      invoice.lines?.data?.length > 0
-        ? getProductIdFromInvoiceLine(invoice.lines.data[0])
-        : null;
+    const productId = invoice.lines?.data?.length > 0
+      ? getProductIdFromInvoiceLine(invoice.lines.data[0])
+      : null;
     const planName = await getPlanNameFromProductId(productId);
 
     const emailTemplate = invoiceUpcomingTemplate({
@@ -4330,7 +4347,8 @@ async function handleInvoiceUpcoming(
       }),
       daysUntil: daysUntil,
       dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-      updatePaymentUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership?tab=payment`,
+      updatePaymentUrl:
+        `${DASHBOARD_URL}/dashboard/user-settings/membership?tab=payment`,
     });
 
     enqueueUserEmail(
@@ -4361,10 +4379,9 @@ async function handlePaymentMethodAttached(
   try {
     console.log("Processing payment method attached:", paymentMethod.id);
 
-    const customerId =
-      typeof paymentMethod.customer === "string"
-        ? paymentMethod.customer
-        : paymentMethod.customer?.id;
+    const customerId = typeof paymentMethod.customer === "string"
+      ? paymentMethod.customer
+      : paymentMethod.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in payment method:", paymentMethod.id);
@@ -4429,8 +4446,7 @@ async function handlePaymentMethodAttached(
         paymentMethod.card.brand.slice(1)
       } ending in ${paymentMethod.card.last4}`;
     } else if (paymentMethod.type) {
-      paymentMethodType =
-        paymentMethod.type.charAt(0).toUpperCase() +
+      paymentMethodType = paymentMethod.type.charAt(0).toUpperCase() +
         paymentMethod.type.slice(1);
     }
 
@@ -4482,10 +4498,9 @@ async function handleSubscriptionPendingUpdateApplied(
       "customer.subscription.pending_update_applied",
     );
 
-    const customerId =
-      typeof subscription.customer === "string"
-        ? subscription.customer
-        : subscription.customer?.id;
+    const customerId = typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer?.id;
     if (!customerId) return;
 
     const user = await getUserForStripeSubscription(subscription, customerId);
@@ -4659,10 +4674,9 @@ async function handleSubscriptionPendingUpdateExpired(
     console.log("Processing pending update expired:", subscription.id);
 
     // Extract customer ID
-    const customerId =
-      typeof subscription.customer === "string"
-        ? subscription.customer
-        : subscription.customer?.id;
+    const customerId = typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in subscription:", subscription.id);
@@ -4729,10 +4743,9 @@ async function handleTerminalSubscriptionSchedule(
   schedule: Stripe.SubscriptionSchedule,
   eventType: string,
 ): Promise<void> {
-  const subscriptionId =
-    typeof schedule.subscription === "string"
-      ? schedule.subscription
-      : schedule.subscription?.id;
+  const subscriptionId = typeof schedule.subscription === "string"
+    ? schedule.subscription
+    : schedule.subscription?.id;
   if (!subscriptionId) {
     await reportStripeWebhookError(
       "handle_terminal_subscription_schedule_missing_subscription",
@@ -4743,12 +4756,12 @@ async function handleTerminalSubscriptionSchedule(
   }
 
   try {
-    const currentSubscription =
-      await stripe.subscriptions.retrieve(subscriptionId);
-    const currentScheduleId =
-      typeof currentSubscription.schedule === "string"
-        ? currentSubscription.schedule
-        : currentSubscription.schedule?.id;
+    const currentSubscription = await stripe.subscriptions.retrieve(
+      subscriptionId,
+    );
+    const currentScheduleId = typeof currentSubscription.schedule === "string"
+      ? currentSubscription.schedule
+      : currentSubscription.schedule?.id;
     if (currentScheduleId && currentScheduleId !== schedule.id) return;
   } catch (retrieveError: any) {
     if (retrieveError?.code !== "resource_missing") throw retrieveError;
@@ -4756,8 +4769,9 @@ async function handleTerminalSubscriptionSchedule(
 
   const finalPhase = schedule.phases?.[schedule.phases.length - 1];
   const finalPrice = finalPhase?.items?.[0]?.price;
-  const finalPriceId =
-    typeof finalPrice === "string" ? finalPrice : finalPrice?.id;
+  const finalPriceId = typeof finalPrice === "string"
+    ? finalPrice
+    : finalPrice?.id;
   const targetPlan = getPlanFromPriceId(finalPriceId);
   if (!targetPlan?.interval) return;
 
@@ -4801,10 +4815,9 @@ async function handleSetupIntentSucceeded(
   try {
     console.log("Processing setup intent succeeded:", setupIntent.id);
 
-    const customerId =
-      typeof setupIntent.customer === "string"
-        ? setupIntent.customer
-        : setupIntent.customer?.id;
+    const customerId = typeof setupIntent.customer === "string"
+      ? setupIntent.customer
+      : setupIntent.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in setup intent:", setupIntent.id);
@@ -4829,10 +4842,9 @@ async function handleSetupIntentSucceeded(
     }
 
     // Get the payment method that was attached
-    const paymentMethodId =
-      typeof setupIntent.payment_method === "string"
-        ? setupIntent.payment_method
-        : setupIntent.payment_method?.id;
+    const paymentMethodId = typeof setupIntent.payment_method === "string"
+      ? setupIntent.payment_method
+      : setupIntent.payment_method?.id;
 
     if (!paymentMethodId) {
       console.error("No payment method in setup intent:", setupIntent.id);
@@ -4908,10 +4920,9 @@ async function handleSetupIntentFailed(
   try {
     console.log("Processing setup intent failed:", setupIntent.id);
 
-    const customerId =
-      typeof setupIntent.customer === "string"
-        ? setupIntent.customer
-        : setupIntent.customer?.id;
+    const customerId = typeof setupIntent.customer === "string"
+      ? setupIntent.customer
+      : setupIntent.customer?.id;
 
     if (!customerId) {
       console.error("No customer ID in setup intent:", setupIntent.id);
