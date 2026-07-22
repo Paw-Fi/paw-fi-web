@@ -17,6 +17,14 @@ import { verifyPlaidWebhook } from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const WEBHOOK_BUILD_MARKER = "20260721-webhook-operation-probe-v1";
+const SUPABASE_HOST = (() => {
+  try {
+    return SUPABASE_URL ? new URL(SUPABASE_URL).host : null;
+  } catch {
+    return null;
+  }
+})();
 
 const SKIP_WEBHOOK_VERIFICATION =
   Deno.env.get("SKIP_WEBHOOK_VERIFICATION")?.toLowerCase() === "true" &&
@@ -84,6 +92,7 @@ Deno.serve(async (req) => {
   let claimedWebhookLockToken: string | null = null;
   let deferWebhookCompletion = false;
   let deferredReason = "deferred_active_sync";
+  let operationPhase = "parse_request";
   try {
     const hasInternalSecret =
       req.headers.has("X-Moneko-Internal-Key") ||
@@ -111,6 +120,7 @@ Deno.serve(async (req) => {
           },
         );
       }
+      operationPhase = "load_recovery_event";
       const { data: storedEvent, error: storedEventError } = await supabase
         .from("bank_webhook_events")
         .select("id, payload")
@@ -158,6 +168,7 @@ Deno.serve(async (req) => {
     }
 
     // Look up the connection
+    operationPhase = "lookup_bank_connection";
     const { data: connection, error: connectionLookupError } = await supabase
       .from("bank_connections")
       .select(
@@ -181,6 +192,7 @@ Deno.serve(async (req) => {
 
     let webhookEventId: string | null = recoveryWebhookEventId;
     if (!webhookEventId) {
+      operationPhase = "insert_webhook_event";
       const { data: insertedWebhookEvent, error: webhookInsertError } =
         await supabase
           .from("bank_webhook_events")
@@ -199,6 +211,7 @@ Deno.serve(async (req) => {
 
       if (webhookInsertError) {
         if (webhookInsertError.code === "23505") {
+          operationPhase = "lookup_duplicate_webhook_event";
           const { data: existingWebhookEvent, error: existingWebhookError } =
             await supabase
               .from("bank_webhook_events")
@@ -240,6 +253,7 @@ Deno.serve(async (req) => {
     }
 
     if (webhookEventId && !recoveryWebhookEventId) {
+      operationPhase = "claim_webhook_event";
       claimedWebhookLockToken = crypto.randomUUID();
       const { data: claimed, error: claimError } = await supabase.rpc(
         "claim_bank_webhook_event_v1",
@@ -266,6 +280,7 @@ Deno.serve(async (req) => {
       deferWebhookCompletion = true;
       deferredReason = "deferred_missing_connection";
     } else if (recoveryWebhookEventId) {
+      operationPhase = "bind_recovery_event_connection";
       const { error: eventConnectionError } = await supabase
         .from("bank_webhook_events")
         .update({ bank_connection_id: connection.id })
@@ -305,28 +320,30 @@ Deno.serve(async (req) => {
     }
 
     if (connection?.id && payload.webhook_type === "TRANSACTIONS") {
+      operationPhase = "update_transactions_webhook_state";
+      let connectionUpdateQuery = supabase
+        .from("bank_connections")
+        .update({
+          metadata: mergePlaidSyncStatusMetadata(connection.metadata, {
+            webhookCode: payload.webhook_code,
+            initialUpdateComplete: payload.initial_update_complete,
+            historicalUpdateComplete: payload.historical_update_complete,
+          }),
+          last_webhook_received_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id)
+        .is("removed_at", null)
+        .neq("status", "disabled");
+      connectionUpdateQuery = connection.item_status == null
+        ? connectionUpdateQuery.is("item_status", null)
+        : connectionUpdateQuery.eq("item_status", connection.item_status);
       const { data: updatedConnections, error: connectionUpdateError } =
-        await supabase
-          .from("bank_connections")
-          .update({
-            metadata: mergePlaidSyncStatusMetadata(connection.metadata, {
-              webhookCode: payload.webhook_code,
-              initialUpdateComplete: payload.initial_update_complete,
-              historicalUpdateComplete: payload.historical_update_complete,
-            }),
-            last_webhook_received_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", connection.id)
-          .is("removed_at", null)
-          .neq("status", "disabled")
-          .or(
-            "item_status.is.null,item_status.not.in.(removed,pending_removal)",
-          )
-          .select("id");
+        await connectionUpdateQuery.select("id");
       if (connectionUpdateError) throw connectionUpdateError;
 
       if (updatedConnections?.length === 1) {
+        operationPhase = "enqueue_transactions_sync";
         const enqueueResult = await enqueuePlaidSyncJob({
           supabase,
           connectionId: connection.id,
@@ -355,6 +372,7 @@ Deno.serve(async (req) => {
 
     if (payload.webhook_type === "ITEM") {
       if (payload.webhook_code === "USER_ACCOUNT_REVOKED" && connection?.id) {
+        operationPhase = "apply_account_revoked_webhook";
         await applyPlaidAccountRevokedWebhook({
           supabase,
           connection,
@@ -368,7 +386,8 @@ Deno.serve(async (req) => {
       });
 
       if (action && connection?.id) {
-        const { data: updatedConnections, error: updateError } = await supabase
+        operationPhase = "update_item_webhook_state";
+        let itemUpdateQuery = supabase
           .from("bank_connections")
           .update({
             status: action.status,
@@ -388,11 +407,12 @@ Deno.serve(async (req) => {
           })
           .eq("id", connection.id)
           .is("removed_at", null)
-          .neq("status", "disabled")
-          .or(
-            "item_status.is.null,item_status.not.in.(removed,pending_removal)",
-          )
-          .select("id");
+          .neq("status", "disabled");
+        itemUpdateQuery = connection.item_status == null
+          ? itemUpdateQuery.is("item_status", null)
+          : itemUpdateQuery.eq("item_status", connection.item_status);
+        const { data: updatedConnections, error: updateError } =
+          await itemUpdateQuery.select("id");
 
         if (updateError) {
           throw updateError;
@@ -408,6 +428,7 @@ Deno.serve(async (req) => {
         );
 
         if (action.shouldEnqueueSync && updatedConnections?.length === 1) {
+          operationPhase = "enqueue_item_sync";
           const enqueueResult = await enqueuePlaidSyncJob({
             supabase,
             connectionId: connection.id,
@@ -425,6 +446,7 @@ Deno.serve(async (req) => {
     }
 
     if (webhookEventId && deferWebhookCompletion) {
+      operationPhase = "defer_webhook_event";
       await transitionBankWebhookEvent({
         supabase,
         eventId: webhookEventId,
@@ -433,6 +455,7 @@ Deno.serve(async (req) => {
         error: deferredReason,
       });
     } else if (webhookEventId) {
+      operationPhase = "complete_webhook_event";
       await transitionBankWebhookEvent({
         supabase,
         eventId: webhookEventId,
@@ -446,7 +469,37 @@ Deno.serve(async (req) => {
       headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("[plaid-webhook] Failed to handle webhook", error);
+    const errorCode =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: unknown }).code || "") || null
+        : null;
+    let schemaProbe: Record<string, unknown> | null = null;
+    if (errorCode === "42703") {
+      const { error: baseColumnProbeError } = await supabase
+        .from("bank_connections")
+        .select("id")
+        .limit(1);
+      const { error: itemStatusProbeError } = await supabase
+        .from("bank_connections")
+        .select("id, item_status")
+        .limit(1);
+      schemaProbe = {
+        base_select_succeeded: baseColumnProbeError == null,
+        base_select_error_code: baseColumnProbeError?.code || null,
+        base_select_error_message: baseColumnProbeError?.message || null,
+        item_status_select_succeeded: itemStatusProbeError == null,
+        item_status_select_error_code: itemStatusProbeError?.code || null,
+        item_status_select_error_message: itemStatusProbeError?.message || null,
+      };
+    }
+    console.error("[plaid-webhook] Failed to handle webhook", {
+      buildMarker: WEBHOOK_BUILD_MARKER,
+      operationPhase,
+      supabaseHost: SUPABASE_HOST,
+      errorCode,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      schemaProbe,
+    });
     try {
       const parsed = JSON.parse(rawBody) as PlaidWebhookPayload;
       const replayKey = await buildPlaidWebhookReplayIdentity({
@@ -483,6 +536,10 @@ Deno.serve(async (req) => {
       error,
       context: {
         phase: "process_verified_webhook",
+        operation_phase: operationPhase,
+        build_marker: WEBHOOK_BUILD_MARKER,
+        supabase_host: SUPABASE_HOST,
+        schema_probe: schemaProbe,
       },
     });
     return new Response(
@@ -630,7 +687,7 @@ async function applyPlaidAccountRevokedWebhook(params: {
     }
   }
 
-  const { error: connectionUpdateError } = await params.supabase
+  let connectionUpdateQuery = params.supabase
     .from("bank_connections")
     .update({
       status: "active",
@@ -650,8 +707,11 @@ async function applyPlaidAccountRevokedWebhook(params: {
     })
     .eq("id", params.connection.id)
     .is("removed_at", null)
-    .neq("status", "disabled")
-    .or("item_status.is.null,item_status.not.in.(removed,pending_removal)");
+    .neq("status", "disabled");
+  connectionUpdateQuery = params.connection.item_status == null
+    ? connectionUpdateQuery.is("item_status", null)
+    : connectionUpdateQuery.eq("item_status", params.connection.item_status);
+  const { error: connectionUpdateError } = await connectionUpdateQuery;
 
   if (connectionUpdateError) {
     throw connectionUpdateError;

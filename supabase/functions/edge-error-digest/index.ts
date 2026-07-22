@@ -137,7 +137,8 @@ function buildDigestEmail(rows: ErrorAggregateRow[], windowStartIso: string) {
     );
   }
 
-  const subject = `[Moneko][Edge Errors] ${windowStartIso} - ${totalCount} errors`;
+  const env = Deno.env.get("ENV") || "production";
+  const subject = `[Moneko][${env}][Edge Errors] ${windowStartIso} - ${totalCount} errors`;
 
   const html = `<div style="font-family:Arial,sans-serif;line-height:1.5;">
 <h1 style="margin-bottom:8px;">Edge Error Digest</h1>
