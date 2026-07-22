@@ -13,7 +13,7 @@
     "build:sitemap": "node scripts/update-sitemap.js",
     "pricing:generate": "node scripts/generate-regional-pricing.mjs && prettier --write src/data/regional-pricing.generated.ts supabase/functions/shared/regional-pricing.generated.ts && cd ../moneko-mobile && dart format lib/features/subscription/data/regional_pricing.generated.dart",
     "pricing:check": "node scripts/generate-regional-pricing.mjs --check && prettier --check src/data/regional-pricing.generated.ts supabase/functions/shared/regional-pricing.generated.ts",
-    "pricing:test": "node --experimental-strip-types --test tests/regional-pricing.test.mjs tests/stripe-regional-pricing-sync.test.mjs",
+    "pricing:test": "node --experimental-strip-types --test tests/checkout-regional-pricing.test.mjs tests/regional-pricing.test.mjs tests/stripe-regional-pricing-sync.test.mjs",
     "test:seo": "node --test tests/seo-geo-pages.test.mjs",
     "test": "npm run pricing:test && npm run test:seo",
     "pricing:stripe:plan": "node scripts/sync-regional-pricing-to-stripe.mjs",

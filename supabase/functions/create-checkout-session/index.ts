@@ -37,12 +37,16 @@ import {
 } from "../shared/subscription-constants.ts";
 import {
   DEFAULT_REGIONAL_PRICING_MARKET_ID,
-  getRegionalPricingMarket,
   getRegionalStripePriceLookupKey,
-  isSupportedRegionalCurrency,
-  isSupportedRegionalPricingCountry,
   type RegionalPricingMarket,
 } from "../shared/regional-pricing.generated.ts";
+import {
+  assertCheckoutLineItem,
+  assertCheckoutSessionCurrency,
+  buildRegionalPriceCacheKey,
+  getRegionalCheckoutAmount,
+  resolveRegionalCheckoutMarket,
+} from "../shared/regional-checkout.ts";
 import { buildCheckoutRedirectUrls } from "../shared/checkout-redirect.ts";
 import {
   checkoutVerificationPersistenceErrorResponse,
@@ -75,18 +79,45 @@ const stripe = new Stripe(env.stripeSecretKey, {
 
 const regionalPriceIdCache = new Map<string, string>();
 
+async function assertSessionPricingOrExpire(
+  session: Stripe.Checkout.Session,
+  expected: { priceId: string; currency: string; amount: number },
+): Promise<void> {
+  try {
+    assertCheckoutSessionCurrency(session.currency, expected.currency);
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+      limit: 2,
+    });
+    const lineItem = lineItems.data[0];
+    assertCheckoutLineItem(
+      {
+        lineItemCount: lineItems.data.length,
+        priceId: lineItem?.price?.id,
+        currency: lineItem?.currency,
+        amountSubtotal: lineItem?.amount_subtotal,
+      },
+      expected,
+    );
+  } catch (error) {
+    await stripe.checkout.sessions.expire(session.id);
+    throw error;
+  }
+}
+
 async function resolveRegionalPriceId(
   plan: PlanType,
   billingInterval: BillingInterval | undefined,
   market: RegionalPricingMarket,
 ): Promise<string> {
-  const planTarget = plan === "lifetime"
-    ? "lifetime"
-    : billingInterval === "yearly"
-    ? "plus_yearly"
-    : "plus_monthly";
+  const planTarget =
+    plan === "lifetime"
+      ? "lifetime"
+      : billingInterval === "yearly"
+        ? "plus_yearly"
+        : "plus_monthly";
   const lookupKey = getRegionalStripePriceLookupKey(planTarget);
-  const cached = regionalPriceIdCache.get(lookupKey);
+  const cacheKey = buildRegionalPriceCacheKey(lookupKey, market.currencyCode);
+  const cached = regionalPriceIdCache.get(cacheKey);
   if (cached) return cached;
 
   const matches = await stripe.prices.list({
@@ -101,18 +132,20 @@ async function resolveRegionalPriceId(
   const regionalPrice = matches.data[0];
   if (regionalPrice) {
     const currency = market.currencyCode.toLowerCase();
-    const expectedAmount = plan === "lifetime"
-      ? market.lifetime
-      : billingInterval === "yearly"
-      ? market.yearly
-      : market.monthly;
-    const actualAmount = regionalPrice.currency === currency
-      ? regionalPrice.unit_amount
-      : regionalPrice.currency_options?.[currency]?.unit_amount;
+    const expectedAmount =
+      plan === "lifetime"
+        ? market.lifetime
+        : billingInterval === "yearly"
+          ? market.yearly
+          : market.monthly;
+    const actualAmount =
+      regionalPrice.currency === currency
+        ? regionalPrice.unit_amount
+        : regionalPrice.currency_options?.[currency]?.unit_amount;
     if (actualAmount !== expectedAmount) {
       throw new Error(`Stripe Price amount mismatch for ${lookupKey}`);
     }
-    regionalPriceIdCache.set(lookupKey, regionalPrice.id);
+    regionalPriceIdCache.set(cacheKey, regionalPrice.id);
     return regionalPrice.id;
   }
 
@@ -220,42 +253,14 @@ serve(async (req: Request) => {
       currency,
     } = await req.json();
 
-    const requestedCountry = typeof country === "string"
-      ? country.trim().toUpperCase()
-      : null;
-
-    if (
-      requestedCountry !== null &&
-      !isSupportedRegionalPricingCountry(requestedCountry)
-    ) {
-      return new Response(
-        JSON.stringify({ error: "Unsupported checkout country" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const regionalMarket = getRegionalPricingMarket(requestedCountry);
-    const requestedCurrency = typeof currency === "string"
-      ? currency.trim().toUpperCase()
-      : regionalMarket.currencyCode;
-
-    if (!isSupportedRegionalCurrency(requestedCurrency)) {
-      return new Response(
-        JSON.stringify({ error: "Unsupported checkout currency" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (requestedCurrency !== regionalMarket.currencyCode) {
+    let regionalSelection;
+    try {
+      regionalSelection = resolveRegionalCheckoutMarket({ country, currency });
+    } catch (error) {
       return new Response(
         JSON.stringify({
-          error: "Checkout currency does not match the selected country",
+          error:
+            error instanceof Error ? error.message : "Invalid checkout market",
         }),
         {
           status: 400,
@@ -264,6 +269,9 @@ serve(async (req: Request) => {
       );
     }
 
+    const requestedCountry = regionalSelection.country;
+    const requestedCurrency = regionalSelection.currency;
+    const regionalMarket = regionalSelection.market;
     const checkoutCurrency = requestedCurrency.toLowerCase();
 
     // Validate plan
@@ -299,6 +307,12 @@ serve(async (req: Request) => {
       }
     }
 
+    const expectedCheckoutAmount = getRegionalCheckoutAmount(
+      plan,
+      billingInterval,
+      regionalMarket,
+    );
+
     // Get the price ID based on plan and billing interval (with validation)
     let priceId: string;
     try {
@@ -311,10 +325,22 @@ serve(async (req: Request) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Error getting price ID:", message);
-      return new Response(JSON.stringify({ error: message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      reportCreateCheckoutSessionError("regional_price_resolution", error, {
+        userId,
+        plan,
+        billingInterval,
+        pricingCountry: requestedCountry,
+        currency: requestedCurrency,
       });
+      return new Response(
+        JSON.stringify({
+          error: "Checkout pricing is temporarily unavailable",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Double-check price ID is valid
@@ -354,9 +380,7 @@ serve(async (req: Request) => {
       const boundToUserId = existingSub.bound_to_user_id;
       const { data: ownerSub, error: ownerSubError } = await supabase
         .from("subscriptions")
-        .select(
-          "plan, status, bound_to_user_id, current_period_end, trial_end",
-        )
+        .select("plan, status, bound_to_user_id, current_period_end, trial_end")
         .eq("user_id", boundToUserId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -377,9 +401,8 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription = hasActiveHouseholdSubscriptionAccess(
-        ownerSub,
-      );
+      const ownerHasActiveSubscription =
+        hasActiveHouseholdSubscriptionAccess(ownerSub);
 
       if (ownerHasActiveSubscription) {
         console.error("User is bound to active household subscription:", {
@@ -535,7 +558,8 @@ serve(async (req: Request) => {
           appUrl: env.appUrl,
           successUrl: typeof successUrl === "string" ? successUrl : null,
           cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
-          allowLocalhost: env.appUrl.includes("localhost") ||
+          allowLocalhost:
+            env.appUrl.includes("localhost") ||
             env.appUrl.includes("127.0.0.1"),
         });
 
@@ -582,8 +606,7 @@ serve(async (req: Request) => {
               return new Response(
                 JSON.stringify({
                   error: "Invalid promotion code",
-                  details:
-                    `The promotion code '${promoCode}' is not valid or has expired.`,
+                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
                 }),
                 {
                   status: 400,
@@ -701,9 +724,19 @@ serve(async (req: Request) => {
           }
         }
 
+        await assertSessionPricingOrExpire(session, {
+          priceId,
+          currency: requestedCurrency,
+          amount: expectedCheckoutAmount,
+        });
         console.log("Lifetime checkout session created:", {
           id: session.id,
           customerId,
+          pricingCountry: requestedCountry,
+          expectedCurrency: requestedCurrency,
+          expectedAmount: expectedCheckoutAmount,
+          sessionCurrency: session.currency,
+          amountSubtotal: session.amount_subtotal,
         });
 
         // Persist nonce keyed to the Stripe Checkout Session ID.
@@ -780,8 +813,7 @@ serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
-                details:
-                  `The promotion code '${promoCode}' is not valid or has expired.`,
+                details: `The promotion code '${promoCode}' is not valid or has expired.`,
               }),
               {
                 status: 400,
@@ -931,9 +963,19 @@ serve(async (req: Request) => {
         }
       }
 
+      await assertSessionPricingOrExpire(session, {
+        priceId,
+        currency: requestedCurrency,
+        amount: expectedCheckoutAmount,
+      });
       console.log("Checkout session created:", {
         id: session.id,
         customerId,
+        pricingCountry: requestedCountry,
+        expectedCurrency: requestedCurrency,
+        expectedAmount: expectedCheckoutAmount,
+        sessionCurrency: session.currency,
+        amountSubtotal: session.amount_subtotal,
       });
 
       // Persist a nonce keyed to the Stripe Checkout Session ID.
@@ -986,11 +1028,17 @@ serve(async (req: Request) => {
         type: stripeErr?.type,
         code: stripeErr?.code,
       });
+      reportCreateCheckoutSessionError("stripe_session_creation", stripeError, {
+        userId,
+        plan,
+        billingInterval,
+        pricingCountry: requestedCountry,
+        currency: requestedCurrency,
+      });
 
       return new Response(
         JSON.stringify({
           error: "Failed to create checkout session",
-          details: stripeErr?.message || String(stripeError),
         }),
         {
           status: 500,
@@ -1008,7 +1056,6 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: "Internal server error",
-        details: message,
       }),
       {
         status: 500,
