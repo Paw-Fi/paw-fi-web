@@ -6,6 +6,13 @@ import {
 } from "./regional-pricing.generated.ts";
 
 const DEFAULT_CHECKOUT_COUNTRY = "US";
+const COMMITMENT_UNAVAILABLE_COUNTRIES = new Set(["US", "SG", "AU"]);
+
+export function isCommitmentAvailableForCountry(countryCode: string): boolean {
+  return !COMMITMENT_UNAVAILABLE_COUNTRIES.has(
+    countryCode.trim().toUpperCase(),
+  );
+}
 
 export function buildRegionalPriceCacheKey(
   lookupKey: string,
@@ -27,18 +34,20 @@ export function resolveRegionalCheckoutMarket({
   country?: unknown;
   currency?: unknown;
 }): RegionalCheckoutSelection {
-  const normalizedCountry = typeof country === "string"
-    ? country.trim().toUpperCase()
-    : DEFAULT_CHECKOUT_COUNTRY;
+  const normalizedCountry =
+    typeof country === "string"
+      ? country.trim().toUpperCase()
+      : DEFAULT_CHECKOUT_COUNTRY;
 
   if (!isSupportedRegionalPricingCountry(normalizedCountry)) {
     throw new Error("Unsupported checkout country");
   }
 
   const market = getRegionalPricingMarket(normalizedCountry);
-  const normalizedCurrency = typeof currency === "string"
-    ? currency.trim().toUpperCase()
-    : market.currencyCode;
+  const normalizedCurrency =
+    typeof currency === "string"
+      ? currency.trim().toUpperCase()
+      : market.currencyCode;
 
   if (!isSupportedRegionalCurrency(normalizedCurrency)) {
     throw new Error("Unsupported checkout currency");
