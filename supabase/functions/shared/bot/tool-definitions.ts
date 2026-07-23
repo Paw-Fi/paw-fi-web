@@ -8,6 +8,7 @@ export function cloneBotToolDeclarations(
 
 type TransactionToolOptions = ToolDescriptionOptions & {
   includeMerchant?: boolean;
+  includeScope?: boolean;
 };
 
 type DescriptionMode = "rich" | "minimal";
@@ -26,6 +27,7 @@ type UpdateTransactionToolOptions = ToolDescriptionOptions & {
 
 type BudgetToolOptions = ToolDescriptionOptions & {
   includePocketDetails?: boolean;
+  requireAmountOnConfirm?: boolean;
 };
 
 type SetPocketToolOptions = ToolDescriptionOptions & {
@@ -90,6 +92,7 @@ function buildTransactionProperties(
   options: TransactionToolOptions = {},
 ): Record<string, unknown> {
   const mode = options.descriptionMode ?? "rich";
+  const includeScope = options.includeScope ?? true;
   return {
     type: transactionTypeSchema,
     amount:
@@ -126,37 +129,42 @@ function buildTransactionProperties(
       mode === "rich"
         ? { type: "STRING", description: "ISO Currency Code" }
         : stringSchema,
-    space_id:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description: "Optional: Space ID if it is a shared transaction",
-          }
-        : stringSchema,
-    space_name:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description: "Optional: Space name if user provided it",
-          }
-        : stringSchema,
-    space_type:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            enum: ["private_space", "shared_space"],
-            description: "Optional: private_space or shared_space.",
-          }
-        : stringSchema,
-    space_scope:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            enum: ["personal", "personal_account"],
-            description:
-              "Use only when the user explicitly says this transaction is for the personal account, overriding any default AI bot space.",
-          }
-        : stringSchema,
+    ...(includeScope
+      ? {
+          space_id:
+            mode === "rich"
+              ? {
+                  type: "STRING",
+                  description:
+                    "Optional: Space ID if it is a shared transaction",
+                }
+              : stringSchema,
+          space_name:
+            mode === "rich"
+              ? {
+                  type: "STRING",
+                  description: "Optional: Space name if user provided it",
+                }
+              : stringSchema,
+          space_type:
+            mode === "rich"
+              ? {
+                  type: "STRING",
+                  enum: ["private_space", "shared_space"],
+                  description: "Optional: private_space or shared_space.",
+                }
+              : stringSchema,
+          space_scope:
+            mode === "rich"
+              ? {
+                  type: "STRING",
+                  enum: ["personal", "personal_account"],
+                  description:
+                    "Use only when the user explicitly says this transaction is for the personal account, overriding any default AI bot space.",
+                }
+              : stringSchema,
+        }
+      : {}),
     wallet_name:
       mode === "rich"
         ? {
@@ -325,7 +333,10 @@ export function buildAddTransactionsBatchTool(
             : {}),
           items: {
             type: "OBJECT",
-            properties: buildTransactionProperties(options),
+            properties: buildTransactionProperties({
+              ...options,
+              includeScope: false,
+            }),
             required: ["type", "amount", "category"],
           },
         },
@@ -517,7 +528,8 @@ export function buildCreateSpaceInviteTool(
           mode === "rich"
             ? {
                 type: "NUMBER",
-                description: "Invite expiry in days. Use 7 by default, 0 for no expiry.",
+                description:
+                  "Invite expiry in days. Use 7 by default, 0 for no expiry.",
               }
             : numberSchema,
       },
@@ -613,6 +625,12 @@ export function buildUpdateTransactionTool(
                     description: "Optional: private_space or shared_space.",
                   }
                 : stringSchema,
+            space_scope: {
+              type: "STRING",
+              enum: ["personal", "personal_account"],
+              description:
+                "Use when moving the transaction back to the personal account.",
+            },
             wallet_id:
               mode === "rich"
                 ? {
@@ -762,14 +780,62 @@ export function buildFinancialInsightTool(
     name: "financial_insight",
     description:
       mode === "rich"
-        ? "Generate a financial health snapshot with verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Use when the user asks about financial situation/health/status."
-        : "Generate a financial health snapshot.",
+        ? "Authoritative aggregate for total spending, income, net cashflow, financial health, budget status, and category breakdowns. Includes recurring occurrences based on frequency. Always use this instead of list_expenses for totals or summaries."
+        : "Authoritative recurring-aware totals and financial summary. Use for spending, income, net, budget, or financial-health aggregates; never calculate totals from list_expenses.",
     parameters: {
       type: "OBJECT",
       properties: {
-        scope:
+        period: {
+          type: "STRING",
+          enum: [
+            "current_financial_period",
+            "last_financial_period",
+            "this_month",
+            "last_month",
+            "this_week",
+            "last_week",
+            "last_30_days",
+            "today",
+            "yesterday",
+            "this_year",
+            "all_time",
+            "custom",
+          ],
+          ...(mode === "rich"
+            ? { description: "Time period requested by the user." }
+            : {}),
+        },
+        date: stringSchema,
+        period_month: stringSchema,
+        start_date: stringSchema,
+        end_date: stringSchema,
+        currency:
           mode === "rich"
-            ? { type: "STRING", description: "Optional scope (e.g., month)" }
+            ? { type: "STRING", description: "Optional ISO currency code." }
+            : stringSchema,
+        ...buildScopeProperties(mode),
+        space_scope: {
+          type: "STRING",
+          enum: [
+            "personal",
+            "personal_account",
+            "private_space",
+            "shared",
+            "shared_space",
+          ],
+          ...(mode === "rich"
+            ? { description: "Account or space scope requested by the user." }
+            : {}),
+        },
+        household_id: stringSchema,
+        household_name: stringSchema,
+        wallet_name:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                description:
+                  "Optional wallet name. Use 'primary wallet' for the default wallet.",
+              }
             : stringSchema,
       },
     },
@@ -915,6 +981,7 @@ export function buildConfirmBudgetTool(
         ...buildScopeProperties(mode),
         pockets: buildBudgetPocketsSchema(options),
       },
+      ...(options.requireAmountOnConfirm ? { required: ["amount"] } : {}),
     },
   };
 }
@@ -974,7 +1041,8 @@ export function buildSetPocketTool(
             ? {
                 type: "ARRAY",
                 items: stringSchema,
-                description: "Optional transaction categories to link to this pocket",
+                description:
+                  "Optional transaction categories to link to this pocket",
               }
             : { type: "ARRAY", items: stringSchema },
         ...(options.includeColorIcon
@@ -1138,7 +1206,10 @@ export function buildManageRecurringTool(
             : stringSchema,
         frequency:
           mode === "rich"
-            ? { type: "STRING", enum: ["weekly", "monthly", "yearly"] }
+            ? {
+                type: "STRING",
+                enum: ["daily", "weekly", "biweekly", "monthly", "yearly"],
+              }
             : stringSchema,
         ...(options.includeRecurrenceRule
           ? {
@@ -1159,11 +1230,16 @@ export function buildManageRecurringTool(
           : {}),
         owner_type: ownerTypeSchema,
         privacy_scope: privacyScopeSchema,
+        wallet_name: stringSchema,
         space_id: stringSchema,
         space_name: stringSchema,
         space_type: {
           type: "STRING",
           enum: ["private_space", "shared_space"],
+        },
+        space_scope: {
+          type: "STRING",
+          enum: ["personal", "personal_account"],
         },
         payer_name: stringSchema,
         split_type: splitTypeSchema,

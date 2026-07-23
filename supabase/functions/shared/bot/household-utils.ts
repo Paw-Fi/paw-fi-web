@@ -88,10 +88,35 @@ export function hasExplicitBotSpaceScope(
   );
 }
 
+export function sanitizeBotToolResultForModel(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sanitizeBotToolResultForModel);
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => {
+        const modelKey = key
+          .replaceAll("household", "space")
+          .replaceAll("Household", "Space");
+        return [modelKey, sanitizeBotToolResultForModel(item)];
+      }),
+    );
+  }
+  if (typeof value !== "string") return value;
+  return sanitizeBotUserFacingText(value);
+}
+
+export function sanitizeBotUserFacingText(value: string): string {
+  return value
+    .replace(/\bhouseholds\b/gi, "shared spaces")
+    .replace(/\bhousehold\b/gi, "shared space");
+}
+
 export function shouldApplyPreferredSpaceDefault(
   toolName: string | null | undefined,
 ): boolean {
-  return !!toolName &&
+  return (
+    !!toolName &&
     [
       "add_transaction",
       "add_transactions_batch",
@@ -109,7 +134,8 @@ export function shouldApplyPreferredSpaceDefault(
       "create_wallet",
       "update_wallet",
       "create_wallet_transfer",
-    ].includes(toolName);
+    ].includes(toolName)
+  );
 }
 
 export function applyPreferredSpaceDefaultToToolCall(

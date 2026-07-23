@@ -39,6 +39,31 @@ function normalizeRow(row: any): LastListedTransaction | null {
   };
 }
 
+export async function validateActiveBotTransactionId(
+  supabase: SupabaseLike,
+  expenseId: string,
+): Promise<{ candidate: LastListedTransaction } | { error: string }> {
+  const { data, error } = await supabase
+    .from("expenses")
+    .select(
+      "id, amount_cents, currency, date, category, raw_text, merchant, type, household_id",
+    )
+    .eq("id", expenseId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) {
+    return { error: "Unable to verify the selected transaction." };
+  }
+  const candidate = normalizeRow(data);
+  if (!candidate) {
+    return {
+      error:
+        "That transaction is no longer available. List recent transactions and try again.",
+    };
+  }
+  return { candidate };
+}
+
 export async function resolveBotTransactionSelection(params: {
   supabase: SupabaseLike;
   userId: string;
@@ -60,7 +85,13 @@ export async function resolveBotTransactionSelection(params: {
     params.args,
     params.spaceNameByHouseholdId,
   );
-  if (!("error" in listedSelection)) return listedSelection;
+  if (!("error" in listedSelection)) {
+    if (!("candidate" in listedSelection)) return listedSelection;
+    return await validateActiveBotTransactionId(
+      params.supabase,
+      listedSelection.candidate.id,
+    );
+  }
 
   const match =
     params.args.match &&

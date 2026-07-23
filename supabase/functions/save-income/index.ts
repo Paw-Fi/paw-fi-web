@@ -448,12 +448,43 @@ Deno.serve(async (req: Request) => {
     const amountCents = Math.round(normalizedAmount * 100);
 
     let accountId: string | null = null;
-    if (body.accountId) {
-      const isInScope = await assertAccountInScope(supabase, body.accountId, {
-        userId,
-        householdId: resolvedHouseholdId,
-        currency,
-      });
+    const bodyRecord = body as unknown as Record<string, unknown>;
+    const hasCamelAccountId = Object.prototype.hasOwnProperty.call(
+      bodyRecord,
+      "accountId",
+    );
+    const hasSnakeAccountId = Object.prototype.hasOwnProperty.call(
+      bodyRecord,
+      "account_id",
+    );
+    const hasRequestedAccountId = hasCamelAccountId || hasSnakeAccountId;
+    const requestedAccountIdRaw = hasCamelAccountId
+      ? bodyRecord.accountId
+      : hasSnakeAccountId
+        ? bodyRecord.account_id
+        : undefined;
+    const requestedAccountId =
+      requestedAccountIdRaw == null ||
+      String(requestedAccountIdRaw).trim().length === 0
+        ? null
+        : sanitizeUuid(String(requestedAccountIdRaw));
+    if (
+      hasRequestedAccountId &&
+      requestedAccountIdRaw != null &&
+      String(requestedAccountIdRaw).trim().length > 0
+    ) {
+      if (!requestedAccountId) {
+        return errorResponse("Invalid accountId", 400, "VALIDATION_ERROR");
+      }
+      const isInScope = await assertAccountInScope(
+        supabase,
+        requestedAccountId,
+        {
+          userId,
+          householdId: resolvedHouseholdId,
+          currency,
+        },
+      );
       if (!isInScope) {
         return errorResponse(
           "Provided accountId does not belong to this scope or currency",
@@ -461,9 +492,9 @@ Deno.serve(async (req: Request) => {
           "VALIDATION_ERROR",
         );
       } else {
-        accountId = body.accountId;
+        accountId = requestedAccountId;
       }
-    } else {
+    } else if (!hasRequestedAccountId) {
       accountId = await resolveDefaultAccountId(supabase, {
         userId,
         householdId: resolvedHouseholdId,

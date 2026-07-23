@@ -281,6 +281,7 @@ function snapshotRowComparisonKey(row: FinancialSnapshotRow): string {
     row.account_id ?? "",
     row.split_group_id ?? "",
     `${row.raw_text ?? ""}`.trim().toLowerCase(),
+    `${row.type ?? "expense"}`.trim().toLowerCase(),
   ].join("|");
 }
 

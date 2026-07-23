@@ -70,6 +70,7 @@ import {
 import {
   reportBotBackendError,
   reportBotToolInvokeFailure,
+  shouldReportBotToolResultError,
 } from "../shared/bot/error-reporting.ts";
 import {
   buildGeminiHighDemandMessage as buildGeminiBusyMessage,
@@ -96,7 +97,10 @@ import {
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
-import { resolveBotTransactionSelection } from "../shared/bot/transaction-selection.ts";
+import {
+  resolveBotTransactionSelection,
+  validateActiveBotTransactionId,
+} from "../shared/bot/transaction-selection.ts";
 import {
   buildAddTransactionsBatchTool,
   buildAddTransactionTool,
@@ -155,8 +159,11 @@ import {
 import {
   applyPreferredSpaceDefaultToToolCall,
   ensureHouseholdMember,
+  hasExplicitBotSpaceScope,
   resolveBotSpaceScope,
   resolveHouseholdSplitConfig,
+  sanitizeBotToolResultForModel,
+  sanitizeBotUserFacingText,
   upsertBotSpaceMetaFromToolResult,
 } from "../shared/bot/household-utils.ts";
 import { jsonResponse } from "../shared/bot/http-utils.ts";
@@ -166,6 +173,15 @@ import {
 } from "../shared/bot/conversation-context.ts";
 import { finalizeBotResponseText } from "../shared/bot/response-finalization.ts";
 import {
+  buildFinancialInsightArgs,
+  FINANCIAL_INSIGHT_PROMPT_RULE,
+  isFinancialInsightChartRequested,
+  orderFinancialInsightAfterWrites,
+  routeFinancialInsightToolCall,
+  shouldUseFinancialInsight,
+} from "../shared/bot/financial-insight-intent.ts";
+import { executeBotFinancialInsight } from "../shared/bot/financial-insight-tool.ts";
+import {
   buildChoiceSummary,
   clearLastListedTransactions,
   type LastListedTransaction,
@@ -174,7 +190,6 @@ import {
   normalizeMatchString,
   normalizeSessionState,
   readLastListedTransactions,
-  resolveLastListedSelection,
   saveSessionState,
   type SessionState,
   setLastListedTransactions,
@@ -194,8 +209,7 @@ const SYSTEM_INSTRUCTION = buildBotSystemInstruction({
     "When calling tools (especially list_expenses), include space_id or space_name when known, or set space_scope to personal account / private space / shared space so the correct account is queried.",
   bulkImportRule:
     "When the user uploads a receipt, bank statement, or file with multiple transactions, use 'add_transactions_batch' to save them all at once.",
-  financialSnapshotRule:
-    'For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.',
+  financialSnapshotRule: FINANCIAL_INSIGHT_PROMPT_RULE,
   messageFormattingRules: `MESSAGE FORMATTING (Telegram-specific):
 - Your response is sent as **plain text** — do NOT use Markdown symbols like *bold* or _italic_ because they will appear as literal characters, not formatted text.
 - Use emoji bullets (✅, 📊, 💰, •) and line breaks for visual structure.
@@ -1043,6 +1057,12 @@ Deno.serve(async (req: Request) => {
             .single();
           if (sessionError || !newSession) {
             console.error("Failed to create chat session:", sessionError);
+            await reportBotBackendError({
+              functionName: "telegram-ai-bot",
+              phase: "session_create",
+              error: sessionError || new Error("Chat session was not returned"),
+              traceId,
+            });
             await sendTelegramMessage(
               TELEGRAM_BOT_TOKEN,
               chatId,
@@ -1173,7 +1193,10 @@ Deno.serve(async (req: Request) => {
           buildFinancialInsightTool({ descriptionMode: "minimal" }),
           buildGetBudgetTool({ descriptionMode: "minimal" }),
           buildDraftBudgetTool({ descriptionMode: "minimal" }),
-          buildConfirmBudgetTool({ descriptionMode: "minimal" }),
+          buildConfirmBudgetTool({
+            descriptionMode: "minimal",
+            requireAmountOnConfirm: true,
+          }),
           buildSetBudgetTool({ descriptionMode: "minimal" }),
           buildSetPocketTool({
             descriptionMode: "minimal",
@@ -1309,8 +1332,48 @@ Deno.serve(async (req: Request) => {
           }
         } catch (error) {
           console.error("[telegram-ai-bot] wallet tool routing failed:", error);
+          await reportBotBackendError({
+            functionName: "telegram-ai-bot",
+            phase: "wallet_tool_routing",
+            error,
+            traceId,
+          });
           debugNotes.push(`wallet-routing-error: ${String(error)}`);
         }
+
+        try {
+          const financialInsightRouting = await routeFinancialInsightToolCall({
+            userMessage: incomingText,
+            functionCalls,
+            chat: activeChat as any,
+          });
+          response = financialInsightRouting.response || response;
+          functionCalls = financialInsightRouting.functionCalls;
+          if (financialInsightRouting.routed) {
+            finalResponseText = "";
+            debugNotes.push("financial insight tool routed");
+            console.log("[telegram-ai-bot] financial insight tool routed", {
+              traceId,
+              functionCalls: functionCalls.map((call) => call?.name),
+            });
+          }
+        } catch (error) {
+          console.error(
+            "[telegram-ai-bot] financial insight routing failed:",
+            error,
+          );
+          await reportBotBackendError({
+            functionName: "telegram-ai-bot",
+            phase: "financial_insight_routing",
+            error,
+            traceId,
+          });
+          debugNotes.push(`financial-insight-routing-error: ${String(error)}`);
+        }
+        functionCalls = orderFinancialInsightAfterWrites({
+          userMessage: incomingText,
+          functionCalls,
+        });
 
         // Defense against AI hallucinating a save without a tool call.
         // Intent stays model-driven; only an unsafe model claim can trigger repair.
@@ -1370,6 +1433,12 @@ Deno.serve(async (req: Request) => {
                 "[telegram-ai-bot] forced-tool-call retry failed:",
                 error,
               );
+              await reportBotBackendError({
+                functionName: "telegram-ai-bot",
+                phase: "forced_tool_call_retry",
+                error,
+                traceId,
+              });
               debugNotes.push(`forced-tool-call-retry-error: ${String(error)}`);
               finalResponseText = buildUnsafeMutationClaimFallback();
               functionCalls = [];
@@ -1397,6 +1466,11 @@ Deno.serve(async (req: Request) => {
           for (const call of functionCalls) {
             let toolResult: any = {};
             applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
+            const executionToolName =
+              call.name === "list_expenses" &&
+              shouldUseFinancialInsight(incomingText)
+                ? "financial_insight"
+                : call.name;
 
             console.log("[telegram-ai-bot] tool call", {
               traceId,
@@ -1624,7 +1698,7 @@ Deno.serve(async (req: Request) => {
                     }
                   }
                 }
-              } else if (call.name === "list_expenses") {
+              } else if (executionToolName === "list_expenses") {
                 const { householdId, spaceMeta } = resolveBotSpaceScope(
                   call.args,
                   spaceMap,
@@ -1638,7 +1712,10 @@ Deno.serve(async (req: Request) => {
                   };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -1771,7 +1848,10 @@ Deno.serve(async (req: Request) => {
                   toolResult = { error: transactionResult.error };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -1789,7 +1869,10 @@ Deno.serve(async (req: Request) => {
                   };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -1815,7 +1898,10 @@ Deno.serve(async (req: Request) => {
                   toolResult = { error: requestedWallet.error };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -1832,7 +1918,10 @@ Deno.serve(async (req: Request) => {
                   toolResult = { error: currencyResult.error };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -1902,7 +1991,10 @@ Deno.serve(async (req: Request) => {
                   toolResult = { error: "No transactions provided" };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -1919,7 +2011,10 @@ Deno.serve(async (req: Request) => {
                   };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -1995,7 +2090,10 @@ Deno.serve(async (req: Request) => {
                     currency: currencyResult.currency,
                     accountId: requestedWallet.accountId ?? undefined,
                     source: row.source,
-                    ownerType: row.owner_type || "me",
+                    ownerType:
+                      row.owner_type === "space"
+                        ? "household"
+                        : row.owner_type || "me",
                     privacyScope: row.privacy_scope || "full",
                     payerUserId: splitConfig.payerUserId,
                     customSplits: splitConfig.customSplits,
@@ -2011,7 +2109,10 @@ Deno.serve(async (req: Request) => {
                   toolResult = { error: batchBuildError };
                   lastToolResult = toolResult;
                   toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
+                    functionResponse: {
+                      name: call.name,
+                      response: sanitizeBotToolResultForModel(toolResult),
+                    },
                   });
                   continue;
                 }
@@ -2172,8 +2273,22 @@ Deno.serve(async (req: Request) => {
                   (await createQuickChartShortUrl(chartConfig)) || longUrl;
                 toolResult = { url: chartUrl };
                 lastGeneratedChartUrl = chartUrl;
-              } else if (call.name === "financial_insight") {
-                toolResult = { success: true };
+              } else if (executionToolName === "financial_insight") {
+                toolResult = await executeBotFinancialInsight({
+                  supabase,
+                  userId,
+                  contactId: contact.id,
+                  currency: userCurrency,
+                  timezone: userTimezone,
+                  args:
+                    call.name === "list_expenses"
+                      ? buildFinancialInsightArgs(incomingText, call.args || {})
+                      : call.args || {},
+                  spaceMap,
+                  logPrefix: "telegram-ai-bot",
+                  chartRequested:
+                    isFinancialInsightChartRequested(incomingText),
+                });
               } else if (call.name === "get_budget") {
                 const dateStr = (
                   call.args.date || formatDateInTimeZone(userTimezone)
@@ -2438,7 +2553,7 @@ Deno.serve(async (req: Request) => {
                     toolResponses.push({
                       functionResponse: {
                         name: call.name,
-                        response: toolResult,
+                        response: sanitizeBotToolResultForModel(toolResult),
                       },
                     });
                     continue;
@@ -2546,18 +2661,7 @@ Deno.serve(async (req: Request) => {
                       updates,
                     };
                     const hasScopeUpdate =
-                      Object.prototype.hasOwnProperty.call(
-                        updatesArgs,
-                        "household_id",
-                      ) ||
-                      Object.prototype.hasOwnProperty.call(
-                        updatesArgs,
-                        "household_name",
-                      ) ||
-                      Object.prototype.hasOwnProperty.call(
-                        updatesArgs,
-                        "householdName",
-                      );
+                      hasExplicitBotSpaceScope(updatesArgs);
                     const scopeResult = hasScopeUpdate
                       ? resolveBotSpaceScope(updatesArgs, spaceMap)
                       : {
@@ -2822,11 +2926,13 @@ Deno.serve(async (req: Request) => {
                 ) =>
                   householdId ? spaceMap.get(householdId)?.name || null : null;
 
-                const resolved = resolveLastListedSelection(
-                  lastRead.items || [],
-                  call.args,
+                const resolved = await resolveBotTransactionSelection({
+                  supabase,
+                  userId,
+                  args: call.args,
+                  items: lastRead.items || [],
                   spaceNameByHouseholdId,
-                );
+                });
                 if ("needs_disambiguation" in resolved) {
                   toolResult = resolved;
                 } else if ("error" in resolved) {
@@ -2868,21 +2974,10 @@ Deno.serve(async (req: Request) => {
                     toolResult = { error: amountResult.error };
                   } else {
                     const amount = amountResult.amount;
-                    let householdId = call.args.household_id || null;
-                    const householdName = (call.args.household_name || "")
-                      .toString()
-                      .toLowerCase();
-                    let spaceMeta = householdId
-                      ? spaceMap.get(householdId)
-                      : undefined;
-                    if (
-                      !spaceMeta &&
-                      householdName &&
-                      spaceMap.has(householdName)
-                    ) {
-                      spaceMeta = spaceMap.get(householdName);
-                      householdId = spaceMeta?.id ?? null;
-                    }
+                    const { householdId, spaceMeta } = resolveBotSpaceScope(
+                      call.args,
+                      spaceMap,
+                    );
 
                     if (
                       householdId &&
@@ -2898,7 +2993,7 @@ Deno.serve(async (req: Request) => {
                       toolResponses.push({
                         functionResponse: {
                           name: call.name,
-                          response: toolResult,
+                          response: sanitizeBotToolResultForModel(toolResult),
                         },
                       });
                       continue;
@@ -3053,21 +3148,10 @@ Deno.serve(async (req: Request) => {
                     userId,
                     dateStr,
                   );
-                  let householdId = call.args.household_id || null;
-                  const householdName = (call.args.household_name || "")
-                    .toString()
-                    .toLowerCase();
-                  let spaceMeta = householdId
-                    ? spaceMap.get(householdId)
-                    : undefined;
-                  if (
-                    !spaceMeta &&
-                    householdName &&
-                    spaceMap.has(householdName)
-                  ) {
-                    spaceMeta = spaceMap.get(householdName);
-                    householdId = spaceMeta?.id ?? null;
-                  }
+                  const { householdId, spaceMeta } = resolveBotSpaceScope(
+                    call.args,
+                    spaceMap,
+                  );
                   if (
                     householdId &&
                     !(await ensureHouseholdMember(
@@ -3082,7 +3166,7 @@ Deno.serve(async (req: Request) => {
                     toolResponses.push({
                       functionResponse: {
                         name: call.name,
-                        response: toolResult,
+                        response: sanitizeBotToolResultForModel(toolResult),
                       },
                     });
                     continue;
@@ -3139,24 +3223,26 @@ Deno.serve(async (req: Request) => {
                       ? spaceMap.get(householdId)?.name || null
                       : null;
 
-                  const resolved = !expenseIdDirect
-                    ? resolveLastListedSelection(
-                        readLastListedTransactions(sessionState).items || [],
-                        call.args,
-                        spaceNameByHouseholdId,
+                  const resolved = expenseIdDirect
+                    ? await validateActiveBotTransactionId(
+                        supabase,
+                        expenseIdDirect,
                       )
-                    : null;
+                    : await resolveBotTransactionSelection({
+                        supabase,
+                        userId,
+                        args: call.args,
+                        items:
+                          readLastListedTransactions(sessionState).items || [],
+                        spaceNameByHouseholdId,
+                      });
 
-                  if (resolved && "needs_disambiguation" in resolved) {
+                  if ("needs_disambiguation" in resolved) {
                     toolResult = resolved;
-                  } else if (resolved && "error" in resolved) {
+                  } else if ("error" in resolved) {
                     toolResult = { error: resolved.error };
                   } else {
-                    const expenseId =
-                      expenseIdDirect ||
-                      (resolved && "candidate" in resolved
-                        ? resolved.candidate.id
-                        : "");
+                    const expenseId = resolved.candidate.id;
                     if (!expenseId) {
                       toolResult = {
                         error:
@@ -3196,24 +3282,26 @@ Deno.serve(async (req: Request) => {
                     householdId
                       ? spaceMap.get(householdId)?.name || null
                       : null;
-                  const resolved = !expenseIdDirect
-                    ? resolveLastListedSelection(
-                        readLastListedTransactions(sessionState).items || [],
-                        call.args,
-                        spaceNameByHouseholdId,
+                  const resolved = expenseIdDirect
+                    ? await validateActiveBotTransactionId(
+                        supabase,
+                        expenseIdDirect,
                       )
-                    : null;
+                    : await resolveBotTransactionSelection({
+                        supabase,
+                        userId,
+                        args: call.args,
+                        items:
+                          readLastListedTransactions(sessionState).items || [],
+                        spaceNameByHouseholdId,
+                      });
 
-                  if (resolved && "needs_disambiguation" in resolved) {
+                  if ("needs_disambiguation" in resolved) {
                     toolResult = resolved;
-                  } else if (resolved && "error" in resolved) {
+                  } else if ("error" in resolved) {
                     toolResult = { error: resolved.error };
                   } else {
-                    const expenseId =
-                      expenseIdDirect ||
-                      (resolved && "candidate" in resolved
-                        ? resolved.candidate.id
-                        : "");
+                    const expenseId = resolved.candidate.id;
                     if (!expenseId) {
                       toolResult = {
                         error:
@@ -3242,7 +3330,8 @@ Deno.serve(async (req: Request) => {
                           toolResponses.push({
                             functionResponse: {
                               name: call.name,
-                              response: toolResult,
+                              response:
+                                sanitizeBotToolResultForModel(toolResult),
                             },
                           });
                           continue;
@@ -3329,7 +3418,7 @@ Deno.serve(async (req: Request) => {
                     toolResponses.push({
                       functionResponse: {
                         name: call.name,
-                        response: toolResult,
+                        response: sanitizeBotToolResultForModel(toolResult),
                       },
                     });
                     continue;
@@ -3446,6 +3535,16 @@ Deno.serve(async (req: Request) => {
               toolResult = { error: String(e) };
             }
 
+            if (shouldReportBotToolResultError(toolResult?.error)) {
+              await reportBotBackendError({
+                functionName: "telegram-ai-bot",
+                phase: "tool_result",
+                error: toolResult.error,
+                traceId,
+                context: { toolName: call.name },
+              });
+            }
+
             console.log("[telegram-ai-bot] tool result", {
               traceId,
               name: call.name,
@@ -3493,7 +3592,7 @@ Deno.serve(async (req: Request) => {
             toolResponses.push({
               functionResponse: {
                 name: call.name,
-                response: toolResult,
+                response: sanitizeBotToolResultForModel(toolResult),
               },
             });
           }
@@ -3587,6 +3686,7 @@ Deno.serve(async (req: Request) => {
             console.log(label, { traceId, ...context });
           },
         });
+        finalResponseText = sanitizeBotUserFacingText(finalResponseText);
 
         // Persist the incoming user message AFTER Gemini/tool flow so history doesn't echo it.
         const chartFromText = extractQuickChartUrl(finalResponseText);

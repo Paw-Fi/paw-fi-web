@@ -198,9 +198,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -269,8 +270,8 @@ Deno.serve(async (req: Request) => {
     if (!detection.isGpt && !sanitizedCategory) {
       return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
     }
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -430,20 +431,53 @@ Deno.serve(async (req: Request) => {
 
     // Convert amount to cents
     const amountCents = Math.round(normalizedAmount * 100);
+    const bodyRecord = body as unknown as Record<string, unknown>;
+    const hasCamelAccountId = Object.prototype.hasOwnProperty.call(
+      bodyRecord,
+      "accountId",
+    );
+    const hasSnakeAccountId = Object.prototype.hasOwnProperty.call(
+      bodyRecord,
+      "account_id",
+    );
+    const hasRequestedAccountId = hasCamelAccountId || hasSnakeAccountId;
+    const requestedAccountIdRaw = hasCamelAccountId
+      ? bodyRecord.accountId
+      : hasSnakeAccountId
+        ? bodyRecord.account_id
+        : undefined;
+    const requestedAccountId =
+      requestedAccountIdRaw == null ||
+      String(requestedAccountIdRaw).trim().length === 0
+        ? null
+        : sanitizeUuid(String(requestedAccountIdRaw));
 
     async function resolveScopedAccountId(
       scopeHouseholdId: string | null,
     ): Promise<string | null> {
-      if (body.accountId) {
-        const isInScope = await assertAccountInScope(supabase, body.accountId, {
-          userId: userId as string,
-          householdId: scopeHouseholdId,
-          currency,
-        });
+      if (hasRequestedAccountId) {
+        if (
+          requestedAccountIdRaw == null ||
+          String(requestedAccountIdRaw).trim().length === 0
+        ) {
+          return null;
+        }
+        if (!requestedAccountId) {
+          throw new Error("ACCOUNT_SCOPE_MISMATCH");
+        }
+        const isInScope = await assertAccountInScope(
+          supabase,
+          requestedAccountId,
+          {
+            userId: userId as string,
+            householdId: scopeHouseholdId,
+            currency,
+          },
+        );
         if (!isInScope) {
           throw new Error("ACCOUNT_SCOPE_MISMATCH");
         }
-        return body.accountId;
+        return requestedAccountId;
       }
 
       return await resolveDefaultAccountId(supabase, {
@@ -832,19 +866,18 @@ Deno.serve(async (req: Request) => {
       }
       const splitType = buildResult.group.split_type;
 
-      let sharedScopeAccountId: string | null = await resolveDefaultAccountId(
-        supabase,
-        {
-          userId,
-          householdId: body.householdId,
-          currency,
-        },
-      );
+      let sharedScopeAccountId: string | null = hasRequestedAccountId
+        ? null
+        : await resolveDefaultAccountId(supabase, {
+            userId,
+            householdId: body.householdId,
+            currency,
+          });
 
-      if (body.accountId) {
+      if (requestedAccountId) {
         const isInSharedScope = await assertAccountInScope(
           supabase,
-          body.accountId,
+          requestedAccountId,
           {
             userId,
             householdId: body.householdId,
@@ -852,7 +885,7 @@ Deno.serve(async (req: Request) => {
           },
         );
         if (isInSharedScope) {
-          sharedScopeAccountId = body.accountId;
+          sharedScopeAccountId = requestedAccountId;
         } else {
           return errorResponse(
             "Provided accountId does not belong to this scope or currency",
@@ -860,17 +893,6 @@ Deno.serve(async (req: Request) => {
             "VALIDATION_ERROR",
           );
         }
-      }
-
-      if (!sharedScopeAccountId) {
-        console.error(
-          "[save-expense] Failed to resolve household account for atomic split",
-        );
-        return errorResponse(
-          "Failed to finalize household split",
-          500,
-          "SERVER_ERROR",
-        );
       }
 
       const { error: commitSplitError } = await commitHouseholdSplitRecords({

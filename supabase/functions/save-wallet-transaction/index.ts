@@ -51,8 +51,8 @@ import {
   normalizeWalletCaptureSource,
   resolveStrongWalletCaptureCurrencyEvidence,
   resolveWalletCaptureCurrency,
-  resolveWalletCaptureScope,
   resolveWalletCaptureDefaultAccount,
+  resolveWalletCaptureScope,
   resolveWalletTransactionCurrency,
   resolveWalletTransactionDate,
   resolveWalletTransactionPackageName,
@@ -1999,7 +1999,34 @@ Deno.serve(async (req: Request) => {
     const amountCents = Math.round(tx.amount * 100);
     const isPortfolio = body.isPortfolio === true;
     const householdId = sanitizeUuid(body.householdId);
-    const requestedAccountId = sanitizeUuid(body.accountId);
+    const bodyRecord = body as unknown as Record<string, unknown>;
+    const hasCamelAccountId = Object.prototype.hasOwnProperty.call(
+      bodyRecord,
+      "accountId",
+    );
+    const hasSnakeAccountId = Object.prototype.hasOwnProperty.call(
+      bodyRecord,
+      "account_id",
+    );
+    const hasRequestedAccountId = hasCamelAccountId || hasSnakeAccountId;
+    const requestedAccountIdRaw = hasCamelAccountId
+      ? bodyRecord.accountId
+      : hasSnakeAccountId
+        ? bodyRecord.account_id
+        : undefined;
+    const requestedAccountId =
+      requestedAccountIdRaw == null ||
+      String(requestedAccountIdRaw).trim().length === 0
+        ? null
+        : sanitizeUuid(String(requestedAccountIdRaw));
+    if (
+      hasRequestedAccountId &&
+      requestedAccountIdRaw != null &&
+      String(requestedAccountIdRaw).trim().length > 0 &&
+      !requestedAccountId
+    ) {
+      return errorResponse("Invalid accountId", 400, "VALIDATION_ERROR");
+    }
     const description = buildDescription(tx);
     const transactionType =
       typeof tx.type === "string" && tx.type.trim().toLowerCase() === "income"
@@ -2235,7 +2262,7 @@ Deno.serve(async (req: Request) => {
     });
     const currency = validateCurrency(resolvedCaptureCurrency ?? "USD");
 
-    if (!accountId) {
+    if (!accountId && !hasRequestedAccountId) {
       try {
         accountId = await resolveWalletCaptureDefaultAccount(supabase, {
           userId,

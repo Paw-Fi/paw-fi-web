@@ -233,6 +233,17 @@ Deno.test("golden platform-specific schema differences are explicit", () => {
     "WhatsApp list_expenses has no space_scope",
   );
 
+  const telegramInsight = telegramTools()[12];
+  const whatsappInsight = twilioWhatsAppTools()[17];
+  for (const insight of [telegramInsight, whatsappInsight]) {
+    assert("period" in properties(insight), "Insight exposes period");
+    assert("start_date" in properties(insight), "Insight exposes start_date");
+    assert("end_date" in properties(insight), "Insight exposes end_date");
+    assert("currency" in properties(insight), "Insight exposes currency");
+    assert("space_scope" in properties(insight), "Insight exposes space_scope");
+    assert("wallet_name" in properties(insight), "Insight exposes wallet_name");
+  }
+
   const telegramRecurring = telegramTools()[21];
   const twilioRecurring = twilioWhatsAppTools()[18];
   assert(
