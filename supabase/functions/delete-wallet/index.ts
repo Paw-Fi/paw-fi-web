@@ -4,8 +4,8 @@ import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { getAccountOrNull, sanitizeUuid } from "../shared/accounts.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import {
-  removePlaidConnection,
   type PlaidRemovableConnection,
+  removePlaidConnection,
 } from "../shared/plaid-remove.ts";
 
 type FunctionSupabaseClient = ReturnType<
@@ -274,61 +274,64 @@ Deno.serve(async (req: Request) => {
     if (!isRecord(deleteResult) || deleteResult.success !== true) {
       const code = isRecord(deleteResult) ? deleteResult.code : null;
       const status = statusForCode(code);
-      const errorMessage = isRecord(deleteResult) &&
-          typeof deleteResult.error === "string"
-        ? deleteResult.error
-        : "Failed to delete wallet";
+      const errorMessage =
+        isRecord(deleteResult) && typeof deleteResult.error === "string"
+          ? deleteResult.error
+          : "Failed to delete wallet";
       const errorCode = typeof code === "string" ? code : "SERVER_ERROR";
       return jsonResponse(
         isRecord(deleteResult)
           ? {
-            ...deleteResult,
-            success: false,
-            error: errorMessage,
-            message: typeof deleteResult.message === "string"
-              ? deleteResult.message
-              : errorMessage,
-            code: errorCode,
-            errorCode,
-            status,
-          }
+              ...deleteResult,
+              success: false,
+              error: errorMessage,
+              message:
+                typeof deleteResult.message === "string"
+                  ? deleteResult.message
+                  : errorMessage,
+              code: errorCode,
+              errorCode,
+              status,
+            }
           : {
-            success: false,
-            error: "Failed to delete wallet",
-            message: "Failed to delete wallet",
-            code: "SERVER_ERROR",
-            errorCode: "SERVER_ERROR",
-            status,
-          },
+              success: false,
+              error: "Failed to delete wallet",
+              message: "Failed to delete wallet",
+              code: "SERVER_ERROR",
+              errorCode: "SERVER_ERROR",
+              status,
+            },
         status,
       );
     }
 
-    const deleteData = isRecord(deleteResult.data)
-      ? deleteResult.data
-      : {};
+    const deleteData = isRecord(deleteResult.data) ? deleteResult.data : {};
     const rpcBank = isRecord(deleteData.bank) ? deleteData.bank : null;
     let bankCleanup: BankCleanupResult = rpcBank
       ? {
-        linkedBankAccountId: typeof rpcBank.linkedBankAccountId === "string"
-          ? rpcBank.linkedBankAccountId
-          : null,
-        bankConnectionId: typeof rpcBank.bankConnectionId === "string"
-          ? rpcBank.bankConnectionId
-          : null,
-        bankAccountStatus: typeof rpcBank.bankAccountStatus === "string"
-          ? rpcBank.bankAccountStatus
-          : null,
-        bankConnectionStatus: typeof rpcBank.bankConnectionStatus === "string"
-          ? rpcBank.bankConnectionStatus
-          : null,
-      }
+          linkedBankAccountId:
+            typeof rpcBank.linkedBankAccountId === "string"
+              ? rpcBank.linkedBankAccountId
+              : null,
+          bankConnectionId:
+            typeof rpcBank.bankConnectionId === "string"
+              ? rpcBank.bankConnectionId
+              : null,
+          bankAccountStatus:
+            typeof rpcBank.bankAccountStatus === "string"
+              ? rpcBank.bankAccountStatus
+              : null,
+          bankConnectionStatus:
+            typeof rpcBank.bankConnectionStatus === "string"
+              ? rpcBank.bankConnectionStatus
+              : null,
+        }
       : {
-        linkedBankAccountId: account.linked_bank_account_id ?? null,
-        bankConnectionId: null,
-        bankAccountStatus: null,
-        bankConnectionStatus: null,
-      };
+          linkedBankAccountId: account.linked_bank_account_id ?? null,
+          bankConnectionId: null,
+          bankAccountStatus: null,
+          bankConnectionStatus: null,
+        };
 
     try {
       bankCleanup = await cleanupLinkedBankAccount({
@@ -343,8 +346,8 @@ Deno.serve(async (req: Request) => {
       );
       bankCleanup = {
         ...bankCleanup,
-        bankConnectionStatus: bankCleanup.bankConnectionStatus ??
-          "cleanup_failed",
+        bankConnectionStatus:
+          bankCleanup.bankConnectionStatus ?? "cleanup_failed",
       };
     }
 
@@ -483,8 +486,7 @@ function walletLogoStoragePath(params: {
       return null;
     }
 
-    const expectedPrefix =
-      `/storage/v1/object/public/public/${params.userId}/wallet-logos/`;
+    const expectedPrefix = `/storage/v1/object/public/public/${params.userId}/wallet-logos/`;
     const decodedPathname = decodeURIComponent(url.pathname);
     if (!decodedPathname.startsWith(expectedPrefix)) {
       return null;
@@ -541,9 +543,8 @@ async function cleanupLinkedBankAccount(params: {
   if (bankAccountError) {
     throw bankAccountError;
   }
-  const bankAccountId = typeof bankAccount?.id === "string"
-    ? bankAccount.id
-    : null;
+  const bankAccountId =
+    typeof bankAccount?.id === "string" ? bankAccount.id : null;
   if (!bankAccountId) {
     return {
       ...emptyResult,
@@ -551,9 +552,10 @@ async function cleanupLinkedBankAccount(params: {
     };
   }
 
-  const bankConnectionId = typeof bankAccount?.bank_connection_id === "string"
-    ? bankAccount.bank_connection_id
-    : null;
+  const bankConnectionId =
+    typeof bankAccount?.bank_connection_id === "string"
+      ? bankAccount.bank_connection_id
+      : null;
   const { data: sharedWallets, error: sharedWalletsError } =
     await params.supabase
       .from("accounts")
@@ -594,13 +596,13 @@ async function cleanupLinkedBankAccount(params: {
     };
   }
 
-  const { data: activeSiblings, error: activeSiblingsError } = await params
-    .supabase
-    .from("bank_accounts")
-    .select("id")
-    .eq("bank_connection_id", bankConnectionId)
-    .neq("id", bankAccountId)
-    .eq("status", "active");
+  const { data: activeSiblings, error: activeSiblingsError } =
+    await params.supabase
+      .from("bank_accounts")
+      .select("id")
+      .eq("bank_connection_id", bankConnectionId)
+      .neq("id", bankAccountId)
+      .eq("status", "active");
   if (activeSiblingsError) {
     throw activeSiblingsError;
   }
@@ -624,20 +626,20 @@ async function cleanupLinkedBankAccount(params: {
     throw siblingBankAccountsError;
   }
 
-  const siblingBankAccountIds = ((siblingBankAccounts || []) as Array<
-    { id?: string | null }
-  >)
+  const siblingBankAccountIds = (
+    (siblingBankAccounts || []) as Array<{ id?: string | null }>
+  )
     .map((row) => row.id)
     .filter((id): id is string => Boolean(id));
   if (siblingBankAccountIds.length > 0) {
-    const { data: siblingWallets, error: siblingWalletsError } = await params
-      .supabase
-      .from("accounts")
-      .select("id")
-      .in("linked_bank_account_id", siblingBankAccountIds)
-      .eq("is_archived", false)
-      .neq("id", params.accountId)
-      .limit(1);
+    const { data: siblingWallets, error: siblingWalletsError } =
+      await params.supabase
+        .from("accounts")
+        .select("id")
+        .in("linked_bank_account_id", siblingBankAccountIds)
+        .eq("is_archived", false)
+        .neq("id", params.accountId)
+        .limit(1);
     if (siblingWalletsError) {
       throw siblingWalletsError;
     }
@@ -693,12 +695,12 @@ async function cleanupLinkedBankAccount(params: {
       bankConnectionStatus: "removed",
     };
   } catch (error) {
-    const { data: removalState, error: removalStateError } = await params
-      .supabase
-      .from("bank_connections")
-      .select("item_status, item_health_state")
-      .eq("id", bankConnectionId)
-      .maybeSingle();
+    const { data: removalState, error: removalStateError } =
+      await params.supabase
+        .from("bank_connections")
+        .select("item_status, item_health_state")
+        .eq("id", bankConnectionId)
+        .maybeSingle();
     if (removalStateError) {
       throw removalStateError;
     }

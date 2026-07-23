@@ -4,12 +4,12 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   buildWalletCaptureIdempotencyKey,
-  ensureWalletCaptureSpendingAccount,
   getLocalYyyyMmDdInTimeZone,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureRecurrenceRule,
   normalizeWalletCaptureSource,
   resolveWalletCaptureCurrency,
+  resolveWalletCaptureDefaultAccount,
   resolveWalletCaptureScope,
   resolveWalletTransactionCurrency,
   resolveWalletTransactionDate,
@@ -279,18 +279,18 @@ Deno.test("wallet capture rejects incomplete recurring schedules", () => {
 });
 
 Deno.test(
-  "wallet capture can ensure the same-currency Spending account",
+  "wallet capture resolves an existing same-currency default account",
   async () => {
     let receivedArgs: Record<string, unknown> | null = null;
     const supabase = {
       rpc: (name: string, args: Record<string, unknown>) => {
-        assertEquals(name, "ensure_spending_account_for_currency");
+        assertEquals(name, "resolve_default_account");
         receivedArgs = args;
         return Promise.resolve({ data: "wallet-eur", error: null });
       },
     };
 
-    const accountId = await ensureWalletCaptureSpendingAccount(supabase, {
+    const accountId = await resolveWalletCaptureDefaultAccount(supabase, {
       userId: "user-1",
       householdId: null,
       currency: "EUR",
@@ -302,5 +302,22 @@ Deno.test(
       p_household_id: null,
       p_currency: "EUR",
     });
+  },
+);
+
+Deno.test(
+  "wallet capture remains unbound when no default account exists",
+  async () => {
+    const supabase = {
+      rpc: () => Promise.resolve({ data: null, error: null }),
+    };
+
+    const accountId = await resolveWalletCaptureDefaultAccount(supabase, {
+      userId: "user-1",
+      householdId: null,
+      currency: "EUR",
+    });
+
+    assertEquals(accountId, null);
   },
 );

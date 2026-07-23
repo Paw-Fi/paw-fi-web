@@ -381,10 +381,6 @@ Deno.serve(async (req: Request) => {
         icon?: string | null;
         color?: string | null;
       } | null;
-      const fallbackAccountName = expense.account_id ? null : "Spending";
-      const fallbackAccountIcon = expense.account_id ? null : "wallet";
-      const fallbackAccountColor = expense.account_id ? null : "#6B7280";
-
       return {
         id: expense.id,
         type: expense.type || "expense",
@@ -398,9 +394,9 @@ Deno.serve(async (req: Request) => {
         split_group_id: expense.split_group_id,
         household_id: expense.household_id,
         account_id: expense.account_id,
-        account_name: accountRow?.name ?? fallbackAccountName,
-        account_icon: accountRow?.icon ?? fallbackAccountIcon,
-        account_color: accountRow?.color ?? fallbackAccountColor,
+        account_name: accountRow?.name ?? null,
+        account_icon: accountRow?.icon ?? null,
+        account_color: accountRow?.color ?? null,
         is_recurring: expense.is_recurring || false,
         recurrence_rule: recurrenceRule,
         attachments: attachments,

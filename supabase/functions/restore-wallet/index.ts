@@ -96,16 +96,6 @@ Deno.serve(async (req: Request) => {
         404,
       );
     }
-    if (account.is_system) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "System account cannot be restored",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
     if (!account.is_archived) {
       return jsonResponse({
         success: true,

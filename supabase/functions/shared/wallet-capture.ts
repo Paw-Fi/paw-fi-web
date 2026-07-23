@@ -100,8 +100,8 @@ export function resolveWalletCaptureCurrency(params: {
   const detectedCurrencySymbol = detectedCurrencyCode
     ? params.tx.currencyEvidenceRaw || null
     : params.tx.currencyEvidenceRaw || normalizedPayloadCurrency || null;
-  const fallbackCurrency = accountCurrency || preferredCurrency ||
-    payloadCurrency || "USD";
+  const fallbackCurrency =
+    accountCurrency || preferredCurrency || payloadCurrency || "USD";
 
   return resolveCurrencyFromOCR({
     detectedCurrencyCode,
@@ -226,7 +226,7 @@ export function getLocalYyyyMmDdInTimeZone(
   return date.toISOString().slice(0, 10);
 }
 
-export async function ensureWalletCaptureSpendingAccount(
+export async function resolveWalletCaptureDefaultAccount(
   supabase: {
     rpc: (
       name: string,
@@ -238,23 +238,18 @@ export async function ensureWalletCaptureSpendingAccount(
     householdId: string | null;
     currency: string;
   },
-): Promise<string> {
-  const { data, error } = await supabase.rpc(
-    "ensure_spending_account_for_currency",
-    {
-      p_user_id: params.userId,
-      p_household_id: params.householdId,
-      p_currency: params.currency,
-    },
-  );
-  if (error || typeof data !== "string" || !data) {
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("resolve_default_account", {
+    p_user_id: params.userId,
+    p_household_id: params.householdId,
+    p_currency: params.currency,
+  });
+  if (error) {
     throw new Error(
-      `SPENDING_ACCOUNT_RESOLUTION_FAILED:${
-        error?.message ?? "missing account"
-      }`,
+      `DEFAULT_ACCOUNT_RESOLUTION_FAILED:${error.message ?? "unknown error"}`,
     );
   }
-  return data;
+  return typeof data === "string" && data ? data : null;
 }
 
 export function buildWalletCaptureIdempotencyKey(params: {
@@ -278,9 +273,8 @@ export function buildWalletCaptureIdempotencyKey(params: {
   const scopeKey = params.householdId
     ? `${params.householdId}:${params.isPortfolio ? "portfolio" : "household"}`
     : "personal";
-  const normalizedTransactionType = params.transactionType === "income"
-    ? "income"
-    : "expense";
+  const normalizedTransactionType =
+    params.transactionType === "income" ? "income" : "expense";
   const normalizedMerchant = normalizeMerchantForDedup(params.merchantName);
   const normalizedCard = (params.cardLabel ?? "").trim().toLowerCase();
   const normalizedPackage = (params.packageName ?? "").trim().toLowerCase();
@@ -311,9 +305,10 @@ export function isWalletCaptureIdempotencyClaimStale(
 ): boolean {
   if (!createdAt) return true;
 
-  const createdAtMs = createdAt instanceof Date
-    ? createdAt.getTime()
-    : new Date(createdAt).getTime();
+  const createdAtMs =
+    createdAt instanceof Date
+      ? createdAt.getTime()
+      : new Date(createdAt).getTime();
 
   if (!Number.isFinite(createdAtMs)) return true;
   return nowMs - createdAtMs >= staleMs;

@@ -44,7 +44,6 @@ import {
 } from "../shared/household-auto-split.ts";
 import {
   buildWalletCaptureIdempotencyKey,
-  ensureWalletCaptureSpendingAccount,
   getLocalYyyyMmDdInTimeZone,
   hasAmbiguousWalletCaptureCurrencyEvidence,
   isWalletCaptureIdempotencyClaimStale,
@@ -53,6 +52,7 @@ import {
   resolveStrongWalletCaptureCurrencyEvidence,
   resolveWalletCaptureCurrency,
   resolveWalletCaptureScope,
+  resolveWalletCaptureDefaultAccount,
   resolveWalletTransactionCurrency,
   resolveWalletTransactionDate,
   resolveWalletTransactionPackageName,
@@ -2237,18 +2237,18 @@ Deno.serve(async (req: Request) => {
 
     if (!accountId) {
       try {
-        accountId = await ensureWalletCaptureSpendingAccount(supabase, {
+        accountId = await resolveWalletCaptureDefaultAccount(supabase, {
           userId,
           householdId,
           currency,
         });
       } catch (error) {
         console.error(
-          "[save-wallet-transaction] Failed to resolve Spending wallet:",
+          "[save-wallet-transaction] Failed to look up default wallet:",
           error,
         );
         return errorResponse(
-          "Failed to resolve a same-currency Spending wallet",
+          "Failed to look up a same-currency default wallet",
           500,
           "SERVER_ERROR",
         );
