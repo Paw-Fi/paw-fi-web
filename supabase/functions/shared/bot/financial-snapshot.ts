@@ -6,6 +6,7 @@ export interface FinancialSnapshotRow {
   category?: string | null;
   raw_text?: string | null;
   account_id?: string | null;
+  household_id?: string | null;
   split_group_id?: string | null;
   parent_recurring_id?: string | null;
   type?: string | null;
@@ -80,6 +81,9 @@ export function projectRecurringSnapshotRows(
             "",
           )
         }`,
+        // Keep the source recurring transaction available to internal callers.
+        // Projected IDs are synthetic and cannot be passed to update-expense.
+        parent_recurring_id: row.id ?? row.parent_recurring_id ?? null,
         date: occurrenceDate,
         recurrence_rule: null,
       };

@@ -13,6 +13,33 @@ Deno.test("telegram verification URL uses verify-telegram route", () => {
   assertEquals(url, "https://moneko.io/verify-telegram?otp=123456");
 });
 
+Deno.test("telegram and whatsapp route recurring mutations through one shared executor", async () => {
+  const testsUrl = new URL(".", import.meta.url);
+  const telegramSource = await Deno.readTextFile(
+    new URL("../telegram-ai-bot/index.ts", testsUrl),
+  );
+  const whatsappSource = await Deno.readTextFile(
+    new URL("../twilio-whatsapp-ai-bot/index.ts", testsUrl),
+  );
+
+  for (
+    const [channel, source] of [
+      ["Telegram", telegramSource],
+      ["WhatsApp", whatsappSource],
+    ] as const
+  ) {
+    assert(
+      source.includes("executeManageRecurringTool({"),
+      `${channel} must use the shared recurring executor`,
+    );
+    assertEquals(
+      source.match(/executeManageRecurringTool\(\{/g)?.length,
+      1,
+      `${channel} should have exactly one recurring execution path`,
+    );
+  }
+});
+
 Deno.test("telegram tool surface includes whatsapp parity tools", () => {
   const required = [
     "create_custom_category",

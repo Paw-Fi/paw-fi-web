@@ -92,6 +92,7 @@ import {
   setBotPreferredSpace,
 } from "../shared/bot/preference-tools.ts";
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
+import { executeManageRecurringTool } from "../shared/bot/recurring-tool.ts";
 import {
   invokeTransactionDelete,
   invokeTransactionSave,
@@ -2288,7 +2289,28 @@ Deno.serve(async (req: Request) => {
                   logPrefix: "telegram-ai-bot",
                   chartRequested:
                     isFinancialInsightChartRequested(incomingText),
+                  includeRecurringSelectionItems: true,
                 });
+                const recurringSelectionItems = Array.isArray(
+                    toolResult?._recurring_selection_items,
+                  )
+                  ? toolResult._recurring_selection_items
+                  : [];
+                if (recurringSelectionItems.length > 0) {
+                  sessionState = setLastListedTransactions(
+                    sessionState,
+                    recurringSelectionItems,
+                  );
+                  await saveSessionState(
+                    supabase,
+                    sessionId,
+                    sessionState,
+                    debugNotes,
+                  );
+                }
+                if (toolResult && typeof toolResult === "object") {
+                  delete toolResult._recurring_selection_items;
+                }
               } else if (call.name === "get_budget") {
                 const dateStr = (
                   call.args.date || formatDateInTimeZone(userTimezone)
@@ -3204,332 +3226,24 @@ Deno.serve(async (req: Request) => {
                   }
                 }
               } else if (call.name === "manage_recurring") {
-                const action = (call.args.action || "")
-                  .toString()
-                  .toLowerCase();
-                if (!["add", "update", "delete"].includes(action)) {
-                  toolResult = {
-                    error: "action must be add, update, or delete.",
-                  };
-                } else if (action === "delete") {
-                  const expenseIdDirect =
-                    typeof call.args.expense_id === "string"
-                      ? call.args.expense_id.trim()
-                      : "";
-                  const spaceNameByHouseholdId = (
-                    householdId: string | null | undefined,
-                  ) =>
-                    householdId
-                      ? spaceMap.get(householdId)?.name || null
-                      : null;
-
-                  const resolved = expenseIdDirect
-                    ? await validateActiveBotTransactionId(
-                        supabase,
-                        expenseIdDirect,
-                      )
-                    : await resolveBotTransactionSelection({
-                        supabase,
-                        userId,
-                        args: call.args,
-                        items:
-                          readLastListedTransactions(sessionState).items || [],
-                        spaceNameByHouseholdId,
-                      });
-
-                  if ("needs_disambiguation" in resolved) {
-                    toolResult = resolved;
-                  } else if ("error" in resolved) {
-                    toolResult = { error: resolved.error };
-                  } else {
-                    const expenseId = resolved.candidate.id;
-                    if (!expenseId) {
-                      toolResult = {
-                        error:
-                          "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-                      };
-                    } else {
-                      const deleteResult = await invokeTransactionDelete(
-                        supabase,
-                        internalFunctionKey,
-                        userId,
-                        expenseId,
-                        "Failed to delete recurring transaction",
-                      );
-                      toolResult = deleteResult.success
-                        ? { success: true }
-                        : { error: deleteResult.formatted };
-                      if (!deleteResult.success) {
-                        await reportTelegramToolInvokeFailure({
-                          traceId,
-                          toolName: "manage_recurring",
-                          targetFunction: "delete-expense",
-                          formatted: deleteResult.formatted,
-                          error: deleteResult.error,
-                          context: { action, expenseId },
-                        });
-                      }
-                    }
-                  }
-                } else if (action === "update") {
-                  const expenseIdDirect =
-                    typeof call.args.expense_id === "string"
-                      ? call.args.expense_id.trim()
-                      : "";
-                  const spaceNameByHouseholdId = (
-                    householdId: string | null | undefined,
-                  ) =>
-                    householdId
-                      ? spaceMap.get(householdId)?.name || null
-                      : null;
-                  const resolved = expenseIdDirect
-                    ? await validateActiveBotTransactionId(
-                        supabase,
-                        expenseIdDirect,
-                      )
-                    : await resolveBotTransactionSelection({
-                        supabase,
-                        userId,
-                        args: call.args,
-                        items:
-                          readLastListedTransactions(sessionState).items || [],
-                        spaceNameByHouseholdId,
-                      });
-
-                  if ("needs_disambiguation" in resolved) {
-                    toolResult = resolved;
-                  } else if ("error" in resolved) {
-                    toolResult = { error: resolved.error };
-                  } else {
-                    const expenseId = resolved.candidate.id;
-                    if (!expenseId) {
-                      toolResult = {
-                        error:
-                          "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-                      };
-                    } else {
-                      const dateValue =
-                        call.args.date || formatDateInTimeZone(userTimezone);
-                      const recurrenceRule = {
-                        frequency: (call.args.frequency || "monthly")
-                          .toString()
-                          .toLowerCase(),
-                        interval: 1,
-                        anchor_date: dateValue,
-                      };
-                      const updates: Record<string, unknown> = {
-                        is_recurring: true,
-                        recurrence_rule: recurrenceRule,
-                      };
-                      if (call.args.amount != null) {
-                        const amountResult = normalizeAiToolAmount(
-                          call.args.amount,
-                        );
-                        if (!amountResult.ok) {
-                          toolResult = { error: amountResult.error };
-                          toolResponses.push({
-                            functionResponse: {
-                              name: call.name,
-                              response:
-                                sanitizeBotToolResultForModel(toolResult),
-                            },
-                          });
-                          continue;
-                        }
-                        updates.amount_cents = Math.round(
-                          amountResult.amount * 100,
-                        );
-                      }
-                      if (call.args.category != null) {
-                        updates.category = call.args.category;
-                      }
-                      if (call.args.description != null) {
-                        updates.raw_text = call.args.description;
-                      }
-                      if (call.args.merchant !== undefined) {
-                        updates.merchant = call.args.merchant;
-                      }
-                      if (call.args.currency != null) {
-                        updates.currency = call.args.currency;
-                      }
-                      if (call.args.date != null) updates.date = call.args.date;
-                      if (call.args.source != null) {
-                        updates.source = call.args.source;
-                      }
-                      if (call.args.recurrence_rule) {
-                        updates.recurrence_rule = call.args.recurrence_rule;
-                      }
-                      const { data, error } = await supabase.functions.invoke(
-                        "update-expense",
-                        {
-                          body: {
-                            userId,
-                            expenseId,
-                            updates,
-                          },
-                          headers:
-                            buildInternalInvokeHeaders(internalFunctionKey),
-                        },
-                      );
-                      const success = !error && data?.success === true;
-                      const formatted = success
-                        ? ""
-                        : formatInvokeError(error ?? data?.error) ||
-                          "Failed to update recurring transaction";
-                      toolResult = success
-                        ? { success: true }
-                        : { error: formatted };
-                      if (!success) {
-                        await reportTelegramToolInvokeFailure({
-                          traceId,
-                          toolName: "manage_recurring",
-                          targetFunction: "update-expense",
-                          formatted,
-                          error: error ?? data?.error,
-                          context: {
-                            action,
-                            expenseId,
-                            updateKeys: Object.keys(updates),
-                          },
-                        });
-                      }
-                    }
-                  }
-                } else {
-                  const dateValue =
-                    call.args.date || formatDateInTimeZone(userTimezone);
-                  const recurrenceRule = {
-                    frequency: (call.args.frequency || "monthly")
-                      .toString()
-                      .toLowerCase(),
-                    interval: 1,
-                    anchor_date: dateValue,
-                  };
-                  const transactionResult = normalizeTransactionToolArgs(
-                    call.args,
-                    {
-                      date: dateValue,
-                      currency: userCurrency,
-                      currencyEvidenceText: userMessageContent,
-                    },
-                  );
-                  if (!transactionResult.ok) {
-                    toolResult = { error: transactionResult.error };
-                    toolResponses.push({
-                      functionResponse: {
-                        name: call.name,
-                        response: sanitizeBotToolResultForModel(toolResult),
-                      },
-                    });
-                    continue;
-                  }
-                  const transaction = transactionResult.transaction;
-                  let householdId = call.args.household_id || null;
-                  const householdName = (call.args.household_name || "")
-                    .toString()
-                    .toLowerCase();
-                  let spaceMeta = householdId
-                    ? spaceMap.get(householdId)
-                    : undefined;
-                  if (
-                    !spaceMeta &&
-                    householdName &&
-                    spaceMap.has(householdName)
-                  ) {
-                    spaceMeta = spaceMap.get(householdName);
-                    householdId = spaceMeta?.id ?? null;
-                  }
-                  const splitConfig =
-                    householdId && !spaceMeta?.isPortfolio
-                      ? await resolveHouseholdSplitConfig(
-                          supabase,
-                          householdId,
-                          userId,
-                          transaction.amount,
-                          call.args,
-                        )
-                      : {};
-                  const requestedWallet =
-                    await resolveWalletForTransactionToolCall(
-                      supabase,
-                      userId,
-                      householdId,
-                      call.args,
-                      "telegram-ai-bot",
-                    );
-                  if (requestedWallet.error) {
-                    toolResult = { error: requestedWallet.error };
-                  } else {
-                    const currencyResult = resolveWalletTransactionCurrency({
-                      wallet: requestedWallet,
-                      walletName: call.args.wallet_name,
-                      transactionCurrency: transaction.currency,
-                      fallbackCurrency: userCurrency,
-                      hasExplicitCurrency: hasExplicitTransactionCurrency(
-                        call.args,
-                      ),
-                    });
-                    if (currencyResult.error || !currencyResult.currency) {
-                      toolResult = { error: currencyResult.error };
-                    } else {
-                      const { data, error } = await invokeTransactionSave(
-                        supabase,
-                        internalFunctionKey,
-                        userId,
-                        {
-                          amount: transaction.amount,
-                          category: transaction.category,
-                          description: transaction.description,
-                          merchant: transaction.merchant,
-                          date: transaction.date || dateValue,
-                          currency: currencyResult.currency,
-                          type: transaction.type,
-                          householdId,
-                          isPortfolio:
-                            spaceMeta?.isPortfolio ??
-                            call.args.is_portfolio === true,
-                          accountId: requestedWallet.accountId ?? undefined,
-                          isRecurring: true,
-                          recurrence_rule: recurrenceRule,
-                          payerUserId: splitConfig.payerUserId,
-                          customSplits: splitConfig.customSplits,
-                          source: call.args.source,
-                          ownerType: call.args.owner_type,
-                          privacyScope: call.args.privacy_scope,
-                        },
-                      );
-                      const targetFunction =
-                        transaction.type === "income"
-                          ? "save-income"
-                          : "save-expense";
-                      const success = !error && data?.success === true;
-                      const formatted = success
-                        ? ""
-                        : (await formatInvokeErrorWithResponseBody(
-                            error ?? data?.error,
-                          )) || "Failed to save recurring transaction";
-                      toolResult = success
-                        ? { success: true, data: data?.data ?? data }
-                        : { error: formatted };
-                      if (!success) {
-                        await reportTelegramToolInvokeFailure({
-                          traceId,
-                          toolName: "manage_recurring",
-                          targetFunction,
-                          formatted,
-                          error: error ?? data?.error,
-                          context: {
-                            action,
-                            type: transaction.type,
-                            amount: transaction.amount,
-                            category: transaction.category,
-                            householdId,
-                          },
-                        });
-                      }
-                    }
-                  }
-                }
+                toolResult = await executeManageRecurringTool({
+                  supabase,
+                  internalFunctionKey,
+                  userId,
+                  userCurrency,
+                  userTimezone,
+                  userMessageContent,
+                  args: call.args || {},
+                  spaceMap,
+                  lastListedTransactions:
+                    readLastListedTransactions(sessionState).items || [],
+                  logPrefix: "telegram-ai-bot",
+                  reportFailure: async (failure) =>
+                    await reportTelegramToolInvokeFailure({
+                      traceId,
+                      ...failure,
+                    }),
+                });
               }
             } catch (e) {
               toolResult = { error: String(e) };

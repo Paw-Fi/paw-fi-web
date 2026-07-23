@@ -7,6 +7,7 @@ import {
   isWriteMutationToolName,
   shouldBlockUnsafeTransactionMutationClaim,
 } from "../shared/bot/mutation-claim-guard.ts";
+import { buildTransactionMutationFailureText } from "../shared/bot/transaction-tool.ts";
 
 Deno.test(
   "blocks transaction saved claim when no write mutation succeeded",
@@ -64,6 +65,16 @@ Deno.test("identifies write mutation tool names", () => {
   assertEquals(isWriteMutationToolName("manage_recurring"), true);
   assertEquals(isWriteMutationToolName("generate_chart_url"), false);
   assertEquals(isWriteMutationToolName(null), false);
+});
+
+Deno.test("does not expose recurring selection instructions to users", () => {
+  assertEquals(
+    buildTransactionMutationFailureText("manage_recurring", {
+      error:
+        "No matching transaction found. Ask user to list recent transactions first or provide more details.",
+    }),
+    null,
+  );
 });
 
 Deno.test("returns safe fallback for blocked mutation claim", () => {

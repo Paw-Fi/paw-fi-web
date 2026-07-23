@@ -86,6 +86,7 @@ import {
   setBotPreferredSpace,
 } from "../shared/bot/preference-tools.ts";
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
+import { executeManageRecurringTool } from "../shared/bot/recurring-tool.ts";
 import {
   invokeTransactionDelete,
   invokeTransactionSave,
@@ -4700,462 +4701,20 @@ Deno.serve(async (req: Request) => {
             toolResult = { url };
             lastGeneratedChartUrl = url;
           } else if (call.name === "manage_recurring") {
-            // Use update-expense or save-expense
-            const action = (call.args.action || "").toString().toLowerCase();
-            if (action === "add") {
-              let householdId = (call.args.space_id ||
-                call.args.household_id) as string | null;
-              const householdName = (
-                call.args.space_name ||
-                call.args.household_name ||
-                ""
-              )
-                .toString()
-                .toLowerCase();
-              let spaceMeta = householdId
-                ? spaceMap.get(householdId)
-                : undefined;
-              if (!spaceMeta && householdName && spaceMap.has(householdName)) {
-                spaceMeta = spaceMap.get(householdName);
-                householdId = spaceMeta?.id ?? null;
-              }
-              if (!spaceMeta && !householdName && spaceMap.size === 1) {
-                spaceMeta = Array.from(spaceMap.values())[0];
-                householdId = spaceMeta?.id ?? null;
-              }
-
-              const dateStr = normalizeDateInput(
-                call.args.anchor_date ?? call.args.date,
-                formatDateInTimeZone(userTimezone),
-              );
-              const transactionResult = normalizeTransactionToolArgs(
-                call.args,
-                {
-                  date: dateStr,
-                  currency: userCurrency,
-                  currencyEvidenceText: userMessageContent,
-                },
-              );
-              if (!transactionResult.ok) {
-                toolResult = { error: transactionResult.error };
-                toolResponses.push({
-                  functionResponse: {
-                    name: call.name,
-                    response: sanitizeBotToolResultForModel(toolResult),
-                  },
-                });
-                continue;
-              }
-              const transaction = transactionResult.transaction;
-              const recurrenceRule = buildRecurrenceRule(
-                call.args,
-                transaction.date!,
-              ) || {
-                frequency: (call.args.frequency || "monthly")
-                  .toString()
-                  .toLowerCase(),
-                interval: 1,
-                anchor_date: transaction.date!,
-              };
-              const type = transaction.type;
-              const canUseHouseholdSplits =
-                !!householdId && spaceMeta?.isPortfolio !== true;
-              const splitConfig = canUseHouseholdSplits
-                ? await resolveHouseholdSplitConfig(
-                    supabase,
-                    householdId!,
-                    userId,
-                    transaction.amount,
-                    call.args,
-                  )
-                : {};
-              const requestedWallet = await resolveWalletForTransactionToolCall(
-                supabase,
-                userId,
-                householdId,
-                call.args,
-                "twilio-whatsapp-ai-bot",
-              );
-              if (requestedWallet.error) {
-                toolResult = { error: requestedWallet.error };
-                toolResponses.push({
-                  functionResponse: {
-                    name: call.name,
-                    response: sanitizeBotToolResultForModel(toolResult),
-                  },
-                });
-                continue;
-              }
-              const currencyResult = resolveWalletTransactionCurrency({
-                wallet: requestedWallet,
-                walletName: call.args.wallet_name || call.args.wallet_id,
-                transactionCurrency: transaction.currency,
-                fallbackCurrency: userCurrency,
-                hasExplicitCurrency: hasExplicitTransactionCurrency(call.args),
-              });
-              if (currencyResult.error || !currencyResult.currency) {
-                toolResult = { error: currencyResult.error };
-                toolResponses.push({
-                  functionResponse: {
-                    name: call.name,
-                    response: sanitizeBotToolResultForModel(toolResult),
-                  },
-                });
-                continue;
-              }
-              const { data, error } = await invokeTransactionSave(
-                supabase,
-                INTERNAL_FUNCTION_KEY,
-                userId,
-                {
-                  amount: transaction.amount,
-                  category: transaction.category,
-                  currency: currencyResult.currency,
-                  date: transaction.date!,
-                  description: transaction.description,
-                  merchant: transaction.merchant,
-                  type,
-                  householdId,
-                  isPortfolio: spaceMeta?.isPortfolio ?? false,
-                  accountId: requestedWallet.accountId ?? undefined,
-                  payerUserId: splitConfig.payerUserId,
-                  customSplits: splitConfig.customSplits,
-                  isRecurring: true,
-                  recurrence_rule: recurrenceRule,
-                  source: call.args.source,
-                  ownerType: call.args.owner_type,
-                  privacyScope: call.args.privacy_scope,
-                },
-              );
-              const success = !error && data?.success === true;
-              const formatted = success
-                ? ""
-                : formatInvokeError(error ?? data?.error) ||
-                  "Failed to save recurring transaction";
-              toolResult = success
-                ? { success: true, data: data?.data ?? data }
-                : { error: formatted };
-              if (!success) {
-                if (WHATSAPP_DEBUG) {
-                  debugNotes.push(`manage_recurring add error: ${formatted}`);
-                }
-                console.error("[twilio-whatsapp-ai-bot] recurring add error", {
-                  error,
-                  formatted,
-                  internalAuth: {
-                    source: internalKeyMeta.source,
-                    fingerprint: fingerprintSecret(INTERNAL_FUNCTION_KEY),
-                    keyLength: INTERNAL_FUNCTION_KEY.length,
-                    httpStatus: getInvokeHttpStatus(error),
-                  },
-                });
-                await reportTwilioToolInvokeFailure({
-                  toolName: "manage_recurring",
-                  targetFunction:
-                    type === "income" ? "save-income" : "save-expense",
-                  formatted,
-                  error: error ?? data?.error,
-                  context: {
-                    action,
-                    type,
-                    amount: transaction.amount,
-                    category: transaction.category,
-                    householdId,
-                  },
-                });
-              }
-            } else if (action === "update") {
-              const expenseIdDirect =
-                typeof call.args.expense_id === "string"
-                  ? call.args.expense_id.trim()
-                  : "";
-
-              const spaceNameByHouseholdId = (
-                householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
-
-              const resolvedSelection = expenseIdDirect
-                ? await validateActiveBotTransactionId(
-                    supabase,
-                    expenseIdDirect,
-                  )
-                : await resolveBotTransactionSelection({
-                    supabase,
-                    userId,
-                    args: call.args,
-                    items: readLastListedTransactions(sessionState).items || [],
-                    spaceNameByHouseholdId,
-                  });
-
-              if (
-                resolvedSelection &&
-                "needs_disambiguation" in resolvedSelection
-              ) {
-                toolResult = resolvedSelection;
-              } else if (resolvedSelection && "error" in resolvedSelection) {
-                toolResult = { error: resolvedSelection.error };
-              } else {
-                const resolvedExpenseId =
-                  "candidate" in resolvedSelection
-                    ? resolvedSelection.candidate.id
-                    : "";
-
-                if (!resolvedExpenseId) {
-                  toolResult = {
-                    error:
-                      "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-                  };
-                } else {
-                  let householdId = (call.args.space_id ||
-                    call.args.household_id) as string | null;
-                  const householdName = (
-                    call.args.space_name ||
-                    call.args.household_name ||
-                    ""
-                  )
-                    .toString()
-                    .toLowerCase();
-                  let spaceMeta = householdId
-                    ? spaceMap.get(householdId)
-                    : undefined;
-                  if (
-                    !spaceMeta &&
-                    householdName &&
-                    spaceMap.has(householdName)
-                  ) {
-                    spaceMeta = spaceMap.get(householdName);
-                    householdId = spaceMeta?.id ?? null;
-                  }
-
-                  const dateStr = normalizeDateInput(
-                    call.args.anchor_date ?? call.args.date,
-                    formatDateInTimeZone(userTimezone),
-                  );
-                  const recurrenceRule = buildRecurrenceRule(
-                    call.args,
-                    dateStr,
-                  );
-
-                  let expenseRow: any = null;
-                  const hasSplitHints =
-                    Array.isArray(call.args.member_splits) &&
-                    call.args.member_splits.length > 0;
-                  const hasPayerHint =
-                    typeof call.args.payer_name === "string" &&
-                    call.args.payer_name.trim().length > 0;
-                  if (
-                    hasSplitHints ||
-                    hasPayerHint ||
-                    !householdId ||
-                    call.args.amount == null
-                  ) {
-                    const { data: row } = await supabase
-                      .from("expenses")
-                      .select("id, amount_cents, household_id, split_group_id")
-                      .eq("id", resolvedExpenseId)
-                      .is("deleted_at", null)
-                      .maybeSingle();
-                    expenseRow = row;
-                    if (!householdId && row?.household_id) {
-                      householdId = row.household_id as string;
-                      spaceMeta = householdId
-                        ? spaceMap.get(householdId)
-                        : spaceMeta;
-                    }
-                  }
-
-                  const updates: Record<string, unknown> = {};
-                  if (call.args.amount != null) {
-                    const amount = Number(call.args.amount);
-                    if (Number.isFinite(amount)) {
-                      updates.amount_cents = Math.round(amount * 100);
-                    }
-                  }
-                  if (call.args.category != null) {
-                    updates.category = call.args.category;
-                  }
-                  if (call.args.description != null) {
-                    updates.raw_text = call.args.description;
-                  }
-                  if (call.args.merchant !== undefined) {
-                    updates.merchant = call.args.merchant;
-                  }
-                  if (call.args.currency != null) {
-                    updates.currency = call.args.currency;
-                  }
-                  if (call.args.date != null) updates.date = dateStr;
-                  updates.is_recurring = true;
-                  if (call.args.source != null) {
-                    updates.source = call.args.source;
-                  }
-                  if (recurrenceRule) updates.recurrence_rule = recurrenceRule;
-
-                  const totalForSplits = (() => {
-                    if (
-                      call.args.amount != null &&
-                      Number.isFinite(Number(call.args.amount))
-                    ) {
-                      return Number(call.args.amount);
-                    }
-                    const cents = expenseRow?.amount_cents;
-                    return typeof cents === "number" ? cents / 100 : 0;
-                  })();
-
-                  const splitConfig =
-                    householdId &&
-                    !spaceMeta?.isPortfolio &&
-                    (hasSplitHints || hasPayerHint)
-                      ? await resolveHouseholdSplitConfig(
-                          supabase,
-                          householdId,
-                          userId,
-                          totalForSplits,
-                          call.args,
-                        )
-                      : {};
-
-                  if (splitConfig.payerUserId) {
-                    updates.payer_user_id = splitConfig.payerUserId;
-                  }
-
-                  const extraBody: Record<string, unknown> = {};
-                  const hasCustomSplits =
-                    !!splitConfig.customSplits &&
-                    Array.isArray(splitConfig.customSplits.memberSplits) &&
-                    splitConfig.customSplits.memberSplits.length > 0;
-                  if (householdId && hasCustomSplits) {
-                    extraBody.householdId = householdId;
-                    if (expenseRow?.split_group_id) {
-                      extraBody.splitUpdate = splitConfig.customSplits;
-                    } else {
-                      extraBody.customSplits = splitConfig.customSplits;
-                    }
-                  }
-                  if (splitConfig.payerUserId) {
-                    extraBody.payerUserId = splitConfig.payerUserId;
-                  }
-
-                  if (
-                    Object.keys(updates).length === 0 &&
-                    Object.keys(extraBody).length === 0
-                  ) {
-                    toolResult = { error: "No updates provided" };
-                  } else {
-                    const requestBody: Record<string, unknown> = {
-                      userId,
-                      expenseId: resolvedExpenseId,
-                      updates,
-                    };
-                    if (Object.keys(extraBody).length > 0) {
-                      Object.assign(requestBody, extraBody);
-                    }
-                    const { data, error } = await supabase.functions.invoke(
-                      "update-expense",
-                      {
-                        body: requestBody,
-                        headers: buildInternalInvokeHeaders(
-                          INTERNAL_FUNCTION_KEY,
-                        ),
-                      },
-                    );
-                    const success = !error && data?.success === true;
-                    const formatted = success
-                      ? ""
-                      : formatInvokeError(error ?? data?.error) ||
-                        "Failed to update expense";
-                    toolResult = success
-                      ? { success: true }
-                      : { error: formatted };
-                    if (!success) {
-                      if (WHATSAPP_DEBUG) {
-                        debugNotes.push(`update-expense error: ${formatted}`);
-                      }
-                      console.error(
-                        "[twilio-whatsapp-ai-bot] update-expense error",
-                        { error, formatted },
-                      );
-                      await reportTwilioToolInvokeFailure({
-                        toolName: "update_transaction",
-                        targetFunction: "update-expense",
-                        formatted,
-                        error: error ?? data?.error,
-                        context: {
-                          expenseId: resolvedExpenseId,
-                          updateKeys: Object.keys(updates),
-                        },
-                      });
-                    }
-                  }
-                }
-              }
-            } else {
-              const expenseIdDirect =
-                typeof call.args.expense_id === "string"
-                  ? call.args.expense_id.trim()
-                  : "";
-              const spaceNameByHouseholdId = (
-                householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
-              const resolved = expenseIdDirect
-                ? await validateActiveBotTransactionId(
-                    supabase,
-                    expenseIdDirect,
-                  )
-                : await resolveBotTransactionSelection({
-                    supabase,
-                    userId,
-                    args: call.args,
-                    items: readLastListedTransactions(sessionState).items || [],
-                    spaceNameByHouseholdId,
-                  });
-              if ("needs_disambiguation" in resolved) {
-                toolResult = resolved;
-              } else if ("error" in resolved) {
-                toolResult = { error: resolved.error };
-              } else {
-                const expenseId = resolved.candidate.id;
-                if (!expenseId) {
-                  toolResult = {
-                    error:
-                      "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-                  };
-                } else {
-                  const deleteResult = await invokeTransactionDelete(
-                    supabase,
-                    INTERNAL_FUNCTION_KEY,
-                    userId,
-                    expenseId,
-                    "Failed to delete expense",
-                  );
-                  toolResult = deleteResult.success
-                    ? { success: true }
-                    : { error: deleteResult.formatted };
-                  if (!deleteResult.success) {
-                    if (WHATSAPP_DEBUG) {
-                      debugNotes.push(
-                        `delete-expense error: ${deleteResult.formatted}`,
-                      );
-                    }
-                    console.error(
-                      "[twilio-whatsapp-ai-bot] delete-expense error",
-                      {
-                        error: deleteResult.error,
-                        formatted: deleteResult.formatted,
-                      },
-                    );
-                    await reportTwilioToolInvokeFailure({
-                      toolName: "delete_transaction",
-                      targetFunction: "delete-expense",
-                      formatted: deleteResult.formatted,
-                      error: deleteResult.error,
-                      context: { expenseId },
-                    });
-                  }
-                }
-              }
-            }
+            toolResult = await executeManageRecurringTool({
+              supabase,
+              internalFunctionKey: INTERNAL_FUNCTION_KEY,
+              userId,
+              userCurrency,
+              userTimezone,
+              userMessageContent,
+              args: call.args || {},
+              spaceMap,
+              lastListedTransactions:
+                readLastListedTransactions(sessionState).items || [],
+              logPrefix: "twilio-whatsapp-ai-bot",
+              reportFailure: reportTwilioToolInvokeFailure,
+            });
           } else if (executionToolName === "financial_insight") {
             toolResult = await executeBotFinancialInsight({
               supabase,
@@ -5170,7 +4729,34 @@ Deno.serve(async (req: Request) => {
               spaceMap,
               logPrefix: "twilio-whatsapp-ai-bot",
               chartRequested: isFinancialInsightChartRequested(body),
+              includeRecurringSelectionItems: true,
             });
+
+            // Financial insight can display projected recurring rows. Preserve
+            // their real source transaction IDs in session state so a later
+            // "update the first one" resolves to an active transaction rather
+            // than the synthetic projected occurrence shown by the model.
+            const recurringSelectionItems = Array.isArray(
+                (toolResult as any)?._recurring_selection_items,
+              )
+              ? (toolResult as any)._recurring_selection_items
+              : [];
+            if (recurringSelectionItems.length > 0) {
+              sessionState = setLastListedTransactions(
+                sessionState,
+                recurringSelectionItems,
+              );
+              await saveSessionState(
+                supabase,
+                sessionId,
+                sessionState,
+                debugNotes,
+                WHATSAPP_DEBUG,
+              );
+            }
+            if (toolResult && typeof toolResult === "object") {
+              delete (toolResult as any)._recurring_selection_items;
+            }
           }
         } catch (e) {
           toolResult = { error: String(e) };
@@ -5178,6 +4764,12 @@ Deno.serve(async (req: Request) => {
             debugNotes.push(`tool exception (${call.name}): ${String(e)}`);
           }
         }
+
+        debugLog(WHATSAPP_DEBUG, "tool result", {
+          name: call.name,
+          success: (toolResult as any)?.success === true,
+          error: (toolResult as any)?.error || null,
+        });
 
         if (shouldReportBotToolResultError((toolResult as any)?.error)) {
           await reportBotBackendError({

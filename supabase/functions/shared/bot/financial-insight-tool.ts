@@ -47,7 +47,7 @@ export interface FinancialInsightSnapshot {
 }
 
 const SNAPSHOT_COLUMNS =
-  "id, amount_cents, type, category, raw_text, date, currency, account_id, split_group_id, parent_recurring_id, recurrence_rule, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income";
+  "id, amount_cents, type, category, raw_text, date, currency, account_id, household_id, split_group_id, parent_recurring_id, recurrence_rule, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income";
 
 export async function resolveFinancialInsightDateRange(params: {
   args?: Record<string, unknown> | null;
@@ -153,6 +153,7 @@ export async function executeBotFinancialInsight(params: {
   spaceMap: Map<string, BotSpaceMeta>;
   logPrefix: string;
   chartRequested?: boolean;
+  includeRecurringSelectionItems?: boolean;
 }): Promise<Record<string, unknown>> {
   try {
     const args = params.args || {};
@@ -292,9 +293,38 @@ export async function executeBotFinancialInsight(params: {
       ...(chartUrl ? { chart_url: chartUrl } : {}),
     };
 
+    const projectedSourceIds = new Set(
+      projected
+        .map((row) => row.parent_recurring_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    );
+    const recurringSelectionItems = (
+      (recurringRows || []) as FinancialSnapshotRow[]
+    )
+      .filter((row) => !!row.id && projectedSourceIds.has(row.id))
+      .map((row) => ({
+        id: row.id as string,
+        amountMajor: (Number(row.amount_cents) || 0) / 100,
+        currency: String(row.currency || currency).toUpperCase(),
+        date: String(row.date || "").slice(0, 10),
+        category: sanitizeToolLabel(String(row.category || "other")),
+        description: sanitizeToolLabel(String(row.raw_text || "")),
+        type:
+          String(row.type || "expense").toLowerCase() === "income"
+            ? "income"
+            : "expense",
+        household_id:
+          typeof row.household_id === "string" ? row.household_id : null,
+      }));
+
     return {
       success: true,
       snapshot,
+      // Internal bot state only. Opt-in callers must remove this before
+      // sending the tool response to the model so IDs are never exposed.
+      ...(params.includeRecurringSelectionItems
+        ? { _recurring_selection_items: recurringSelectionItems }
+        : {}),
       chart_url: chartUrl,
       summary: buildFinancialInsightSummary(
         snapshot,

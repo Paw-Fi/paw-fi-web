@@ -111,10 +111,23 @@ Deno.test(
       },
       spaceMap: new Map(),
       logPrefix: "test",
+      includeRecurringSelectionItems: true,
     });
     const snapshot = result.snapshot as Record<string, unknown>;
 
     assertEquals(result.success, true);
+    assertEquals(result._recurring_selection_items, [
+      {
+        id: "rent",
+        amountMajor: 500,
+        currency: "SGD",
+        date: "2026-01-10",
+        category: "housing",
+        description: "Rent",
+        type: "expense",
+        household_id: null,
+      },
+    ]);
     assertEquals(snapshot.totalExpense, 50000);
     assertEquals(snapshot.projected_recurring_count, 1);
     assertEquals(snapshot.includes_projected_recurring, true);
@@ -148,6 +161,7 @@ Deno.test(
     });
 
     assertEquals(result.success, true);
+    assertEquals(result._recurring_selection_items, undefined);
     assertEquals(
       FakeQuery.calls.some(
         ([table, method, column, value]) =>

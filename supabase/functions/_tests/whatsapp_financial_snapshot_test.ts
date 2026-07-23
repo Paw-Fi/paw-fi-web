@@ -65,6 +65,10 @@ Deno.test(
       projected.map((row) => row.date),
       ["2026-07-10", "2026-07-01"],
     );
+    assertEquals(
+      projected.map((row) => row.parent_recurring_id),
+      ["recurring-expense", "recurring-income"],
+    );
     assertEquals(totals, {
       totalExpense: 95000,
       totalIncome: 125000,
