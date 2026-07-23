@@ -10,17 +10,26 @@ begin
       in ('prod', 'production') then
     raise exception 'Plaid reconciliation pgTAP is forbidden in production';
   end if;
+  if coalesce(
+    current_setting('moneko.plaid_disposable_test_opt_in', true),
+    ''
+  ) <> 'I_UNDERSTAND_THIS_MUST_BE_DISPOSABLE' then
+    raise exception using
+      message = 'Plaid reconciliation pgTAP requires disposable-database opt-in',
+      hint = 'Set moneko.plaid_disposable_test_opt_in only on an isolated disposable database';
+  end if;
   raise warning 'TEST ONLY: Plaid reconciliation fixtures mutate data and roll back';
 end;
 $$;
 
 create extension if not exists pgtap;
 
-select plan(35);
+select plan(40);
 
 do $$
 begin
   perform set_config('moneko.plaid_transfer_update_counts', '{}', true);
+  perform set_config('moneko.plaid_no_op_update_counts', '{}', true);
   perform set_config('moneko.plaid_transfer_tap_results', '[]', true);
 end;
 $$;
@@ -79,6 +88,57 @@ create trigger test_count_plaid_transfer_updates
 after update on public.expenses
 for each row execute function pg_temp.count_plaid_transfer_updates();
 
+create or replace function pg_temp.count_plaid_no_op_updates()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_counts jsonb;
+  v_key text := tg_argv[0];
+begin
+  if v_key = 'inactive_account'
+      and not (
+        to_jsonb(old) ->> 'status' = 'inactive'
+        and to_jsonb(new) ->> 'status' = 'inactive'
+      ) then
+    return new;
+  end if;
+  v_counts := coalesce(
+    nullif(current_setting('moneko.plaid_no_op_update_counts', true), ''),
+    '{}'
+  )::jsonb;
+  perform set_config(
+    'moneko.plaid_no_op_update_counts',
+    jsonb_set(
+      v_counts,
+      array[v_key],
+      to_jsonb(coalesce((v_counts ->> v_key)::integer, 0) + 1),
+      true
+    )::text,
+    true
+  );
+  return new;
+end;
+$$;
+
+create trigger test_count_plaid_account_upsert_updates
+after update of
+  plaid_account_id, provider_account_id, provider_persistent_account_id,
+  name, official_name, mask, currency, type, subtype,
+  provider_balance_current_cents, provider_balance_available_cents,
+  provider_balance_limit_cents, provider_balance_updated_at,
+  raw_provider_payload
+on public.bank_accounts
+for each row execute function pg_temp.count_plaid_no_op_updates('account_upsert');
+
+create trigger test_count_plaid_inactive_account_rewrites
+after update of status on public.bank_accounts
+for each row execute function pg_temp.count_plaid_no_op_updates('inactive_account');
+
+create trigger test_count_plaid_raw_updates
+after update on public.bank_transaction_raw
+for each row execute function pg_temp.count_plaid_no_op_updates('raw_transaction');
+
 create or replace function pg_temp.apply_empty_plaid_sync(
   p_user_id uuid,
   p_connection_id uuid,
@@ -108,6 +168,78 @@ begin
     '[]'::jsonb,
     '{}'::uuid[],
     '[]'::jsonb,
+    '{}'::jsonb,
+    true,
+    false,
+    p_lock_token,
+    null
+  );
+end;
+$$;
+
+create or replace function pg_temp.apply_plaid_no_op_payload(
+  p_user_id uuid,
+  p_connection_id uuid,
+  p_account_id uuid,
+  p_inactive_account_id uuid,
+  p_processed_account_ids uuid[],
+  p_lock_token uuid
+) returns jsonb
+language plpgsql
+as $$
+declare
+  v_generation integer;
+  v_account_upserts jsonb;
+begin
+  select coalesce(connection.cursor_generation, 0)
+  into v_generation
+  from public.bank_connections connection
+  where connection.id = p_connection_id;
+
+  select jsonb_build_array(jsonb_build_object(
+    'id', account.id,
+    'user_id', account.user_id,
+    'bank_connection_id', account.bank_connection_id,
+    'provider', account.provider,
+    'plaid_account_id', account.plaid_account_id,
+    'provider_account_id', account.provider_account_id,
+    'provider_persistent_account_id', account.provider_persistent_account_id,
+    'name', account.name,
+    'official_name', account.official_name,
+    'mask', account.mask,
+    'currency', account.currency,
+    'type', account.type,
+    'subtype', account.subtype,
+    'status', account.status,
+    'provider_balance_current_cents', account.provider_balance_current_cents,
+    'provider_balance_available_cents', account.provider_balance_available_cents,
+    'provider_balance_limit_cents', account.provider_balance_limit_cents,
+    'provider_balance_updated_at', account.provider_balance_updated_at,
+    'raw_provider_payload', account.raw_provider_payload
+  ))
+  into v_account_upserts
+  from public.bank_accounts account
+  where account.id = p_account_id;
+
+  return public.apply_plaid_sync_batch_v2(
+    p_user_id,
+    p_connection_id,
+    v_generation,
+    'test-cursor-' || (v_generation + 1)::text,
+    '[]'::jsonb,
+    '[]'::jsonb,
+    '{}'::text[],
+    '{}'::uuid[],
+    p_processed_account_ids,
+    v_account_upserts,
+    array[p_inactive_account_id],
+    jsonb_build_array(jsonb_build_object(
+      'bank_connection_id', p_connection_id,
+      'bank_account_id', p_account_id,
+      'provider', 'plaid',
+      'provider_transaction_id', 'phase-2-identical-raw',
+      'payload', jsonb_build_object('stable', true)
+    )),
     '{}'::jsonb,
     true,
     false,
@@ -157,7 +289,13 @@ begin
   insert into public.households (id, name, owner_id, currency, created_at)
   values
     (v_household, 'Plaid transfer test household', v_user, 'USD', now()),
-    (v_other_household, 'Other Plaid transfer household', v_user, 'USD', now());
+    (
+      v_other_household,
+      'Other Plaid transfer household',
+      v_other_user,
+      'USD',
+      now()
+    );
 
   -- household_add_owner_member creates both owner memberships when the
   -- household rows are inserted; inserting them again violates
@@ -202,6 +340,10 @@ begin
       v_personal_account_b, v_user, v_personal_connection, 'plaid',
       'personal-b', 'personal-b', 'Personal B', 'USD', 'active'
     );
+
+  update public.bank_accounts
+  set status = 'inactive'
+  where id = v_household_account_outside;
 
   insert into public.bank_sync_locks (
     bank_connection_id, locked_until, locked_by, lock_token, heartbeat_at
@@ -416,7 +558,8 @@ begin
   v_scope_outcomes := v_scope_outcomes || jsonb_build_object(
     'empty', v_result || jsonb_build_object(
       'possible_count', (select count(*) from public.expenses
-        where classification_source = 'plaid_possible_transfer')
+        where user_id = v_user
+          and classification_source = 'plaid_possible_transfer')
     )
   );
 
@@ -429,7 +572,8 @@ begin
   v_scope_outcomes := v_scope_outcomes || jsonb_build_object(
     'one_account', v_result || jsonb_build_object(
       'possible_count', (select count(*) from public.expenses
-        where classification_source = 'plaid_possible_transfer')
+        where user_id = v_user
+          and classification_source = 'plaid_possible_transfer')
     )
   );
 
@@ -570,6 +714,66 @@ select pg_temp.capture_plaid_transfer_tap(is(
    where key like '70000000-0000-0000-0000-%'),
   1,
   'high-amplification candidates are each updated only once'
+));
+select pg_temp.capture_plaid_transfer_tap(lives_ok(
+  $$select pg_temp.apply_empty_plaid_sync(
+    '10000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    array[
+      '40000000-0000-0000-0000-000000000001'::uuid,
+      '40000000-0000-0000-0000-000000000002'::uuid
+    ],
+    '50000000-0000-0000-0000-000000000001'
+  )$$,
+  'a repeated equivalent sync completes without changing the public contract'
+));
+select pg_temp.capture_plaid_transfer_tap(is(
+  (select max(value::integer)
+   from jsonb_each_text(current_setting(
+     'moneko.plaid_transfer_update_counts'
+   )::jsonb)),
+  1,
+  'a repeated equivalent sync does not rewrite stable transfer classifications'
+));
+select pg_temp.capture_plaid_transfer_tap(lives_ok(
+  $$select pg_temp.apply_plaid_no_op_payload(
+    '10000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    '40000000-0000-0000-0000-000000000001',
+    '40000000-0000-0000-0000-000000000003',
+    array[
+      '40000000-0000-0000-0000-000000000001'::uuid,
+      '40000000-0000-0000-0000-000000000002'::uuid
+    ],
+    '50000000-0000-0000-0000-000000000001'
+  )$$,
+  'an initial equivalent account payload and raw insert complete normally'
+));
+select pg_temp.capture_plaid_transfer_tap(lives_ok(
+  $$select pg_temp.apply_plaid_no_op_payload(
+    '10000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    '40000000-0000-0000-0000-000000000001',
+    '40000000-0000-0000-0000-000000000003',
+    array[
+      '40000000-0000-0000-0000-000000000001'::uuid,
+      '40000000-0000-0000-0000-000000000002'::uuid
+    ],
+    '50000000-0000-0000-0000-000000000001'
+  )$$,
+  'a repeated identical account and raw payload completes normally'
+));
+select pg_temp.capture_plaid_transfer_tap(is(
+  jsonb_build_array(
+    coalesce((current_setting('moneko.plaid_no_op_update_counts')::jsonb
+      ->> 'account_upsert')::integer, 0),
+    coalesce((current_setting('moneko.plaid_no_op_update_counts')::jsonb
+      ->> 'inactive_account')::integer, 0),
+    coalesce((current_setting('moneko.plaid_no_op_update_counts')::jsonb
+      ->> 'raw_transaction')::integer, 0)
+  ),
+  '[0, 0, 0]'::jsonb,
+  'identical account, inactive status, and raw payload writes are skipped'
 ));
 select pg_temp.capture_plaid_transfer_tap(is(
   (select jsonb_build_array(analytics_class, analytics_direction, analytics_spending_multiplier, analytics_counts_toward_income, classification_source, classification_review_state, classification_review_reason) from public.expenses where id = '60000000-0000-0000-0000-000000000001'),

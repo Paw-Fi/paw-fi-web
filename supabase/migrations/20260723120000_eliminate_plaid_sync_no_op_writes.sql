@@ -1,0 +1,930 @@
+-- Phase 2: eliminate genuinely equivalent Plaid sync writes while preserving
+-- the public v2 contract, fencing, lifecycle timestamps, and Phase 1 matching.
+
+set lock_timeout = '5s';
+set statement_timeout = '2min';
+
+create or replace function public.apply_plaid_sync_batch_v1(
+  p_user_id uuid,
+  p_bank_connection_id uuid,
+  p_expected_cursor_generation integer,
+  p_next_cursor text,
+  p_expense_inserts jsonb,
+  p_expense_updates jsonb,
+  p_removed_provider_transaction_ids text[],
+  p_removed_bank_account_ids uuid[],
+  p_processed_bank_account_ids uuid[],
+  p_lock_token uuid,
+  p_audit_id uuid default null
+) returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_connection public.bank_connections%rowtype;
+  v_now timestamptz := now();
+  v_inserted integer := 0;
+  v_updated integer := 0;
+  v_removed integer := 0;
+  v_inserted_rows jsonb := '[]'::jsonb;
+  v_expected_inserts integer := 0;
+  v_expected_updates integer := 0;
+begin
+  if jsonb_typeof(coalesce(p_expense_inserts, '[]'::jsonb)) <> 'array'
+    or jsonb_typeof(coalesce(p_expense_updates, '[]'::jsonb)) <> 'array' then
+    raise exception 'Plaid sync mutation payloads must be JSON arrays'
+      using errcode = '22023';
+  end if;
+  v_expected_inserts := jsonb_array_length(coalesce(p_expense_inserts, '[]'::jsonb));
+  v_expected_updates := jsonb_array_length(coalesce(p_expense_updates, '[]'::jsonb));
+
+  select * into v_connection
+  from public.bank_connections
+  where id = p_bank_connection_id
+    and user_id = p_user_id
+    and provider = 'plaid'
+    and removed_at is null
+  for update;
+
+  if v_connection.id is null then
+    raise exception 'Plaid connection not found' using errcode = 'P0002';
+  end if;
+  if coalesce(v_connection.cursor_generation, 0) <> coalesce(p_expected_cursor_generation, 0) then
+    raise exception 'Plaid cursor generation changed during sync' using errcode = '40001';
+  end if;
+  perform 1
+  from public.bank_sync_locks
+  where bank_connection_id = p_bank_connection_id
+    and lock_token = p_lock_token
+    and locked_until > v_now
+  for update;
+  if not found then
+    raise exception 'Plaid sync lock lease was lost' using errcode = '40001';
+  end if;
+  if exists (
+    select 1 from unnest(coalesce(p_processed_bank_account_ids, '{}'::uuid[])) account_id
+    where not exists (
+      select 1 from public.bank_accounts ba
+      where ba.id = account_id
+        and ba.bank_connection_id = p_bank_connection_id
+        and ba.user_id = p_user_id
+        and ba.provider = 'plaid'
+    )
+  ) then
+    raise exception 'Plaid batch contains an account outside the connection' using errcode = '42501';
+  end if;
+  if exists (
+    select 1 from unnest(coalesce(p_removed_bank_account_ids, '{}'::uuid[])) account_id
+    where not exists (
+      select 1 from public.bank_accounts ba
+      where ba.id = account_id
+        and ba.bank_connection_id = p_bank_connection_id
+        and ba.user_id = p_user_id
+        and ba.provider = 'plaid'
+    )
+  ) then
+    raise exception 'Plaid removal batch contains an account outside the connection' using errcode = '42501';
+  end if;
+  if exists (
+    select 1
+    from jsonb_populate_recordset(
+      null::public.expenses,
+      coalesce(p_expense_inserts, '[]'::jsonb)
+        || coalesce(p_expense_updates, '[]'::jsonb)
+    ) r
+    where r.account_id is not null
+      and not exists (
+        select 1 from public.accounts a
+        where a.id = r.account_id
+          and a.linked_bank_account_id = r.bank_account_id
+          and upper(a.currency) = upper(r.currency)
+          and a.household_id is not distinct from r.household_id
+          and (
+            a.user_id = p_user_id
+            or exists (
+              select 1 from public.household_members hm
+              where hm.household_id = a.household_id
+                and hm.user_id = p_user_id
+            )
+          )
+      )
+  ) then
+    raise exception 'Plaid batch contains an invalid linked wallet' using errcode = '42501';
+  end if;
+  if exists (
+    select 1
+    from jsonb_populate_recordset(
+      null::public.expenses,
+      coalesce(p_expense_inserts, '[]'::jsonb)
+        || coalesce(p_expense_updates, '[]'::jsonb)
+    ) r
+    where r.household_id is not null
+      and not exists (
+        select 1 from public.household_members hm
+        where hm.household_id = r.household_id
+          and hm.user_id = p_user_id
+      )
+  ) then
+    raise exception 'Plaid batch contains an unauthorized household' using errcode = '42501';
+  end if;
+  if exists (
+    select 1
+    from jsonb_populate_recordset(
+      null::public.expenses,
+      coalesce(p_expense_inserts, '[]'::jsonb)
+        || coalesce(p_expense_updates, '[]'::jsonb)
+    ) r
+    where r.household_id is distinct from v_connection.household_id
+  ) then
+    raise exception 'Plaid batch does not match the connection scope' using errcode = '42501';
+  end if;
+
+  with inserted as (
+    insert into public.expenses (
+      id, user_id, bank_account_id, provider, provider_transaction_id,
+      amount_cents, currency, date, type, category, raw_text, merchant,
+      source, raw_provider_payload, is_recurring, recurrence_rule,
+      household_id, account_id, contact_id, normalized_amount_cents,
+      base_currency, fx_rate, provider_pfc_primary, provider_pfc_detailed,
+      provider_pfc_confidence, provider_pfc_version,
+      provider_transaction_code, provider_pending, analytics_class,
+      analytics_direction, analytics_is_final,
+      analytics_spending_multiplier, analytics_counts_toward_income,
+      classification_source, classification_version, deleted_at,
+      classification_review_state, classification_review_reason,
+      deleted_reason, provider_deleted_at, provider_fields, user_overrides,
+      sync_version, provider_pending_transaction_id,
+      provider_posted_from_pending_transaction_id,
+      provider_sync_cursor_generation
+    )
+    select
+      coalesce(r.id, gen_random_uuid()), r.user_id, r.bank_account_id,
+      r.provider, r.provider_transaction_id, r.amount_cents, r.currency,
+      r.date, r.type, r.category, r.raw_text, r.merchant, r.source,
+      r.raw_provider_payload, r.is_recurring, r.recurrence_rule,
+      r.household_id, r.account_id, null,
+      r.normalized_amount_cents, r.base_currency, r.fx_rate,
+      r.provider_pfc_primary, r.provider_pfc_detailed,
+      r.provider_pfc_confidence, r.provider_pfc_version,
+      r.provider_transaction_code, r.provider_pending, r.analytics_class,
+      r.analytics_direction, r.analytics_is_final,
+      r.analytics_spending_multiplier, r.analytics_counts_toward_income,
+      r.classification_source, r.classification_version, r.deleted_at,
+      r.classification_review_state, r.classification_review_reason,
+      r.deleted_reason, r.provider_deleted_at, r.provider_fields,
+      r.user_overrides, r.sync_version, r.provider_pending_transaction_id,
+      r.provider_posted_from_pending_transaction_id,
+      r.provider_sync_cursor_generation
+    from jsonb_populate_recordset(
+      null::public.expenses,
+      coalesce(p_expense_inserts, '[]'::jsonb)
+    ) r
+    where r.user_id = p_user_id
+      and r.provider = 'plaid'
+      and r.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+    returning id, provider_transaction_id, amount_cents, currency, date,
+      type, category, raw_text, merchant, is_recurring, recurrence_rule,
+      created_at, updated_at, bank_account_id, account_id, user_id,
+      household_id, contact_id, analytics_class, classification_source,
+      classification_review_state, classification_review_reason,
+      provider_pfc_confidence
+  )
+  select count(*)::integer, coalesce(jsonb_agg(to_jsonb(inserted)), '[]'::jsonb)
+  into v_inserted, v_inserted_rows
+  from inserted;
+  if v_inserted <> v_expected_inserts then
+    raise exception 'Plaid batch insert scope validation failed' using errcode = '42501';
+  end if;
+
+  with updated as (
+    update public.expenses e
+    set
+      provider_transaction_id = r.provider_transaction_id,
+      amount_cents = case when e.user_overrides ? 'amount_cents' then e.amount_cents else r.amount_cents end,
+      currency = case when e.user_overrides ? 'currency' then e.currency else r.currency end,
+      date = case when e.user_overrides ? 'date' then e.date else r.date end,
+      type = case when e.user_overrides ? 'type' then e.type else r.type end,
+      category = case when e.user_overrides ? 'category' then e.category else r.category end,
+      raw_text = case when e.user_overrides ? 'raw_text' then e.raw_text else r.raw_text end,
+      merchant = case when e.user_overrides ? 'merchant' then e.merchant else r.merchant end,
+      source = case when e.user_overrides ? 'source' then e.source else r.source end,
+      raw_provider_payload = r.raw_provider_payload,
+      is_recurring = case when e.user_overrides ? 'is_recurring' then e.is_recurring else r.is_recurring end,
+      recurrence_rule = case when e.user_overrides ? 'recurrence_rule' then e.recurrence_rule else r.recurrence_rule end,
+      household_id = case when e.user_overrides ? 'household_id' then e.household_id else r.household_id end,
+      account_id = case when e.user_overrides ? 'account_id' then e.account_id else r.account_id end,
+      contact_id = e.contact_id,
+      normalized_amount_cents = case
+        when e.user_overrides ? 'amount_cents' or e.user_overrides ? 'currency'
+          then e.normalized_amount_cents
+        else r.normalized_amount_cents
+      end,
+      base_currency = case when e.user_overrides ? 'currency' then e.base_currency else r.base_currency end,
+      fx_rate = case when e.user_overrides ? 'currency' then e.fx_rate else r.fx_rate end,
+      provider_pfc_primary = r.provider_pfc_primary,
+      provider_pfc_detailed = r.provider_pfc_detailed,
+      provider_pfc_confidence = r.provider_pfc_confidence,
+      provider_pfc_version = r.provider_pfc_version,
+      provider_transaction_code = r.provider_transaction_code,
+      provider_pending = r.provider_pending,
+      analytics_class = case
+        when e.classification_source = 'user_override' then e.analytics_class
+        else r.analytics_class
+      end,
+      analytics_direction = case
+        when e.classification_source = 'user_override' then e.analytics_direction
+        else r.analytics_direction
+      end,
+      analytics_is_final = case
+        when e.classification_source = 'user_override' then e.analytics_is_final
+        else r.analytics_is_final
+      end,
+      analytics_spending_multiplier = case
+        when e.classification_source = 'user_override' then e.analytics_spending_multiplier
+        else r.analytics_spending_multiplier
+      end,
+      analytics_counts_toward_income = case
+        when e.classification_source = 'user_override' then e.analytics_counts_toward_income
+        else r.analytics_counts_toward_income
+      end,
+      classification_source = case
+        when e.classification_source = 'user_override' then e.classification_source
+        else r.classification_source
+      end,
+      classification_version = r.classification_version,
+      classification_review_state = case
+        when e.classification_source = 'user_override' then e.classification_review_state
+        else r.classification_review_state
+      end,
+      classification_review_reason = case
+        when e.classification_source = 'user_override' then e.classification_review_reason
+        else r.classification_review_reason
+      end,
+      deleted_at = case when e.deleted_reason = 'user_deleted' then e.deleted_at else r.deleted_at end,
+      deleted_reason = case when e.deleted_reason = 'user_deleted' then e.deleted_reason else r.deleted_reason end,
+      provider_deleted_at = case
+        when e.deleted_reason = 'user_deleted' then e.provider_deleted_at
+        else r.provider_deleted_at
+      end,
+      provider_fields = r.provider_fields,
+      user_overrides = e.user_overrides,
+      sync_version = r.sync_version,
+      provider_pending_transaction_id = r.provider_pending_transaction_id,
+      provider_posted_from_pending_transaction_id = r.provider_posted_from_pending_transaction_id,
+      provider_sync_cursor_generation = r.provider_sync_cursor_generation,
+      updated_at = v_now
+    from jsonb_populate_recordset(
+      null::public.expenses,
+      coalesce(p_expense_updates, '[]'::jsonb)
+    ) r
+    where e.id = r.id
+      and e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      and r.user_id = p_user_id
+      and r.provider = 'plaid'
+      and r.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+    returning e.id
+  )
+  select count(*)::integer into v_updated from updated;
+  if v_updated <> v_expected_updates then
+    raise exception 'Plaid batch update target changed' using errcode = '40001';
+  end if;
+
+  with removed as (
+    update public.expenses e
+    set deleted_at = v_now,
+      deleted_reason = 'provider_removed',
+      provider_deleted_at = v_now,
+      updated_at = v_now
+    where e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.bank_account_id = any(coalesce(p_removed_bank_account_ids, '{}'::uuid[]))
+      and e.provider_transaction_id = any(coalesce(p_removed_provider_transaction_ids, '{}'::text[]))
+      and e.deleted_at is null
+    returning e.id
+  )
+  select count(*)::integer into v_removed from removed;
+
+  with candidate_expenses as materialized (
+    select
+      e.id,
+      e.bank_account_id,
+      upper(coalesce(e.currency, '')) as normalized_currency,
+      abs(e.amount_cents) as absolute_amount_cents,
+      e.date,
+      e.type,
+      e.classification_source
+    from public.expenses e
+    where e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.deleted_at is null
+      and e.analytics_is_final
+      and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      and e.household_id is not distinct from v_connection.household_id
+  ), matching_pairs as (
+    select
+      left_candidate.id as left_id,
+      left_candidate.classification_source as left_classification_source,
+      right_candidate.id as right_id,
+      right_candidate.classification_source as right_classification_source
+    from candidate_expenses left_candidate
+    join candidate_expenses right_candidate
+      on left_candidate.id < right_candidate.id
+      and left_candidate.bank_account_id is distinct from right_candidate.bank_account_id
+      and left_candidate.normalized_currency = right_candidate.normalized_currency
+      and left_candidate.absolute_amount_cents = right_candidate.absolute_amount_cents
+      and left_candidate.type is distinct from right_candidate.type
+      and abs(left_candidate.date - right_candidate.date) <= 3
+  ), transfer_candidates as (
+    select distinct candidate_side.id
+    from matching_pairs pair
+    cross join lateral (
+      values
+        (pair.left_id, pair.left_classification_source),
+        (pair.right_id, pair.right_classification_source)
+    ) as candidate_side(id, classification_source)
+    where candidate_side.classification_source <> 'user_override'
+  ), affected_expenses as materialized (
+    select candidate.id, true as is_transfer_candidate
+    from transfer_candidates candidate
+    union all
+    select e.id, false as is_transfer_candidate
+    from public.expenses e
+    where e.user_id = p_user_id
+      and e.provider = 'plaid'
+      and e.bank_account_id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      and e.classification_source <> 'user_override'
+      and e.classification_review_reason = 'possible_transfer_match'
+      and not exists (
+        select 1 from transfer_candidates candidate where candidate.id = e.id
+      )
+  )
+  update public.expenses e
+  set analytics_class = case
+        when affected.is_transfer_candidate then 'unknown'
+        else e.analytics_class
+      end,
+      analytics_direction = case
+        when affected.is_transfer_candidate then 'none'
+        else e.analytics_direction
+      end,
+      analytics_spending_multiplier = case
+        when affected.is_transfer_candidate then 0
+        else e.analytics_spending_multiplier
+      end,
+      analytics_counts_toward_income = case
+        when affected.is_transfer_candidate then false
+        else e.analytics_counts_toward_income
+      end,
+      classification_source = case
+        when affected.is_transfer_candidate then 'plaid_possible_transfer'
+        when coalesce(e.provider_transaction_code, '') in (
+          'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+          'bank charge', 'late fee', 'membership fee', 'returned item fee',
+          'adjustment', 'purchase'
+        ) then 'plaid_transaction_code'
+        else 'plaid_pfc_' || coalesce(e.provider_pfc_version, 'v2')
+      end,
+      classification_review_state = case
+        when affected.is_transfer_candidate then 'needs_review'
+        else 'not_required'
+      end,
+      classification_review_reason = case
+        when affected.is_transfer_candidate then 'possible_transfer_match'
+        else null
+      end,
+      updated_at = v_now
+  from affected_expenses affected
+  where e.id = affected.id
+    and row(
+      e.analytics_class,
+      e.analytics_direction,
+      e.analytics_spending_multiplier,
+      e.analytics_counts_toward_income,
+      e.analytics_is_final,
+      e.classification_source,
+      e.classification_version,
+      e.classification_review_state,
+      e.classification_review_reason,
+      e.provider_pfc_primary,
+      e.provider_pfc_detailed,
+      e.provider_pfc_confidence,
+      e.provider_pfc_version,
+      e.provider_transaction_code,
+      e.provider_pending
+    ) is distinct from row(
+      case when affected.is_transfer_candidate then 'unknown' else e.analytics_class end,
+      case when affected.is_transfer_candidate then 'none' else e.analytics_direction end,
+      case when affected.is_transfer_candidate then 0 else e.analytics_spending_multiplier end,
+      case when affected.is_transfer_candidate then false else e.analytics_counts_toward_income end,
+      case
+        when affected.is_transfer_candidate then not (
+          case
+            when jsonb_typeof(e.raw_provider_payload -> 'pending') = 'boolean'
+              then (e.raw_provider_payload ->> 'pending')::boolean
+            else false
+          end
+        )
+        else e.analytics_is_final
+      end,
+      case
+        when affected.is_transfer_candidate then 'plaid_possible_transfer'
+        when coalesce(e.provider_transaction_code, '') in (
+          'atm', 'cash', 'cash advance', 'cashback', 'transfer', 'refund',
+          'bank charge', 'late fee', 'membership fee', 'returned item fee',
+          'adjustment', 'purchase'
+        ) then 'plaid_transaction_code'
+        else 'plaid_pfc_' || coalesce(e.provider_pfc_version, 'v2')
+      end,
+      case when affected.is_transfer_candidate then 2 else e.classification_version end,
+      case when affected.is_transfer_candidate then 'needs_review' else 'not_required' end,
+      case when affected.is_transfer_candidate then 'possible_transfer_match' else null end,
+      upper(nullif(trim(e.raw_provider_payload #>> '{personal_finance_category,primary}'), '')),
+      upper(nullif(trim(e.raw_provider_payload #>> '{personal_finance_category,detailed}'), '')),
+      upper(nullif(trim(e.raw_provider_payload #>> '{personal_finance_category,confidence_level}'), '')),
+      lower(coalesce(nullif(trim(e.raw_provider_payload #>> '{personal_finance_category,version}'), ''), 'v2')),
+      lower(nullif(trim(e.raw_provider_payload ->> 'transaction_code'), '')),
+      case
+        when jsonb_typeof(e.raw_provider_payload -> 'pending') = 'boolean'
+          then (e.raw_provider_payload ->> 'pending')::boolean
+        else false
+      end
+    );
+
+  update public.bank_accounts
+  set last_synced_at = v_now
+  where id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+    and bank_connection_id = p_bank_connection_id
+    and user_id = p_user_id;
+
+  update public.bank_connections
+  set cursor = p_next_cursor,
+    plaid_cursor = p_next_cursor,
+    cursor_generation = coalesce(cursor_generation, 0) + 1,
+    last_successful_sync_at = v_now,
+    last_synced_at = v_now,
+    status = 'active',
+    item_status = case
+      when item_status in (
+        'pending_relink', 'newly_connected', 'initial_sync_in_progress',
+        'reconnected', 'accounts_updated'
+      ) then 'active'
+      else coalesce(item_status, 'active')
+    end,
+    item_health_state = 'healthy',
+    needs_resync = false,
+    relink_state = case
+      when relink_state = 'required' then null
+      when relink_state = 'new_accounts_available' then 'new_accounts_available'
+      else null
+    end,
+    error_code = null,
+    error_message = null
+  where id = p_bank_connection_id and user_id = p_user_id;
+
+  if p_audit_id is not null then
+    update public.bank_sync_audit
+    set synced_accounts = cardinality(coalesce(p_processed_bank_account_ids, '{}'::uuid[])),
+      inserted_transactions = v_inserted,
+      updated_transactions = v_updated,
+      status = 'succeeded',
+      finished_at = v_now,
+      error_message = null
+    where id = p_audit_id and bank_connection_id = p_bank_connection_id;
+  end if;
+
+  insert into public.plaid_sync_events (
+    bank_connection_id, bank_sync_audit_id, event_type, payload
+  ) values (
+    p_bank_connection_id,
+    p_audit_id,
+    'batch_applied',
+    jsonb_build_object(
+      'inserted', v_inserted,
+      'updated', v_updated,
+      'removed', v_removed,
+      'accounts', cardinality(coalesce(p_processed_bank_account_ids, '{}'::uuid[])),
+      'cursor_generation', coalesce(p_expected_cursor_generation, 0) + 1
+    )
+  );
+
+  return jsonb_build_object(
+    'inserted', v_inserted,
+    'updated', v_updated,
+    'removed', v_removed,
+    'accounts_processed', cardinality(coalesce(p_processed_bank_account_ids, '{}'::uuid[])),
+    'inserted_records', v_inserted_rows,
+    'cursor_generation', coalesce(p_expected_cursor_generation, 0) + 1
+  );
+end;
+$$;
+
+create or replace function public.apply_plaid_sync_batch_v2_legacy(
+  p_user_id uuid,
+  p_bank_connection_id uuid,
+  p_expected_cursor_generation integer,
+  p_next_cursor text,
+  p_expense_inserts jsonb,
+  p_expense_updates jsonb,
+  p_removed_provider_transaction_ids text[],
+  p_removed_bank_account_ids uuid[],
+  p_processed_bank_account_ids uuid[],
+  p_account_upserts jsonb,
+  p_inactive_bank_account_ids uuid[],
+  p_raw_transactions jsonb,
+  p_sync_status jsonb,
+  p_is_ready boolean,
+  p_recurring_refresh_required boolean,
+  p_lock_token uuid,
+  p_audit_id uuid default null
+) returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_connection public.bank_connections%rowtype;
+  v_result jsonb;
+  v_now timestamptz := now();
+  v_initial_complete boolean;
+  v_historical_complete boolean;
+begin
+  if jsonb_typeof(coalesce(p_account_upserts, '[]'::jsonb)) <> 'array'
+    or jsonb_typeof(coalesce(p_raw_transactions, '[]'::jsonb)) <> 'array'
+    or jsonb_typeof(coalesce(p_sync_status, '{}'::jsonb)) <> 'object' then
+    raise exception 'Plaid account, raw transaction, and status payloads are invalid'
+      using errcode = '22023';
+  end if;
+
+  select * into v_connection
+  from public.bank_connections
+  where id = p_bank_connection_id
+    and user_id = p_user_id
+    and provider = 'plaid'
+    and removed_at is null
+    and status <> 'disabled'
+    and coalesce(item_status, '') not in ('removed', 'pending_removal')
+  for update;
+
+  if v_connection.id is null then
+    raise exception 'Plaid connection not found' using errcode = 'P0002';
+  end if;
+  if coalesce(v_connection.cursor_generation, 0) <>
+      coalesce(p_expected_cursor_generation, 0) then
+    raise exception 'Plaid cursor generation changed during sync'
+      using errcode = '40001';
+  end if;
+
+  perform 1
+  from public.bank_sync_locks
+  where bank_connection_id = p_bank_connection_id
+    and lock_token = p_lock_token
+    and locked_until > v_now
+  for update;
+  if not found then
+    raise exception 'Plaid sync lock lease was lost' using errcode = '40001';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_populate_recordset(
+      null::public.bank_accounts,
+      coalesce(p_account_upserts, '[]'::jsonb)
+    ) incoming
+    where incoming.user_id is distinct from p_user_id
+      or incoming.bank_connection_id is distinct from p_bank_connection_id
+      or incoming.provider is distinct from 'plaid'
+      or incoming.provider_account_id is null
+      or exists (
+        select 1
+        from public.bank_accounts existing
+        where existing.id = incoming.id
+          and (
+            existing.user_id is distinct from p_user_id
+            or existing.bank_connection_id is distinct from p_bank_connection_id
+            or existing.provider is distinct from 'plaid'
+          )
+      )
+  ) then
+    raise exception 'Plaid account payload is outside the connection scope'
+      using errcode = '42501';
+  end if;
+
+  insert into public.bank_accounts (
+    id, user_id, bank_connection_id, provider, plaid_account_id,
+    provider_account_id, provider_persistent_account_id, name, official_name,
+    mask, currency, type, subtype, status, provider_balance_current_cents,
+    provider_balance_available_cents, provider_balance_limit_cents,
+    provider_balance_updated_at, raw_provider_payload
+  )
+  select
+    incoming.id, incoming.user_id, incoming.bank_connection_id,
+    incoming.provider, incoming.plaid_account_id,
+    incoming.provider_account_id, incoming.provider_persistent_account_id,
+    incoming.name, incoming.official_name, incoming.mask, incoming.currency,
+    incoming.type, incoming.subtype, incoming.status,
+    incoming.provider_balance_current_cents,
+    incoming.provider_balance_available_cents,
+    incoming.provider_balance_limit_cents,
+    incoming.provider_balance_updated_at, incoming.raw_provider_payload
+  from jsonb_populate_recordset(
+    null::public.bank_accounts,
+    coalesce(p_account_upserts, '[]'::jsonb)
+  ) incoming
+  on conflict (id) do update set
+    plaid_account_id = excluded.plaid_account_id,
+    provider_account_id = excluded.provider_account_id,
+    provider_persistent_account_id = excluded.provider_persistent_account_id,
+    name = excluded.name,
+    official_name = excluded.official_name,
+    mask = excluded.mask,
+    currency = excluded.currency,
+    type = excluded.type,
+    subtype = excluded.subtype,
+    status = excluded.status,
+    provider_balance_current_cents = excluded.provider_balance_current_cents,
+    provider_balance_available_cents = excluded.provider_balance_available_cents,
+    provider_balance_limit_cents = excluded.provider_balance_limit_cents,
+    provider_balance_updated_at = excluded.provider_balance_updated_at,
+    raw_provider_payload = excluded.raw_provider_payload,
+    updated_at = v_now
+  where row(
+    bank_accounts.plaid_account_id,
+    bank_accounts.provider_account_id,
+    bank_accounts.provider_persistent_account_id,
+    bank_accounts.name,
+    bank_accounts.official_name,
+    bank_accounts.mask,
+    bank_accounts.currency,
+    bank_accounts.type,
+    bank_accounts.subtype,
+    bank_accounts.status,
+    bank_accounts.provider_balance_current_cents,
+    bank_accounts.provider_balance_available_cents,
+    bank_accounts.provider_balance_limit_cents,
+    bank_accounts.provider_balance_updated_at,
+    bank_accounts.raw_provider_payload
+  ) is distinct from row(
+    excluded.plaid_account_id,
+    excluded.provider_account_id,
+    excluded.provider_persistent_account_id,
+    excluded.name,
+    excluded.official_name,
+    excluded.mask,
+    excluded.currency,
+    excluded.type,
+    excluded.subtype,
+    excluded.status,
+    excluded.provider_balance_current_cents,
+    excluded.provider_balance_available_cents,
+    excluded.provider_balance_limit_cents,
+    excluded.provider_balance_updated_at,
+    excluded.raw_provider_payload
+  );
+
+  if exists (
+    select 1
+    from unnest(coalesce(p_inactive_bank_account_ids, '{}'::uuid[])) account_id
+    where not exists (
+      select 1
+      from public.bank_accounts account
+      where account.id = account_id
+        and account.user_id = p_user_id
+        and account.bank_connection_id = p_bank_connection_id
+        and account.provider = 'plaid'
+    )
+  ) then
+    raise exception 'Plaid inactive account payload is outside the connection scope'
+      using errcode = '42501';
+  end if;
+
+  update public.bank_accounts
+  set status = 'inactive', updated_at = v_now
+  where id = any(coalesce(p_inactive_bank_account_ids, '{}'::uuid[]))
+    and user_id = p_user_id
+    and bank_connection_id = p_bank_connection_id
+    and provider = 'plaid'
+    and status is distinct from 'disabled'
+    and status is distinct from 'inactive';
+
+  update public.expenses expense
+  set deleted_at = null,
+      deleted_reason = null,
+      updated_at = v_now
+  where expense.user_id = p_user_id
+    and expense.provider = 'plaid'
+    and expense.deleted_reason = 'bank_account_inactive'
+    and expense.bank_account_id in (
+      select account.id
+      from public.bank_accounts account
+      where account.id = any(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+        and account.status = 'active'
+        and account.bank_connection_id = p_bank_connection_id
+    );
+
+  if exists (
+    select 1
+    from jsonb_populate_recordset(
+      null::public.bank_transaction_raw,
+      coalesce(p_raw_transactions, '[]'::jsonb)
+    ) raw
+    where raw.bank_connection_id is distinct from p_bank_connection_id
+      or raw.provider is distinct from 'plaid'
+      or raw.bank_account_id is null
+      or raw.provider_transaction_id is null
+      or raw.bank_account_id <> all(coalesce(p_processed_bank_account_ids, '{}'::uuid[]))
+      or not exists (
+        select 1
+        from public.bank_accounts account
+        where account.id = raw.bank_account_id
+          and account.user_id = p_user_id
+          and account.bank_connection_id = p_bank_connection_id
+          and account.provider = 'plaid'
+      )
+  ) then
+    raise exception 'Plaid raw transaction payload is outside the connection scope'
+      using errcode = '42501';
+  end if;
+
+  v_initial_complete :=
+    coalesce((v_connection.metadata -> 'plaid_sync_status' ->>
+      'initial_update_complete')::boolean, false)
+    or coalesce((p_sync_status ->> 'initial_update_complete')::boolean, false);
+  v_historical_complete :=
+    coalesce((v_connection.metadata -> 'plaid_sync_status' ->>
+      'historical_update_complete')::boolean, false)
+    or coalesce((p_sync_status ->> 'historical_update_complete')::boolean, false);
+
+  if not coalesce(p_is_ready, false) then
+    if jsonb_array_length(coalesce(p_expense_inserts, '[]'::jsonb)) > 0
+      or jsonb_array_length(coalesce(p_expense_updates, '[]'::jsonb)) > 0
+      or jsonb_array_length(coalesce(p_raw_transactions, '[]'::jsonb)) > 0
+      or cardinality(coalesce(
+        p_removed_provider_transaction_ids,
+        '{}'::text[]
+      )) > 0 then
+      raise exception 'Plaid returned mutations while transactions were not ready'
+        using errcode = '40001';
+    end if;
+
+    update public.bank_connections
+    set metadata = coalesce(metadata, '{}'::jsonb)
+          || jsonb_build_object(
+            'initial_update_complete', v_initial_complete,
+            'historical_update_complete', v_historical_complete,
+            'sync_status_updated_at', v_now
+          )
+          || jsonb_build_object(
+            'plaid_sync_status',
+            coalesce(metadata -> 'plaid_sync_status', '{}'::jsonb)
+              || jsonb_build_object(
+                'initial_update_complete', v_initial_complete,
+                'historical_update_complete', v_historical_complete,
+                'transactions_update_status',
+                  p_sync_status ->> 'transactions_update_status',
+                'updated_at', v_now
+              )
+          ),
+        last_sync_attempt_at = v_now,
+        status = 'pending',
+        item_status = 'initial_sync_in_progress',
+        updated_at = v_now
+    where id = p_bank_connection_id
+      and user_id = p_user_id;
+
+    if p_audit_id is not null then
+      update public.bank_sync_audit
+      set status = 'deferred',
+          synced_accounts = 0,
+          inserted_transactions = 0,
+          updated_transactions = 0,
+          finished_at = v_now,
+          error_message = null
+      where id = p_audit_id
+        and bank_connection_id = p_bank_connection_id;
+    end if;
+
+    insert into public.plaid_sync_events (
+      bank_connection_id, bank_sync_audit_id, event_type, payload
+    ) values (
+      p_bank_connection_id,
+      p_audit_id,
+      'batch_not_ready',
+      jsonb_build_object(
+        'cursor_generation', coalesce(p_expected_cursor_generation, 0),
+        'transactions_update_status',
+          p_sync_status ->> 'transactions_update_status'
+      )
+    );
+
+    return jsonb_build_object(
+      'inserted', 0,
+      'updated', 0,
+      'removed', 0,
+      'accounts_processed', 0,
+      'inserted_records', '[]'::jsonb,
+      'cursor_generation', coalesce(p_expected_cursor_generation, 0),
+      'is_ready', false,
+      'recurring_refresh_required', false
+    );
+  end if;
+
+  insert into public.bank_transaction_raw (
+    bank_connection_id, bank_account_id, provider,
+    provider_transaction_id, payload
+  )
+  select
+    raw.bank_connection_id, raw.bank_account_id, raw.provider,
+    raw.provider_transaction_id, raw.payload
+  from jsonb_populate_recordset(
+    null::public.bank_transaction_raw,
+    coalesce(p_raw_transactions, '[]'::jsonb)
+  ) raw
+  on conflict (bank_account_id, provider, provider_transaction_id)
+  do update set payload = excluded.payload
+  where bank_transaction_raw.payload is distinct from excluded.payload;
+
+  delete from public.bank_transaction_raw raw
+  where raw.bank_connection_id = p_bank_connection_id
+    and raw.provider = 'plaid'
+    and raw.bank_account_id = any(coalesce(p_removed_bank_account_ids, '{}'::uuid[]))
+    and raw.provider_transaction_id = any(
+      coalesce(p_removed_provider_transaction_ids, '{}'::text[])
+    );
+
+  v_result := public.apply_plaid_sync_batch_v1(
+    p_user_id,
+    p_bank_connection_id,
+    p_expected_cursor_generation,
+    p_next_cursor,
+    p_expense_inserts,
+    p_expense_updates,
+    p_removed_provider_transaction_ids,
+    p_removed_bank_account_ids,
+    p_processed_bank_account_ids,
+    p_lock_token,
+    p_audit_id
+  );
+
+  update public.bank_connections
+  set metadata = case
+        when coalesce(p_sync_status, '{}'::jsonb) = '{}'::jsonb then metadata
+        else coalesce(metadata, '{}'::jsonb)
+          || jsonb_build_object(
+            'initial_update_complete', v_initial_complete,
+            'historical_update_complete', v_historical_complete,
+            'sync_status_updated_at', v_now
+          )
+          || jsonb_build_object(
+            'plaid_sync_status',
+            coalesce(metadata -> 'plaid_sync_status', '{}'::jsonb)
+              || jsonb_build_object(
+                'initial_update_complete', v_initial_complete,
+                'historical_update_complete', v_historical_complete,
+                'transactions_update_status',
+                  p_sync_status ->> 'transactions_update_status',
+                'updated_at', v_now
+              )
+          )
+      end,
+      last_sync_attempt_at = v_now,
+      plaid_recurring_refresh_pending =
+        plaid_recurring_refresh_pending
+          or coalesce(p_recurring_refresh_required, false),
+      updated_at = v_now
+  where id = p_bank_connection_id
+    and user_id = p_user_id;
+
+  return v_result || jsonb_build_object(
+    'is_ready', p_is_ready,
+    'recurring_refresh_required', p_recurring_refresh_required
+  );
+end;
+$$;
+
+revoke all on function public.apply_plaid_sync_batch_v1(
+  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], uuid, uuid
+)
+from public, anon, authenticated, service_role;
+
+revoke all on function public.apply_plaid_sync_batch_v2_legacy(
+  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], jsonb,
+  uuid[], jsonb, jsonb, boolean, boolean, uuid, uuid
+)
+from public, anon, authenticated, service_role;
+
+comment on function public.apply_plaid_sync_batch_v1(
+  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], uuid, uuid
+)
+is 'Internal implementation owned by apply_plaid_sync_batch_v2; direct worker execution is revoked.';
+
+comment on function public.apply_plaid_sync_batch_v2_legacy(
+  uuid, uuid, integer, text, jsonb, jsonb, text[], uuid[], uuid[], jsonb,
+  uuid[], jsonb, jsonb, boolean, boolean, uuid, uuid
+)
+is 'Internal legacy implementation owned by apply_plaid_sync_batch_v2; direct execution is revoked.';
+
+reset statement_timeout;
+reset lock_timeout;
