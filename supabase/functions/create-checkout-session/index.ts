@@ -109,12 +109,11 @@ async function resolveRegionalPriceId(
   billingInterval: BillingInterval | undefined,
   market: RegionalPricingMarket,
 ): Promise<string> {
-  const planTarget =
-    plan === "lifetime"
-      ? "lifetime"
-      : billingInterval === "yearly"
-        ? "plus_yearly"
-        : "plus_monthly";
+  const planTarget = plan === "lifetime"
+    ? "lifetime"
+    : billingInterval === "yearly"
+    ? "plus_commitment_monthly"
+    : "plus_monthly";
   const lookupKey = getRegionalStripePriceLookupKey(planTarget);
   const cacheKey = buildRegionalPriceCacheKey(lookupKey, market.currencyCode);
   const cached = regionalPriceIdCache.get(cacheKey);
@@ -132,16 +131,14 @@ async function resolveRegionalPriceId(
   const regionalPrice = matches.data[0];
   if (regionalPrice) {
     const currency = market.currencyCode.toLowerCase();
-    const expectedAmount =
-      plan === "lifetime"
-        ? market.lifetime
-        : billingInterval === "yearly"
-          ? market.yearly
-          : market.monthly;
-    const actualAmount =
-      regionalPrice.currency === currency
-        ? regionalPrice.unit_amount
-        : regionalPrice.currency_options?.[currency]?.unit_amount;
+    const expectedAmount = plan === "lifetime"
+      ? market.lifetime
+      : billingInterval === "yearly"
+      ? Math.round(market.yearly / 12)
+      : market.monthly;
+    const actualAmount = regionalPrice.currency === currency
+      ? regionalPrice.unit_amount
+      : regionalPrice.currency_options?.[currency]?.unit_amount;
     if (actualAmount !== expectedAmount) {
       throw new Error(`Stripe Price amount mismatch for ${lookupKey}`);
     }
@@ -259,8 +256,9 @@ serve(async (req: Request) => {
     } catch (error) {
       return new Response(
         JSON.stringify({
-          error:
-            error instanceof Error ? error.message : "Invalid checkout market",
+          error: error instanceof Error
+            ? error.message
+            : "Invalid checkout market",
         }),
         {
           status: 400,
@@ -401,8 +399,9 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription =
-        hasActiveHouseholdSubscriptionAccess(ownerSub);
+      const ownerHasActiveSubscription = hasActiveHouseholdSubscriptionAccess(
+        ownerSub,
+      );
 
       if (ownerHasActiveSubscription) {
         console.error("User is bound to active household subscription:", {
@@ -558,8 +557,7 @@ serve(async (req: Request) => {
           appUrl: env.appUrl,
           successUrl: typeof successUrl === "string" ? successUrl : null,
           cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
-          allowLocalhost:
-            env.appUrl.includes("localhost") ||
+          allowLocalhost: env.appUrl.includes("localhost") ||
             env.appUrl.includes("127.0.0.1"),
         });
 
@@ -606,7 +604,8 @@ serve(async (req: Request) => {
               return new Response(
                 JSON.stringify({
                   error: "Invalid promotion code",
-                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                  details:
+                    `The promotion code '${promoCode}' is not valid or has expired.`,
                 }),
                 {
                   status: 400,
@@ -813,7 +812,8 @@ serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
-                details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                details:
+                  `The promotion code '${promoCode}' is not valid or has expired.`,
               }),
               {
                 status: 400,
@@ -861,6 +861,10 @@ serve(async (req: Request) => {
             user_id: userId, // Use snake_case for Stripe metadata
             plan: plan,
             billing_interval: billingInterval,
+            payment_interval: billingInterval === "yearly"
+              ? "monthly"
+              : billingInterval,
+            commitment_months: billingInterval === "yearly" ? "12" : "0",
             pricing_country: requestedCountry ?? "US",
             presentment_currency: requestedCurrency,
           },
@@ -869,6 +873,7 @@ serve(async (req: Request) => {
         metadata: {
           user_id: userId,
           checkout_type: "subscription",
+          commitment_months: billingInterval === "yearly" ? "12" : "0",
           pricing_country: requestedCountry ?? "US",
           presentment_currency: requestedCurrency,
         },

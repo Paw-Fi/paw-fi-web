@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
+import { subscriptionHasCommitmentPrice } from "../shared/stripe-subscription-prices.ts";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 
@@ -45,8 +46,9 @@ serve(async (req) => {
     // Parse the request body ONCE
     requestBody = await req.json();
     const { action, paymentMethodId } = requestBody;
-    const requestUserId =
-      typeof requestBody?.userId === "string" ? requestBody.userId : null;
+    const requestUserId = typeof requestBody?.userId === "string"
+      ? requestBody.userId
+      : null;
 
     if (requestUserId && requestUserId !== userId) {
       return new Response(JSON.stringify({ error: "User ID mismatch" }), {
@@ -56,13 +58,10 @@ serve(async (req) => {
     }
 
     if (!action) {
-      return new Response(
-        JSON.stringify({ error: "Action is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Action is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get the user's current subscription
@@ -170,10 +169,10 @@ serve(async (req) => {
           (customer.invoice_settings?.default_payment_method as string) ||
           (subscription.stripe_subscription_id
             ? ((
-                await stripe.subscriptions.retrieve(
-                  subscription.stripe_subscription_id,
-                )
-              ).default_payment_method as string)
+              await stripe.subscriptions.retrieve(
+                subscription.stripe_subscription_id,
+              )
+            ).default_payment_method as string)
             : null);
 
         // Filter out invalid/expired payment methods and format
@@ -189,8 +188,7 @@ serve(async (req) => {
             const expMonth = pm.card.exp_month;
 
             // Card is expired if exp_year < current year, or same year but exp_month < current month
-            const isExpired =
-              expYear < currentYear ||
+            const isExpired = expYear < currentYear ||
               (expYear === currentYear && expMonth < currentMonth);
             return !isExpired;
           })
@@ -257,8 +255,7 @@ serve(async (req) => {
           const now = new Date();
           const expYear = paymentMethod.card.exp_year;
           const expMonth = paymentMethod.card.exp_month;
-          const isExpired =
-            expYear < now.getFullYear() ||
+          const isExpired = expYear < now.getFullYear() ||
             (expYear === now.getFullYear() && expMonth < now.getMonth() + 1);
 
           if (isExpired) {
@@ -341,7 +338,7 @@ serve(async (req) => {
         )) as Stripe.Customer;
         const isDefault =
           (customer.invoice_settings?.default_payment_method as string) ===
-          paymentMethodId;
+            paymentMethodId;
 
         // CRITICAL: Cannot remove default payment method if subscription is active
         if (isDefault && subscription.stripe_subscription_id) {
@@ -419,9 +416,29 @@ serve(async (req) => {
       case "create_portal_session": {
         // Create a billing portal session for the customer
         // This allows customers to manage their subscription, payment methods, and billing history
+        const stripeSubscription = await stripe.subscriptions.retrieve(
+          subscription.stripe_subscription_id,
+        );
+        const isCommitment = subscriptionHasCommitmentPrice(stripeSubscription);
+        const commitmentPortalConfiguration = Deno.env.get(
+          "STRIPE_COMMITMENT_PORTAL_CONFIGURATION_ID",
+        );
+        if (
+          isCommitment &&
+          !commitmentPortalConfiguration?.startsWith("bpc_")
+        ) {
+          throw new Error(
+            "STRIPE_COMMITMENT_PORTAL_CONFIGURATION_ID is not configured",
+          );
+        }
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: subscription.stripe_customer_id,
-          return_url: `${req.headers.get("origin") || "https://moneko.io"}/dashboard/user-settings/membership`,
+          return_url: `${
+            req.headers.get("origin") || "https://moneko.io"
+          }/dashboard/user-settings/membership`,
+          ...(isCommitment
+            ? { configuration: commitmentPortalConfiguration }
+            : {}),
         });
 
         return new Response(
@@ -442,34 +459,29 @@ serve(async (req) => {
         });
     }
   } catch (error: unknown) {
-    const errorObject =
-      typeof error === "object" && error !== null
-        ? (error as Record<string, unknown>)
-        : null;
+    const errorObject = typeof error === "object" && error !== null
+      ? (error as Record<string, unknown>)
+      : null;
 
-    const errorMessage =
-      typeof errorObject?.message === "string"
-        ? errorObject.message
-        : error instanceof Error
-          ? error.message
-          : "Internal server error";
+    const errorMessage = typeof errorObject?.message === "string"
+      ? errorObject.message
+      : error instanceof Error
+      ? error.message
+      : "Internal server error";
 
-    const statusCode =
-      typeof errorObject?.statusCode === "number"
-        ? errorObject.statusCode
-        : 500;
+    const statusCode = typeof errorObject?.statusCode === "number"
+      ? errorObject.statusCode
+      : 500;
 
-    const errorType =
-      typeof errorObject?.type === "string"
-        ? errorObject.type
-        : "unknown_error";
+    const errorType = typeof errorObject?.type === "string"
+      ? errorObject.type
+      : "unknown_error";
 
-    const errorStack =
-      typeof errorObject?.stack === "string"
-        ? errorObject.stack
-        : error instanceof Error
-          ? error.stack
-          : undefined;
+    const errorStack = typeof errorObject?.stack === "string"
+      ? errorObject.stack
+      : error instanceof Error
+      ? error.stack
+      : undefined;
 
     console.error("Error in manage-payment-method:", {
       error: errorMessage,

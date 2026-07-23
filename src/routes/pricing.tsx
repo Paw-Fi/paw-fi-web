@@ -1,7 +1,7 @@
 /**
  * Sample checkout URLs:
  * - Monthly + MONEKO-3:    /checkout?plan=plus&billing=monthly&promo=MONEKO-3
- * - Yearly + MONEKO100:  /checkout?plan=plus&billing=yearly&promo=MONEKO100
+ * - 12-month commitment + MONEKO100: /checkout?plan=plus&billing=yearly&promo=MONEKO100
  * - Lifetime: /checkout?plan=lifetime
  */
 
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/pricing")({
       title:
         "Moneko Plus Pricing | AI Budgeting App for Individuals & Households",
       description:
-        "Moneko Plus includes monthly, yearly, and lifetime access to AI expense capture, health reports, AI scenarios, WhatsApp and Telegram tracking, email receipts, wallets, Spaces, bank sync, multi-currency tools, App Lock, and priority support.",
+        "Moneko Plus includes flexible monthly billing, discounted monthly payments with a 12-month commitment, and lifetime access options for AI expense capture, reports, scenarios, wallets, Spaces, bank sync, and multi-currency tools.",
       keywords:
         "moneko pricing, moneko plus, AI budgeting app pricing, budgeting app subscription, envelope budgeting app, household budgeting app, WhatsApp expense tracker, personal finance app subscription",
       image: "https://moneko.io/og-img.png",

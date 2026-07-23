@@ -920,6 +920,23 @@ serve(async (req: Request): Promise<Response> => {
     const inAppOwnershipType = normalizeAppStoreInAppOwnershipType(
       (transaction as Record<string, unknown>).inAppOwnershipType,
     );
+    const transactionRecord = transaction as Record<string, unknown>;
+    const billingPlanType = String(
+      transactionRecord.billingPlanType ?? "",
+    ).toUpperCase();
+    const commitmentInfo = transactionRecord.commitmentInfo as
+      | Record<string, unknown>
+      | null
+      | undefined;
+    const commitmentMonths = billingPlanType === "MONTHLY" &&
+        Number(commitmentInfo?.totalBillingPeriods) === 12
+      ? 12
+      : null;
+    const commitmentExpiresDate = Number(commitmentInfo?.commitmentExpiresDate);
+    const commitmentEnd =
+      commitmentMonths === 12 && Number.isFinite(commitmentExpiresDate)
+        ? new Date(commitmentExpiresDate).toISOString()
+        : null;
     notificationLogContext = getAppStoreDiagnosticsContext({
       phase: "decoded_notification",
       environment,
@@ -1537,6 +1554,11 @@ serve(async (req: Request): Promise<Response> => {
       plan: catalogProduct.plan,
       status,
       billing_interval: catalogProduct.billing_interval,
+      payment_interval: commitmentMonths === 12
+        ? "monthly"
+        : catalogProduct.billing_interval,
+      commitment_months: commitmentMonths,
+      commitment_end: commitmentEnd,
       current_period_end: catalogProduct.plan === "lifetime"
         ? null
         : resolvedExpiresIso,

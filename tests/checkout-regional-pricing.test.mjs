@@ -67,7 +67,7 @@ test("checkout amount uses the selected market and billing interval", () => {
   });
 
   assert.equal(getRegionalCheckoutAmount("plus", "monthly", market), 499);
-  assert.equal(getRegionalCheckoutAmount("plus", "yearly", market), 2999);
+  assert.equal(getRegionalCheckoutAmount("plus", "yearly", market), 250);
   assert.equal(getRegionalCheckoutAmount("lifetime", undefined, market), 9999);
 });
 

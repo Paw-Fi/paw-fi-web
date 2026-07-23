@@ -106,7 +106,7 @@ export function getRegionalPriceLabels(countryCode: string) {
   return {
     market,
     monthly: formatRegionalPrice(market, market.monthly),
-    yearly: formatRegionalPrice(market, market.yearly),
+    yearly: formatRegionalPrice(market, effectiveMonthly * 12),
     lifetime: formatRegionalPrice(market, market.lifetime),
     effectiveMonthly: formatRegionalPrice(market, effectiveMonthly),
     compareAtMonthly: formatRegionalPrice(market, market.compareAtMonthly),

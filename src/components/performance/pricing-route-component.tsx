@@ -97,7 +97,7 @@ function BillingToggle({
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           />
         )}
-        <span className="relative z-10">Yearly</span>
+        <span className="relative z-10">Annual plan</span>
         <span className="bg-primary/10 text-primary relative z-10 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase">
           Save {savingsPercent}%
         </span>
@@ -212,7 +212,7 @@ export function PricingRouteComponent() {
     {
       question: "Can I switch billing later?",
       answer:
-        "Yes. You can switch between monthly and yearly Plus billing from your account settings. Billing dates are handled by Stripe based on your current subscription.",
+        "You can switch from monthly billing to the discounted 12-month commitment. Changes away from a commitment take effect after its 12 monthly payments are complete.",
     },
     {
       question: "What payment methods do you accept?",
@@ -227,7 +227,17 @@ export function PricingRouteComponent() {
     {
       question: "What is your cancellation and refund policy?",
       answer:
-        "You can cancel anytime from account settings. For billing questions (including refunds), contact hello@moneko.io and we'll help based on your payment details.",
+        "Monthly subscriptions can be canceled anytime. The discounted option commits you to 12 monthly payments; cancellation prevents the next 12-month commitment from starting. For billing questions, contact hello@moneko.io.",
+    },
+    {
+      question: "Why do I still get charged after canceling the Annual Plan?",
+      answer:
+        "The discounted Annual Plan includes a 12-month commitment. Canceling prevents the next annual commitment from starting, but your remaining monthly payments continue until all 12 payments are complete.",
+    },
+    {
+      question: "Can I stop paying immediately after canceling?",
+      answer:
+        "No. If you choose the Annual Plan, monthly payments continue until the current 12-month commitment has been fulfilled.",
     },
     {
       question: "What does the AI help with in Moneko?",
@@ -478,6 +488,7 @@ export function PricingRouteComponent() {
                 pyTier={pyTier}
                 lifetimePrice={regionalPrices.lifetime}
                 freePrice={formatRegionalPrice(regionalPrices.market, 0)}
+                yearlySavingsPercent={regionalPrices.yearlySavingsPercent}
                 onSubscribe={handleSubscribe}
               />
             </motion.div>
