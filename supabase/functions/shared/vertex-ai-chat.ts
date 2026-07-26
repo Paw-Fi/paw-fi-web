@@ -257,8 +257,10 @@ function normalizeSendMessageInput(content: unknown): VertexContent {
       item && typeof item === "object" && "functionResponse" in item
     )
   ) {
+    // Vertex generateContent accepts only `user` and `model` content roles.
+    // Function responses are sent as user content (not OpenAI's `tool` role).
     return {
-      role: "tool",
+      role: "user",
       parts: content.map((item) => ({
         functionResponse: structuredClone(
           (item as { functionResponse: Record<string, unknown> })
