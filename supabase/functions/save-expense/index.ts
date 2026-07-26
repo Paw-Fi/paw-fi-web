@@ -26,6 +26,7 @@ import {
 import {
   buildHouseholdSplitRecords,
   commitHouseholdSplitRecords,
+  commitRecurringTemplateSplitRecords,
   type CustomSplits,
   expectedSplitParentFromTransaction,
   fetchHouseholdAutoSplitSettings,
@@ -895,7 +896,10 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const { error: commitSplitError } = await commitHouseholdSplitRecords({
+      const commitSplit = body.isRecurring === true
+        ? commitRecurringTemplateSplitRecords
+        : commitHouseholdSplitRecords;
+      const { error: commitSplitError } = await commitSplit({
         supabase,
         actorUserId: userId,
         group: buildResult.group,

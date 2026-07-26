@@ -29,6 +29,7 @@ import {
   buildHouseholdSplitRecords,
   buildPreservedHistoricalSplitRecords,
   commitHouseholdSplitRecordsWithPatch,
+  commitRecurringTemplateSplitRecordsWithPatch,
   expectedSplitParentFromTransaction,
   fetchHouseholdAutoSplitSettings,
   parseExplicitReSplitRequested,
@@ -2207,8 +2208,14 @@ Deno.serve(async (req: Request) => {
     let updatedExpense: unknown = null;
     if (splitWriteNeedsFinalization && pendingSplitCommit) {
       const splitCommit = pendingSplitCommit;
+      const isRecurringTemplate = (
+        updates.is_recurring ?? expenseRecord["is_recurring"] ?? false
+      ) === true;
+      const commitSplit = isRecurringTemplate
+        ? commitRecurringTemplateSplitRecordsWithPatch
+        : commitHouseholdSplitRecordsWithPatch;
       const { error: commitSplitError } =
-        await commitHouseholdSplitRecordsWithPatch({
+        await commitSplit({
           supabase,
           actorUserId: userId,
           group: splitCommit.group,
