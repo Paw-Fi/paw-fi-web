@@ -506,7 +506,8 @@ serve(async (req: Request): Promise<Response> => {
       .lte("date", toStr)
       .in("currency", selectedCurrencies)
       .eq("analytics_is_final", true)
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .or("is_recurring.eq.false,is_recurring.is.null");
 
     if (mode === "household") {
       expensesQuery = expensesQuery

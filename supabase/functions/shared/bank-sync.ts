@@ -1,4 +1,5 @@
 import { type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { withTransientBankReadRetry } from "./bank-retry.ts";
 import { resolvePlaidCountryCode } from "./plaid-country.ts";
 import {
   buildBankExpenseMutationPlan,
@@ -704,22 +705,29 @@ async function upsertPlaidRecurringTemplates(params: {
   const selectExistingTemplate = async (
     candidate: PlaidRecurringTemplateCandidate,
   ) => {
-    let existingQuery = params.supabase
-      .from("expenses")
-      .select(
-        "id, date, account_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, deleted_at, deleted_reason, provider_fields, user_overrides",
-      )
-      .eq("user_id", candidate.userId)
-      .eq("idempotency_key", candidate.idempotencyKey)
-      .limit(1);
+    return await withTransientBankReadRetry(async () => {
+      // Build a fresh query for each retry; PostgREST builders are single-use.
+      let existingQuery = params.supabase
+        .from("expenses")
+        .select(
+          "id, date, account_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, deleted_at, deleted_reason, provider_fields, user_overrides",
+        )
+        .eq("user_id", candidate.userId)
+        .eq("idempotency_key", candidate.idempotencyKey)
+        .limit(1);
 
-    existingQuery = candidate.householdId
-      ? existingQuery.eq("household_id", candidate.householdId)
-      : existingQuery.is("household_id", null);
+      existingQuery = candidate.householdId
+        ? existingQuery.eq("household_id", candidate.householdId)
+        : existingQuery.is("household_id", null);
 
-    const { data, error } = await existingQuery;
-    if (error) throw error;
-    return data?.[0] as PlaidRecurringTemplateRow | undefined;
+      const { data, error } = await existingQuery;
+      if (error) throw error;
+      return data?.[0] as PlaidRecurringTemplateRow | undefined;
+    }, {
+      maxRetries: 2,
+      initialDelayMs: 250,
+      maxDelayMs: 1000,
+    });
   };
 
   const updateExistingTemplate = async (

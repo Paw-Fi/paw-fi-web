@@ -55,6 +55,27 @@ export async function reportBotBackendError({
   }
 }
 
+export function shouldReportBotToolResultError(error: unknown): boolean {
+  if (error == null) return false;
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : String(error);
+  if (!message.trim()) return false;
+  if (
+    /failed|internal|database|timeout|unexpected|configuration|not supported|\[object Object\]/i.test(
+      message,
+    )
+  ) {
+    return true;
+  }
+  return !/required|invalid|not found|no matching|no pending|no updates|no longer available|select a|choose a|provide |confirmation required|do not have access|don't have access|permission|only space|already exists|cannot have|must be|unknown space/i.test(
+    message,
+  );
+}
+
 export async function reportBotToolInvokeFailure({
   functionName,
   traceId,

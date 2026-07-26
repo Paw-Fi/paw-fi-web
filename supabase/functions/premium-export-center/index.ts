@@ -784,7 +784,7 @@ async function fetchTransactions(
     .select(
       "id, date, type, amount_cents, currency, category, raw_text, merchant, account_id, receipt_image_url, attachments, created_at, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
-    .eq("is_recurring", false)
+    .or("is_recurring.eq.false,is_recurring.is.null")
     .is("deleted_at", null)
     .gte("date", filters.startDate)
     .lte("date", filters.endDate)

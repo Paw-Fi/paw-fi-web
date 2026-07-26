@@ -1293,6 +1293,70 @@ export async function commitHouseholdSplitRecords({
   });
 }
 
+export async function commitRecurringTemplateSplitRecords({
+  supabase,
+  actorUserId,
+  group,
+  lines,
+  expectedParent,
+  previousSplitGroupId: _previousSplitGroupId = null,
+  targetAccountId = null,
+}: {
+  // deno-lint-ignore no-explicit-any
+  supabase: any;
+  actorUserId: string;
+  group: SplitGroupRecord;
+  lines: SplitLineRecord[];
+  expectedParent: ExpectedSplitParent;
+  previousSplitGroupId?: string | null;
+  targetAccountId?: string | null;
+}) {
+  return await supabase.rpc("households_commit_recurring_template_split_v1", {
+    ...splitCommitRpcParams({
+      actorUserId,
+      group,
+      lines,
+      expectedParent,
+      previousSplitGroupId: null,
+      targetAccountId,
+    }),
+  });
+}
+
+export async function commitRecurringTemplateSplitRecordsWithPatch({
+  supabase,
+  actorUserId,
+  group,
+  lines,
+  expectedParent,
+  previousSplitGroupId: _previousSplitGroupId = null,
+  targetAccountId = null,
+  expensePatch,
+}: {
+  // deno-lint-ignore no-explicit-any
+  supabase: any;
+  actorUserId: string;
+  group: SplitGroupRecord;
+  lines: SplitLineRecord[];
+  expectedParent: ExpectedSplitParent;
+  previousSplitGroupId?: string | null;
+  targetAccountId?: string | null;
+  expensePatch: Record<string, unknown>;
+}) {
+  assertSafeAtomicExpensePatch(expensePatch);
+  return await supabase.rpc("households_commit_recurring_template_split_v1", {
+    ...splitCommitRpcParams({
+      actorUserId,
+      group,
+      lines,
+      expectedParent,
+      previousSplitGroupId: null,
+      targetAccountId,
+    }),
+    p_expense_patch: expensePatch,
+  });
+}
+
 export async function commitHouseholdSplitRecordsWithPatch({
   supabase,
   actorUserId,

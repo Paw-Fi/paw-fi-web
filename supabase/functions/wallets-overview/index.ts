@@ -213,49 +213,19 @@ function firstOnOrAfterDayStep(
     (rangeStart.getTime() - anchor.getTime()) / 86400000,
   );
   const offsetDays = diffDays % stepDays;
-  const deltaDays =
-    offsetDays === 0 ? diffDays : diffDays + (stepDays - offsetDays);
+  const deltaDays = offsetDays === 0
+    ? diffDays
+    : diffDays + (stepDays - offsetDays);
   return new Date(anchor.getTime() + deltaDays * 86400000);
-}
-
-function resolveDefaultWalletId(wallets: WalletRow[]): string | null {
-  const defaultWallet = wallets.find(
-    (wallet) => wallet.is_default && !wallet.is_archived,
-  );
-  if (defaultWallet) return defaultWallet.id;
-
-  const systemWallet = wallets.find(
-    (wallet) => wallet.is_system && !wallet.is_archived,
-  );
-  if (systemWallet) return systemWallet.id;
-
-  return wallets.find((wallet) => !wallet.is_archived)?.id ?? null;
-}
-
-function resolveLegacyWalletId(wallets: WalletRow[]): string | null {
-  const spendingWallet = wallets.find(
-    (wallet) =>
-      wallet.is_system &&
-      !wallet.is_archived &&
-      wallet.name.trim().toLowerCase() === "spending",
-  );
-  if (spendingWallet) return spendingWallet.id;
-
-  const systemWallet = wallets.find(
-    (wallet) => wallet.is_system && !wallet.is_archived,
-  );
-  if (systemWallet) return systemWallet.id;
-
-  return resolveDefaultWalletId(wallets);
 }
 
 function resolveTransactionWalletId(
   transaction: WalletTransaction,
-  wallets: WalletRow[],
+  _wallets: WalletRow[],
 ): string | null {
   const rawWalletId = transaction.walletId?.trim();
   if (rawWalletId) return rawWalletId;
-  return resolveLegacyWalletId(wallets);
+  return null;
 }
 
 function buildWalletAvailableMonths(
@@ -301,8 +271,7 @@ function buildWalletSnapshot(
       totalIncomeCents += Math.abs(transaction.amountCents);
     }
     if (transaction.analyticsSpendingMultiplier !== 0) {
-      totalSpentCents +=
-        Math.abs(transaction.amountCents) *
+      totalSpentCents += Math.abs(transaction.amountCents) *
         transaction.analyticsSpendingMultiplier;
     }
   }
@@ -383,8 +352,8 @@ function parseRecurringRule(value: unknown): RecurringRule | null {
   const excludedDatesRaw = Array.isArray(raw.excludedDates)
     ? raw.excludedDates
     : Array.isArray(raw.excluded_dates)
-      ? raw.excluded_dates
-      : [];
+    ? raw.excluded_dates
+    : [];
 
   return {
     frequency,
@@ -478,8 +447,9 @@ function projectRecurringTransactions(
           const monthsBetween =
             (startDay.getFullYear() - anchor.getFullYear()) * 12 +
             (startDay.getMonth() - anchor.getMonth());
-          let n =
-            monthsBetween <= 0 ? 0 : Math.floor(monthsBetween / stepMonths);
+          let n = monthsBetween <= 0
+            ? 0
+            : Math.floor(monthsBetween / stepMonths);
           let current = addMonthsFromAnchor(anchor, n * stepMonths);
           while (normalizeDate(current).getTime() < startDay.getTime()) {
             n += 1;
@@ -537,8 +507,9 @@ function projectRecurringTransactions(
         walletId: recurring.accountId,
         type: recurring.type,
         analyticsIsFinal: true,
-        analyticsSpendingMultiplier:
-          recurring.type.toLowerCase() === "income" ? 0 : 1,
+        analyticsSpendingMultiplier: recurring.type.toLowerCase() === "income"
+          ? 0
+          : 1,
         analyticsCountsTowardIncome: recurring.type.toLowerCase() === "income",
       });
     }
@@ -670,10 +641,9 @@ Deno.serve(async (req: Request) => {
       .map(parseDateOnly)
       .filter((value): value is Date => value != null)
       .map(normalizeMonthStart);
-    const requestedMonths =
-      requestedMonthStarts.length > 0
-        ? requestedMonthStarts
-        : [normalizeMonthStart(currentMonthStart)];
+    const requestedMonths = requestedMonthStarts.length > 0
+      ? requestedMonthStarts
+      : [normalizeMonthStart(currentMonthStart)];
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
@@ -773,9 +743,11 @@ Deno.serve(async (req: Request) => {
         .in("to_account_id", accountIds);
 
       const transferOut = new Map<string, number>();
-      for (const row of (transferOutRows ?? []) as Array<
-        Record<string, unknown>
-      >) {
+      for (
+        const row of (transferOutRows ?? []) as Array<
+          Record<string, unknown>
+        >
+      ) {
         const key = `${row.from_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -788,9 +760,11 @@ Deno.serve(async (req: Request) => {
       }
 
       const transferIn = new Map<string, number>();
-      for (const row of (transferInRows ?? []) as Array<
-        Record<string, unknown>
-      >) {
+      for (
+        const row of (transferInRows ?? []) as Array<
+          Record<string, unknown>
+        >
+      ) {
         const key = `${row.to_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -806,8 +780,7 @@ Deno.serve(async (req: Request) => {
         const opening = toNumber(wallet.opening_balance_cents);
         (
           wallet as WalletRow & { current_balance_cents?: number }
-        ).current_balance_cents =
-          opening +
+        ).current_balance_cents = opening +
           (incomeIn.get(wallet.id) ?? 0) -
           (expenseOut.get(wallet.id) ?? 0) +
           (transferIn.get(wallet.id) ?? 0) -

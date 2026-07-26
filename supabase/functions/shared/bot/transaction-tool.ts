@@ -442,7 +442,17 @@ export function buildTransactionMutationFailureText(
     return `I couldn't delete that transaction. ${error}`;
   }
   if (toolName === "manage_recurring") {
-    return "I couldn't save that recurring transaction right now. Please try again in a moment.";
+    if (
+      error.startsWith("No matching transaction found") ||
+      error.startsWith("Invalid selection_index") ||
+      error.startsWith("That transaction is no longer available") ||
+      error === "Unable to verify the selected transaction."
+    ) {
+      // Selection errors are model instructions, not user-facing copy. Let the
+      // model turn them into a natural clarification in the preferred language.
+      return null;
+    }
+    return `I couldn't save that recurring transaction right now. ${error}`;
   }
   return null;
 }

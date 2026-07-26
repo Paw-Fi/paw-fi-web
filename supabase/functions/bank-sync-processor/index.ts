@@ -5,6 +5,7 @@ import {
   buildInternalInvokeHeaders,
   resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
+import { withTransientBankReadRetry } from "../shared/bank-retry.ts";
 import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
 import { requiresPlaidRelinkForError } from "../shared/plaid-update-mode.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -469,18 +470,28 @@ async function enqueueStalePlaidRecoveryJobs(
   supabase: ReturnType<typeof createClient>,
 ): Promise<number> {
   const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: connections, error } = await supabase
-    .from("bank_connections")
-    .select("id, status, error_code, plaid_not_ready_retry_at")
-    .eq("provider", PLAID_PROVIDER)
-    .in("status", ["active", "pending", "error"])
-    .is("removed_at", null)
-    .or("item_status.is.null,item_status.not.in.(removed,pending_removal)")
-    .or(
-      `needs_resync.eq.true,plaid_recurring_refresh_pending.eq.true,last_successful_sync_at.is.null,last_successful_sync_at.lt.${staleBefore}`,
-    )
-    .order("last_successful_sync_at", { ascending: true, nullsFirst: true })
-    .limit(BATCH_SIZE);
+  const { data: connections, error } = await withTransientBankReadRetry(
+    async () => {
+      // Build a fresh query for each retry; PostgREST builders are single-use.
+      return await supabase
+        .from("bank_connections")
+        .select("id, status, error_code, plaid_not_ready_retry_at")
+        .eq("provider", PLAID_PROVIDER)
+        .in("status", ["active", "pending", "error"])
+        .is("removed_at", null)
+        .or("item_status.is.null,item_status.not.in.(removed,pending_removal)")
+        .or(
+          `needs_resync.eq.true,plaid_recurring_refresh_pending.eq.true,last_successful_sync_at.is.null,last_successful_sync_at.lt.${staleBefore}`,
+        )
+        .order("last_successful_sync_at", { ascending: true, nullsFirst: true })
+        .limit(BATCH_SIZE);
+    },
+    {
+      maxRetries: 2,
+      initialDelayMs: 250,
+      maxDelayMs: 1000,
+    },
+  );
   if (error) throw error;
 
   let queued = 0;

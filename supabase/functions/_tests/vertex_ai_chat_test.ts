@@ -174,7 +174,7 @@ Deno.test("createVertexChatSession sends Vertex request and parses text plus fun
   ]);
 });
 
-Deno.test("createVertexChatSession converts tool responses into a tool role content", async () => {
+Deno.test("createVertexChatSession converts tool responses into user role content", async () => {
   const fetchCalls: Array<{ input: string; init?: RequestInit }> = [];
 
   const chat = createVertexChatSession({
@@ -227,7 +227,7 @@ Deno.test("createVertexChatSession converts tool responses into a tool role cont
 
   const body = JSON.parse(String(fetchCalls[0].init?.body));
   assertEquals(body.contents.at(-1), {
-    role: "tool",
+    role: "user",
     parts: [
       {
         functionResponse: {
@@ -320,7 +320,7 @@ Deno.test("createVertexChatSession preserves thoughtSignature on function-call h
       ],
     },
     {
-      role: "tool",
+      role: "user",
       parts: [
         {
           functionResponse: {

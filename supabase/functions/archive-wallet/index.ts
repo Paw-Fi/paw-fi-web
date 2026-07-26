@@ -96,17 +96,7 @@ Deno.serve(async (req: Request) => {
         404,
       );
     }
-    if (account.is_system) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "System account cannot be archived",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-    if (account.is_default) {
+    if (account.is_default && !account.is_system) {
       return jsonResponse(
         {
           success: false,
