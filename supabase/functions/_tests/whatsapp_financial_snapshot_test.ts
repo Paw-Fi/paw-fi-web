@@ -142,6 +142,29 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "financial snapshot suppresses the scheduled projection when payment date moves",
+  () => {
+    const actualRow = recurringRow({
+      id: "actual-expense",
+      date: "2026-07-14",
+      amount_cents: 97500,
+      parent_recurring_id: "recurring-expense",
+      scheduled_occurrence_date: "2026-07-10",
+      recurrence_rule: null,
+    });
+
+    const projected = projectRecurringSnapshotRows(
+      [recurringRow()],
+      [actualRow],
+      "2026-07-01",
+      "2026-07-23",
+    );
+
+    assertEquals(projected, []);
+  },
+);
+
 Deno.test("financial snapshot supports a custom financial period start", () => {
   const projected = projectRecurringSnapshotRows(
     [
@@ -212,12 +235,12 @@ Deno.test("financial snapshot applies daily and biweekly frequencies", () => {
     "2026-07-01",
     "2026-07-31",
   );
-  const dailyCount =
-    projected.filter((row) => row.id?.startsWith("recurring_daily-expense_"))
-      .length;
-  const biweeklyCount =
-    projected.filter((row) => row.id?.startsWith("recurring_biweekly-expense_"))
-      .length;
+  const dailyCount = projected.filter((row) =>
+    row.id?.startsWith("recurring_daily-expense_"),
+  ).length;
+  const biweeklyCount = projected.filter((row) =>
+    row.id?.startsWith("recurring_biweekly-expense_"),
+  ).length;
 
   assertEquals(dailyCount, 31);
   assertEquals(biweeklyCount, 3);

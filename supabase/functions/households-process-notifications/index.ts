@@ -483,7 +483,9 @@ serve(async (req) => {
       });
     }
 
-    if (!isServiceRoleRequest(req, supabaseServiceRoleKey, supabaseSecretKeys)) {
+    if (
+      !isServiceRoleRequest(req, supabaseServiceRoleKey, supabaseSecretKeys)
+    ) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -584,6 +586,37 @@ serve(async (req) => {
             errors.push(`Event ${event.id}: Failed to claim for processing`);
           }
           continue;
+        }
+
+        if (event.event_type === "recurring_reminder") {
+          const recurringId = event.payload?.expense_id;
+          const occurrenceDate = event.payload?.occurrence_date;
+          if (
+            typeof recurringId === "string" &&
+            typeof occurrenceDate === "string"
+          ) {
+            const { data: occurrence } = await supabase
+              .from("recurring_occurrences")
+              .select("status")
+              .eq("recurring_id", recurringId)
+              .eq("scheduled_occurrence_date", occurrenceDate)
+              .maybeSingle();
+            if (
+              occurrence?.status === "confirmed" ||
+              occurrence?.status === "skipped"
+            ) {
+              await supabase
+                .from("notification_events")
+                .update({
+                  is_sent: true,
+                  sent_at: new Date().toISOString(),
+                  processing_started_at: null,
+                  error_message: "Recurring occurrence already resolved",
+                })
+                .eq("id", event.id);
+              continue;
+            }
+          }
         }
 
         // Determine notification content based on event type

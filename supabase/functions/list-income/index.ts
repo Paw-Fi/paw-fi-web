@@ -277,8 +277,8 @@ Deno.serve(async (req: Request) => {
 
     if (body.includeRecurring === true) {
       query = query.eq("is_recurring", true);
-    } else if (body.excludeRecurring === true) {
-      query = query.or("is_recurring.is.false,is_recurring.is.null");
+    } else {
+      query = query.or("is_recurring.eq.false,is_recurring.is.null");
     }
 
     if (body.personalOnly === true) {
@@ -344,7 +344,7 @@ Deno.serve(async (req: Request) => {
       summaryQuery = summaryQuery.eq("is_recurring", true);
     } else if (body.excludeRecurring === true) {
       summaryQuery = summaryQuery.or(
-        "is_recurring.is.false,is_recurring.is.null",
+        "is_recurring.eq.false,is_recurring.is.null",
       );
     }
     if (body.personalOnly === true) {

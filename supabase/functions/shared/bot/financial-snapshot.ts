@@ -9,6 +9,7 @@ export interface FinancialSnapshotRow {
   household_id?: string | null;
   split_group_id?: string | null;
   parent_recurring_id?: string | null;
+  scheduled_occurrence_date?: string | null;
   type?: string | null;
   analytics_is_final?: boolean | null;
   analytics_spending_multiplier?: number | null;
@@ -49,7 +50,10 @@ export function projectRecurringSnapshotRows(
     actualRows
       .filter((row) => row.parent_recurring_id?.trim())
       .map(
-        (row) => `${row.parent_recurring_id!.trim()}|${row.date.slice(0, 10)}`,
+        (row) =>
+          `${row.parent_recurring_id!.trim()}|${(
+            row.scheduled_occurrence_date ?? row.date
+          ).slice(0, 10)}`,
       ),
   );
   const projectedRows: FinancialSnapshotRow[] = [];
@@ -75,20 +79,18 @@ export function projectRecurringSnapshotRows(
 
       const projected = {
         ...row,
-        id: `recurring_${row.id ?? "transaction"}_${
-          occurrenceDate.replaceAll(
-            "-",
-            "",
-          )
-        }`,
+        id: `recurring_${row.id ?? "transaction"}_${occurrenceDate.replaceAll(
+          "-",
+          "",
+        )}`,
         // Keep the source recurring transaction available to internal callers.
         // Projected IDs are synthetic and cannot be passed to update-expense.
         parent_recurring_id: row.id ?? row.parent_recurring_id ?? null,
         date: occurrenceDate,
         recurrence_rule: null,
       };
-      const hasLinkedOccurrence = row.id &&
-        linkedActualOccurrences.has(`${row.id}|${occurrenceDate}`);
+      const hasLinkedOccurrence =
+        row.id && linkedActualOccurrences.has(`${row.id}|${occurrenceDate}`);
       if (
         !hasLinkedOccurrence &&
         !actualKeys.has(snapshotRowComparisonKey(projected))
@@ -112,7 +114,8 @@ export function buildFinancialSnapshotTotals(
     if (row.analytics_is_final === false) continue;
 
     const absoluteAmount = Math.abs(Number(row.amount_cents) || 0);
-    const isIncome = row.analytics_counts_toward_income === true ||
+    const isIncome =
+      row.analytics_counts_toward_income === true ||
       (row.analytics_counts_toward_income == null &&
         `${row.type ?? ""}`.toLowerCase() === "income");
     if (isIncome) totalIncome += absoluteAmount;
@@ -166,8 +169,8 @@ function parseRecurrenceRule(value: unknown): RecurrenceRule | null {
   const excludedValues = Array.isArray(raw.excluded_dates)
     ? raw.excluded_dates
     : Array.isArray(raw.excludedDates)
-    ? raw.excludedDates
-    : [];
+      ? raw.excludedDates
+      : [];
 
   return {
     frequency,
@@ -200,11 +203,8 @@ function buildOccurrences(
   };
 
   if (["daily", "weekly", "biweekly"].includes(rule.frequency)) {
-    const frequencyDays = rule.frequency === "daily"
-      ? 1
-      : rule.frequency === "weekly"
-      ? 7
-      : 14;
+    const frequencyDays =
+      rule.frequency === "daily" ? 1 : rule.frequency === "weekly" ? 7 : 14;
     const stepDays = frequencyDays * rule.interval;
     let current = firstOnOrAfterDayStep(rule.anchorDate, rangeStart, stepDays);
     while (current.getTime() <= rangeEnd.getTime()) {
@@ -219,9 +219,8 @@ function buildOccurrences(
       (rangeStart.getUTCFullYear() - rule.anchorDate.getUTCFullYear()) * 12 +
       rangeStart.getUTCMonth() -
       rule.anchorDate.getUTCMonth();
-    let occurrenceIndex = monthsBetween <= 0
-      ? 0
-      : Math.floor(monthsBetween / rule.interval);
+    let occurrenceIndex =
+      monthsBetween <= 0 ? 0 : Math.floor(monthsBetween / rule.interval);
     let current = addMonthsFromAnchor(
       rule.anchorDate,
       occurrenceIndex * rule.interval,
@@ -245,11 +244,10 @@ function buildOccurrences(
   }
 
   if (rule.frequency === "yearly") {
-    const yearsBetween = rangeStart.getUTCFullYear() -
-      rule.anchorDate.getUTCFullYear();
-    let occurrenceIndex = yearsBetween <= 0
-      ? 0
-      : Math.floor(yearsBetween / rule.interval);
+    const yearsBetween =
+      rangeStart.getUTCFullYear() - rule.anchorDate.getUTCFullYear();
+    let occurrenceIndex =
+      yearsBetween <= 0 ? 0 : Math.floor(yearsBetween / rule.interval);
     let current = addYearsFromAnchor(
       rule.anchorDate,
       occurrenceIndex * rule.interval,
@@ -298,8 +296,8 @@ function parseDateOnly(value: unknown): Date | null {
   const day = Number(match[3]);
   const date = new Date(Date.UTC(year, month - 1, day));
   return date.getUTCFullYear() === year &&
-      date.getUTCMonth() === month - 1 &&
-      date.getUTCDate() === day
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
     ? date
     : null;
 }

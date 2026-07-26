@@ -47,7 +47,7 @@ export interface FinancialInsightSnapshot {
 }
 
 const SNAPSHOT_COLUMNS =
-  "id, amount_cents, type, category, raw_text, date, currency, account_id, household_id, split_group_id, parent_recurring_id, recurrence_rule, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income";
+  "id, amount_cents, type, category, raw_text, date, currency, account_id, household_id, split_group_id, parent_recurring_id, scheduled_occurrence_date, recurrence_rule, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income";
 
 export async function resolveFinancialInsightDateRange(params: {
   args?: Record<string, unknown> | null;

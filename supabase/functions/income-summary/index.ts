@@ -182,6 +182,7 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", userId)
       .is("household_id", null) // Personal income only
       .is("deleted_at", null) // Exclude soft-deleted transactions
+      .or("is_recurring.eq.false,is_recurring.is.null")
       .gte("date", startDate)
       .lte("date", endDate);
 

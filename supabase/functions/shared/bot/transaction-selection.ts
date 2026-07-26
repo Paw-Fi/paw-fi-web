@@ -50,6 +50,7 @@ export async function validateActiveBotTransactionId(
     )
     .eq("id", expenseId)
     .is("deleted_at", null)
+    .or("is_recurring.eq.false,is_recurring.is.null")
     .maybeSingle();
   if (error) {
     return { error: "Unable to verify the selected transaction." };
@@ -109,6 +110,7 @@ export async function resolveBotTransactionSelection(params: {
     )
     .eq("user_id", params.userId)
     .is("deleted_at", null)
+    .or("is_recurring.eq.false,is_recurring.is.null")
     .limit(10);
 
   if (match.type) {
