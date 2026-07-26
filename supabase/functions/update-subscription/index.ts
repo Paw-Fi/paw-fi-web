@@ -2,7 +2,10 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
-import { getPriceId } from "../shared/stripe-subscription-prices.ts";
+import {
+  getPriceId,
+  subscriptionHasCommitmentPrice,
+} from "../shared/stripe-subscription-prices.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import type {
   BillingInterval,
@@ -10,6 +13,11 @@ import type {
 } from "../shared/subscription-constants.ts";
 import { buildCheckoutPageUrl } from "../shared/checkout-redirect.ts";
 import { getSubscriptionChangePolicy } from "../shared/subscription-change-policy.ts";
+import {
+  commitmentCancellationParams,
+  isCommitmentActive,
+  resolveCommitmentEnd,
+} from "../shared/subscription-commitment.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -20,6 +28,26 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function resolveStripeCommitment(
+  subscription: Record<string, any>,
+  stripeSubscription?: Stripe.Subscription,
+): Promise<{ isActive: boolean; end: string | null }> {
+  const current = stripeSubscription ??
+    (await stripe.subscriptions.retrieve(subscription.stripe_subscription_id));
+  if (!subscriptionHasCommitmentPrice(current)) {
+    return { isActive: false, end: null };
+  }
+  const end = resolveCommitmentEnd({
+    previousCommitmentEnd: subscription.commitment_end,
+    subscriptionStartUnixSeconds:
+      Number(current.metadata?.commitment_started_at) ||
+      current.trial_end ||
+      current.start_date,
+  });
+  return { isActive: isCommitmentActive(end), end };
+}
+
 serve(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
@@ -54,15 +82,16 @@ serve(async (req) => {
     >;
     const action = typeof body.action === "string" ? body.action : null;
     const plan = typeof body.plan === "string" ? body.plan : null;
-    const billingInterval =
-      typeof body.billingInterval === "string" ? body.billingInterval : null;
+    const billingInterval = typeof body.billingInterval === "string"
+      ? body.billingInterval
+      : null;
     const returnTrialDurationMinutesRaw = Number(
       Deno.env.get("PAYWALL_RETURN_TRIAL_DURATION_MINUTES") ??
         String(7 * 24 * 60),
     );
     const returnTrialDurationMinutes =
       Number.isFinite(returnTrialDurationMinutesRaw) &&
-      returnTrialDurationMinutesRaw > 0
+        returnTrialDurationMinutesRaw > 0
         ? Math.floor(returnTrialDurationMinutesRaw)
         : 7 * 24 * 60;
 
@@ -219,9 +248,13 @@ serve(async (req) => {
           }
 
           // Cancel the subscription at period end
+          const commitment = await resolveStripeCommitment(subscription);
+          const commitmentActive = commitment.isActive;
           const canceledSubscription = await stripe.subscriptions.update(
             subscription.stripe_subscription_id,
-            { cancel_at_period_end: true },
+            commitmentActive
+              ? commitmentCancellationParams(commitment.end!)
+              : { cancel_at_period_end: true },
           );
 
           // Update the subscription in the database
@@ -236,8 +269,9 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message:
-                "Subscription will be canceled at the end of the billing period",
+              message: commitmentActive
+                ? "Subscription will end after the 12-month commitment"
+                : "Subscription will be canceled at the end of the billing period",
               subscription: canceledSubscription,
               isDowngrade: true,
             }),
@@ -283,10 +317,9 @@ serve(async (req) => {
         } catch (error) {
           return new Response(
             JSON.stringify({
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Invalid plan or billing interval",
+              error: error instanceof Error
+                ? error.message
+                : "Invalid plan or billing interval",
             }),
             {
               status: 400,
@@ -323,6 +356,12 @@ serve(async (req) => {
         }
 
         const subscriptionItemId = stripeSubscription.items.data[0].id;
+        const commitment = await resolveStripeCommitment(
+          subscription,
+          stripeSubscription,
+        );
+        const shouldDeferForCommitment = commitment.isActive &&
+          !changePolicy.isUpgrade;
 
         if (changePolicy.billingBehavior === "no_change") {
           return new Response(
@@ -341,7 +380,11 @@ serve(async (req) => {
         }
 
         // Immediate changes: plan upgrades and same-plan billing interval changes.
-        if (changePolicy.billingBehavior === "immediate") {
+        if (
+          changePolicy.billingBehavior === "immediate" &&
+          !shouldDeferForCommitment
+        ) {
+          const commitmentStartedAt = Math.floor(Date.now() / 1000);
           const updateParams: any = {
             items: [
               {
@@ -352,6 +395,13 @@ serve(async (req) => {
             metadata: {
               plan,
               billing_interval: billingInterval,
+              payment_interval: billingInterval === "yearly"
+                ? "monthly"
+                : billingInterval,
+              commitment_months: billingInterval === "yearly" ? "12" : "0",
+              commitment_started_at: billingInterval === "yearly"
+                ? String(commitmentStartedAt)
+                : "",
             },
             proration_behavior: "always_invoice", // Immediate charge with proration
             payment_behavior: "error_if_incomplete",
@@ -368,6 +418,18 @@ serve(async (req) => {
             .update({
               plan,
               billing_interval: billingInterval,
+              payment_interval: billingInterval === "yearly"
+                ? "monthly"
+                : billingInterval,
+              commitment_months: billingInterval === "yearly" ? 12 : null,
+              commitment_end: billingInterval === "yearly"
+                ? new Date(
+                  new Date(commitmentStartedAt * 1000).setUTCFullYear(
+                    new Date(commitmentStartedAt * 1000).getUTCFullYear() +
+                      1,
+                  ),
+                ).toISOString()
+                : null,
               cancel_at_period_end: false,
               pending_plan: null,
               pending_interval: null,
@@ -413,7 +475,9 @@ serve(async (req) => {
                   },
                 ],
                 start_date: stripeSubscription.current_period_start,
-                end_date: stripeSubscription.current_period_end,
+                end_date: shouldDeferForCommitment
+                  ? Math.floor(new Date(commitment.end!).getTime() / 1000)
+                  : stripeSubscription.current_period_end,
               },
               {
                 items: [
@@ -426,6 +490,10 @@ serve(async (req) => {
                 metadata: {
                   plan,
                   billing_interval: billingInterval,
+                  payment_interval: billingInterval === "yearly"
+                    ? "monthly"
+                    : billingInterval,
+                  commitment_months: billingInterval === "yearly" ? "12" : "0",
                 },
               },
             ],
@@ -437,9 +505,11 @@ serve(async (req) => {
             .update({
               pending_plan: plan,
               pending_interval: billingInterval,
-              pending_effective_date: new Date(
-                stripeSubscription.current_period_end * 1000,
-              ).toISOString(),
+              pending_effective_date: shouldDeferForCommitment
+                ? commitment.end
+                : new Date(
+                  stripeSubscription.current_period_end * 1000,
+                ).toISOString(),
               updated_at: new Date().toISOString(),
             })
             .eq("id", subscription.id);
@@ -447,15 +517,19 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: `Subscription will change to ${plan} (${billingInterval}) at end of current period`,
+              message: shouldDeferForCommitment
+                ? `Subscription will change after the 12-month commitment`
+                : `Subscription will change to ${plan} (${billingInterval}) at end of current period`,
               subscription: stripeSubscription,
               isUpgrade: false,
               pendingChange: {
                 plan,
                 billingInterval,
-                effectiveDate: new Date(
-                  stripeSubscription.current_period_end * 1000,
-                ).toISOString(),
+                effectiveDate: shouldDeferForCommitment
+                  ? commitment.end
+                  : new Date(
+                    stripeSubscription.current_period_end * 1000,
+                  ).toISOString(),
               },
             }),
             {
@@ -503,9 +577,13 @@ serve(async (req) => {
         }
 
         // Cancel the subscription at period end
+        const commitment = await resolveStripeCommitment(subscription);
+        const commitmentActive = commitment.isActive;
         const canceledSubscription = await stripe.subscriptions.update(
           subscription.stripe_subscription_id,
-          { cancel_at_period_end: true },
+          commitmentActive
+            ? commitmentCancellationParams(commitment.end!)
+            : { cancel_at_period_end: true },
         );
 
         // Update the subscription in the database
@@ -520,8 +598,9 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             success: true,
-            message:
-              "Subscription will be canceled at the end of the billing period",
+            message: commitmentActive
+              ? "Subscription will end after the 12-month commitment"
+              : "Subscription will be canceled at the end of the billing period",
             subscription: canceledSubscription,
           }),
           {
@@ -555,6 +634,22 @@ serve(async (req) => {
             }),
             {
               status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const commitment = await resolveStripeCommitment(subscription);
+        if (commitment.isActive) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "This subscription cannot be canceled immediately during its 12-month commitment.",
+              code: "SUBSCRIPTION_COMMITMENT_ACTIVE",
+              commitmentEnd: commitment.end,
+            }),
+            {
+              status: 409,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
@@ -606,7 +701,7 @@ serve(async (req) => {
         // Resume the subscription by removing cancel_at_period_end
         const resumedSubscription = await stripe.subscriptions.update(
           subscription.stripe_subscription_id,
-          { cancel_at_period_end: false },
+          { cancel_at: null, cancel_at_period_end: false },
         );
 
         // Update the subscription in the database
@@ -683,8 +778,8 @@ serve(async (req) => {
 
         userEligibility = userEligibilityData;
         if (!userEligibility) {
-          const { data: authUserData, error: authUserError } =
-            await supabase.auth.admin.getUserById(userId);
+          const { data: authUserData, error: authUserError } = await supabase
+            .auth.admin.getUserById(userId);
           const authEmail = authUserData?.user?.email;
 
           if (authUserError || !authEmail) {
@@ -770,9 +865,9 @@ serve(async (req) => {
           .eq("id", userId);
         markerReservationQuery = grantedAt
           ? markerReservationQuery.eq(
-              "paywall_return_trial_granted_at",
-              grantedAt,
-            )
+            "paywall_return_trial_granted_at",
+            grantedAt,
+          )
           : markerReservationQuery.is("paywall_return_trial_granted_at", null);
 
         const { data: markerReservation, error: markerReservationError } =

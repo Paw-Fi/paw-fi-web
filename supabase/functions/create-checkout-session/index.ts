@@ -45,6 +45,7 @@ import {
   assertCheckoutSessionCurrency,
   buildRegionalPriceCacheKey,
   getRegionalCheckoutAmount,
+  isCommitmentAvailableForCountry,
   resolveRegionalCheckoutMarket,
 } from "../shared/regional-checkout.ts";
 import { buildCheckoutRedirectUrls } from "../shared/checkout-redirect.ts";
@@ -113,7 +114,7 @@ async function resolveRegionalPriceId(
     plan === "lifetime"
       ? "lifetime"
       : billingInterval === "yearly"
-        ? "plus_yearly"
+        ? "plus_commitment_monthly"
         : "plus_monthly";
   const lookupKey = getRegionalStripePriceLookupKey(planTarget);
   const cacheKey = buildRegionalPriceCacheKey(lookupKey, market.currencyCode);
@@ -136,7 +137,7 @@ async function resolveRegionalPriceId(
       plan === "lifetime"
         ? market.lifetime
         : billingInterval === "yearly"
-          ? market.yearly
+          ? Math.round(market.yearly / 12)
           : market.monthly;
     const actualAmount =
       regionalPrice.currency === currency
@@ -305,6 +306,24 @@ serve(async (req: Request) => {
           },
         );
       }
+    }
+
+    if (
+      plan === "plus" &&
+      billingInterval === "yearly" &&
+      !isCommitmentAvailableForCountry(requestedCountry)
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "The monthly annual commitment is not available in this country",
+          code: "COMMITMENT_UNAVAILABLE_IN_COUNTRY",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const expectedCheckoutAmount = getRegionalCheckoutAmount(
@@ -861,6 +880,9 @@ serve(async (req: Request) => {
             user_id: userId, // Use snake_case for Stripe metadata
             plan: plan,
             billing_interval: billingInterval,
+            payment_interval:
+              billingInterval === "yearly" ? "monthly" : billingInterval,
+            commitment_months: billingInterval === "yearly" ? "12" : "0",
             pricing_country: requestedCountry ?? "US",
             presentment_currency: requestedCurrency,
           },
@@ -869,6 +891,7 @@ serve(async (req: Request) => {
         metadata: {
           user_id: userId,
           checkout_type: "subscription",
+          commitment_months: billingInterval === "yearly" ? "12" : "0",
           pricing_country: requestedCountry ?? "US",
           presentment_currency: requestedCurrency,
         },

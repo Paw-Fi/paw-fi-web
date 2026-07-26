@@ -31,18 +31,18 @@ const PRICE_TARGETS = [
     ],
   },
   {
-    id: "plus_yearly",
-    label: "Plus yearly",
+    id: "plus_commitment_monthly",
+    label: "Plus monthly with 12-month commitment",
     amountKey: "yearly",
+    amountDivisor: 12,
     expectedType: "recurring",
-    expectedInterval: "year",
+    expectedInterval: "month",
     productEnvironmentNames: [
+      "STRIPE_PLUS_COMMITMENT_PRODUCT_ID",
       "STRIPE_PLUS_YEARLY_PRODUCT_ID",
-      "STRIPE_YEARLY_PLUS_PRODUCT_ID",
     ],
     templatePriceEnvironmentNames: [
-      "STRIPE_YEARLY_PLUS_PLAN_ID",
-      "STRIPE_PLUS_YEARLY_PRICE_ID",
+      "STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID",
     ],
   },
   {
@@ -120,7 +120,10 @@ export function buildCatalogMarkets(catalog) {
 export function buildMultiCurrencyPlanPricing(catalogPricing, target) {
   const amountsByCurrency = new Map();
   for (const market of catalogPricing.markets) {
-    const amount = market.amounts[target.amountKey];
+    const sourceAmount = market.amounts[target.amountKey];
+    const amount = target.amountDivisor
+      ? Math.round(sourceAmount / target.amountDivisor)
+      : sourceAmount;
     const currencyEntry = amountsByCurrency.get(market.currency) ?? new Map();
     const marketIds = currencyEntry.get(amount) ?? [];
     marketIds.push(market.id);

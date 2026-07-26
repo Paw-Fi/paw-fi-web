@@ -36,7 +36,9 @@ import {
   getPlanFromPriceId,
   resolveInvoicePlanFromLinePrices,
   resolveSubscriptionPlanFromPrice,
+  subscriptionHasCommitmentPrice,
 } from "../shared/stripe-subscription-prices.ts";
+import { resolveCommitmentEnd } from "../shared/subscription-commitment.ts";
 import { resolveStripeCurrentPeriodEnd } from "../shared/stripe-subscription-period.ts";
 import { resolveStripeSubscriptionUserCandidate } from "../shared/stripe-subscription-user.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -1619,12 +1621,14 @@ async function handleSubscriptionUpdated(
 
     const userId = user.id;
     const status = subscription.status;
-    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    const cancelAtPeriodEnd = Boolean(
+      subscription.cancel_at_period_end || subscription.cancel_at,
+    );
 
     const { data: previousSub, error: previousSubError } = await supabase
       .from("subscriptions")
       .select(
-        "provider, plan, billing_interval, status, stripe_subscription_id, app_store_original_transaction_id, current_price_id, cancel_at_period_end, current_period_end, ended_at, last_event_id, pending_plan, pending_interval, pending_effective_date",
+        "provider, plan, billing_interval, payment_interval, commitment_months, commitment_end, status, stripe_subscription_id, app_store_original_transaction_id, current_price_id, cancel_at_period_end, current_period_end, ended_at, last_event_id, pending_plan, pending_interval, pending_effective_date",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -1948,6 +1952,18 @@ async function handleSubscriptionUpdated(
     }
     const finalPlan = pricePlanInfo.plan;
     const finalInterval = pricePlanInfo.interval as BillingInterval;
+    const commitmentMonths = subscriptionHasCommitmentPrice(subscription)
+      ? 12
+      : null;
+    const commitmentEnd = commitmentMonths === 12
+      ? resolveCommitmentEnd({
+        previousCommitmentEnd: previousSub?.commitment_end,
+        subscriptionStartUnixSeconds:
+          Number(subscription.metadata?.commitment_started_at) ||
+          subscription.trial_end ||
+          subscription.start_date,
+      })
+      : null;
     const pendingChangeApplied = previousSub?.pending_plan === finalPlan &&
       previousSub?.pending_interval === finalInterval;
 
@@ -2047,6 +2063,9 @@ async function handleSubscriptionUpdated(
           play_package_name: null,
           plan: finalPlan,
           billing_interval: finalInterval,
+          payment_interval: commitmentMonths === 12 ? "monthly" : finalInterval,
+          commitment_months: commitmentMonths,
+          commitment_end: commitmentEnd,
           status: storedStatus,
           bound_to_user_id: null,
           bound_to_household_id: null,
@@ -3651,7 +3670,7 @@ async function handleCheckoutSessionCompleted(
           oldSubData?.last_event_id === eventId;
         const lifetimeSourceId = typeof session.payment_intent === "string"
           ? session.payment_intent
-          : session.payment_intent?.id ?? `checkout:${sessionId}`;
+          : (session.payment_intent?.id ?? `checkout:${sessionId}`);
         if (
           payerAlreadyLifetime &&
           !(

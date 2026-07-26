@@ -19,6 +19,7 @@ import { authenticateUser } from "../shared/auth.ts";
 import { validateEnvironment } from "../shared/env-validation.ts";
 import { generateIdempotencyKey } from "../shared/idempotency.ts";
 import { createCustomerWithRetry } from "../shared/stripe-retry.ts";
+import { subscriptionHasCommitmentPrice } from "../shared/stripe-subscription-prices.ts";
 
 // Validate environment on startup
 const env = validateEnvironment();
@@ -91,8 +92,9 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const returnUrl =
-      typeof body?.returnUrl === "string" ? body.returnUrl : null;
+    const returnUrl = typeof body?.returnUrl === "string"
+      ? body.returnUrl
+      : null;
 
     console.log("Creating portal session for user:", userId);
 
@@ -192,8 +194,8 @@ serve(async (req: Request): Promise<Response> => {
     );
 
     const sanitizedReturnUrl = sanitizeReturnUrl(returnUrl, allowedHosts);
-    const finalReturnUrl =
-      sanitizedReturnUrl || `${env.appUrl}/dashboard/user-settings/membership`;
+    const finalReturnUrl = sanitizedReturnUrl ||
+      `${env.appUrl}/dashboard/user-settings/membership`;
 
     // Create portal session with idempotency key
     const idempotencyKey = generateIdempotencyKey("portal_session", customerId);
@@ -202,6 +204,9 @@ serve(async (req: Request): Promise<Response> => {
       {
         customer: customerId,
         return_url: finalReturnUrl,
+        ...(await resolvePortalConfiguration(
+          subscription?.stripe_subscription_id,
+        )),
       },
       {
         idempotencyKey,
@@ -225,8 +230,9 @@ serve(async (req: Request): Promise<Response> => {
     console.error("Error creating portal session:", error);
 
     // Return user-friendly error message
-    const errorMessage =
-      error instanceof Error ? error.message : "Internal server error";
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Internal server error";
 
     return new Response(
       JSON.stringify({
@@ -240,3 +246,24 @@ serve(async (req: Request): Promise<Response> => {
     );
   }
 });
+
+async function resolvePortalConfiguration(
+  stripeSubscriptionId: string | null | undefined,
+): Promise<{ configuration?: string }> {
+  if (!stripeSubscriptionId) return {};
+  const stripeSubscription = await stripe.subscriptions.retrieve(
+    stripeSubscriptionId,
+  );
+  if (!subscriptionHasCommitmentPrice(stripeSubscription)) {
+    return {};
+  }
+  const configuration = Deno.env.get(
+    "STRIPE_COMMITMENT_PORTAL_CONFIGURATION_ID",
+  );
+  if (!configuration?.startsWith("bpc_")) {
+    throw new Error(
+      "STRIPE_COMMITMENT_PORTAL_CONFIGURATION_ID is not configured",
+    );
+  }
+  return { configuration };
+}

@@ -40,6 +40,8 @@ type VerifyRequestBody = {
   platform: Platform;
   storeProductId: string;
   appAccountToken?: string | null;
+  expectedBillingPlanType?: "MONTHLY" | "BILLED_UPFRONT";
+  expectedCommitmentMonths?: 12;
   verificationData: {
     source?: string;
     localVerificationData?: string;
@@ -519,9 +521,7 @@ serve(async (req: Request) => {
       const boundToUserId = (existingSub as any).bound_to_user_id as string;
       const { data: ownerSub, error: ownerSubError } = await supabase
         .from("subscriptions")
-        .select(
-          "plan, status, bound_to_user_id, current_period_end, trial_end",
-        )
+        .select("plan, status, bound_to_user_id, current_period_end, trial_end")
         .eq("user_id", boundToUserId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -611,6 +611,9 @@ serve(async (req: Request) => {
       let appStoreOfferIdentifier: string | null = null;
       let appStoreInAppOwnershipType: "FAMILY_SHARED" | "PURCHASED" | null =
         null;
+      let appStoreBillingPlanType: string | null = null;
+      let appStoreCommitmentMonths: number | null = null;
+      let appStoreCommitmentEnd: string | null = null;
       // Use the environment from ENV secret as default.
       // Will be updated based on JWS payload or App Store Server API response if available.
       // See ENV configuration comments at the top of this file for details.
@@ -977,6 +980,59 @@ serve(async (req: Request) => {
           inAppOwnershipType: (decodedTransaction as Record<string, unknown>)
             .inAppOwnershipType ?? null,
         });
+
+        const verifiedTransactionRecord = decodedTransaction as Record<
+          string,
+          unknown
+        >;
+        const decodedHintRecord = decodedHint as Record<string, unknown>;
+        appStoreBillingPlanType = String(
+          verifiedTransactionRecord.billingPlanType ??
+            decodedHintRecord.billingPlanType ??
+            "",
+        ).toUpperCase() || null;
+        const commitmentInfo = (verifiedTransactionRecord.commitmentInfo ??
+          decodedHintRecord.commitmentInfo) as
+            | Record<string, unknown>
+            | null
+            | undefined;
+        const totalBillingPeriods = Number(commitmentInfo?.totalBillingPeriods);
+        const commitmentExpiresDate = Number(
+          commitmentInfo?.commitmentExpiresDate,
+        );
+        if (
+          appStoreBillingPlanType === "MONTHLY" &&
+          totalBillingPeriods === 12 &&
+          Number.isFinite(commitmentExpiresDate)
+        ) {
+          appStoreCommitmentMonths = 12;
+          appStoreCommitmentEnd = new Date(commitmentExpiresDate).toISOString();
+        }
+
+        if (
+          body.expectedBillingPlanType &&
+          appStoreBillingPlanType !== body.expectedBillingPlanType
+        ) {
+          return new Response(
+            JSON.stringify({ error: "App Store billing plan mismatch" }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+        if (
+          body.expectedCommitmentMonths === 12 &&
+          (appStoreCommitmentMonths !== 12 || !appStoreCommitmentEnd)
+        ) {
+          return new Response(
+            JSON.stringify({ error: "App Store commitment terms mismatch" }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
 
         // Legacy code path for additional server validation (kept for compatibility)
         // This section is now mostly redundant since we validate above
@@ -2012,8 +2068,8 @@ serve(async (req: Request) => {
             plan: (existingSub as any).plan,
             status: (existingSub as any).status,
             stripeSubscriptionId: (existingSub as any).stripe_subscription_id,
-            appStoreOriginalTransactionId:
-              (existingSub as any).app_store_original_transaction_id,
+            appStoreOriginalTransactionId: (existingSub as any)
+              .app_store_original_transaction_id,
           }
           : null,
         {
@@ -2053,6 +2109,11 @@ serve(async (req: Request) => {
         plan,
         status,
         billing_interval: billingInterval,
+        payment_interval: appStoreBillingPlanType === "MONTHLY"
+          ? "monthly"
+          : billingInterval,
+        commitment_months: appStoreCommitmentMonths,
+        commitment_end: appStoreCommitmentEnd,
         bound_to_user_id: null,
         bound_to_household_id: null,
         // Provider hygiene: prevent mixed-source subscription rows.
@@ -2498,8 +2559,8 @@ serve(async (req: Request) => {
           plan: (existingSub as any).plan,
           status: (existingSub as any).status,
           stripeSubscriptionId: (existingSub as any).stripe_subscription_id,
-          appStoreOriginalTransactionId:
-            (existingSub as any).app_store_original_transaction_id,
+          appStoreOriginalTransactionId: (existingSub as any)
+            .app_store_original_transaction_id,
         }
         : null,
       {

@@ -6,6 +6,13 @@ import {
 } from "./regional-pricing.generated.ts";
 
 const DEFAULT_CHECKOUT_COUNTRY = "US";
+const COMMITMENT_UNAVAILABLE_COUNTRIES = new Set(["US", "SG", "AU"]);
+
+export function isCommitmentAvailableForCountry(countryCode: string): boolean {
+  return !COMMITMENT_UNAVAILABLE_COUNTRIES.has(
+    countryCode.trim().toUpperCase(),
+  );
+}
 
 export function buildRegionalPriceCacheKey(
   lookupKey: string,
@@ -96,7 +103,9 @@ export function assertCheckoutLineItem(
   }
   if (actual.amountSubtotal !== expected.amount) {
     throw new Error(
-      `Stripe Checkout line item amount mismatch: expected ${expected.amount}, received ${actual.amountSubtotal ?? "NONE"}`,
+      `Stripe Checkout line item amount mismatch: expected ${expected.amount}, received ${
+        actual.amountSubtotal ?? "NONE"
+      }`,
     );
   }
 }
@@ -107,5 +116,7 @@ export function getRegionalCheckoutAmount(
   market: RegionalPricingMarket,
 ): number {
   if (plan === "lifetime") return market.lifetime;
-  return billingInterval === "yearly" ? market.yearly : market.monthly;
+  return billingInterval === "yearly"
+    ? Math.round(market.yearly / 12)
+    : market.monthly;
 }
