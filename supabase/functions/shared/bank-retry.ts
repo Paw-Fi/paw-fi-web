@@ -14,6 +14,16 @@ const DEFAULT_RETRY_OPTIONS: Required<Omit<RetryOptions, "retryOnStatuses">> = {
 };
 
 const DEFAULT_RETRY_STATUSES = [429, 500, 502, 503, 504];
+const TRANSIENT_NETWORK_ERROR_MARKERS = [
+  "connection reset",
+  "connection error",
+  "sendrequest",
+  "network error",
+  "network request failed",
+  "fetch failed",
+  "timed out",
+  "timeout",
+];
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -34,6 +44,37 @@ function parseRetryAfterMs(value: string | null): number {
   const date = Date.parse(value);
   if (Number.isNaN(date)) return 0;
   return Math.max(date - Date.now(), 0);
+}
+
+export function isTransientBankNetworkError(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "string"
+      ? error
+      : "";
+  const normalized = message.toLowerCase();
+  return TRANSIENT_NETWORK_ERROR_MARKERS.some((marker) =>
+    normalized.includes(marker)
+  );
+}
+
+/** Retries read-only Supabase operations after Edge-to-PostgREST transport failures. */
+export async function withTransientBankReadRetry<T>(
+  operation: () => Promise<T>,
+  options: Pick<RetryOptions, "maxRetries" | "initialDelayMs" | "maxDelayMs" | "backoffMultiplier"> = {},
+): Promise<T> {
+  const resolvedOptions = { ...DEFAULT_RETRY_OPTIONS, ...options };
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isTransientBankNetworkError(error) || attempt > resolvedOptions.maxRetries) {
+        throw error;
+      }
+      await sleep(calculateDelay(attempt, resolvedOptions));
+    }
+  }
 }
 
 export async function fetchWithRetry(
