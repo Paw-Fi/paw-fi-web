@@ -14,6 +14,8 @@ import {
   resolveWalletTransactionCurrency,
   resolveWalletTransactionDate,
   resolveWalletTransactionPackageName,
+  usesAiAccountCurrencyContext,
+  usesAiUserPreferredCurrency,
 } from "../shared/wallet-capture.ts";
 
 Deno.test("wallet capture source normalizes Android legacy alias", () => {
@@ -96,6 +98,79 @@ Deno.test(
       }),
       "CAD",
     );
+  },
+);
+
+Deno.test(
+  "wallet capture preserves AI-verified explicit currency without locale parsing",
+  () => {
+    assertEquals(
+      resolveWalletCaptureCurrency({
+        captureSource: "android_notification_listener",
+        accountCurrency: "AED",
+        tx: {
+          currency: "AED",
+          currencyEvidenceRaw: "د.إ",
+          currencyEvidenceType: "ai_notification_explicit",
+        },
+      }),
+      "AED",
+    );
+  },
+);
+
+Deno.test(
+  "wallet capture preserves AI account-context currency",
+  () => {
+    assertEquals(
+      resolveWalletCaptureCurrency({
+        captureSource: "android_notification_listener",
+        accountCurrency: "CAD",
+        tx: {
+          currency: "CAD",
+          currencyEvidenceRaw: "$",
+          currencyEvidenceType: "ai_account_context",
+          currencyAmbiguous: true,
+        },
+      }),
+      "CAD",
+    );
+    assertEquals(
+      usesAiAccountCurrencyContext({
+        currency: "CAD",
+        currencyEvidenceType: "ai_account_context",
+      }),
+      true,
+    );
+    assertEquals(
+      usesAiAccountCurrencyContext({
+        currency: "CAD",
+        currencyEvidenceType: "ai_notification_explicit",
+      }),
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "wallet capture preserves server-verified user preferred currency",
+  () => {
+    const tx = {
+      currency: "SGD",
+      currencyEvidenceRaw: "$",
+      currencyEvidenceType: "ai_user_preference",
+      currencyAmbiguous: true,
+    };
+    assertEquals(
+      resolveWalletCaptureCurrency({
+        captureSource: "android_notification_listener",
+        preferredCurrency: "SGD",
+        tx,
+      }),
+      "SGD",
+    );
+    assertEquals(usesAiUserPreferredCurrency(tx), true);
+    assertEquals(usesAiAccountCurrencyContext(tx), false);
   },
 );
 

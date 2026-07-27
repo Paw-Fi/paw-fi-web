@@ -79,18 +79,38 @@ function sanitizeNotification(value: unknown): AndroidNotificationInput | null {
   const packageName = optionalString(raw.packageName, 200);
   if (!packageName || !/^[A-Za-z0-9._-]+$/.test(packageName)) return null;
   const rawLines = Array.isArray(raw.textLines) ? raw.textLines : [];
+  const rawMessages = Array.isArray(raw.messages) ? raw.messages : [];
+  const rawAdditionalText = Array.isArray(raw.additionalText)
+    ? raw.additionalText
+    : [];
   return {
     packageName,
     sourceAppLabel: optionalString(raw.sourceAppLabel, 120),
+    isGroupSummary: raw.isGroupSummary === true,
     notificationKey: optionalString(raw.notificationKey, 240),
     notificationPostTime: optionalString(raw.notificationPostTime, 80),
     title: optionalString(raw.title, MAX_FIELD_LENGTH),
     text: optionalString(raw.text, MAX_FIELD_LENGTH),
     bigText: optionalString(raw.bigText, MAX_FIELD_LENGTH),
     subText: optionalString(raw.subText, MAX_FIELD_LENGTH),
+    summaryText: optionalString(raw.summaryText, MAX_FIELD_LENGTH),
+    infoText: optionalString(raw.infoText, MAX_FIELD_LENGTH),
+    conversationTitle: optionalString(
+      raw.conversationTitle,
+      MAX_FIELD_LENGTH,
+    ),
+    tickerText: optionalString(raw.tickerText, MAX_FIELD_LENGTH),
     textLines: rawLines
       .map((line) => optionalString(line, 500))
       .filter((line): line is string => line != null)
+      .slice(0, MAX_TEXT_LINES),
+    messages: rawMessages
+      .map((message) => optionalString(message, 500))
+      .filter((message): message is string => message != null)
+      .slice(0, MAX_TEXT_LINES),
+    additionalText: rawAdditionalText
+      .map((text) => optionalString(text, 500))
+      .filter((text): text is string => text != null)
       .slice(0, MAX_TEXT_LINES),
   };
 }
@@ -118,8 +138,9 @@ async function claimClassificationEvent(params: {
     },
   );
   if (error) throw error;
-  const result =
-    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const result = data && typeof data === "object"
+    ? (data as Record<string, unknown>)
+    : {};
   if (result.status === "cached" && result.result) {
     return {
       status: "cached",
@@ -197,8 +218,8 @@ async function sendDecisionPush(params: {
       deep_link: params.deepLink ?? "moneko://home",
     },
     firebaseProjectId: Deno.env.get("FIREBASE_PROJECT_ID") || "",
-    firebaseServiceAccountJson:
-      Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "",
+    firebaseServiceAccountJson: Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") ||
+      "",
     iosBundleId: Deno.env.get("IOS_BUNDLE_ID") || "com.moneko.mobile",
   });
 }
@@ -243,9 +264,11 @@ async function invokeWalletCapture(params: {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const internalKey = resolveAnyInternalFunctionKey();
-  const url = `${Deno.env.get(
-    "SUPABASE_URL",
-  )}/functions/v1/save-wallet-transaction`;
+  const url = `${
+    Deno.env.get(
+      "SUPABASE_URL",
+    )
+  }/functions/v1/save-wallet-transaction`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -269,9 +292,12 @@ async function invokeWalletCapture(params: {
         amount: params.classification.amount,
         currency: params.classification.currency,
         currencyEvidenceRaw: params.classification.currencyEvidenceRaw,
-        currencyEvidenceType: params.classification.currencyAmbiguous
-          ? "ambiguous_symbol"
-          : "explicit_code",
+        currencyEvidenceType:
+          params.classification.currencySource === "account_context"
+            ? "ai_account_context"
+            : params.classification.currencySource === "user_preference"
+            ? "ai_user_preference"
+            : "ai_notification_explicit",
         currencyAmbiguous: params.classification.currencyAmbiguous,
         accountCurrency: params.accountCurrency,
         date: params.classification.date,
@@ -469,10 +495,9 @@ Deno.serve(async (req: Request) => {
         );
       }
       const account = await getAccountOrNull(supabase, accountId);
-      accountCurrency =
-        typeof account?.currency === "string"
-          ? account.currency.trim().toUpperCase()
-          : null;
+      accountCurrency = typeof account?.currency === "string"
+        ? account.currency.trim().toUpperCase()
+        : null;
       if (!accountCurrency) {
         return await rejectClaimedRequest(
           "Selected account has no currency",
@@ -481,10 +506,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    const preferredTimezone =
-      typeof contact?.preferred_timezone === "string"
-        ? contact.preferred_timezone
-        : null;
+    const preferredTimezone = typeof contact?.preferred_timezone === "string"
+      ? contact.preferred_timezone
+      : null;
     const clientDate = body.clientCreatedAt
       ? new Date(body.clientCreatedAt)
       : new Date();
@@ -498,6 +522,7 @@ Deno.serve(async (req: Request) => {
       notification,
       fallbackDate,
       accountCurrency,
+      preferredCurrency: contact?.preferred_currency,
       preferredLanguage: contact?.preferred_language,
       expenseCategories: Array.from(categoryContext.allowedExpenseSet).sort(),
       incomeCategories: Array.from(categoryContext.allowedIncomeSet).sort(),
@@ -509,6 +534,9 @@ Deno.serve(async (req: Request) => {
         ignored: true,
         reasonCode: classification.reasonCode,
         subtype: classification.subtype,
+        confidence: classification.confidence,
+        classifierModel: classification.model ?? null,
+        verificationModel: classification.verificationModel ?? null,
       };
       await finalizeClassificationEvent({
         supabase,
@@ -562,7 +590,8 @@ Deno.serve(async (req: Request) => {
           supabase,
           userId,
           title: "Recurring transaction already tracked",
-          body: "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
+          body:
+            "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
           eventType: "notification_capture_recurring_existing",
           deepLink: `moneko://recurring/${recurringMatch.schedule.id}`,
           notificationId: eventId,
@@ -661,6 +690,9 @@ Deno.serve(async (req: Request) => {
         subtype: classification.subtype,
         confidence: classification.confidence,
         isRecurring: classification.isRecurring,
+        classifierModel: classification.model ?? null,
+        verificationModel: classification.verificationModel ?? null,
+        currencySource: classification.currencySource ?? null,
       },
     };
     await finalizeClassificationEvent({
@@ -698,8 +730,11 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse(result, saved.response.status);
   } catch (error) {
+    const diagnosticCode = error instanceof Error
+      ? optionalString(error.message, 160) ?? "unknown_error"
+      : "unknown_error";
     console.error("[classify-notification-capture] Request failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: diagnosticCode,
       eventId,
     });
     if (supabase && eventId) {
@@ -707,7 +742,11 @@ Deno.serve(async (req: Request) => {
         supabase,
         eventId,
         status: "failed",
-        result: { success: false, error: "Classification failed" },
+        result: {
+          success: false,
+          error: "Classification failed",
+          diagnosticCode,
+        },
       }).catch(() => undefined);
     }
     return jsonResponse(

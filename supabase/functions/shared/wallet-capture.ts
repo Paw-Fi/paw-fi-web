@@ -36,6 +36,9 @@ const VALID_CAPTURE_SOURCES = new Set([
   "ios_wallet_shortcut",
   "android_notification_listener",
 ]);
+const AI_EXPLICIT_CURRENCY_EVIDENCE = "ai_notification_explicit";
+const AI_ACCOUNT_CURRENCY_EVIDENCE = "ai_account_context";
+const AI_USER_PREFERENCE_CURRENCY_EVIDENCE = "ai_user_preference";
 
 export const WALLET_CAPTURE_CLAIM_STALE_MS = 10 * 60 * 1000;
 
@@ -65,6 +68,18 @@ export function resolveWalletTransactionCurrency(
 ): string | null {
   const value = (tx.currency ?? tx.currencyCode ?? "").trim();
   return value || null;
+}
+
+export function usesAiAccountCurrencyContext(
+  tx: WalletTransactionLike,
+): boolean {
+  return tx.currencyEvidenceType === AI_ACCOUNT_CURRENCY_EVIDENCE;
+}
+
+export function usesAiUserPreferredCurrency(
+  tx: WalletTransactionLike,
+): boolean {
+  return tx.currencyEvidenceType === AI_USER_PREFERENCE_CURRENCY_EVIDENCE;
 }
 
 function walletCaptureCurrencyEvidenceText(tx: WalletTransactionLike): string {
@@ -97,6 +112,13 @@ export function resolveWalletCaptureCurrency(params: {
   if (captureSource !== "android_notification_listener") {
     return payloadCurrency || preferredCurrency;
   }
+  if (
+    params.tx.currencyEvidenceType === AI_EXPLICIT_CURRENCY_EVIDENCE ||
+    params.tx.currencyEvidenceType === AI_ACCOUNT_CURRENCY_EVIDENCE ||
+    params.tx.currencyEvidenceType === AI_USER_PREFERENCE_CURRENCY_EVIDENCE
+  ) {
+    return payloadCurrency;
+  }
 
   const rawOcrText = walletCaptureCurrencyEvidenceText(params.tx);
   const normalizedPayloadCurrency = (payloadCurrency || "").trim();
@@ -120,6 +142,14 @@ export function resolveWalletCaptureCurrency(params: {
 export function resolveStrongWalletCaptureCurrencyEvidence(
   tx: WalletTransactionLike,
 ): string | null {
+  if (
+    usesAiAccountCurrencyContext(tx) ||
+    usesAiUserPreferredCurrency(tx)
+  ) return null;
+  if (tx.currencyEvidenceType === AI_EXPLICIT_CURRENCY_EVIDENCE) {
+    const currency = resolveWalletTransactionCurrency(tx)?.toUpperCase();
+    return currency && /^[A-Z]{3}$/.test(currency) ? currency : null;
+  }
   const rawOcrText = walletCaptureCurrencyEvidenceText(tx);
   return resolveSingleStrongCurrencyEvidenceFromOCRText(rawOcrText);
 }
@@ -127,6 +157,11 @@ export function resolveStrongWalletCaptureCurrencyEvidence(
 export function hasAmbiguousWalletCaptureCurrencyEvidence(
   tx: WalletTransactionLike,
 ): boolean {
+  if (
+    usesAiAccountCurrencyContext(tx) ||
+    usesAiUserPreferredCurrency(tx)
+  ) return true;
+  if (tx.currencyEvidenceType === AI_EXPLICIT_CURRENCY_EVIDENCE) return false;
   const rawOcrText = walletCaptureCurrencyEvidenceText(tx);
   if (resolveSingleStrongCurrencyEvidenceFromOCRText(rawOcrText)) {
     return false;
