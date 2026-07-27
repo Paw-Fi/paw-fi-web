@@ -12,6 +12,12 @@ import {
   classifyAndroidNotification,
 } from "../shared/android-notification-classifier.ts";
 import {
+  assertAccountInScope,
+  assertScopeAccess,
+  getAccountOrNull,
+  resolveDefaultAccountIdStrict,
+} from "../shared/accounts.ts";
+import {
   type AndroidRecurringScheduleRow,
   type AndroidSavedRecurringRow,
   findAndroidRecurringCaptureMatch,
@@ -45,7 +51,6 @@ interface NotificationCaptureRequest {
   householdId?: string | null;
   isPortfolio?: boolean;
   accountId?: string | null;
-  accountCurrency?: string | null;
   notification?: AndroidNotificationInput | null;
 }
 
@@ -232,6 +237,8 @@ async function invokeWalletCapture(params: {
   notification: AndroidNotificationInput;
   classification: AndroidNotificationClassification;
   eventKey: string;
+  accountId: string | null;
+  accountCurrency: string | null;
 }): Promise<{ response: Response; payload: Record<string, unknown> }> {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -254,7 +261,7 @@ async function invokeWalletCapture(params: {
       clientCreatedAt: params.body.clientCreatedAt,
       householdId: params.body.householdId,
       isPortfolio: params.body.isPortfolio === true,
-      accountId: params.body.accountId,
+      accountId: params.accountId,
       suppressNotification: params.classification.isRecurring,
       transaction: {
         merchantName: params.classification.merchant,
@@ -266,7 +273,7 @@ async function invokeWalletCapture(params: {
           ? "ambiguous_symbol"
           : "explicit_code",
         currencyAmbiguous: params.classification.currencyAmbiguous,
-        accountCurrency: params.body.accountCurrency,
+        accountCurrency: params.accountCurrency,
         date: params.classification.date,
         packageName: params.notification.packageName,
         sourceAppLabel: params.notification.sourceAppLabel,
@@ -376,6 +383,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const householdId = sanitizeUuid(body.householdId);
+    const rawHouseholdId = optionalString(body.householdId, 80);
+    if (rawHouseholdId && !householdId) {
+      return jsonResponse(
+        { success: false, error: "Valid household id required" },
+        400,
+      );
+    }
+    const requestedAccountId = sanitizeUuid(body.accountId);
+    const rawAccountId = optionalString(body.accountId, 80);
+    if (rawAccountId && !requestedAccountId) {
+      return jsonResponse(
+        { success: false, error: "Valid account id required" },
+        400,
+      );
+    }
+
     const hourlyLimit = Math.max(
       1,
       Number.parseInt(
@@ -414,6 +438,48 @@ Deno.serve(async (req: Request) => {
     }
     eventId = claim.id;
 
+    const rejectClaimedRequest = async (error: string): Promise<Response> => {
+      const result = { success: false, error };
+      await finalizeClassificationEvent({
+        supabase,
+        eventId: claim.id,
+        status: "failed",
+        result,
+      });
+      return jsonResponse(result, 400);
+    };
+
+    if (!await assertScopeAccess(supabase, userId, householdId)) {
+      return await rejectClaimedRequest(
+        "Destination scope is not accessible",
+      );
+    }
+    const accountId = requestedAccountId ??
+      await resolveDefaultAccountIdStrict(supabase, { userId, householdId });
+    let accountCurrency: string | null = null;
+    if (accountId) {
+      const isAccountInScope = await assertAccountInScope(
+        supabase,
+        accountId,
+        { userId, householdId },
+      );
+      if (!isAccountInScope) {
+        return await rejectClaimedRequest(
+          "Provided account does not belong to this scope",
+        );
+      }
+      const account = await getAccountOrNull(supabase, accountId);
+      accountCurrency =
+        typeof account?.currency === "string"
+          ? account.currency.trim().toUpperCase()
+          : null;
+      if (!accountCurrency) {
+        return await rejectClaimedRequest(
+          "Selected account has no currency",
+        );
+      }
+    }
+
     const categoryContext = await loadCategoryContext({ supabase, userId });
     const preferredTimezone =
       typeof contact?.preferred_timezone === "string"
@@ -431,6 +497,7 @@ Deno.serve(async (req: Request) => {
       genAI,
       notification,
       fallbackDate,
+      accountCurrency,
       preferredLanguage: contact?.preferred_language,
       expenseCategories: Array.from(categoryContext.allowedExpenseSet).sort(),
       incomeCategories: Array.from(categoryContext.allowedIncomeSet).sort(),
@@ -461,7 +528,6 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(result);
     }
 
-    const householdId = sanitizeUuid(body.householdId);
     let replacedSchedule: AndroidRecurringScheduleRow | null = null;
     if (classification.isRecurring && classification.recurrenceRule) {
       const schedules = await loadRecurringSchedules({
@@ -474,7 +540,7 @@ Deno.serve(async (req: Request) => {
         amountCents: Math.round(classification.amount! * 100),
         currency: classification.currency!,
         transactionType: classification.transactionType!,
-        accountId: sanitizeUuid(body.accountId),
+        accountId,
         frequency: classification.recurrenceRule.frequency,
         date: classification.date,
       });
@@ -515,6 +581,8 @@ Deno.serve(async (req: Request) => {
       notification,
       classification,
       eventKey,
+      accountId,
+      accountCurrency,
     });
     if (!saved.response.ok) {
       await finalizeClassificationEvent({
@@ -569,7 +637,7 @@ Deno.serve(async (req: Request) => {
             amountCents: Math.round(classification.amount! * 100),
             currency: classification.currency!,
             transactionType: classification.transactionType!,
-            accountId: sanitizeUuid(body.accountId),
+            accountId,
             frequency: classification.recurrenceRule.frequency,
           },
         )

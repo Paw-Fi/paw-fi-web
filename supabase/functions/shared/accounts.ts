@@ -64,6 +64,21 @@ export async function resolveDefaultAccountId(
   return typeof data === "string" ? data : null;
 }
 
+export async function resolveDefaultAccountIdStrict(
+  supabase: SupabaseClient,
+  context: ScopeContext,
+): Promise<string | null> {
+  const { userId, householdId } = context;
+  if (!userId) return null;
+  const { data, error } = await supabase.rpc("resolve_default_account", {
+    p_user_id: userId,
+    p_household_id: householdId,
+    p_currency: context.currency ?? null,
+  });
+  if (error) throw error;
+  return typeof data === "string" ? data : null;
+}
+
 export async function assertAccountInScope(
   supabase: SupabaseClient,
   accountId: string,

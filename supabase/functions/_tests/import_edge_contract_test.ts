@@ -96,6 +96,20 @@ Deno.test(
 );
 
 Deno.test(
+  "import contract: text analysis retries fallback models for empty AI output",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../shared/analyze-core.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, '"gemini-3.1-flash-lite"');
+    assertStringIncludes(source, "returned no transaction tool call");
+    assertStringIncludes(source, "returned empty or invalid items");
+    assertStringIncludes(source, "trying fallback model");
+  },
+);
+
+Deno.test(
   "import contract: save-transactions-batch exposes streaming progress",
   async () => {
     const source = await Deno.readTextFile(
@@ -114,24 +128,29 @@ Deno.test(
 );
 
 Deno.test(
-  "import contract: forwarded inbound email body is not sent as attachment analysis text",
+  "import contract: inbound visible email body is sanitized and analyzed separately from attachments",
   async () => {
     const source = await Deno.readTextFile(
       new URL("../resend-inbound-webhook/index.ts", import.meta.url),
     );
 
-    const analyzeBodyStart = source.indexOf(
-      "const analyzeBody: AnalyzeRequestBody",
+    assertStringIncludes(
+      source,
+      "resolveInboundEmailText({",
     );
-    const analyzeBodyEnd = source.indexOf(
-      "const result = await runAnalyzeExpense",
-      analyzeBodyStart,
+    assertStringIncludes(source, "html: emailContent?.html");
+    assertStringIncludes(source, 'filename: "Email body"');
+    assertStringIncludes(source, "text: emailBodyText");
+    assertStringIncludes(source, "allowDeterministicTextFallback: false");
+    assertStringIncludes(source, "preferred_timezone");
+    assertStringIncludes(source, "localDateTimeToUtcIso({");
+    assertStringIncludes(source, "clientCreatedAt");
+    assertStringIncludes(
+      source,
+      "supportedAttachments.length === 0 && !emailBodyText",
     );
-    const analyzeBodySource = source.slice(analyzeBodyStart, analyzeBodyEnd);
-
-    assertStringIncludes(analyzeBodySource, "attachments:");
-    assertEquals(analyzeBodySource.includes("emailContent?.text"), false);
-    assertEquals(analyzeBodySource.includes("emailContent.text"), false);
+    assertStringIncludes(source, "deduplicateImportedTransactions");
+    assertStringIncludes(source, "buildImportSemanticKey");
   },
 );
 
@@ -139,26 +158,16 @@ Deno.test(
   "import contract: inbound follow-up email caps long transaction lists",
   async () => {
     const source = await Deno.readTextFile(
-      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+      new URL(
+        "../resend-inbound-webhook/email-templates/import-followup-email.ts",
+        import.meta.url,
+      ),
     );
-
-    const transactionLinesStart = source.indexOf(
-      "const transactionLines = transactions",
-    );
-    const transactionLinesEnd = source.indexOf(
-      "const attachmentLines",
-      transactionLinesStart,
-    );
-    const transactionLinesSource = source.slice(
-      transactionLinesStart,
-      transactionLinesEnd,
-    );
-
-    assertStringIncludes(transactionLinesSource, ".map((item) => {");
-    assertStringIncludes(transactionLinesSource, ".slice(0, 30)");
-    assertStringIncludes(transactionLinesSource, "transactions.length > 30");
-    assertStringIncludes(transactionLinesSource, "<li>...</li>");
-    assertEquals(transactionLinesSource.includes(".slice(0, 20)"), false);
+    assertStringIncludes(source, ".map(renderTransactionLine)");
+    assertStringIncludes(source, ".slice(0, 30)");
+    assertStringIncludes(source, "transactions.length <= 30");
+    assertStringIncludes(source, "<li>...</li>");
+    assertEquals(source.includes(".slice(0, 20)"), false);
   },
 );
 
@@ -166,20 +175,19 @@ Deno.test(
   "import contract: inbound follow-up email explains attachment retention",
   async () => {
     const source = await Deno.readTextFile(
-      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+      new URL(
+        "../resend-inbound-webhook/email-templates/import-followup-email.ts",
+        import.meta.url,
+      ),
     );
 
-    const followupStart = source.indexOf("function buildFollowupEmail");
-    const followupEnd = source.indexOf("async function getFcmAccessToken");
-    const followupSource = source.slice(followupStart, followupEnd);
-
     assertStringIncludes(
-      followupSource,
-      "Moneko does not store forwarded attachments on our servers.",
+      source,
+      "Moneko does not store forwarded attachments or email content on our servers.",
     );
     assertStringIncludes(
-      followupSource,
-      "We download them temporarily only to extract transactions.",
+      source,
+      "We process them temporarily only to extract transactions.",
     );
   },
 );

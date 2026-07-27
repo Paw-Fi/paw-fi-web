@@ -67,6 +67,21 @@ export function resolveWalletTransactionCurrency(
   return value || null;
 }
 
+function walletCaptureCurrencyEvidenceText(tx: WalletTransactionLike): string {
+  const verifiedEvidence = tx.currencyEvidenceRaw?.trim();
+  if (verifiedEvidence) return verifiedEvidence;
+
+  return [
+    tx.note,
+    tx.rawMerchant,
+    tx.merchantName,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .join("\n");
+}
+
 export function resolveWalletCaptureCurrency(params: {
   tx: WalletTransactionLike;
   preferredCurrency?: string | null;
@@ -83,16 +98,7 @@ export function resolveWalletCaptureCurrency(params: {
     return payloadCurrency || preferredCurrency;
   }
 
-  const rawOcrText = [
-    params.tx.note,
-    params.tx.rawMerchant,
-    params.tx.merchantName,
-    params.tx.currencyEvidenceRaw,
-  ]
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .join("\n");
+  const rawOcrText = walletCaptureCurrencyEvidenceText(params.tx);
   const normalizedPayloadCurrency = (payloadCurrency || "").trim();
   const detectedCurrencyCode = /^[A-Za-z]{3}$/.test(normalizedPayloadCurrency)
     ? normalizedPayloadCurrency.toUpperCase()
@@ -114,32 +120,14 @@ export function resolveWalletCaptureCurrency(params: {
 export function resolveStrongWalletCaptureCurrencyEvidence(
   tx: WalletTransactionLike,
 ): string | null {
-  const rawOcrText = [
-    tx.note,
-    tx.rawMerchant,
-    tx.merchantName,
-    tx.currencyEvidenceRaw,
-  ]
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .join("\n");
+  const rawOcrText = walletCaptureCurrencyEvidenceText(tx);
   return resolveSingleStrongCurrencyEvidenceFromOCRText(rawOcrText);
 }
 
 export function hasAmbiguousWalletCaptureCurrencyEvidence(
   tx: WalletTransactionLike,
 ): boolean {
-  const rawOcrText = [
-    tx.note,
-    tx.rawMerchant,
-    tx.merchantName,
-    tx.currencyEvidenceRaw,
-  ]
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .join("\n");
+  const rawOcrText = walletCaptureCurrencyEvidenceText(tx);
   if (resolveSingleStrongCurrencyEvidenceFromOCRText(rawOcrText)) {
     return false;
   }

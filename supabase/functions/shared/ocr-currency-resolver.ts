@@ -99,6 +99,8 @@ const AMBIGUOUS_SYMBOLS = new Set([
 
 const AMBIGUOUS_TEXT_TOKEN_REGEX =
   /[$＄£￡¥￥₩￦₨₣₤₱]|(^|[^A-Za-z])(?:kr|fr|rs)\.?(?=[^A-Za-z]|$)/i;
+const AMBIGUOUS_TEXT_TOKEN_CAPTURE_REGEX =
+  /([$＄£￡¥￥₩￦₨₣₤₱])|(?:^|[^A-Za-z])((?:kr|fr|rs)\.?)(?=[^A-Za-z]|$)/i;
 
 const UNIQUE_SYMBOL_TO_CURRENCY: Record<string, string> = {
   "€": "EUR",
@@ -380,12 +382,18 @@ function collectStrongTextCurrencyEvidence(text: string): {
 export function resolveSingleStrongCurrencyEvidenceFromOCRText(
   text?: string | null,
 ): string | null {
+  const codes = resolveStrongCurrencyEvidenceCodesFromOCRText(text);
+  return codes.length === 1 ? codes[0] : null;
+}
+
+export function resolveStrongCurrencyEvidenceCodesFromOCRText(
+  text?: string | null,
+): string[] {
   const rawText = normalizeEvidenceText(text);
-  if (!rawText) return null;
+  if (!rawText) return [];
 
   const { codes } = collectStrongTextCurrencyEvidence(rawText);
-
-  return codes.size === 1 ? (codes.values().next().value ?? null) : null;
+  return Array.from(codes).sort();
 }
 
 function hasAmbiguousCurrencySymbol(
@@ -402,6 +410,15 @@ export function hasAmbiguousCurrencyEvidenceInOCRText(
   symbol?: string | null,
 ): boolean {
   return hasAmbiguousCurrencySymbol(normalizeEvidenceText(text), symbol);
+}
+
+export function resolveAmbiguousCurrencyEvidenceTokenFromOCRText(
+  text?: string | null,
+): string | null {
+  const match = AMBIGUOUS_TEXT_TOKEN_CAPTURE_REGEX.exec(
+    normalizeEvidenceText(text),
+  );
+  return match?.[1] ?? match?.[2] ?? null;
 }
 
 export function resolveCurrencyFromOCR(

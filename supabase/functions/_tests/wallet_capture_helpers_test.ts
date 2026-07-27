@@ -80,6 +80,26 @@ Deno.test(
 );
 
 Deno.test(
+  "wallet capture ignores model text when verified ambiguous evidence is supplied",
+  () => {
+    assertEquals(
+      resolveWalletCaptureCurrency({
+        captureSource: "android_notification_listener",
+        accountCurrency: "CAD",
+        tx: {
+          currency: "CAD",
+          note: "Model guessed USD for this purchase",
+          currencyEvidenceRaw: "$",
+          currencyEvidenceType: "ambiguous_symbol",
+          currencyAmbiguous: true,
+        },
+      }),
+      "CAD",
+    );
+  },
+);
+
+Deno.test(
   "wallet capture currency keeps non-Android explicit payload behavior",
   () => {
     assertEquals(

@@ -14,17 +14,22 @@ import {
   pluralize,
   sanitizeSubject,
 } from "../shared/email-utils.ts";
+import { buildImportSemanticKey } from "../shared/import-dedupe.ts";
 import {
   filterSupportedImportAttachments,
   normalizeEmailAddress,
+  resolveInboundEmailText,
   resolveNewestSenderOwner,
   shouldProcessInboundRecipients,
 } from "../shared/email-import.ts";
 import {
   type AnalyzeRequestBody,
+  extractLabeledTransactionFallback,
   runAnalyzeExpense,
+  validateTransactionSourceGrounding,
 } from "../shared/analyze-core.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { localDateTimeToUtcIso } from "../shared/timezone.ts";
 import {
   fetchUserCategoryPreferences,
   fetchUserCustomCategories,
@@ -98,6 +103,7 @@ interface ResolvedOwner {
   defaultEmail: string;
   enabled: boolean;
   preferredCurrency: string;
+  preferredTimezone: string | null;
   householdId: string | null;
   isPortfolio: boolean;
   accountId: string | null;
@@ -146,6 +152,10 @@ type ClaimInboundEventResult =
     inProgress: boolean;
     reason: string;
   };
+
+function chunkDiagnosticText(value: string): string[] {
+  return value.match(/[\s\S]{1,450}/g) ?? [];
+}
 
 function validPositiveInt(value: number, fallback: number): number {
   if (!Number.isFinite(value) || value <= 0) return fallback;
@@ -743,7 +753,7 @@ async function resolveOwnerBySender(params: {
       supabase
         .from("user_contacts")
         .select(
-          "email_import_enabled, email_import_household_id, email_import_is_portfolio, email_import_account_id, preferred_currency",
+          "email_import_enabled, email_import_household_id, email_import_is_portfolio, email_import_account_id, preferred_currency, preferred_timezone",
         )
         .eq("user_id", resolved.userId)
         .order("updated_at", { ascending: false })
@@ -786,6 +796,10 @@ async function resolveOwnerBySender(params: {
         contact.preferred_currency.trim().length > 0
       ? contact.preferred_currency.trim().toUpperCase()
       : "USD",
+    preferredTimezone: typeof contact?.preferred_timezone === "string" &&
+        contact.preferred_timezone.trim().length > 0
+      ? contact.preferred_timezone.trim()
+      : null,
     householdId: sanitizeUuid(contact?.email_import_household_id ?? null),
     isPortfolio: contact?.email_import_is_portfolio === true,
     accountId,
@@ -958,7 +972,7 @@ function buildUnavailableEmail(params: {
     )
   }.</p>
     <p>${escapeHtml(reason)}</p>
-    <p>To import files, forward supported attachments to <strong>${
+    <p>To import files or receipt emails, forward them to <strong>${
     escapeHtml(
       PRIMARY_IMPORT_INBOX_EMAIL,
     )
@@ -982,8 +996,44 @@ function buildUnavailableEmail(params: {
       }),
     ),
     text:
-      `Moneko could not process the files sent from ${senderEmail}. ${reason} To import files, forward them to ${PRIMARY_IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help. Open Moneko settings to configure Email File Import: ${APP_URL}`,
+      `Moneko could not process the email sent from ${senderEmail}. ${reason} To import files or receipt emails, forward them to ${PRIMARY_IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help. Open Moneko settings to configure Email File Import: ${APP_URL}`,
   };
+}
+
+function deduplicateImportedTransactions(params: {
+  items: Array<Record<string, unknown>>;
+  userId: string;
+  householdId: string | null;
+  accountId: string | null;
+}): Array<Record<string, unknown>> {
+  const seen = new Set<string>();
+  const unique: Array<Record<string, unknown>> = [];
+
+  for (const item of params.items) {
+    const amount = Number(item.amount);
+    const date = typeof item.date === "string" ? item.date : "";
+    if (!Number.isFinite(amount) || amount <= 0 || !date) {
+      unique.push(item);
+      continue;
+    }
+
+    const key = buildImportSemanticKey({
+      userId: params.userId,
+      householdId: params.householdId,
+      accountId: params.accountId,
+      type: item.type === "income" ? "income" : "expense",
+      amountCents: Math.round(amount * 100),
+      currency: typeof item.currency === "string" ? item.currency : null,
+      date,
+      category: typeof item.category === "string" ? item.category : null,
+      description: typeof item.description === "string" ? item.description : "",
+    });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique;
 }
 
 function sortImportedTransactions(
@@ -1662,8 +1712,17 @@ export async function handleResendInboundWebhook(
         return jsonResponse({ success: true, ignored: true });
       }
 
-      if (attachmentListResponse.error != null) {
+      if (
+        attachmentListResponse.error != null && !emailContent?.text &&
+        !emailContent?.html
+      ) {
         throw new Error("ATTACHMENT_FETCH_FAILED");
+      }
+      if (attachmentListResponse.error != null) {
+        console.warn(
+          "[resend-inbound-webhook] attachment list unavailable; processing email body only",
+          { emailId: emailData.email_id },
+        );
       }
 
       const supportedAttachments = filterSupportedImportAttachments(
@@ -1671,10 +1730,17 @@ export async function handleResendInboundWebhook(
           ? (attachmentListResponse.data as any).data
           : [],
       ).slice(0, MAX_SUPPORTED_ATTACHMENTS);
+      const resolvedEmailBody = resolveInboundEmailText({
+        text: emailContent?.text,
+        html: emailContent?.html,
+      });
+      const emailBodyText = resolvedEmailBody.text;
 
       console.log("[resend-inbound-webhook] supported attachments", {
         emailId: emailData.email_id,
         attachmentCount: supportedAttachments.length,
+        emailBodyTextLength: emailBodyText.length,
+        emailBodySource: resolvedEmailBody.source,
         attachments: supportedAttachments.map((attachment) => ({
           filename: attachment.filename,
           contentType: attachment.contentType,
@@ -1682,18 +1748,18 @@ export async function handleResendInboundWebhook(
         })),
       });
 
-      if (supportedAttachments.length === 0) {
+      if (supportedAttachments.length === 0 && !emailBodyText) {
         const unavailable = buildUnavailableEmail({
           senderEmail,
           reason:
-            "No supported PDF, CSV, or Excel attachments were found in the forwarded email.",
+            "No supported PDF, CSV, or Excel attachments or readable email content were found in the forwarded email.",
         });
         await updateInboundEvent({
           supabase,
           owner: leaseOwner,
           userId: owner.userId,
           status: "ignored",
-          errorText: "NO_SUPPORTED_ATTACHMENTS",
+          errorText: "NO_SUPPORTED_IMPORT_CONTENT",
         });
         try {
           await sendEmail({
@@ -1976,6 +2042,258 @@ export async function handleResendInboundWebhook(
         }
       }
 
+      if (emailBodyText) {
+        try {
+          setStage("email_body_analyze_start", {
+            textLength: emailBodyText.length,
+          });
+          ensureSoftDeadline(processingStartedAtMs, "email_body_processing");
+          await heartbeatInboundEvent({
+            supabase,
+            owner: leaseOwner,
+            svixId,
+            svixTimestamp,
+          });
+          const result = await runAnalyzeExpense(
+            {
+              userId: owner.userId,
+              date: (
+                emailData.created_at ||
+                event.created_at ||
+                new Date().toISOString()
+              ).slice(0, 10),
+              currency: owner.preferredCurrency,
+              text: emailBodyText,
+              allowDeterministicTextFallback: false,
+              allowedExpenseCategories:
+                categoryContext.allowedExpenseCategories,
+              allowedIncomeCategories: categoryContext.allowedIncomeCategories,
+              categoryPreferences: categoryContext.categoryPreferences,
+            },
+            requiredGeminiApiKey,
+            (progress) => {
+              console.log(
+                "[resend-inbound-webhook] email body analyze progress",
+                {
+                  emailId: emailData.email_id,
+                  elapsedMs: Date.now() - backgroundStartedAtMs,
+                  type: progress.type,
+                  current: progress.current ?? null,
+                  total: progress.total ?? null,
+                  message: progress.message ?? null,
+                },
+              );
+            },
+          );
+          if (!result.success && isRetryableAnalyzeFailure(result)) {
+            const retryableError = new Error(
+              result.error || result.code ||
+                "RETRYABLE_EMAIL_BODY_ANALYSIS_FAILURE",
+            );
+            await reportEdgeFunctionError({
+              functionName: "resend-inbound-webhook",
+              error: retryableError,
+              context: {
+                operation: "email_body_analysis_retryable_failure",
+                providerEmailId: emailData.email_id,
+                senderEmail,
+                subjectLine: emailData.subject || "",
+                emailBodySource: resolvedEmailBody.source,
+                sanitizedEmailContent: emailBodyText,
+                sanitizedEmailContentChunks: chunkDiagnosticText(emailBodyText),
+                resultCode: result.code || null,
+                resultStatus: result.status || null,
+              },
+            });
+            throw retryableError;
+          }
+          let bodyItems = Array.isArray(result.items) ? result.items : [];
+          if (bodyItems.length > 0) {
+            const rejectedItems: Array<{
+              item: Record<string, unknown>;
+              reasons: string[];
+            }> = [];
+            bodyItems = bodyItems.filter((item) => {
+              const grounding = validateTransactionSourceGrounding({
+                sourceText: emailBodyText,
+                item: item as unknown as Record<string, unknown>,
+              });
+              if (!grounding.grounded) {
+                rejectedItems.push({
+                  item: item as unknown as Record<string, unknown>,
+                  reasons: grounding.reasons,
+                });
+              }
+              return grounding.grounded;
+            });
+            if (rejectedItems.length > 0) {
+              await reportEdgeFunctionError({
+                functionName: "resend-inbound-webhook",
+                error: new Error(
+                  "Rejected ungrounded AI email transaction output",
+                ),
+                context: {
+                  operation: "email_body_ai_output_rejected",
+                  providerEmailId: emailData.email_id,
+                  senderEmail,
+                  subjectLine: emailData.subject || "",
+                  emailBodySource: resolvedEmailBody.source,
+                  sanitizedEmailContent: emailBodyText,
+                  sanitizedEmailContentChunks: chunkDiagnosticText(
+                    emailBodyText,
+                  ),
+                  rejectedItems,
+                },
+              });
+            }
+          }
+          if (bodyItems.length === 0) {
+            const fallback = extractLabeledTransactionFallback({
+              sourceText: emailBodyText,
+              receivedDate: emailData.created_at || event.created_at ||
+                new Date().toISOString(),
+            });
+            if (fallback) {
+              bodyItems = [{
+                ...fallback,
+                category: "other",
+                currencySymbol: "",
+              }];
+              await reportEdgeFunctionError({
+                functionName: "resend-inbound-webhook",
+                error: new Error(
+                  result.error || result.code ||
+                    "AI returned no items; deterministic email fallback recovered the transaction",
+                ),
+                context: {
+                  operation: "email_body_ai_empty_fallback_recovered",
+                  providerEmailId: emailData.email_id,
+                  senderEmail,
+                  subjectLine: emailData.subject || "",
+                  emailBodySource: resolvedEmailBody.source,
+                  sanitizedEmailContent: emailBodyText,
+                  sanitizedEmailContentChunks: chunkDiagnosticText(
+                    emailBodyText,
+                  ),
+                  recoveredItem: fallback,
+                },
+              });
+            }
+          }
+
+          if (bodyItems.length === 0) {
+            // A note accompanying a file is valid even when it does not
+            // describe another transaction, so only surface this result when
+            // the body was the sole import source.
+            if (supportedAttachments.length === 0) {
+              const failureMessage = result.error || "No transactions found";
+              await reportEdgeFunctionError({
+                functionName: "resend-inbound-webhook",
+                error: new Error(failureMessage),
+                context: {
+                  operation: "email_body_extraction_failed",
+                  providerEmailId: emailData.email_id,
+                  senderEmail,
+                  subjectLine: emailData.subject || "",
+                  emailBodySource: resolvedEmailBody.source,
+                  sanitizedEmailContent: emailBodyText,
+                  sanitizedEmailContentChunks: chunkDiagnosticText(
+                    emailBodyText,
+                  ),
+                  resultCode: result.code || null,
+                  resultStatus: result.status || null,
+                },
+              });
+              attachmentResults.push({
+                filename: "Email body",
+                success: false,
+                itemCount: 0,
+                error: failureMessage,
+              });
+            }
+          } else {
+            const mappedItems = bodyItems.map((item) => {
+              const clientCreatedAt =
+                typeof item.transactionTime === "string" &&
+                  owner.preferredTimezone
+                  ? localDateTimeToUtcIso({
+                    date: item.date,
+                    time: item.transactionTime,
+                    timeZone: owner.preferredTimezone,
+                    referenceInstant: emailData.created_at ||
+                      event.created_at || null,
+                  })
+                  : null;
+              return {
+                type: item.type,
+                amount: item.amount,
+                category: item.category,
+                currency: item.currency,
+                date: item.date,
+                ...(typeof item.description === "string" &&
+                    item.description.trim().length > 0
+                  ? { description: item.description.trim() }
+                  : {}),
+                ...(typeof item.merchant === "string" &&
+                    item.merchant.trim().length > 0
+                  ? { merchant: item.merchant.trim() }
+                  : {}),
+                ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
+                  ? { breakdown: item.breakdown }
+                  : {}),
+                ...(item.payerUserId ? { payerUserId: item.payerUserId } : {}),
+                ...(item.customSplits
+                  ? { customSplits: item.customSplits }
+                  : {}),
+                ...(clientCreatedAt ? { clientCreatedAt } : {}),
+                ...(owner.accountId ? { accountId: owner.accountId } : {}),
+              };
+            });
+            analyzedItems.push(...mappedItems);
+            attachmentResults.push({
+              filename: "Email body",
+              success: true,
+              itemCount: mappedItems.length,
+              items: mappedItems,
+            });
+          }
+          setStage("email_body_analyze_complete", {
+            success: result.success,
+            itemCount: Array.isArray(result.items) ? result.items.length : 0,
+          });
+        } catch (error) {
+          if (isRetryableAttachmentError(error)) throw error;
+          console.error(
+            "[resend-inbound-webhook] email body processing failed",
+            {
+              emailId: emailData.email_id,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          );
+          if (supportedAttachments.length === 0) {
+            await reportEdgeFunctionError({
+              functionName: "resend-inbound-webhook",
+              error,
+              context: {
+                operation: "email_body_processing_exception",
+                providerEmailId: emailData.email_id,
+                senderEmail,
+                subjectLine: emailData.subject || "",
+                emailBodySource: resolvedEmailBody.source,
+                sanitizedEmailContent: emailBodyText,
+                sanitizedEmailContentChunks: chunkDiagnosticText(emailBodyText),
+              },
+            });
+          }
+          attachmentResults.push({
+            filename: "Email body",
+            success: false,
+            itemCount: 0,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
       setStage("aggregate_analyze_complete", {
         analyzedItemCount: analyzedItems.length,
         attachmentResultCount: attachmentResults.length,
@@ -2062,9 +2380,20 @@ export async function handleResendInboundWebhook(
         analyzedItemCount: convertedAnalyzedItems.length,
       });
 
-      const sortedAnalyzedItems = sortImportedTransactions(
-        convertedAnalyzedItems,
-      );
+      const uniqueAnalyzedItems = deduplicateImportedTransactions({
+        items: convertedAnalyzedItems,
+        userId: owner.userId,
+        householdId: owner.householdId,
+        accountId: owner.accountId,
+      });
+      const sortedAnalyzedItems = sortImportedTransactions(uniqueAnalyzedItems);
+      if (sortedAnalyzedItems.length !== convertedAnalyzedItems.length) {
+        console.log("[resend-inbound-webhook] removed duplicate import items", {
+          emailId: emailData.email_id,
+          duplicateCount: convertedAnalyzedItems.length -
+            sortedAnalyzedItems.length,
+        });
+      }
 
       ensureSoftDeadline(processingStartedAtMs, "save_transactions");
       setStage("pre_save_heartbeat_start", {

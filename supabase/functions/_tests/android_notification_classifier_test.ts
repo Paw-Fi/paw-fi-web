@@ -4,7 +4,9 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   classificationHasNotificationEvidence,
+  classifyAndroidNotification,
   normalizeAndroidNotificationClassification,
+  resolveAndroidNotificationClassificationCurrency,
 } from "../shared/android-notification-classifier.ts";
 
 const fallbackDate = "2026-07-15";
@@ -143,6 +145,250 @@ Deno.test(
 
     assertEquals(result.action, "ignore");
     assertEquals(result.reasonCode, "unsupported_currency");
+  },
+);
+
+Deno.test(
+  "Android notification classifier resolves a bare dollar from account currency",
+  () => {
+    assertEquals(
+      resolveAndroidNotificationClassificationCurrency({
+        rawCurrency: "$",
+        notification: {
+          packageName: "com.td.myspend",
+          text: "Purchase of $4.86 at Coffee Shop",
+        },
+        accountCurrency: "CAD",
+      }),
+      {
+        currency: "CAD",
+        currencyEvidenceRaw: "$",
+        currencyAmbiguous: true,
+      },
+    );
+  },
+);
+
+Deno.test(
+  "Android notification classifier fails closed on a bare dollar without an account",
+  () => {
+    assertEquals(
+      resolveAndroidNotificationClassificationCurrency({
+        rawCurrency: "USD",
+        notification: {
+          packageName: "com.td.myspend",
+          text: "Purchase of $4.86 at Coffee Shop",
+        },
+      }),
+      {
+        currencyAmbiguous: true,
+        ignoreReason: "ambiguous_currency_without_context",
+      },
+    );
+  },
+);
+
+Deno.test(
+  "Android notification classifier resolves a localized Canadian dollar symbol",
+  () => {
+    assertEquals(
+      resolveAndroidNotificationClassificationCurrency({
+        rawCurrency: "C$",
+        notification: {
+          packageName: "com.td.myspend",
+          text: "Purchase of C$4.86 at Coffee Shop",
+        },
+      }),
+      {
+        currency: "CAD",
+        currencyEvidenceRaw: "CAD",
+        currencyAmbiguous: false,
+      },
+    );
+  },
+);
+
+Deno.test(
+  "Android notification classifier preserves explicit currency over context",
+  () => {
+    assertEquals(
+      resolveAndroidNotificationClassificationCurrency({
+        rawCurrency: "USD",
+        notification: {
+          packageName: "com.bank.app",
+          text: "Purchase of USD 4.86 at Coffee Shop",
+        },
+        accountCurrency: "CAD",
+      }),
+      {
+        currency: "USD",
+        currencyEvidenceRaw: "USD",
+        currencyAmbiguous: false,
+      },
+    );
+  },
+);
+
+Deno.test(
+  "Android notification classifier does not rewrite unsupported ISO codes",
+  () => {
+    const resolution = resolveAndroidNotificationClassificationCurrency({
+      rawCurrency: "QAR",
+      notification: {
+        packageName: "com.bank.app",
+        text: "Purchase of QAR 20.00 at Coffee Shop",
+      },
+      accountCurrency: "CAD",
+    });
+    const result = normalizeAndroidNotificationClassification(
+      {
+        action: "save_transaction",
+        eventStatus: "posted",
+        transactionType: "expense",
+        subtype: "purchase",
+        amount: 20,
+        currency: resolution.currency,
+        currencyEvidenceRaw: "QAR",
+        merchant: "Coffee Shop",
+        isRecurring: false,
+        confidence: 0.99,
+        reasonCode: "completed_payment",
+      },
+      fallbackDate,
+    );
+
+    assertEquals(resolution, { currency: "QAR", currencyAmbiguous: false });
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "unsupported_currency");
+  },
+);
+
+Deno.test(
+  "Android notification classifier saves a CAD purchase from a bare dollar",
+  async () => {
+    const result = await classifyAndroidNotification({
+      genAI: {
+        getGenerativeModel: () => ({
+          generateContent: () =>
+            Promise.resolve({
+              response: {
+                functionCalls: () => [
+                  {
+                    name: "classify_notification",
+                    args: {
+                      action: "save_transaction",
+                      eventStatus: "posted",
+                      transactionType: "expense",
+                      subtype: "purchase",
+                      amount: 4.86,
+                      currency: "USD",
+                      currencyEvidenceRaw: "USD",
+                      merchant: "Coffee Shop",
+                      description: "Model guessed USD for this purchase",
+                      date: fallbackDate,
+                      category: "coffee & tea",
+                      isRecurring: false,
+                      confidence: 1,
+                      reasonCode: "completed_payment",
+                    },
+                  },
+                ],
+              },
+            }),
+        }),
+      },
+      notification: {
+        packageName: "com.td.myspend",
+        sourceAppLabel: "TD MySpend",
+        text: "Purchase of $4.86 at Coffee Shop",
+      },
+      fallbackDate,
+      accountCurrency: "CAD",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.currency, "CAD");
+    assertEquals(result.currencyEvidenceRaw, "$");
+    assertEquals(result.currencyAmbiguous, true);
+    assertEquals(result.amount, 4.86);
+  },
+);
+
+Deno.test(
+  "Android notification classifier ignores conflicting strong currency evidence",
+  async () => {
+    const result = await classifyAndroidNotification({
+      genAI: {
+        getGenerativeModel: () => ({
+          generateContent: () =>
+            Promise.resolve({
+              response: {
+                functionCalls: () => [
+                  {
+                    name: "classify_notification",
+                    args: {
+                      action: "save_transaction",
+                      eventStatus: "posted",
+                      transactionType: "expense",
+                      subtype: "purchase",
+                      amount: 4.86,
+                      currency: "CAD",
+                      merchant: "Coffee Shop",
+                      date: fallbackDate,
+                      category: "coffee & tea",
+                      isRecurring: false,
+                      confidence: 1,
+                      reasonCode: "completed_payment",
+                    },
+                  },
+                ],
+              },
+            }),
+        }),
+      },
+      notification: {
+        packageName: "com.bank.app",
+        text: "Statement currency USD; purchase CAD 4.86 at Coffee Shop",
+      },
+      fallbackDate,
+      accountCurrency: "CAD",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "conflicting_currency_evidence");
+  },
+);
+
+Deno.test(
+  "classifier accepts contextual ambiguous currency without model evidence text",
+  () => {
+    assertEquals(
+      classificationHasNotificationEvidence(
+        {
+          packageName: "com.td.myspend",
+          text: "Purchase of $4.86 at Coffee Shop",
+        },
+        {
+          action: "save_transaction",
+          eventStatus: "posted",
+          transactionType: "expense",
+          subtype: "purchase",
+          amount: 4.86,
+          currency: "CAD",
+          currencyAmbiguous: true,
+          merchant: "Coffee Shop",
+          date: fallbackDate,
+          isRecurring: false,
+          confidence: 0.99,
+          reasonCode: "completed_payment",
+        },
+      ),
+      true,
+    );
   },
 );
 

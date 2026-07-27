@@ -5,6 +5,8 @@ import {
 
 import {
   buildCategoryPreferenceGuidance,
+  extractExplicitTransactionTime,
+  extractLabeledTransactionFallback,
   inferAttachmentFallbackCurrency,
   inferPayerFromText,
   inferSplitAmountsFromText,
@@ -12,6 +14,7 @@ import {
   normalizeTransactionDateAndDescription,
   parseTransactionsJsonToItems,
   resolveHouseholdContext,
+  validateTransactionSourceGrounding,
 } from "../shared/analyze-core.ts";
 
 Deno.test(
@@ -152,6 +155,104 @@ Deno.test("analyze-core: transaction JSON fallback preserves merchant", () => {
 
   assertEquals(item.merchant, "Blue Bottle Coffee");
 });
+
+Deno.test("analyze-core: extracts only explicitly labeled transaction time", () => {
+  assertEquals(
+    extractExplicitTransactionTime(
+      "Date & Time: 26 Jul 14:05 (SGT)\nForwarded at: 18:00",
+    ),
+    "14:05:00",
+  );
+  assertEquals(
+    extractExplicitTransactionTime("Forwarded at: 18:00\nAmount: SGD 2.20"),
+    undefined,
+  );
+});
+
+Deno.test(
+  "analyze-core: rejects hallucinated values and recovers a grounded labeled transaction",
+  () => {
+    const sourceText =
+      "Dear Customer,\n\nDate & Time: 26 Jul 16:35 (SGT)\nAmount: SGD2.20\nFrom: My Account A/C ending 1204\nTo: SUNRIC SHOPPING PTE. LTD. (UEN ending WSUN)";
+
+    assertEquals(
+      validateTransactionSourceGrounding({
+        sourceText,
+        item: {
+          type: "expense",
+          amount: 12.5,
+          currency: "EUR",
+          date: "2026-07-27",
+          description: "Lunch at Tesco",
+        },
+      }),
+      {
+        grounded: false,
+        reasons: [
+          "AMOUNT_NOT_FOUND_IN_SOURCE",
+          "CURRENCY_CONTRADICTS_SOURCE",
+          "DESCRIPTION_NOT_GROUNDED_IN_SOURCE",
+        ],
+      },
+    );
+    assertEquals(
+      validateTransactionSourceGrounding({
+        sourceText,
+        item: {
+          type: "expense",
+          amount: 2.2,
+          currency: "SGD",
+          date: "2025-07-26",
+          transactionTime: "16:35:00",
+          description: "SUNRIC SHOPPING PTE. LTD.",
+        },
+      }),
+      { grounded: true, reasons: [] },
+    );
+    assertEquals(
+      validateTransactionSourceGrounding({
+        sourceText: "USD 10.00 fee and EUR 20.00 purchase",
+        item: {
+          type: "expense",
+          amount: 10,
+          currency: "EUR",
+          description: "purchase",
+        },
+      }),
+      {
+        grounded: false,
+        reasons: ["AMOUNT_NOT_FOUND_IN_SOURCE"],
+      },
+    );
+    assertEquals(
+      validateTransactionSourceGrounding({
+        sourceText: "Please review all 10 purchased items. Total: $25.00",
+        item: {
+          type: "expense",
+          amount: 25,
+          currency: "USD",
+          description: "purchased items",
+        },
+      }),
+      { grounded: true, reasons: [] },
+    );
+    assertEquals(
+      extractLabeledTransactionFallback({
+        sourceText,
+        receivedDate: "2025-07-26T09:00:00.000Z",
+      }),
+      {
+        type: "expense",
+        amount: 2.2,
+        currency: "SGD",
+        date: "2025-07-26",
+        description: "SUNRIC SHOPPING PTE. LTD.",
+        merchant: "SUNRIC SHOPPING PTE. LTD.",
+        transactionTime: "16:35:00",
+      },
+    );
+  },
+);
 
 Deno.test(
   "analyze-core: attachment fallback currency prefers unambiguous document evidence",

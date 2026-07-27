@@ -8,7 +8,9 @@ import {
 import {
   filterSupportedImportAttachments,
   normalizeEmailAddress,
+  resolveInboundEmailText,
   resolveNewestSenderOwner,
+  sanitizeInboundEmailText,
   shouldProcessInboundRecipients,
 } from "../shared/email-import.ts";
 
@@ -31,6 +33,86 @@ Deno.test("email import: normalizeEmailAddress rejects invalid values", () => {
   assertEquals(normalizeEmailAddress(""), null);
   assertEquals(normalizeEmailAddress(undefined), null);
 });
+
+Deno.test(
+  "email import: sanitizes a plain-text receipt without quoted history or signature",
+  () => {
+    assertEquals(
+      sanitizeInboundEmailText(
+        "Payment received\r\nMerchant: Coffee Shop\r\nTotal: USD 4.50\r\n\r\nOn Monday, Ada wrote:\r\n> Prior receipt: USD 99.00\r\n-- \r\nAda",
+      ),
+      "Payment received\nMerchant: Coffee Shop\nTotal: USD 4.50",
+    );
+    assertEquals(sanitizeInboundEmailText("\n  \n"), "");
+  },
+);
+
+Deno.test(
+  "email import: falls back to visible HTML when plain text is only an object placeholder",
+  () => {
+    const resolved = resolveInboundEmailText({
+      text: "\uFFFC",
+      html:
+        '<html><body><p>Date &amp; Time: 26 Jul 16:35 (SGT)</p><p>Amount: SGD2.20</p><p>To: SUNRIC SHOPPING PTE. LTD.</p><img src="https://tracker.invalid/pixel"></body></html>',
+    });
+
+    assertEquals(resolved.source, "html");
+    assertEquals(resolved.text.includes("Amount: SGD2.20"), true);
+    assertEquals(resolved.text.includes("tracker.invalid"), false);
+  },
+);
+
+Deno.test(
+  "email import: prefers meaningful plain text over HTML",
+  () => {
+    const resolved = resolveInboundEmailText({
+      text: "Amount: EUR 10.00\nTo: Plain Merchant",
+      html: "<p>Amount: USD 99.00</p><p>To: HTML Merchant</p>",
+    });
+
+    assertEquals(resolved.source, "plain");
+    assertEquals(resolved.text.includes("Plain Merchant"), true);
+    assertEquals(resolved.text.includes("HTML Merchant"), false);
+  },
+);
+
+Deno.test(
+  "email import: extracts the body of a directly forwarded plain-text email",
+  () => {
+    const text = sanitizeInboundEmailText(
+      "FYI\n\n---------- Forwarded message ---------\nFrom: DBS Alerts <alerts@example.com>\nDate: Sat, 26 Jul 2025 at 16:35\nSubject: PayNow alert\nTo: Customer <customer@example.com>\n\nDear Customer,\nDate & Time: 26 Jul 16:35 (SGT)\nAmount: SGD2.20\nFrom: My Account A/C ending 1204\nTo: SUNRIC SHOPPING PTE. LTD. (UEN ending WSUN)",
+    );
+
+    assertEquals(text.includes("Forwarded message"), false);
+    assertEquals(text.includes("Subject: PayNow alert"), false);
+    assertEquals(text.includes("Amount: SGD2.20"), true);
+    assertEquals(text.includes("From: My Account"), true);
+    assertEquals(text.includes("To: SUNRIC SHOPPING"), true);
+  },
+);
+
+Deno.test(
+  "email import: still stops at forwarded history after receipt content",
+  () => {
+    const text = sanitizeInboundEmailText(
+      "Amount: EUR 12.50\nTo: Current Merchant\n\n---------- Forwarded message ---------\nAmount: USD 99.00\nTo: Old Merchant",
+    );
+
+    assertEquals(text.includes("Current Merchant"), true);
+    assertEquals(text.includes("Old Merchant"), false);
+  },
+);
+
+Deno.test(
+  "email import: keeps transaction From and To fields",
+  () => {
+    const text = sanitizeInboundEmailText(
+      "Dear Customer,\n\nDate & Time:    26 Jul 16:35 (SGT)\nAmount:    SGD2.20\nFrom:    My Account A/C ending 1204\nTo:    SUNRIC SHOPPING PTE. LTD. (UEN ending WSUN)\n\nThank you",
+    );
+    assertEquals(text.includes("From:    My Account"), true);
+    assertEquals(text.includes("To:    SUNRIC SHOPPING"), true);
+  },
+);
 
 Deno.test(
   "email import: filterSupportedImportAttachments keeps importable files only",

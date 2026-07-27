@@ -39,8 +39,10 @@ function buildFollowupEmail(
   params: FollowupEmailParams,
   config: FollowupEmailBuilderConfig,
 ) {
-  const appTransactionsUrl =
-    params.appTransactionsUrl ?? config.appTransactionsUrl;
+  const appTransactionsUrl = params.appTransactionsUrl ??
+    config.appTransactionsUrl;
+  const didFail = params.savedCount === 0 && params.duplicateCount === 0 &&
+    params.failedCount > 0;
   const attachmentLines = renderAttachmentLines(params.attachmentResults);
   const transactionLines = renderTransactionLines(params.transactions);
   const content = renderContent(
@@ -48,13 +50,24 @@ function buildFollowupEmail(
     appTransactionsUrl,
     attachmentLines,
     transactionLines,
+    didFail,
   );
   const footerReason =
-    "Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored.";
-  const text = buildTextEmail(params, config, appTransactionsUrl, footerReason);
+    "Moneko does not store forwarded attachments or email content on our servers. We process them temporarily only to extract transactions. Replies are not monitored.";
+  const text = buildTextEmail(
+    params,
+    config,
+    appTransactionsUrl,
+    footerReason,
+    didFail,
+  );
 
   return {
-    subject: sanitizeSubject("Your Moneko import is complete"),
+    subject: sanitizeSubject(
+      didFail
+        ? "Moneko could not complete your import"
+        : "Your Moneko import is complete",
+    ),
     html: baseTemplate(
       content,
       renderFooter({
@@ -70,13 +83,22 @@ function renderContent(
   appTransactionsUrl: string,
   attachmentLines: string,
   transactionLines: string,
+  didFail: boolean,
 ): string {
   return `
-    <h1 class="title">Your Moneko import is complete</h1>
-    <p class="subtitle">We finished processing the files forwarded from ${escapeHtml(params.senderEmail)}.</p>
+    <h1 class="title">${
+    didFail
+      ? "Moneko could not complete your import"
+      : "Your Moneko import is complete"
+  }</h1>
+    <p class="subtitle">${
+    didFail
+      ? "We could not extract a transaction from the import content forwarded from"
+      : "We finished processing the import content forwarded from"
+  } ${escapeHtml(params.senderEmail)}.</p>
     ${renderOpenTransactionsButton(appTransactionsUrl)}
     ${renderImportSummary(params)}
-    <p><strong>Attachment summary</strong></p>
+    <p><strong>Import source summary</strong></p>
     <ul>${attachmentLines}</ul>
     ${renderSavedTransactionsSection(transactionLines)}
   `;
@@ -85,7 +107,9 @@ function renderContent(
 function renderOpenTransactionsButton(appTransactionsUrl: string): string {
   return `
     <p>
-      <a href="${escapeHtml(appTransactionsUrl)}" style="display:inline-block;background-color:#7458FF;color:#ffffff !important;padding:14px 24px;border-radius:8px;font-weight:600;font-size:16px;text-decoration:none !important;margin:8px 0 20px 0;">
+      <a href="${
+    escapeHtml(appTransactionsUrl)
+  }" style="display:inline-block;background-color:#7458FF;color:#ffffff !important;padding:14px 24px;border-radius:8px;font-weight:600;font-size:16px;text-decoration:none !important;margin:8px 0 20px 0;">
         Open transactions in Moneko
       </a>
     </p>
@@ -94,7 +118,9 @@ function renderOpenTransactionsButton(appTransactionsUrl: string): string {
 
 function renderImportSummary(params: FollowupEmailParams): string {
   return `
-    <p><strong>Saved:</strong> ${params.savedCount} ${pluralize(params.savedCount, "transaction")}</p>
+    <p><strong>Saved:</strong> ${params.savedCount} ${
+    pluralize(params.savedCount, "transaction")
+  }</p>
     <p><strong>Duplicates skipped:</strong> ${params.duplicateCount}</p>
     <p><strong>Failed:</strong> ${params.failedCount}</p>
     ${renderFailureReasons(params.failureReasons)}
@@ -112,7 +138,9 @@ function renderFailureReasons(reasons?: string[]): string {
 
   if (uniqueReasons.length === 0) return "";
 
-  return `<p><strong>Failure ${pluralize(uniqueReasons.length, "reason")}:</strong> ${uniqueReasons.map(escapeHtml).join("; ")}</p>`;
+  return `<p><strong>Failure ${
+    pluralize(uniqueReasons.length, "reason")
+  }:</strong> ${uniqueReasons.map(escapeHtml).join("; ")}</p>`;
 }
 
 function renderSavedTransactionsSection(transactionLines: string): string {
@@ -126,9 +154,13 @@ function renderAttachmentLines(
   return attachmentResults
     .map((item) => {
       if (!item.success) {
-        return `<li>${escapeHtml(item.filename)}: ${escapeHtml(item.error || "analysis failed")}</li>`;
+        return `<li>${escapeHtml(item.filename)}: ${
+          escapeHtml(item.error || "analysis failed")
+        }</li>`;
       }
-      return `<li>${escapeHtml(item.filename)}: ${item.itemCount} ${pluralize(item.itemCount, "transaction")} found</li>`;
+      return `<li>${escapeHtml(item.filename)}: ${item.itemCount} ${
+        pluralize(item.itemCount, "transaction")
+      } found</li>`;
     })
     .join("");
 }
@@ -149,7 +181,11 @@ function renderTransactionLine(item: Record<string, unknown>): string {
   const description = resolveTransactionDescription(item);
   const dateText = renderTransactionDate(item);
 
-  return `<li><strong>${escapeHtml(type)}</strong>: ${escapeHtml(description)} · ${escapeHtml(category)} · ${escapeHtml(formatCurrency(amount, currency))}${dateText}</li>`;
+  return `<li><strong>${escapeHtml(type)}</strong>: ${
+    escapeHtml(description)
+  } · ${escapeHtml(category)} · ${
+    escapeHtml(formatCurrency(amount, currency))
+  }${dateText}</li>`;
 }
 
 function resolveTransactionType(item: Record<string, unknown>): string {
@@ -191,6 +227,7 @@ function buildTextEmail(
   config: FollowupEmailBuilderConfig,
   appTransactionsUrl: string,
   footerReason: string,
+  didFail: boolean,
 ): string {
   const failureReasons = Array.from(
     new Set(
@@ -199,10 +236,14 @@ function buildTextEmail(
         .filter((reason) => reason.length > 0),
     ),
   );
-  const failureText =
-    failureReasons.length > 0
-      ? ` Failure ${pluralize(failureReasons.length, "reason")}: ${failureReasons.join("; ")}.`
-      : "";
+  const failureText = failureReasons.length > 0
+    ? ` Failure ${pluralize(failureReasons.length, "reason")}: ${
+      failureReasons.join("; ")
+    }.`
+    : "";
 
-  return `Moneko processed files from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} Open transactions in Moneko: ${appTransactionsUrl}. ${footerReason} Contact ${config.supportEmail} if you need help.`;
+  const statusText = didFail
+    ? "Moneko could not complete the import"
+    : "Moneko completed the import";
+  return `${statusText} from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} Open transactions in Moneko: ${appTransactionsUrl}. ${footerReason} Contact ${config.supportEmail} if you need help.`;
 }

@@ -5,6 +5,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   resolveCurrencyFromOCR,
   resolveSingleStrongCurrencyEvidenceFromOCRText,
+  resolveStrongCurrencyEvidenceCodesFromOCRText,
 } from "../shared/ocr-currency-resolver.ts";
 
 function resolve(params: {
@@ -204,6 +205,12 @@ Deno.test(
         "Statement currency EUR\nRefund USD 5.00",
       ),
       null,
+    );
+    assertEquals(
+      resolveStrongCurrencyEvidenceCodesFromOCRText(
+        "Statement currency EUR\nRefund USD 5.00",
+      ),
+      ["EUR", "USD"],
     );
     assertEquals(
       resolveSingleStrongCurrencyEvidenceFromOCRText(
