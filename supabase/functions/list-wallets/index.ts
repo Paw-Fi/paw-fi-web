@@ -193,7 +193,7 @@ Deno.serve(async (req: Request) => {
     let accountsQuery = supabase
       .from("accounts")
       .select(
-        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
+        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, exclude_from_analytics, linked_bank_account_id, created_at, updated_at",
       )
       .order("is_default", { ascending: false })
       .order("is_system", { ascending: false })

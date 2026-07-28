@@ -26,6 +26,7 @@ interface WalletRow {
   is_system: boolean;
   is_archived: boolean;
   linked_bank_account_id: string | null;
+  exclude_from_analytics: boolean;
   current_balance_cents?: number;
 }
 
@@ -213,9 +214,8 @@ function firstOnOrAfterDayStep(
     (rangeStart.getTime() - anchor.getTime()) / 86400000,
   );
   const offsetDays = diffDays % stepDays;
-  const deltaDays = offsetDays === 0
-    ? diffDays
-    : diffDays + (stepDays - offsetDays);
+  const deltaDays =
+    offsetDays === 0 ? diffDays : diffDays + (stepDays - offsetDays);
   return new Date(anchor.getTime() + deltaDays * 86400000);
 }
 
@@ -259,6 +259,11 @@ function buildWalletSnapshot(
   transactions: WalletTransaction[],
   endExclusive: Date,
 ): WalletSnapshot {
+  const excludedWalletIds = new Set(
+    wallets
+      .filter((wallet) => wallet.exclude_from_analytics)
+      .map((wallet) => wallet.id),
+  );
   const filteredTransactions = transactions.filter(
     (transaction) => transaction.date.getTime() < endExclusive.getTime(),
   );
@@ -267,11 +272,14 @@ function buildWalletSnapshot(
   let totalSpentCents = 0;
   for (const transaction of filteredTransactions) {
     if (!transaction.analyticsIsFinal) continue;
+    const resolvedWalletId = resolveTransactionWalletId(transaction, wallets);
+    if (resolvedWalletId && excludedWalletIds.has(resolvedWalletId)) continue;
     if (transaction.analyticsCountsTowardIncome) {
       totalIncomeCents += Math.abs(transaction.amountCents);
     }
     if (transaction.analyticsSpendingMultiplier !== 0) {
-      totalSpentCents += Math.abs(transaction.amountCents) *
+      totalSpentCents +=
+        Math.abs(transaction.amountCents) *
         transaction.analyticsSpendingMultiplier;
     }
   }
@@ -295,8 +303,9 @@ function buildWalletSnapshot(
     }
   }
 
-  const netWorthCents = Object.values(walletBalances).reduce(
-    (sum, value) => sum + value,
+  const netWorthCents = Object.entries(walletBalances).reduce(
+    (sum, [walletId, value]) =>
+      excludedWalletIds.has(walletId) ? sum : sum + value,
     0,
   );
   return {
@@ -311,6 +320,11 @@ function applyCurrentWalletBalances(
   snapshot: WalletSnapshot,
   wallets: WalletRow[],
 ): WalletSnapshot {
+  const excludedWalletIds = new Set(
+    wallets
+      .filter((wallet) => wallet.exclude_from_analytics)
+      .map((wallet) => wallet.id),
+  );
   const walletBalances = { ...snapshot.walletBalances };
   for (const wallet of wallets) {
     if (wallet.current_balance_cents != null) {
@@ -320,8 +334,9 @@ function applyCurrentWalletBalances(
   return {
     ...snapshot,
     walletBalances,
-    netWorthCents: Object.values(walletBalances).reduce(
-      (sum, balance) => sum + balance,
+    netWorthCents: Object.entries(walletBalances).reduce(
+      (sum, [walletId, balance]) =>
+        excludedWalletIds.has(walletId) ? sum : sum + balance,
       0,
     ),
   };
@@ -352,8 +367,8 @@ function parseRecurringRule(value: unknown): RecurringRule | null {
   const excludedDatesRaw = Array.isArray(raw.excludedDates)
     ? raw.excludedDates
     : Array.isArray(raw.excluded_dates)
-    ? raw.excluded_dates
-    : [];
+      ? raw.excluded_dates
+      : [];
 
   return {
     frequency,
@@ -447,9 +462,8 @@ function projectRecurringTransactions(
           const monthsBetween =
             (startDay.getFullYear() - anchor.getFullYear()) * 12 +
             (startDay.getMonth() - anchor.getMonth());
-          let n = monthsBetween <= 0
-            ? 0
-            : Math.floor(monthsBetween / stepMonths);
+          let n =
+            monthsBetween <= 0 ? 0 : Math.floor(monthsBetween / stepMonths);
           let current = addMonthsFromAnchor(anchor, n * stepMonths);
           while (normalizeDate(current).getTime() < startDay.getTime()) {
             n += 1;
@@ -507,9 +521,8 @@ function projectRecurringTransactions(
         walletId: recurring.accountId,
         type: recurring.type,
         analyticsIsFinal: true,
-        analyticsSpendingMultiplier: recurring.type.toLowerCase() === "income"
-          ? 0
-          : 1,
+        analyticsSpendingMultiplier:
+          recurring.type.toLowerCase() === "income" ? 0 : 1,
         analyticsCountsTowardIncome: recurring.type.toLowerCase() === "income",
       });
     }
@@ -641,9 +654,10 @@ Deno.serve(async (req: Request) => {
       .map(parseDateOnly)
       .filter((value): value is Date => value != null)
       .map(normalizeMonthStart);
-    const requestedMonths = requestedMonthStarts.length > 0
-      ? requestedMonthStarts
-      : [normalizeMonthStart(currentMonthStart)];
+    const requestedMonths =
+      requestedMonthStarts.length > 0
+        ? requestedMonthStarts
+        : [normalizeMonthStart(currentMonthStart)];
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
@@ -680,7 +694,7 @@ Deno.serve(async (req: Request) => {
     let accountsQuery = supabase
       .from("accounts")
       .select(
-        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id",
+        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, exclude_from_analytics, linked_bank_account_id",
       )
       .eq("is_archived", false)
       .order("is_default", { ascending: false })
@@ -743,11 +757,9 @@ Deno.serve(async (req: Request) => {
         .in("to_account_id", accountIds);
 
       const transferOut = new Map<string, number>();
-      for (
-        const row of (transferOutRows ?? []) as Array<
-          Record<string, unknown>
-        >
-      ) {
+      for (const row of (transferOutRows ?? []) as Array<
+        Record<string, unknown>
+      >) {
         const key = `${row.from_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -760,11 +772,9 @@ Deno.serve(async (req: Request) => {
       }
 
       const transferIn = new Map<string, number>();
-      for (
-        const row of (transferInRows ?? []) as Array<
-          Record<string, unknown>
-        >
-      ) {
+      for (const row of (transferInRows ?? []) as Array<
+        Record<string, unknown>
+      >) {
         const key = `${row.to_account_id ?? ""}`;
         if (!key) continue;
         if (`${row.currency ?? ""}`.trim().toUpperCase() !== selectedCurrency) {
@@ -780,7 +790,8 @@ Deno.serve(async (req: Request) => {
         const opening = toNumber(wallet.opening_balance_cents);
         (
           wallet as WalletRow & { current_balance_cents?: number }
-        ).current_balance_cents = opening +
+        ).current_balance_cents =
+          opening +
           (incomeIn.get(wallet.id) ?? 0) -
           (expenseOut.get(wallet.id) ?? 0) +
           (transferIn.get(wallet.id) ?? 0) -

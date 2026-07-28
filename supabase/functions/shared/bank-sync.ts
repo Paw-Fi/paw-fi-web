@@ -103,6 +103,7 @@ export interface LinkedWalletRecord {
   opening_balance_cents: number;
   goal_amount_cents: number | null;
   is_default: boolean;
+  exclude_from_analytics: boolean;
   linked_bank_account_id: string | null;
 }
 
@@ -417,7 +418,7 @@ export async function loadLinkedWalletsForBankAccounts(params: {
   let query = params.supabase
     .from("accounts")
     .select(
-      "id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, linked_bank_account_id",
+      "id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, exclude_from_analytics, linked_bank_account_id",
     )
     .eq("is_archived", false)
     .in("linked_bank_account_id", bankAccountIds);
@@ -705,29 +706,32 @@ async function upsertPlaidRecurringTemplates(params: {
   const selectExistingTemplate = async (
     candidate: PlaidRecurringTemplateCandidate,
   ) => {
-    return await withTransientBankReadRetry(async () => {
-      // Build a fresh query for each retry; PostgREST builders are single-use.
-      let existingQuery = params.supabase
-        .from("expenses")
-        .select(
-          "id, date, account_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, deleted_at, deleted_reason, provider_fields, user_overrides",
-        )
-        .eq("user_id", candidate.userId)
-        .eq("idempotency_key", candidate.idempotencyKey)
-        .limit(1);
+    return await withTransientBankReadRetry(
+      async () => {
+        // Build a fresh query for each retry; PostgREST builders are single-use.
+        let existingQuery = params.supabase
+          .from("expenses")
+          .select(
+            "id, date, account_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, deleted_at, deleted_reason, provider_fields, user_overrides",
+          )
+          .eq("user_id", candidate.userId)
+          .eq("idempotency_key", candidate.idempotencyKey)
+          .limit(1);
 
-      existingQuery = candidate.householdId
-        ? existingQuery.eq("household_id", candidate.householdId)
-        : existingQuery.is("household_id", null);
+        existingQuery = candidate.householdId
+          ? existingQuery.eq("household_id", candidate.householdId)
+          : existingQuery.is("household_id", null);
 
-      const { data, error } = await existingQuery;
-      if (error) throw error;
-      return data?.[0] as PlaidRecurringTemplateRow | undefined;
-    }, {
-      maxRetries: 2,
-      initialDelayMs: 250,
-      maxDelayMs: 1000,
-    });
+        const { data, error } = await existingQuery;
+        if (error) throw error;
+        return data?.[0] as PlaidRecurringTemplateRow | undefined;
+      },
+      {
+        maxRetries: 2,
+        initialDelayMs: 250,
+        maxDelayMs: 1000,
+      },
+    );
   };
 
   const updateExistingTemplate = async (

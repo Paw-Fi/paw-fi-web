@@ -14,6 +14,7 @@ interface RequestBody {
   openingBalanceCents?: number;
   goalAmountCents?: number | null;
   isDefault?: boolean;
+  excludeFromAnalytics?: boolean;
 }
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -51,10 +52,9 @@ function parseOptionalLogoUrl(
     const isLocalProject = ["localhost", "127.0.0.1"].includes(
       projectUrl.hostname,
     );
-    const hasAllowedProtocol = url.protocol === "https:" ||
-      (isLocalProject && url.protocol === "http:");
-    const expectedPrefix =
-      `/storage/v1/object/public/public/${userId}/wallet-logos/`;
+    const hasAllowedProtocol =
+      url.protocol === "https:" || (isLocalProject && url.protocol === "http:");
+    const expectedPrefix = `/storage/v1/object/public/public/${userId}/wallet-logos/`;
     if (
       !hasAllowedProtocol ||
       url.host !== projectUrl.host ||
@@ -238,12 +238,29 @@ Deno.serve(async (req: Request) => {
       body.goalAmountCents === null ||
       Number.isFinite(body.goalAmountCents)
     ) {
-      updates.goal_amount_cents = body.goalAmountCents == null
-        ? null
-        : Math.round(Number(body.goalAmountCents));
+      updates.goal_amount_cents =
+        body.goalAmountCents == null
+          ? null
+          : Math.round(Number(body.goalAmountCents));
     }
     if (typeof body.isDefault === "boolean") {
       updates.is_default = body.isDefault;
+    }
+    if (
+      body.excludeFromAnalytics != null &&
+      typeof body.excludeFromAnalytics !== "boolean"
+    ) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "excludeFromAnalytics must be a boolean",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+    if (typeof body.excludeFromAnalytics === "boolean") {
+      updates.exclude_from_analytics = body.excludeFromAnalytics;
     }
 
     if (body.isDefault === true) {
@@ -293,9 +310,10 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(
         {
           success: false,
-          error: error == null
-            ? "Failed to update account"
-            : "Wallet update is not allowed for the current state",
+          error:
+            error == null
+              ? "Failed to update account"
+              : "Wallet update is not allowed for the current state",
           code: error == null ? "SERVER_ERROR" : "VALIDATION_ERROR",
         },
         error == null ? 500 : 400,

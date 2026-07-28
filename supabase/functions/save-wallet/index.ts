@@ -21,6 +21,7 @@ interface RequestBody {
   goalAmountCents?: number | null;
   openingBalanceCents?: number;
   isDefault?: boolean;
+  excludeFromAnalytics?: boolean;
   linkedBankAccountId?: string | null;
 }
 
@@ -142,6 +143,19 @@ Deno.serve(async (req: Request) => {
         {
           success: false,
           error: "Valid currency is required",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+    if (
+      body.excludeFromAnalytics != null &&
+      typeof body.excludeFromAnalytics !== "boolean"
+    ) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "excludeFromAnalytics must be a boolean",
           code: "VALIDATION_ERROR",
         },
         400,
@@ -486,12 +500,20 @@ Deno.serve(async (req: Request) => {
             }),
           );
         }
-        if (!existingLinkedWallet.logo_url && logoUrl) {
+        const linkedWalletUpdates = {
+          ...(!existingLinkedWallet.logo_url && logoUrl
+            ? { logo_url: logoUrl }
+            : {}),
+          ...(typeof body.excludeFromAnalytics === "boolean"
+            ? { exclude_from_analytics: body.excludeFromAnalytics }
+            : {}),
+        };
+        if (Object.keys(linkedWalletUpdates).length > 0) {
           const { data: updatedLinkedWallet, error: linkedLogoError } =
             await supabase
               .from("accounts")
               .update({
-                logo_url: logoUrl,
+                ...linkedWalletUpdates,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", existingLinkedWallet.id)
@@ -567,6 +589,7 @@ Deno.serve(async (req: Request) => {
         opening_balance_cents: openingBalanceCents,
         goal_amount_cents: goalAmountCents,
         is_default: shouldSetDefault,
+        exclude_from_analytics: body.excludeFromAnalytics === true,
         linked_bank_account_id: linkedBankAccountId,
       })
       .select()
