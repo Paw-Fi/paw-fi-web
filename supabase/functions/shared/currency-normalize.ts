@@ -69,6 +69,9 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     // Malawi Kwacha
     "MK": "MWK",
 
+    // Moldovan Leu
+    "MOLDOVAN LEU": "MDL",
+
     // Syrian Pound
     "£S": "SYP",
 
@@ -78,6 +81,9 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     // Kenya Shilling
     "KSH": "KES",
     "KSHS": "KES",
+
+    // Mauritian Rupee
+    "MAURITIAN RUPEE": "MUR",
   };
 
   if (Object.prototype.hasOwnProperty.call(map, upper)) {
