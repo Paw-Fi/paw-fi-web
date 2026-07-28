@@ -107,6 +107,23 @@ export interface AndroidNotificationClassification {
   verificationModel?: string;
 }
 
+export interface AndroidNotificationFieldProvenance {
+  transactionType?: "expense" | "income";
+  amount?: number;
+  currency?: string;
+  currencySource?: AndroidNotificationClassification["currencySource"];
+  currencyAmbiguous: boolean;
+  merchant?: string;
+  category?: string;
+  date: string;
+  isRecurring: boolean;
+  evidence: {
+    amount: boolean;
+    currency: boolean;
+    merchant: boolean;
+  };
+}
+
 interface NotificationClassifierClient {
   getGenerativeModel(options: {
     model: string;
@@ -139,6 +156,56 @@ function optionalString(value: unknown, maxLength = 160): string | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().replace(/\s+/g, " ");
   return normalized ? normalized.slice(0, maxLength) : undefined;
+}
+
+function normalizeProvenanceComparison(value: string | undefined): string {
+  return (
+    value?.normalize("NFKC").toLocaleLowerCase().replace(/\s+/gu, " ").trim() ??
+    ""
+  );
+}
+
+function isWholeNotificationValue(
+  value: string | undefined,
+  classification: AndroidNotificationClassification,
+): boolean {
+  const normalized = normalizeProvenanceComparison(value);
+  if (!normalized) return false;
+  return [
+    classification.transactionEvidenceRaw,
+    classification.completionEvidenceRaw,
+  ].some((evidence) => normalizeProvenanceComparison(evidence) === normalized);
+}
+
+export function buildAndroidNotificationFieldProvenance(
+  classification: AndroidNotificationClassification,
+): AndroidNotificationFieldProvenance {
+  const merchant = isWholeNotificationValue(
+    classification.merchant,
+    classification,
+  )
+    ? undefined
+    : classification.merchant;
+  return {
+    ...(classification.transactionType
+      ? { transactionType: classification.transactionType }
+      : {}),
+    ...(classification.amount != null ? { amount: classification.amount } : {}),
+    ...(classification.currency ? { currency: classification.currency } : {}),
+    ...(classification.currencySource
+      ? { currencySource: classification.currencySource }
+      : {}),
+    currencyAmbiguous: classification.currencyAmbiguous,
+    ...(merchant ? { merchant } : {}),
+    ...(classification.category ? { category: classification.category } : {}),
+    date: classification.date,
+    isRecurring: classification.isRecurring,
+    evidence: {
+      amount: Boolean(classification.amountEvidenceRaw),
+      currency: Boolean(classification.currencyEvidenceRaw),
+      merchant: Boolean(classification.merchantEvidenceRaw),
+    },
+  };
 }
 
 function normalizeSupportedCurrencyContext(
@@ -209,8 +276,10 @@ function notificationContainsEvidence(
 ): boolean {
   if (!evidence) return false;
   const normalizedEvidence = normalizeEvidenceText(evidence);
-  return normalizedEvidence.length > 0 &&
-    normalizedContent.includes(normalizedEvidence);
+  return (
+    normalizedEvidence.length > 0 &&
+    normalizedContent.includes(normalizedEvidence)
+  );
 }
 
 export function classificationHasNotificationEvidence(
@@ -257,17 +326,16 @@ export function classificationHasNotificationEvidence(
       classification.currencyEvidenceRaw,
     );
   }
-  const normalizedAccountCurrency = normalizeSupportedCurrencyContext(
-    accountCurrency,
-  );
+  const normalizedAccountCurrency =
+    normalizeSupportedCurrencyContext(accountCurrency);
   const normalizedContextCurrency =
     classification.currencySource === "account_context"
       ? normalizedAccountCurrency
       : classification.currencySource === "user_preference"
-      ? normalizedAccountCurrency
-        ? null
-        : normalizeSupportedCurrencyContext(preferredCurrency)
-      : null;
+        ? normalizedAccountCurrency
+          ? null
+          : normalizeSupportedCurrencyContext(preferredCurrency)
+        : null;
   if (
     !normalizedContextCurrency ||
     classification.currency !== normalizedContextCurrency
@@ -276,9 +344,9 @@ export function classificationHasNotificationEvidence(
   }
   return classification.currencyEvidenceRaw
     ? notificationContainsEvidence(
-      normalizedContent,
-      classification.currencyEvidenceRaw,
-    )
+        normalizedContent,
+        classification.currencyEvidenceRaw,
+      )
     : true;
 }
 
@@ -287,9 +355,8 @@ export function normalizeAndroidNotificationClassification(
   fallbackDate: string,
   model?: string,
 ): AndroidNotificationClassification {
-  const value = raw && typeof raw === "object"
-    ? (raw as Record<string, unknown>)
-    : {};
+  const value =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const rawAction = optionalString(value.action, 32) ?? "ignore";
   const action = ACTIONS.has(rawAction) ? rawAction : "ignore";
   const rawStatus = optionalString(value.eventStatus, 32) ?? "unknown";
@@ -346,15 +413,17 @@ export function normalizeAndroidNotificationClassification(
 
   const transactionType = optionalString(value.transactionType, 16);
   const amount = Number(value.amount);
-  const amountFitsStoragePrecision = Number.isFinite(amount) &&
+  const amountFitsStoragePrecision =
+    Number.isFinite(amount) &&
     Math.abs(amount * 100 - Math.round(amount * 100)) < 1e-7;
   const currency = optionalString(value.currency, 8)?.toUpperCase();
   const rawCurrencySource = optionalString(value.currencySource, 32);
-  const currencySource = rawCurrencySource === "notification_explicit" ||
-      rawCurrencySource === "account_context" ||
-      rawCurrencySource === "user_preference"
-    ? rawCurrencySource
-    : undefined;
+  const currencySource =
+    rawCurrencySource === "notification_explicit" ||
+    rawCurrencySource === "account_context" ||
+    rawCurrencySource === "user_preference"
+      ? rawCurrencySource
+      : undefined;
   const merchant = optionalString(value.merchant, 160);
   if (
     !transactionType ||
@@ -375,17 +444,16 @@ export function normalizeAndroidNotificationClassification(
       reasonCode: !amountFitsStoragePrecision
         ? "unsupported_amount_precision"
         : currency && !SUPPORTED_CURRENCIES.has(currency)
-        ? "unsupported_currency"
-        : "missing_transaction_details",
+          ? "unsupported_currency"
+          : "missing_transaction_details",
       date,
       model,
     });
   }
 
   const rawFrequency = optionalString(value.frequency, 16);
-  const frequency = rawFrequency && FREQUENCIES.has(rawFrequency)
-    ? rawFrequency
-    : undefined;
+  const frequency =
+    rawFrequency && FREQUENCIES.has(rawFrequency) ? rawFrequency : undefined;
   const requestedRecurring = value.isRecurring === true;
   const isRecurring = requestedRecurring && frequency != null;
   const rawInterval = Number(value.interval);
@@ -396,8 +464,8 @@ export function normalizeAndroidNotificationClassification(
   const normalizedType = INCOME_SUBTYPES.has(subtype)
     ? "income"
     : EXPENSE_SUBTYPES.has(subtype)
-    ? "expense"
-    : (transactionType as "expense" | "income");
+      ? "expense"
+      : (transactionType as "expense" | "income");
 
   return {
     action: "save_transaction",
@@ -420,12 +488,12 @@ export function normalizeAndroidNotificationClassification(
     isRecurring,
     ...(isRecurring && frequency
       ? {
-        recurrenceRule: {
-          frequency,
-          anchor_date: date,
-          ...(interval ? { interval } : {}),
-        },
-      }
+          recurrenceRule: {
+            frequency,
+            anchor_date: date,
+            ...(interval ? { interval } : {}),
+          },
+        }
       : {}),
     confidence,
     reasonCode: requestedReason,
@@ -558,14 +626,15 @@ function buildVerifierPrompt(
   params: ClassifyAndroidNotificationParams,
   classification: AndroidNotificationClassification,
 ): string {
-  const decisionRule = classification.action === "save_transaction"
-    ? `Approve only when it clearly proves one completed or posted financial movement and the proposed direction, subtype, amount, ISO currency, merchant/source, and date are correct.
+  const decisionRule =
+    classification.action === "save_transaction"
+      ? `Approve only when it clearly proves one completed or posted financial movement and the proposed direction, subtype, amount, ISO currency, merchant/source, and date are correct.
 Reject promotions, discounts, reward offers, newsletters, shipping updates, statements, OTP/security messages, pending or declined events, authorizations, bills due, renewal reminders, transfers, credit-card payments, and uncertain cases.
 Check that every proposed evidence fragment is verbatim and supports the field it claims to prove.
 If currencySource is account_context, approve only when the notification currency is absent or genuinely ambiguous and the proposed currency equals the supplied account currency.
 If currencySource is user_preference, approve only when account currency is unavailable, the notification currency is absent or genuinely ambiguous, and the proposed currency equals the supplied user preferred currency.
 False approval is worse than rejection. Do not correct the proposal; reject it.`
-    : `Approve only when ignoring the notification is correct and the proposed status, subtype, and reason are consistent with the original notification.
+      : `Approve only when ignoring the notification is correct and the proposed status, subtype, and reason are consistent with the original notification.
 Reject the ignore decision when the notification clearly proves a completed or posted financial movement that could be saved with an amount, supported ISO currency (explicitly or from the supplied account context), merchant/source, and direction.
 Promotions, discounts, reward offers, newsletters, shipping updates, statements, OTP/security messages, pending or declined events, authorizations, bills due, renewal reminders, transfers, credit-card payments, and genuinely uncertain cases should be ignored.
 False agreement can permanently hide a real transaction, so review the original notification independently rather than trusting the proposed reason.`;
@@ -650,8 +719,9 @@ async function verifyAndroidNotificationClassification(
       );
       const call = result.response
         .functionCalls?.()
-        .find((candidate) =>
-          candidate.name === "verify_notification_classification"
+        .find(
+          (candidate) =>
+            candidate.name === "verify_notification_classification",
         );
       if (!call?.args) throw new Error("INVALID_VERIFICATION_RESPONSE");
       const rawConfidence = Number(call.args.confidence);
@@ -659,10 +729,11 @@ async function verifyAndroidNotificationClassification(
         ? Math.max(0, Math.min(1, rawConfidence))
         : 0;
       return {
-        approved: call.args.approved === true &&
-          confidence >= MIN_AUTOSAVE_CONFIDENCE,
+        approved:
+          call.args.approved === true && confidence >= MIN_AUTOSAVE_CONFIDENCE,
         confidence,
-        reasonCode: optionalString(call.args.reasonCode, 64) ??
+        reasonCode:
+          optionalString(call.args.reasonCode, 64) ??
           "ai_verification_rejected",
         model: modelName,
       };

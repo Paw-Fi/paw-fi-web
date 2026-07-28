@@ -13,6 +13,7 @@ import {
   resolveWalletCaptureScope,
   resolveWalletTransactionCurrency,
   resolveWalletTransactionDate,
+  resolveWalletTransactionMerchant,
   resolveWalletTransactionPackageName,
   usesAiAccountCurrencyContext,
   usesAiUserPreferredCurrency,
@@ -43,6 +44,40 @@ Deno.test(
     assertEquals(
       resolveWalletTransactionPackageName({ sourcePackage: "com.wallet" }),
       "com.wallet",
+    );
+  },
+);
+
+Deno.test(
+  "wallet capture merchant resolver keeps only genuine merchant fields",
+  () => {
+    assertEquals(
+      resolveWalletTransactionMerchant({
+        merchantName: "  District Factory  ",
+        rawMerchant: "SQ *DISTRICT FACTORY",
+        note: "A purchase of $36.95",
+      }),
+      "District Factory",
+    );
+    assertEquals(
+      resolveWalletTransactionMerchant({
+        rawMerchant: "  SQ *DISTRICT FACTORY  ",
+        note: "A purchase of $36.95",
+      }),
+      "SQ *DISTRICT FACTORY",
+    );
+  },
+);
+
+Deno.test(
+  "wallet capture merchant resolver never promotes fallback descriptors",
+  () => {
+    assertEquals(
+      resolveWalletTransactionMerchant({
+        note: "21:08:05utc - a purchase of $69.22",
+        packageName: "com.bank.app",
+      }),
+      null,
     );
   },
 );
@@ -119,38 +154,35 @@ Deno.test(
   },
 );
 
-Deno.test(
-  "wallet capture preserves AI account-context currency",
-  () => {
-    assertEquals(
-      resolveWalletCaptureCurrency({
-        captureSource: "android_notification_listener",
-        accountCurrency: "CAD",
-        tx: {
-          currency: "CAD",
-          currencyEvidenceRaw: "$",
-          currencyEvidenceType: "ai_account_context",
-          currencyAmbiguous: true,
-        },
-      }),
-      "CAD",
-    );
-    assertEquals(
-      usesAiAccountCurrencyContext({
+Deno.test("wallet capture preserves AI account-context currency", () => {
+  assertEquals(
+    resolveWalletCaptureCurrency({
+      captureSource: "android_notification_listener",
+      accountCurrency: "CAD",
+      tx: {
         currency: "CAD",
+        currencyEvidenceRaw: "$",
         currencyEvidenceType: "ai_account_context",
-      }),
-      true,
-    );
-    assertEquals(
-      usesAiAccountCurrencyContext({
-        currency: "CAD",
-        currencyEvidenceType: "ai_notification_explicit",
-      }),
-      false,
-    );
-  },
-);
+        currencyAmbiguous: true,
+      },
+    }),
+    "CAD",
+  );
+  assertEquals(
+    usesAiAccountCurrencyContext({
+      currency: "CAD",
+      currencyEvidenceType: "ai_account_context",
+    }),
+    true,
+  );
+  assertEquals(
+    usesAiAccountCurrencyContext({
+      currency: "CAD",
+      currencyEvidenceType: "ai_notification_explicit",
+    }),
+    false,
+  );
+});
 
 Deno.test(
   "wallet capture preserves server-verified user preferred currency",

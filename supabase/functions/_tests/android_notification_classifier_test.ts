@@ -7,6 +7,7 @@ import {
 
 import {
   type AndroidNotificationClassification,
+  buildAndroidNotificationFieldProvenance,
   classificationHasNotificationEvidence,
   classifyAndroidNotification,
   normalizeAndroidNotificationClassification,
@@ -112,23 +113,112 @@ Deno.test("Android notification classifier rejects promotions", () => {
   assertEquals(result.reasonCode, "promotion");
 });
 
-Deno.test("Android notification classifier saves posted refunds as income", () => {
-  const result = normalizeAndroidNotificationClassification(
-    saveArgs({
+Deno.test(
+  "notification provenance keeps bounded fields without full notification text",
+  () => {
+    const result = buildAndroidNotificationFieldProvenance(
+      classification({
+        category: "coffee & tea",
+        description: "Full bank notification description",
+        transactionEvidenceRaw:
+          "Card purchase USD 12.99 at Cafe Bloom was completed",
+      }),
+    );
+
+    assertEquals(result, {
       transactionType: "expense",
-      subtype: "refund",
       amount: 12.99,
       currency: "USD",
-      merchant: "Amazon",
-      category: "refunds",
-    }),
-    fallbackDate,
-  );
+      currencySource: "notification_explicit",
+      currencyAmbiguous: false,
+      merchant: "Cafe Bloom",
+      category: "coffee & tea",
+      date: fallbackDate,
+      isRecurring: false,
+      evidence: {
+        amount: true,
+        currency: true,
+        merchant: true,
+      },
+    });
+    assertEquals("description" in result, false);
+    assertEquals("transactionEvidenceRaw" in result, false);
+  },
+);
 
-  assertEquals(result.action, "save_transaction");
-  assertEquals(result.transactionType, "income");
-  assertEquals(result.category, "refunds");
-});
+Deno.test(
+  "notification provenance stores evidence presence without raw text",
+  () => {
+    const result = buildAndroidNotificationFieldProvenance(
+      classification({
+        amountEvidenceRaw: "x".repeat(49),
+        currencyEvidenceRaw: "x".repeat(25),
+        merchantEvidenceRaw: "x".repeat(161),
+        completionEvidenceRaw: "Full notification text",
+      }),
+    );
+
+    assertEquals(result.evidence, {
+      amount: true,
+      currency: true,
+      merchant: true,
+    });
+    assertEquals(JSON.stringify(result).includes("x".repeat(25)), false);
+  },
+);
+
+Deno.test(
+  "notification provenance rejects short whole-notification merchant text",
+  () => {
+    const fullNotification =
+      "Card purchase USD 12.99 at Cafe Bloom was completed";
+    const result = buildAndroidNotificationFieldProvenance(
+      classification({
+        merchant: fullNotification,
+        merchantEvidenceRaw: fullNotification,
+        transactionEvidenceRaw: fullNotification,
+      }),
+    );
+
+    assertEquals("merchant" in result, false);
+    assertEquals(result.evidence.merchant, true);
+  },
+);
+
+Deno.test(
+  "notification provenance normalizes whole-notification comparisons",
+  () => {
+    const result = buildAndroidNotificationFieldProvenance(
+      classification({
+        merchant: "ＣＡＲＤ PURCHASE AT CAFÉ BLOOM",
+        transactionEvidenceRaw: "card purchase at café bloom",
+      }),
+    );
+
+    assertEquals("merchant" in result, false);
+  },
+);
+
+Deno.test(
+  "Android notification classifier saves posted refunds as income",
+  () => {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({
+        transactionType: "expense",
+        subtype: "refund",
+        amount: 12.99,
+        currency: "USD",
+        merchant: "Amazon",
+        category: "refunds",
+      }),
+      fallbackDate,
+    );
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.transactionType, "income");
+    assertEquals(result.category, "refunds");
+  },
+);
 
 Deno.test("Android notification classifier cannot save pending events", () => {
   const result = normalizeAndroidNotificationClassification(
@@ -150,67 +240,79 @@ Deno.test("Android notification classifier cannot save transfers", () => {
   assertEquals(result.reasonCode, "transfer_requires_wallets");
 });
 
-Deno.test("Android notification classifier rejects unsupported currencies", () => {
-  const result = normalizeAndroidNotificationClassification(
-    saveArgs({
-      amount: 20,
-      amountEvidenceRaw: "20",
-      currency: "QAR",
-      currencyEvidenceRaw: "QAR",
-    }),
-    fallbackDate,
-  );
+Deno.test(
+  "Android notification classifier rejects unsupported currencies",
+  () => {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({
+        amount: 20,
+        amountEvidenceRaw: "20",
+        currency: "QAR",
+        currencyEvidenceRaw: "QAR",
+      }),
+      fallbackDate,
+    );
 
-  assertEquals(result.action, "ignore");
-  assertEquals(result.reasonCode, "unsupported_currency");
-});
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "unsupported_currency");
+  },
+);
 
-Deno.test("Android notification classifier rejects low-confidence mutations", () => {
-  const result = normalizeAndroidNotificationClassification(
-    saveArgs({ confidence: 0.7 }),
-    fallbackDate,
-  );
+Deno.test(
+  "Android notification classifier rejects low-confidence mutations",
+  () => {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({ confidence: 0.7 }),
+      fallbackDate,
+    );
 
-  assertEquals(result.action, "ignore");
-  assertEquals(result.reasonCode, "uncertain");
-});
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "uncertain");
+  },
+);
 
-Deno.test("classifier never rounds an amount the storage model cannot represent", () => {
-  const result = normalizeAndroidNotificationClassification(
-    saveArgs({
-      amount: 1.234,
-      amountEvidenceRaw: "١٫٢٣٤",
-      currency: "JOD",
-      currencyEvidenceRaw: "د.أ",
-    }),
-    fallbackDate,
-  );
+Deno.test(
+  "classifier never rounds an amount the storage model cannot represent",
+  () => {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({
+        amount: 1.234,
+        amountEvidenceRaw: "١٫٢٣٤",
+        currency: "JOD",
+        currencyEvidenceRaw: "د.أ",
+      }),
+      fallbackDate,
+    );
 
-  assertEquals(result.action, "ignore");
-  assertEquals(result.reasonCode, "unsupported_amount_precision");
-});
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "unsupported_amount_precision");
+  },
+);
 
-Deno.test("Android notification classifier keeps explicit recurring cadence", () => {
-  const result = normalizeAndroidNotificationClassification(
-    saveArgs({
-      subtype: "subscription",
-      amount: 10.99,
-      amountEvidenceRaw: "10.99",
-      merchant: "Spotify",
-      merchantEvidenceRaw: "Spotify",
-      isRecurring: true,
+Deno.test(
+  "Android notification classifier keeps explicit recurring cadence",
+  () => {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({
+        subtype: "subscription",
+        amount: 10.99,
+        amountEvidenceRaw: "10.99",
+        merchant: "Spotify",
+        merchantEvidenceRaw: "Spotify",
+        isRecurring: true,
+        frequency: "monthly",
+      }),
+      fallbackDate,
+    );
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.isRecurring, true);
+    assertEquals(result.recurrenceRule, {
       frequency: "monthly",
-    }),
-    fallbackDate,
-  );
-
-  assertEquals(result.action, "save_transaction");
-  assertEquals(result.isRecurring, true);
-  assertEquals(result.recurrenceRule, {
-    frequency: "monthly",
-    anchor_date: fallbackDate,
-  });
-});
+      anchor_date: fallbackDate,
+    });
+  },
+);
 
 Deno.test("evidence validation accepts French localized formatting", () => {
   assertEquals(
@@ -281,108 +383,117 @@ Deno.test("evidence validation accepts Japanese notification structure", () => {
   );
 });
 
-Deno.test("evidence validation accepts messaging-style and custom extras", () => {
-  assertEquals(
-    classificationHasNotificationEvidence(
-      {
-        packageName: "com.bank.app",
-        conversationTitle: "Alertas bancarias",
-        messages: ["Compra completada"],
-        additionalText: ["COP$ 45.000 en Mercado Central"],
-      },
-      classification({
-        amount: 45000,
-        amountEvidenceRaw: "COP$ 45.000",
-        currency: "COP",
-        currencyEvidenceRaw: "COP$",
-        merchant: "Mercado Central",
-        merchantEvidenceRaw: "Mercado Central",
-        completionEvidenceRaw: "Compra completada",
-        transactionEvidenceRaw: "COP$ 45.000 en Mercado Central",
-      }),
-    ),
-    true,
-  );
-});
+Deno.test(
+  "evidence validation accepts messaging-style and custom extras",
+  () => {
+    assertEquals(
+      classificationHasNotificationEvidence(
+        {
+          packageName: "com.bank.app",
+          conversationTitle: "Alertas bancarias",
+          messages: ["Compra completada"],
+          additionalText: ["COP$ 45.000 en Mercado Central"],
+        },
+        classification({
+          amount: 45000,
+          amountEvidenceRaw: "COP$ 45.000",
+          currency: "COP",
+          currencyEvidenceRaw: "COP$",
+          merchant: "Mercado Central",
+          merchantEvidenceRaw: "Mercado Central",
+          completionEvidenceRaw: "Compra completada",
+          transactionEvidenceRaw: "COP$ 45.000 en Mercado Central",
+        }),
+      ),
+      true,
+    );
+  },
+);
 
-Deno.test("account-context currency must match the server-loaded account", () => {
-  const notification = {
-    packageName: "com.bank.app",
-    text: "Purchase of $4.86 at Coffee Shop was completed",
-  };
-  const candidate = classification({
-    amount: 4.86,
-    amountEvidenceRaw: "$4.86",
-    currency: "CAD",
-    currencyEvidenceRaw: "$",
-    currencySource: "account_context",
-    currencyAmbiguous: true,
-    merchant: "Coffee Shop",
-    merchantEvidenceRaw: "Coffee Shop",
-    completionEvidenceRaw: "was completed",
-    transactionEvidenceRaw: "Purchase of $4.86 at Coffee Shop was completed",
-  });
+Deno.test(
+  "account-context currency must match the server-loaded account",
+  () => {
+    const notification = {
+      packageName: "com.bank.app",
+      text: "Purchase of $4.86 at Coffee Shop was completed",
+    };
+    const candidate = classification({
+      amount: 4.86,
+      amountEvidenceRaw: "$4.86",
+      currency: "CAD",
+      currencyEvidenceRaw: "$",
+      currencySource: "account_context",
+      currencyAmbiguous: true,
+      merchant: "Coffee Shop",
+      merchantEvidenceRaw: "Coffee Shop",
+      completionEvidenceRaw: "was completed",
+      transactionEvidenceRaw: "Purchase of $4.86 at Coffee Shop was completed",
+    });
 
-  assertEquals(
-    classificationHasNotificationEvidence(notification, candidate, "CAD"),
-    true,
-  );
-  assertEquals(
-    classificationHasNotificationEvidence(notification, candidate, "USD"),
-    false,
-  );
-  assertEquals(
-    classificationHasNotificationEvidence(notification, candidate, null),
-    false,
-  );
-});
+    assertEquals(
+      classificationHasNotificationEvidence(notification, candidate, "CAD"),
+      true,
+    );
+    assertEquals(
+      classificationHasNotificationEvidence(notification, candidate, "USD"),
+      false,
+    );
+    assertEquals(
+      classificationHasNotificationEvidence(notification, candidate, null),
+      false,
+    );
+  },
+);
 
-Deno.test("ambiguous symbols fall back to server-loaded user preference", () => {
-  const notification = {
-    packageName: "com.bank.app",
-    text: "Purchase of $4.86 at Coffee Shop was completed",
-  };
-  const candidate = classification({
-    amount: 4.86,
-    amountEvidenceRaw: "$4.86",
-    currency: "SGD",
-    currencyEvidenceRaw: "$",
-    currencySource: "user_preference",
-    currencyAmbiguous: true,
-    merchant: "Coffee Shop",
-    merchantEvidenceRaw: "Coffee Shop",
-    completionEvidenceRaw: "was completed",
-    transactionEvidenceRaw: "Purchase of $4.86 at Coffee Shop was completed",
-  });
+Deno.test(
+  "ambiguous symbols fall back to server-loaded user preference",
+  () => {
+    const notification = {
+      packageName: "com.bank.app",
+      text: "Purchase of $4.86 at Coffee Shop was completed",
+    };
+    const candidate = classification({
+      amount: 4.86,
+      amountEvidenceRaw: "$4.86",
+      currency: "SGD",
+      currencyEvidenceRaw: "$",
+      currencySource: "user_preference",
+      currencyAmbiguous: true,
+      merchant: "Coffee Shop",
+      merchantEvidenceRaw: "Coffee Shop",
+      completionEvidenceRaw: "was completed",
+      transactionEvidenceRaw: "Purchase of $4.86 at Coffee Shop was completed",
+    });
 
-  assertEquals(
-    classificationHasNotificationEvidence(
-      notification,
-      candidate,
-      null,
-      "SGD",
-    ),
-    true,
-  );
-  assertEquals(
-    classificationHasNotificationEvidence(
-      notification,
-      candidate,
-      null,
-      "USD",
-    ),
-    false,
-  );
-  assertEquals(
-    classificationHasNotificationEvidence(
-      notification,
-      candidate,
-      "CAD",
-      "SGD",
-    ),
-    false,
-  );
-});
+    assertEquals(
+      classificationHasNotificationEvidence(
+        notification,
+        candidate,
+        null,
+        "SGD",
+      ),
+      true,
+    );
+    assertEquals(
+      classificationHasNotificationEvidence(
+        notification,
+        candidate,
+        null,
+        "USD",
+      ),
+      false,
+    );
+    assertEquals(
+      classificationHasNotificationEvidence(
+        notification,
+        candidate,
+        "CAD",
+        "SGD",
+      ),
+      false,
+    );
+  },
+);
 
 Deno.test("evidence validation rejects hallucinated fragments", () => {
   assertEquals(
@@ -397,96 +508,102 @@ Deno.test("evidence validation rejects hallucinated fragments", () => {
   );
 });
 
-Deno.test("AI classification and independent verification save Arabic AED", async () => {
-  const capturedModels: string[] = [];
-  const result = await classifyAndroidNotification({
-    genAI: fakeGenAI(
-      [
+Deno.test(
+  "AI classification and independent verification save Arabic AED",
+  async () => {
+    const capturedModels: string[] = [];
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAI(
+        [
+          modelCall(
+            "classify_notification",
+            saveArgs({
+              amount: 125.5,
+              amountEvidenceRaw: "١٢٥٫٥٠",
+              currency: "AED",
+              currencyEvidenceRaw: "د.إ",
+              merchant: "متجر النور",
+              merchantEvidenceRaw: "متجر النور",
+              completionEvidenceRaw: "تمت عملية شراء",
+              transactionEvidenceRaw:
+                "تمت عملية شراء بقيمة ١٢٥٫٥٠ د.إ لدى متجر النور",
+            }),
+          ),
+          modelCall("verify_notification_classification", {
+            approved: true,
+            confidence: 0.99,
+            reasonCode: "verified_completed_purchase",
+          }),
+        ],
+        capturedModels,
+      ),
+      notification: {
+        packageName: "com.bank.app",
+        text: "تمت عملية شراء بقيمة ١٢٥٫٥٠ د.إ لدى متجر النور",
+      },
+      fallbackDate,
+      accountCurrency: "AED",
+      preferredLanguage: "ar",
+      expenseCategories: ["shopping"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.currency, "AED");
+    assertEquals(result.amount, 125.5);
+    assertEquals(result.model, "gemini-3.1-flash-lite");
+    assertEquals(result.verificationModel, "gemini-3-flash-preview");
+    assertEquals(capturedModels, [
+      "gemini-3.1-flash-lite",
+      "gemini-3-flash-preview",
+    ]);
+  },
+);
+
+Deno.test(
+  "AI uses preferred currency for an ambiguous symbol without a wallet",
+  async () => {
+    const text = "Purchase of $4.86 at Coffee Shop was completed";
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAI([
         modelCall(
           "classify_notification",
           saveArgs({
-            amount: 125.5,
-            amountEvidenceRaw: "١٢٥٫٥٠",
-            currency: "AED",
-            currencyEvidenceRaw: "د.إ",
-            merchant: "متجر النور",
-            merchantEvidenceRaw: "متجر النور",
-            completionEvidenceRaw: "تمت عملية شراء",
-            transactionEvidenceRaw:
-              "تمت عملية شراء بقيمة ١٢٥٫٥٠ د.إ لدى متجر النور",
+            amount: 4.86,
+            amountEvidenceRaw: "$4.86",
+            currency: "SGD",
+            currencyEvidenceRaw: "$",
+            currencySource: "user_preference",
+            merchant: "Coffee Shop",
+            merchantEvidenceRaw: "Coffee Shop",
+            completionEvidenceRaw: "was completed",
+            transactionEvidenceRaw: text,
           }),
         ),
         modelCall("verify_notification_classification", {
           approved: true,
           confidence: 0.99,
-          reasonCode: "verified_completed_purchase",
+          reasonCode: "verified_with_user_preference",
         }),
-      ],
-      capturedModels,
-    ),
-    notification: {
-      packageName: "com.bank.app",
-      text: "تمت عملية شراء بقيمة ١٢٥٫٥٠ د.إ لدى متجر النور",
-    },
-    fallbackDate,
-    accountCurrency: "AED",
-    preferredLanguage: "ar",
-    expenseCategories: ["shopping"],
-    incomeCategories: ["other income"],
-  });
+      ]),
+      notification: {
+        packageName: "com.bank.app",
+        text,
+      },
+      fallbackDate,
+      accountCurrency: null,
+      preferredCurrency: "SGD",
+      preferredLanguage: "en",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
 
-  assertEquals(result.action, "save_transaction");
-  assertEquals(result.currency, "AED");
-  assertEquals(result.amount, 125.5);
-  assertEquals(result.model, "gemini-3.1-flash-lite");
-  assertEquals(result.verificationModel, "gemini-3-flash-preview");
-  assertEquals(capturedModels, [
-    "gemini-3.1-flash-lite",
-    "gemini-3-flash-preview",
-  ]);
-});
-
-Deno.test("AI uses preferred currency for an ambiguous symbol without a wallet", async () => {
-  const text = "Purchase of $4.86 at Coffee Shop was completed";
-  const result = await classifyAndroidNotification({
-    genAI: fakeGenAI([
-      modelCall(
-        "classify_notification",
-        saveArgs({
-          amount: 4.86,
-          amountEvidenceRaw: "$4.86",
-          currency: "SGD",
-          currencyEvidenceRaw: "$",
-          currencySource: "user_preference",
-          merchant: "Coffee Shop",
-          merchantEvidenceRaw: "Coffee Shop",
-          completionEvidenceRaw: "was completed",
-          transactionEvidenceRaw: text,
-        }),
-      ),
-      modelCall("verify_notification_classification", {
-        approved: true,
-        confidence: 0.99,
-        reasonCode: "verified_with_user_preference",
-      }),
-    ]),
-    notification: {
-      packageName: "com.bank.app",
-      text,
-    },
-    fallbackDate,
-    accountCurrency: null,
-    preferredCurrency: "SGD",
-    preferredLanguage: "en",
-    expenseCategories: ["coffee & tea"],
-    incomeCategories: ["other income"],
-  });
-
-  assertEquals(result.action, "save_transaction");
-  assertEquals(result.currency, "SGD");
-  assertEquals(result.currencySource, "user_preference");
-  assertEquals(result.currencyAmbiguous, true);
-});
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.currency, "SGD");
+    assertEquals(result.currencySource, "user_preference");
+    assertEquals(result.currencyAmbiguous, true);
+  },
+);
 
 Deno.test("promotion is ignored only after independent agreement", async () => {
   const capturedModels: string[] = [];
@@ -529,167 +646,180 @@ Deno.test("promotion is ignored only after independent agreement", async () => {
   ]);
 });
 
-Deno.test("verifier blocks a promotional message misclassified as a purchase", async () => {
-  const promotionalText = "عرض خاص: خصم 20 د.إ عند الشراء من متجر النور";
-  const result = await classifyAndroidNotification({
-    genAI: fakeGenAI([
-      modelCall(
-        "classify_notification",
-        saveArgs({
-          amount: 20,
-          amountEvidenceRaw: "20 د.إ",
-          currency: "AED",
-          currencyEvidenceRaw: "د.إ",
-          merchant: "متجر النور",
-          merchantEvidenceRaw: "متجر النور",
-          completionEvidenceRaw: promotionalText,
-          transactionEvidenceRaw: promotionalText,
+Deno.test(
+  "verifier blocks a promotional message misclassified as a purchase",
+  async () => {
+    const promotionalText = "عرض خاص: خصم 20 د.إ عند الشراء من متجر النور";
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAI([
+        modelCall(
+          "classify_notification",
+          saveArgs({
+            amount: 20,
+            amountEvidenceRaw: "20 د.إ",
+            currency: "AED",
+            currencyEvidenceRaw: "د.إ",
+            merchant: "متجر النور",
+            merchantEvidenceRaw: "متجر النور",
+            completionEvidenceRaw: promotionalText,
+            transactionEvidenceRaw: promotionalText,
+          }),
+        ),
+        modelCall("verify_notification_classification", {
+          approved: false,
+          confidence: 0.99,
+          reasonCode: "promotion",
+        }),
+        modelCall("classify_notification", {
+          action: "ignore",
+          eventStatus: "informational",
+          subtype: "promotion",
+          isRecurring: false,
+          confidence: 0.99,
+          reasonCode: "promotion",
+        }),
+        modelCall("verify_notification_classification", {
+          approved: true,
+          confidence: 0.99,
+          reasonCode: "verified_promotion",
+        }),
+      ]),
+      notification: {
+        packageName: "com.bank.app",
+        text: promotionalText,
+      },
+      fallbackDate,
+      preferredLanguage: "ar",
+      expenseCategories: ["shopping"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "promotion");
+  },
+);
+
+Deno.test(
+  "ignore disagreement escalates to a stronger classifier",
+  async () => {
+    const text = "支払い完了: コンビニで1,234円";
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAI([
+        modelCall("classify_notification", {
+          action: "ignore",
+          eventStatus: "unknown",
+          subtype: "other",
+          isRecurring: false,
+          confidence: 0.92,
+          reasonCode: "uncertain",
+        }),
+        modelCall("verify_notification_classification", {
+          approved: false,
+          confidence: 0.99,
+          reasonCode: "completed_purchase_present",
+        }),
+        modelCall(
+          "classify_notification",
+          saveArgs({
+            amount: 1234,
+            amountEvidenceRaw: "1,234円",
+            currency: "JPY",
+            currencyEvidenceRaw: "円",
+            merchant: "コンビニ",
+            merchantEvidenceRaw: "コンビニ",
+            completionEvidenceRaw: "支払い完了",
+            transactionEvidenceRaw: text,
+          }),
+        ),
+        modelCall("verify_notification_classification", {
+          approved: true,
+          confidence: 0.99,
+          reasonCode: "verified_completed_purchase",
+        }),
+      ]),
+      notification: {
+        packageName: "com.bank.app",
+        text,
+      },
+      fallbackDate,
+      accountCurrency: "JPY",
+      preferredLanguage: "ja",
+      expenseCategories: ["shopping"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.currency, "JPY");
+    assertEquals(result.model, "gemini-3-flash-preview");
+    assertEquals(result.verificationModel, "gemini-2.5-pro");
+  },
+);
+
+Deno.test(
+  "unresolved model disagreement is retryable, not cached as ignore",
+  async () => {
+    const ignored = {
+      action: "ignore",
+      eventStatus: "unknown",
+      subtype: "other",
+      isRecurring: false,
+      confidence: 0.95,
+      reasonCode: "uncertain",
+    };
+    await assertRejects(
+      () =>
+        classifyAndroidNotification({
+          genAI: fakeGenAI([
+            modelCall("classify_notification", ignored),
+            modelCall("verify_notification_classification", {
+              approved: false,
+              confidence: 0.99,
+              reasonCode: "completed_transaction_present",
+            }),
+            modelCall("classify_notification", ignored),
+            modelCall("verify_notification_classification", {
+              approved: false,
+              confidence: 0.99,
+              reasonCode: "completed_transaction_present",
+            }),
+            modelCall("classify_notification", ignored),
+          ]),
+          notification: {
+            packageName: "com.bank.app",
+            text: "Global-format notification requiring another attempt",
+          },
+          fallbackDate,
+          accountCurrency: "USD",
+          expenseCategories: ["shopping"],
+          incomeCategories: ["other income"],
+        }),
+      Error,
+      "NOTIFICATION_VERIFICATION_FAILED",
+    );
+  },
+);
+
+Deno.test(
+  "AI may select transaction currency despite unrelated balance currency",
+  () => {
+    const text =
+      "USD account balance: 200.00. Purchase completed: CAD 4.86 at Coffee Shop.";
+    assertEquals(
+      classificationHasNotificationEvidence(
+        { packageName: "com.bank.app", text },
+        classification({
+          amount: 4.86,
+          amountEvidenceRaw: "CAD 4.86",
+          currency: "CAD",
+          currencyEvidenceRaw: "CAD",
+          merchant: "Coffee Shop",
+          merchantEvidenceRaw: "Coffee Shop",
+          completionEvidenceRaw: "Purchase completed",
+          transactionEvidenceRaw:
+            "Purchase completed: CAD 4.86 at Coffee Shop.",
         }),
       ),
-      modelCall("verify_notification_classification", {
-        approved: false,
-        confidence: 0.99,
-        reasonCode: "promotion",
-      }),
-      modelCall("classify_notification", {
-        action: "ignore",
-        eventStatus: "informational",
-        subtype: "promotion",
-        isRecurring: false,
-        confidence: 0.99,
-        reasonCode: "promotion",
-      }),
-      modelCall("verify_notification_classification", {
-        approved: true,
-        confidence: 0.99,
-        reasonCode: "verified_promotion",
-      }),
-    ]),
-    notification: {
-      packageName: "com.bank.app",
-      text: promotionalText,
-    },
-    fallbackDate,
-    preferredLanguage: "ar",
-    expenseCategories: ["shopping"],
-    incomeCategories: ["other income"],
-  });
-
-  assertEquals(result.action, "ignore");
-  assertEquals(result.reasonCode, "promotion");
-});
-
-Deno.test("ignore disagreement escalates to a stronger classifier", async () => {
-  const text = "支払い完了: コンビニで1,234円";
-  const result = await classifyAndroidNotification({
-    genAI: fakeGenAI([
-      modelCall("classify_notification", {
-        action: "ignore",
-        eventStatus: "unknown",
-        subtype: "other",
-        isRecurring: false,
-        confidence: 0.92,
-        reasonCode: "uncertain",
-      }),
-      modelCall("verify_notification_classification", {
-        approved: false,
-        confidence: 0.99,
-        reasonCode: "completed_purchase_present",
-      }),
-      modelCall(
-        "classify_notification",
-        saveArgs({
-          amount: 1234,
-          amountEvidenceRaw: "1,234円",
-          currency: "JPY",
-          currencyEvidenceRaw: "円",
-          merchant: "コンビニ",
-          merchantEvidenceRaw: "コンビニ",
-          completionEvidenceRaw: "支払い完了",
-          transactionEvidenceRaw: text,
-        }),
-      ),
-      modelCall("verify_notification_classification", {
-        approved: true,
-        confidence: 0.99,
-        reasonCode: "verified_completed_purchase",
-      }),
-    ]),
-    notification: {
-      packageName: "com.bank.app",
-      text,
-    },
-    fallbackDate,
-    accountCurrency: "JPY",
-    preferredLanguage: "ja",
-    expenseCategories: ["shopping"],
-    incomeCategories: ["other income"],
-  });
-
-  assertEquals(result.action, "save_transaction");
-  assertEquals(result.currency, "JPY");
-  assertEquals(result.model, "gemini-3-flash-preview");
-  assertEquals(result.verificationModel, "gemini-2.5-pro");
-});
-
-Deno.test("unresolved model disagreement is retryable, not cached as ignore", async () => {
-  const ignored = {
-    action: "ignore",
-    eventStatus: "unknown",
-    subtype: "other",
-    isRecurring: false,
-    confidence: 0.95,
-    reasonCode: "uncertain",
-  };
-  await assertRejects(
-    () =>
-      classifyAndroidNotification({
-        genAI: fakeGenAI([
-          modelCall("classify_notification", ignored),
-          modelCall("verify_notification_classification", {
-            approved: false,
-            confidence: 0.99,
-            reasonCode: "completed_transaction_present",
-          }),
-          modelCall("classify_notification", ignored),
-          modelCall("verify_notification_classification", {
-            approved: false,
-            confidence: 0.99,
-            reasonCode: "completed_transaction_present",
-          }),
-          modelCall("classify_notification", ignored),
-        ]),
-        notification: {
-          packageName: "com.bank.app",
-          text: "Global-format notification requiring another attempt",
-        },
-        fallbackDate,
-        accountCurrency: "USD",
-        expenseCategories: ["shopping"],
-        incomeCategories: ["other income"],
-      }),
-    Error,
-    "NOTIFICATION_VERIFICATION_FAILED",
-  );
-});
-
-Deno.test("AI may select transaction currency despite unrelated balance currency", () => {
-  const text =
-    "USD account balance: 200.00. Purchase completed: CAD 4.86 at Coffee Shop.";
-  assertEquals(
-    classificationHasNotificationEvidence(
-      { packageName: "com.bank.app", text },
-      classification({
-        amount: 4.86,
-        amountEvidenceRaw: "CAD 4.86",
-        currency: "CAD",
-        currencyEvidenceRaw: "CAD",
-        merchant: "Coffee Shop",
-        merchantEvidenceRaw: "Coffee Shop",
-        completionEvidenceRaw: "Purchase completed",
-        transactionEvidenceRaw: "Purchase completed: CAD 4.86 at Coffee Shop.",
-      }),
-    ),
-    true,
-  );
-});
+      true,
+    );
+  },
+);

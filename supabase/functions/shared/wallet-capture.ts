@@ -70,6 +70,13 @@ export function resolveWalletTransactionCurrency(
   return value || null;
 }
 
+export function resolveWalletTransactionMerchant(
+  tx: WalletTransactionLike,
+): string | null {
+  const value = (tx.merchantName ?? tx.rawMerchant ?? "").trim();
+  return value || null;
+}
+
 export function usesAiAccountCurrencyContext(
   tx: WalletTransactionLike,
 ): boolean {
@@ -86,11 +93,7 @@ function walletCaptureCurrencyEvidenceText(tx: WalletTransactionLike): string {
   const verifiedEvidence = tx.currencyEvidenceRaw?.trim();
   if (verifiedEvidence) return verifiedEvidence;
 
-  return [
-    tx.note,
-    tx.rawMerchant,
-    tx.merchantName,
-  ]
+  return [tx.note, tx.rawMerchant, tx.merchantName]
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
     .filter((value) => value.length > 0)
@@ -128,8 +131,8 @@ export function resolveWalletCaptureCurrency(params: {
   const detectedCurrencySymbol = detectedCurrencyCode
     ? params.tx.currencyEvidenceRaw || null
     : params.tx.currencyEvidenceRaw || normalizedPayloadCurrency || null;
-  const fallbackCurrency = accountCurrency || preferredCurrency ||
-    payloadCurrency || "USD";
+  const fallbackCurrency =
+    accountCurrency || preferredCurrency || payloadCurrency || "USD";
 
   return resolveCurrencyFromOCR({
     detectedCurrencyCode,
@@ -142,10 +145,8 @@ export function resolveWalletCaptureCurrency(params: {
 export function resolveStrongWalletCaptureCurrencyEvidence(
   tx: WalletTransactionLike,
 ): string | null {
-  if (
-    usesAiAccountCurrencyContext(tx) ||
-    usesAiUserPreferredCurrency(tx)
-  ) return null;
+  if (usesAiAccountCurrencyContext(tx) || usesAiUserPreferredCurrency(tx))
+    return null;
   if (tx.currencyEvidenceType === AI_EXPLICIT_CURRENCY_EVIDENCE) {
     const currency = resolveWalletTransactionCurrency(tx)?.toUpperCase();
     return currency && /^[A-Z]{3}$/.test(currency) ? currency : null;
@@ -157,10 +158,8 @@ export function resolveStrongWalletCaptureCurrencyEvidence(
 export function hasAmbiguousWalletCaptureCurrencyEvidence(
   tx: WalletTransactionLike,
 ): boolean {
-  if (
-    usesAiAccountCurrencyContext(tx) ||
-    usesAiUserPreferredCurrency(tx)
-  ) return true;
+  if (usesAiAccountCurrencyContext(tx) || usesAiUserPreferredCurrency(tx))
+    return true;
   if (tx.currencyEvidenceType === AI_EXPLICIT_CURRENCY_EVIDENCE) return false;
   const rawOcrText = walletCaptureCurrencyEvidenceText(tx);
   if (resolveSingleStrongCurrencyEvidenceFromOCRText(rawOcrText)) {
@@ -296,9 +295,8 @@ export function buildWalletCaptureIdempotencyKey(params: {
   const scopeKey = params.householdId
     ? `${params.householdId}:${params.isPortfolio ? "portfolio" : "household"}`
     : "personal";
-  const normalizedTransactionType = params.transactionType === "income"
-    ? "income"
-    : "expense";
+  const normalizedTransactionType =
+    params.transactionType === "income" ? "income" : "expense";
   const normalizedMerchant = normalizeMerchantForDedup(params.merchantName);
   const normalizedCard = (params.cardLabel ?? "").trim().toLowerCase();
   const normalizedPackage = (params.packageName ?? "").trim().toLowerCase();
@@ -329,9 +327,10 @@ export function isWalletCaptureIdempotencyClaimStale(
 ): boolean {
   if (!createdAt) return true;
 
-  const createdAtMs = createdAt instanceof Date
-    ? createdAt.getTime()
-    : new Date(createdAt).getTime();
+  const createdAtMs =
+    createdAt instanceof Date
+      ? createdAt.getTime()
+      : new Date(createdAt).getTime();
 
   if (!Number.isFinite(createdAtMs)) return true;
   return nowMs - createdAtMs >= staleMs;

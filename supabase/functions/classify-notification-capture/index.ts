@@ -9,6 +9,7 @@ import {
 import {
   type AndroidNotificationClassification,
   type AndroidNotificationInput,
+  buildAndroidNotificationFieldProvenance,
   classifyAndroidNotification,
 } from "../shared/android-notification-classifier.ts";
 import {
@@ -95,10 +96,7 @@ function sanitizeNotification(value: unknown): AndroidNotificationInput | null {
     subText: optionalString(raw.subText, MAX_FIELD_LENGTH),
     summaryText: optionalString(raw.summaryText, MAX_FIELD_LENGTH),
     infoText: optionalString(raw.infoText, MAX_FIELD_LENGTH),
-    conversationTitle: optionalString(
-      raw.conversationTitle,
-      MAX_FIELD_LENGTH,
-    ),
+    conversationTitle: optionalString(raw.conversationTitle, MAX_FIELD_LENGTH),
     tickerText: optionalString(raw.tickerText, MAX_FIELD_LENGTH),
     textLines: rawLines
       .map((line) => optionalString(line, 500))
@@ -138,9 +136,8 @@ async function claimClassificationEvent(params: {
     },
   );
   if (error) throw error;
-  const result = data && typeof data === "object"
-    ? (data as Record<string, unknown>)
-    : {};
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   if (result.status === "cached" && result.result) {
     return {
       status: "cached",
@@ -172,6 +169,10 @@ async function finalizeClassificationEvent(params: {
       subtype: params.classification?.subtype ?? null,
       confidence: params.classification?.confidence ?? null,
       model: params.classification?.model ?? null,
+      verification_model: params.classification?.verificationModel ?? null,
+      field_provenance: params.classification
+        ? buildAndroidNotificationFieldProvenance(params.classification)
+        : null,
       expense_id: params.expenseId ?? null,
       result: params.result,
       updated_at: new Date().toISOString(),
@@ -218,8 +219,8 @@ async function sendDecisionPush(params: {
       deep_link: params.deepLink ?? "moneko://home",
     },
     firebaseProjectId: Deno.env.get("FIREBASE_PROJECT_ID") || "",
-    firebaseServiceAccountJson: Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") ||
-      "",
+    firebaseServiceAccountJson:
+      Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "",
     iosBundleId: Deno.env.get("IOS_BUNDLE_ID") || "com.moneko.mobile",
   });
 }
@@ -264,11 +265,9 @@ async function invokeWalletCapture(params: {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const internalKey = resolveAnyInternalFunctionKey();
-  const url = `${
-    Deno.env.get(
-      "SUPABASE_URL",
-    )
-  }/functions/v1/save-wallet-transaction`;
+  const url = `${Deno.env.get(
+    "SUPABASE_URL",
+  )}/functions/v1/save-wallet-transaction`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -296,8 +295,8 @@ async function invokeWalletCapture(params: {
           params.classification.currencySource === "account_context"
             ? "ai_account_context"
             : params.classification.currencySource === "user_preference"
-            ? "ai_user_preference"
-            : "ai_notification_explicit",
+              ? "ai_user_preference"
+              : "ai_notification_explicit",
         currencyAmbiguous: params.classification.currencyAmbiguous,
         accountCurrency: params.accountCurrency,
         date: params.classification.date,
@@ -475,40 +474,38 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(result, 400);
     };
 
-    if (!await assertScopeAccess(supabase, userId, householdId)) {
-      return await rejectClaimedRequest(
-        "Destination scope is not accessible",
-      );
+    if (!(await assertScopeAccess(supabase, userId, householdId))) {
+      return await rejectClaimedRequest("Destination scope is not accessible");
     }
-    const accountId = requestedAccountId ??
-      await resolveDefaultAccountIdStrict(supabase, { userId, householdId });
+    const accountId =
+      requestedAccountId ??
+      (await resolveDefaultAccountIdStrict(supabase, { userId, householdId }));
     let accountCurrency: string | null = null;
     if (accountId) {
-      const isAccountInScope = await assertAccountInScope(
-        supabase,
-        accountId,
-        { userId, householdId },
-      );
+      const isAccountInScope = await assertAccountInScope(supabase, accountId, {
+        userId,
+        householdId,
+      });
       if (!isAccountInScope) {
         return await rejectClaimedRequest(
           "Provided account does not belong to this scope",
         );
       }
       const account = await getAccountOrNull(supabase, accountId);
-      accountCurrency = typeof account?.currency === "string"
-        ? account.currency.trim().toUpperCase()
-        : null;
+      accountCurrency =
+        typeof account?.currency === "string"
+          ? account.currency.trim().toUpperCase()
+          : null;
       if (!accountCurrency) {
-        return await rejectClaimedRequest(
-          "Selected account has no currency",
-        );
+        return await rejectClaimedRequest("Selected account has no currency");
       }
     }
 
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    const preferredTimezone = typeof contact?.preferred_timezone === "string"
-      ? contact.preferred_timezone
-      : null;
+    const preferredTimezone =
+      typeof contact?.preferred_timezone === "string"
+        ? contact.preferred_timezone
+        : null;
     const clientDate = body.clientCreatedAt
       ? new Date(body.clientCreatedAt)
       : new Date();
@@ -590,8 +587,7 @@ Deno.serve(async (req: Request) => {
           supabase,
           userId,
           title: "Recurring transaction already tracked",
-          body:
-            "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
+          body: "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
           eventType: "notification_capture_recurring_existing",
           deepLink: `moneko://recurring/${recurringMatch.schedule.id}`,
           notificationId: eventId,
@@ -730,9 +726,10 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse(result, saved.response.status);
   } catch (error) {
-    const diagnosticCode = error instanceof Error
-      ? optionalString(error.message, 160) ?? "unknown_error"
-      : "unknown_error";
+    const diagnosticCode =
+      error instanceof Error
+        ? (optionalString(error.message, 160) ?? "unknown_error")
+        : "unknown_error";
     console.error("[classify-notification-capture] Request failed", {
       error: diagnosticCode,
       eventId,
