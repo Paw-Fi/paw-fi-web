@@ -348,50 +348,12 @@ async function loadUserContact(userId: string): Promise<UserContact | null> {
     return null;
   }
 
-  const fullName =
-    asNonEmptyString(data?.full_name) ?? (await loadAuthUserName(userId));
+  const fullName = asNonEmptyString(data?.full_name);
 
   return {
     email,
     full_name: fullName,
   };
-}
-
-async function loadAuthUserName(userId: string): Promise<string | null> {
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-
-  if (error) {
-    reportSubscriptionFounderFollowupError("load_auth_user", error, { userId });
-    return null;
-  }
-
-  const user = data?.user;
-  if (!user) {
-    return null;
-  }
-
-  const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
-  const identityData = (user.identities?.[0]?.identity_data ?? {}) as Record<
-    string,
-    unknown
-  >;
-
-  return (
-    asNonEmptyString(metadata.full_name) ??
-    asNonEmptyString(metadata.fullName) ??
-    asNonEmptyString(metadata.display_name) ??
-    asNonEmptyString(metadata.displayName) ??
-    asNonEmptyString(metadata.name) ??
-    asNonEmptyString(metadata.first_name) ??
-    asNonEmptyString(metadata.given_name) ??
-    asNonEmptyString(identityData.full_name) ??
-    asNonEmptyString(identityData.display_name) ??
-    asNonEmptyString(identityData.displayName) ??
-    asNonEmptyString(identityData.name) ??
-    asNonEmptyString(identityData.first_name) ??
-    asNonEmptyString(identityData.given_name) ??
-    null
-  );
 }
 
 function shouldSendWelcomeOnInsert(subscription: SubscriptionRecord): boolean {
@@ -500,7 +462,7 @@ function buildWelcomeEmailText(name: string): string {
     "",
     "Yifan here, co-founder and CTO of Moneko. Thanks for joining us—I wanted to personally welcome you.",
     "",
-    "A great way to get started is to log your next expense through WhatsApp. Simply send a message like \"12.50 for lunch,\" and Moneko will automatically record it for you.",
+    'A great way to get started is to log your next expense through WhatsApp. Simply send a message like "12.50 for lunch," and Moneko will automatically record it for you.',
     "",
     "You can also set up Email Receipt Capture. Once it’s set up, simply forward any receipt email to Moneko, and we’ll automatically log the expense for you.",
     "",

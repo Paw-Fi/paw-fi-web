@@ -40,6 +40,7 @@ interface EligibleInvite {
   household_name: string;
   inviter_id: string;
   inviter_name: string;
+  inviter_email: string | null;
   invited_email: string | null;
   invited_user_id: string | null;
   invitee_name: string | null;
@@ -59,14 +60,14 @@ interface EligibleInvite {
 function determineReminderTier(invite: EligibleInvite): number | null {
   const now = new Date();
   const createdAt = new Date(invite.created_at);
-  const daysSinceCreated = (now.getTime() - createdAt.getTime()) /
-    (1000 * 60 * 60 * 24);
+  const daysSinceCreated =
+    (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
 
   // Tier 3: Expiring soon (2 days before expiration)
   if (invite.expires_at) {
     const expiresAt = new Date(invite.expires_at);
-    const daysUntilExpiry = (expiresAt.getTime() - now.getTime()) /
-      (1000 * 60 * 60 * 24);
+    const daysUntilExpiry =
+      (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
 
     if (daysUntilExpiry > 0 && daysUntilExpiry <= 2) {
       return 3;
@@ -96,8 +97,8 @@ function canSendReminder(lastReminderSentAt: string | null): boolean {
 
   const now = new Date();
   const lastSent = new Date(lastReminderSentAt);
-  const hoursSinceLastReminder = (now.getTime() - lastSent.getTime()) /
-    (1000 * 60 * 60);
+  const hoursSinceLastReminder =
+    (now.getTime() - lastSent.getTime()) / (1000 * 60 * 60);
 
   return hoursSinceLastReminder >= 72;
 }
@@ -123,13 +124,7 @@ async function getEligibleInvites(
       reminder_count,
       last_reminder_sent_at,
       personal_message,
-      households!inner(name),
-      inviter:auth.users!invites_inviter_id_fkey(
-        raw_user_meta_data
-      ),
-      invitee:auth.users!invites_invited_user_id_fkey(
-        raw_user_meta_data
-      )
+       households!inner(name)
     `,
     )
     .eq("status", "pending")
@@ -142,6 +137,30 @@ async function getEligibleInvites(
     throw new Error(`Failed to fetch eligible invites: ${error.message}`);
   }
 
+  const userIds = [
+    ...new Set(
+      (data || [])
+        .flatMap((invite: any) => [invite.inviter_id, invite.invited_user_id])
+        .filter(Boolean),
+    ),
+  ];
+  const { data: profiles, error: profilesError } =
+    userIds.length > 0
+      ? await supabase
+          .from("users")
+          .select("id, email, full_name")
+          .in("id", userIds)
+      : { data: [], error: null };
+
+  if (profilesError) {
+    console.error("Error fetching invite reminder profiles:", profilesError);
+    throw new Error(`Failed to fetch user profiles: ${profilesError.message}`);
+  }
+
+  const profilesById = new Map(
+    (profiles || []).map((profile: any) => [profile.id, profile]),
+  );
+
   // Transform the data to a cleaner structure
   const eligibleInvites: EligibleInvite[] = (data || []).map((invite: any) => ({
     id: invite.id,
@@ -149,10 +168,13 @@ async function getEligibleInvites(
     household_id: invite.household_id,
     household_name: invite.households?.name || "Unknown Household",
     inviter_id: invite.inviter_id,
-    inviter_name: invite.inviter?.raw_user_meta_data?.full_name || "Someone",
+    inviter_name: profilesById.get(invite.inviter_id)?.full_name || "Someone",
+    inviter_email: profilesById.get(invite.inviter_id)?.email || null,
     invited_email: invite.invited_email,
     invited_user_id: invite.invited_user_id,
-    invitee_name: invite.invitee?.raw_user_meta_data?.full_name || null,
+    invitee_name: invite.invited_user_id
+      ? profilesById.get(invite.invited_user_id)?.full_name || null
+      : null,
     expires_at: invite.expires_at,
     created_at: invite.created_at,
     reminder_count: invite.reminder_count,
@@ -217,8 +239,7 @@ async function createReminderNotifications(
         invitee_name: invite.invitee_name,
         expires_at: invite.expires_at,
         reminder_tier: reminderTier,
-        deep_link:
-          `${deepLinkAppScheme}household/${invite.household_id}/settings?tab=2`,
+        deep_link: `${deepLinkAppScheme}household/${invite.household_id}/settings?tab=2`,
       },
       created_at: new Date().toISOString(),
     });
@@ -243,9 +264,9 @@ async function createReminderNotifications(
         expires_at: invite.expires_at,
         reminder_tier: reminderTier,
         personal_message: invite.personal_message,
-        deep_link: `${deepLinkAppScheme}households/join?token=${
-          encodeURIComponent(invite.token)
-        }`,
+        deep_link: `${deepLinkAppScheme}households/join?token=${encodeURIComponent(
+          invite.token,
+        )}`,
       },
       created_at: new Date().toISOString(),
     });
@@ -264,12 +285,12 @@ async function createReminderNotifications(
 
     const daysUntilExpiry = invite.expires_at
       ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(invite.expires_at).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24),
-        ),
-      )
+          0,
+          Math.ceil(
+            (new Date(invite.expires_at).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
       : undefined;
 
     // Invitee reminder
@@ -301,10 +322,7 @@ async function createReminderNotifications(
 
     // Optional: also email the inviter (tier 1 and 3) if we have an address.
     if (notifyInviter) {
-      const { data: inviterUser } = await supabase.auth.admin.getUserById(
-        invite.inviter_id,
-      );
-      const inviterEmail = inviterUser.user?.email;
+      const inviterEmail = invite.inviter_email;
 
       if (inviterEmail) {
         const {

@@ -35,18 +35,41 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "No authorization header" }, 401, corsHeaders);
+      return jsonResponse(
+        { error: "No authorization header" },
+        401,
+        corsHeaders,
+      );
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", ""),
-    );
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
 
     if (authError || !user) {
-      return jsonResponse({ error: "Invalid or expired token" }, 401, corsHeaders);
+      return jsonResponse(
+        { error: "Invalid or expired token" },
+        401,
+        corsHeaders,
+      );
     }
 
     const body: CreateInviteRequest = await req.json();
+    const { data: actorProfile, error: actorProfileError } = await supabase
+      .from("users")
+      .select("full_name, email")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (actorProfileError) {
+      console.error("Failed to load inviter profile:", actorProfileError);
+    }
+
+    const inviterName =
+      actorProfile?.full_name?.trim() ||
+      actorProfile?.email?.split("@")[0] ||
+      user.email?.split("@")[0];
     const result = await createHouseholdInvite({
       supabase,
       appUrl,
@@ -56,11 +79,7 @@ serve(async (req) => {
       actorUserId: user.id,
       invitedEmail: body.invited_email,
       personalMessage: body.personal_message,
-      inviterName:
-        body.inviter_name?.trim() ||
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email?.split("@")[0],
+      inviterName,
       householdName: body.household_name,
       expiresInDays:
         typeof body.expires_in_days === "number" ? body.expires_in_days : 7,
