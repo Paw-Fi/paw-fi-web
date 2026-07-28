@@ -426,6 +426,25 @@ function mergeFixedPublicUrls(xmlContent) {
         priority: "0.7",
       },
     },
+    ...[
+      "best-apps-for-couples-to-manage-money-in-2026",
+      "best-bill-splitting-apps-in-2026",
+      "best-budget-apps-for-adhd-in-2026",
+      "best-budget-apps-for-freelancers-in-2026",
+      "best-free-budget-apps-in-2026",
+      "moneko-vs-goodbudget-2026",
+      "moneko-vs-honeydue-2026",
+      "moneko-vs-splid-2026",
+      "moneko-vs-splitwise-2026",
+      "moneko-vs-ynab-2026",
+    ].map((slug) => ({
+      url: `https://moneko.io/blogs/${slug}`,
+      page: {
+        lastmod: "2026-07-28",
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    })),
   ];
 
   const entries = fixedPages
