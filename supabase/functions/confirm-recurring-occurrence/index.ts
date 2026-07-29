@@ -9,7 +9,7 @@ interface RequestBody {
   scheduledOccurrenceDate?: string;
   paidDate?: string;
   amount?: number;
-  accountId?: string;
+  accountId?: string | null;
   merchant?: string;
   description?: string;
   customSplits?: unknown;
@@ -35,42 +35,54 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "POST") {
-    return response({
-      success: false,
-      code: "METHOD_NOT_ALLOWED",
-      error: "Use POST.",
-    }, 405);
+    return response(
+      {
+        success: false,
+        code: "METHOD_NOT_ALLOWED",
+        error: "Use POST.",
+      },
+      405,
+    );
   }
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) {
-    return response({
-      success: false,
-      code: "SERVER_ERROR",
-      error: "Server configuration error",
-    }, 500);
+    return response(
+      {
+        success: false,
+        code: "SERVER_ERROR",
+        error: "Server configuration error",
+      },
+      500,
+    );
   }
   try {
     const body: RequestBody = await req.json();
     const recurringId = validUuid(body.recurringId);
-    const accountId = validUuid(body.accountId);
-    const clientRecordId = body.clientRecordId == null
-      ? null
-      : validUuid(body.clientRecordId);
+    const accountId = body.accountId == null ? null : validUuid(body.accountId);
+    const clientRecordId =
+      body.clientRecordId == null ? null : validUuid(body.clientRecordId);
     const scheduledDate = normalizeCalendarDateString(
       body.scheduledOccurrenceDate ?? "",
     );
     const paidDate = normalizeCalendarDateString(body.paidDate ?? "");
     if (
-      !recurringId || !accountId || !scheduledDate || !paidDate ||
-      !Number.isFinite(body.amount) || (body.amount ?? 0) <= 0 ||
+      !recurringId ||
+      (body.accountId != null && !accountId) ||
+      !scheduledDate ||
+      !paidDate ||
+      !Number.isFinite(body.amount) ||
+      (body.amount ?? 0) <= 0 ||
       (body.clientRecordId != null && !clientRecordId)
     ) {
-      return response({
-        success: false,
-        code: "VALIDATION_ERROR",
-        error: "Invalid occurrence confirmation request",
-      }, 400);
+      return response(
+        {
+          success: false,
+          code: "VALIDATION_ERROR",
+          error: "Invalid occurrence confirmation request",
+        },
+        400,
+      );
     }
     const supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -78,21 +90,27 @@ Deno.serve(async (req) => {
     const auth = await authenticateUserOrInternalSecret(req, supabase);
     const actorUserId = auth.isInternalService
       ? validUuid(body.userId)
-      : auth.userId ?? null;
+      : (auth.userId ?? null);
     if (!auth.success || !actorUserId) {
-      return response({
-        success: false,
-        code: "UNAUTHORIZED",
-        error: auth.error ?? "Authentication required",
-      }, auth.statusCode ?? 401);
+      return response(
+        {
+          success: false,
+          code: "UNAUTHORIZED",
+          error: auth.error ?? "Authentication required",
+        },
+        auth.statusCode ?? 401,
+      );
     }
     const amountCents = Math.round((body.amount ?? 0) * 100);
     if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
-      return response({
-        success: false,
-        code: "VALIDATION_ERROR",
-        error: "Invalid amount",
-      }, 400);
+      return response(
+        {
+          success: false,
+          code: "VALIDATION_ERROR",
+          error: "Invalid amount",
+        },
+        400,
+      );
     }
     const { data, error } = await supabase.rpc(
       "confirm_recurring_occurrence_v1",
@@ -109,14 +127,15 @@ Deno.serve(async (req) => {
         p_payer_user_id: validUuid(body.payerUserId),
         p_update_future_amount: body.updateFutureAmount === true,
         p_client_record_id: clientRecordId,
-        p_idempotency_key: body.idempotencyKey?.trim() ||
-          body.clientMutationId?.trim() || null,
+        p_idempotency_key:
+          body.idempotencyKey?.trim() || body.clientMutationId?.trim() || null,
       },
     );
     if (error) {
       const code =
-        String(error.message ?? "OCCURRENCE_FAILED").match(/OCCURRENCE_[A-Z_]+/)
-          ?.[0] ?? "OCCURRENCE_FAILED";
+        String(error.message ?? "OCCURRENCE_FAILED").match(
+          /OCCURRENCE_[A-Z_]+/,
+        )?.[0] ?? "OCCURRENCE_FAILED";
       return response(
         { success: false, code, error: error.message },
         code === "OCCURRENCE_UNAUTHORIZED" ? 403 : 400,
@@ -124,10 +143,13 @@ Deno.serve(async (req) => {
     }
     return response({ success: true, data });
   } catch (error) {
-    return response({
-      success: false,
-      code: "VALIDATION_ERROR",
-      error: error instanceof Error ? error.message : "Invalid request",
-    }, 400);
+    return response(
+      {
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: error instanceof Error ? error.message : "Invalid request",
+      },
+      400,
+    );
   }
 });

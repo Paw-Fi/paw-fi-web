@@ -9,7 +9,7 @@ interface RequestBody {
   scheduledOccurrenceDate?: string;
   paidDate?: string;
   amount?: number;
-  accountId?: string;
+  accountId?: string | null;
   merchant?: string | null;
   description?: string;
   updateFutureAmount?: boolean;
@@ -30,20 +30,26 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "POST") {
-    return json({
-      success: false,
-      code: "METHOD_NOT_ALLOWED",
-      error: "Use POST.",
-    }, 405);
+    return json(
+      {
+        success: false,
+        code: "METHOD_NOT_ALLOWED",
+        error: "Use POST.",
+      },
+      405,
+    );
   }
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) {
-    return json({
-      success: false,
-      code: "SERVER_ERROR",
-      error: "Server configuration error",
-    }, 500);
+    return json(
+      {
+        success: false,
+        code: "SERVER_ERROR",
+        error: "Server configuration error",
+      },
+      500,
+    );
   }
   try {
     const body: RequestBody = await req.json();
@@ -51,27 +57,29 @@ Deno.serve(async (req) => {
     const scheduledDate = normalizeCalendarDateString(
       body.scheduledOccurrenceDate ?? "",
     );
-    const accountId = body.accountId === undefined
-      ? null
-      : validUuid(body.accountId);
-    const paidDate = body.paidDate === undefined
-      ? null
-      : normalizeCalendarDateString(body.paidDate);
-    const amountCents = body.amount === undefined
-      ? null
-      : Math.round(body.amount * 100);
+    const accountId = body.accountId == null ? null : validUuid(body.accountId);
+    const paidDate =
+      body.paidDate === undefined
+        ? null
+        : normalizeCalendarDateString(body.paidDate);
+    const amountCents =
+      body.amount === undefined ? null : Math.round(body.amount * 100);
     if (
-      !recurringId || !scheduledDate ||
-      (body.accountId !== undefined && !accountId) ||
+      !recurringId ||
+      !scheduledDate ||
+      (body.accountId != null && !accountId) ||
       (body.paidDate !== undefined && !paidDate) ||
       (amountCents !== null &&
         (!Number.isSafeInteger(amountCents) || amountCents <= 0))
     ) {
-      return json({
-        success: false,
-        code: "VALIDATION_ERROR",
-        error: "Invalid occurrence update request",
-      }, 400);
+      return json(
+        {
+          success: false,
+          code: "VALIDATION_ERROR",
+          error: "Invalid occurrence update request",
+        },
+        400,
+      );
     }
     const supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -79,13 +87,16 @@ Deno.serve(async (req) => {
     const auth = await authenticateUserOrInternalSecret(req, supabase);
     const actorUserId = auth.isInternalService
       ? validUuid(body.userId)
-      : auth.userId ?? null;
+      : (auth.userId ?? null);
     if (!auth.success || !actorUserId) {
-      return json({
-        success: false,
-        code: "UNAUTHORIZED",
-        error: auth.error ?? "Authentication required",
-      }, auth.statusCode ?? 401);
+      return json(
+        {
+          success: false,
+          code: "UNAUTHORIZED",
+          error: auth.error ?? "Authentication required",
+        },
+        auth.statusCode ?? 401,
+      );
     }
     const { data, error } = await supabase.rpc(
       "update_recurring_occurrence_v1",
@@ -102,7 +113,8 @@ Deno.serve(async (req) => {
       },
     );
     if (error) {
-      const code = String(error.message).match(/OCCURRENCE_[A-Z_]+/)?.[0] ??
+      const code =
+        String(error.message).match(/OCCURRENCE_[A-Z_]+/)?.[0] ??
         "OCCURRENCE_FAILED";
       return json(
         { success: false, code, error: error.message },
@@ -111,10 +123,13 @@ Deno.serve(async (req) => {
     }
     return json({ success: true, data });
   } catch (error) {
-    return json({
-      success: false,
-      code: "VALIDATION_ERROR",
-      error: error instanceof Error ? error.message : "Invalid request",
-    }, 400);
+    return json(
+      {
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: error instanceof Error ? error.message : "Invalid request",
+      },
+      400,
+    );
   }
 });

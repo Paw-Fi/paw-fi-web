@@ -45,7 +45,6 @@ import {
   assertCheckoutSessionCurrency,
   buildRegionalPriceCacheKey,
   getRegionalCheckoutAmount,
-  isCommitmentAvailableForCountry,
   resolveRegionalCheckoutMarket,
 } from "../shared/regional-checkout.ts";
 import { buildCheckoutRedirectUrls } from "../shared/checkout-redirect.ts";
@@ -306,24 +305,6 @@ serve(async (req: Request) => {
           },
         );
       }
-    }
-
-    if (
-      plan === "plus" &&
-      billingInterval === "yearly" &&
-      !isCommitmentAvailableForCountry(requestedCountry)
-    ) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "The monthly annual commitment is not available in this country",
-          code: "COMMITMENT_UNAVAILABLE_IN_COUNTRY",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
     }
 
     const expectedCheckoutAmount = getRegionalCheckoutAmount(

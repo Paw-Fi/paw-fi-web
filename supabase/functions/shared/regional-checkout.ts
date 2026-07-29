@@ -6,13 +6,6 @@ import {
 } from "./regional-pricing.generated.ts";
 
 const DEFAULT_CHECKOUT_COUNTRY = "US";
-const COMMITMENT_UNAVAILABLE_COUNTRIES = new Set(["US", "SG", "AU"]);
-
-export function isCommitmentAvailableForCountry(countryCode: string): boolean {
-  return !COMMITMENT_UNAVAILABLE_COUNTRIES.has(
-    countryCode.trim().toUpperCase(),
-  );
-}
 
 export function buildRegionalPriceCacheKey(
   lookupKey: string,
