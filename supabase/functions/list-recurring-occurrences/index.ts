@@ -24,37 +24,50 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "POST") {
-    return json({
-      success: false,
-      code: "METHOD_NOT_ALLOWED",
-      error: "Use POST.",
-    }, 405);
+    return json(
+      {
+        success: false,
+        code: "METHOD_NOT_ALLOWED",
+        error: "Use POST.",
+      },
+      405,
+    );
   }
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) {
-    return json({
-      success: false,
-      code: "SERVER_ERROR",
-      error: "Server configuration error",
-    }, 500);
+    return json(
+      {
+        success: false,
+        code: "SERVER_ERROR",
+        error: "Server configuration error",
+      },
+      500,
+    );
   }
   try {
     const body: RequestBody = await req.json();
     const recurringId = validUuid(body.recurringId);
-    const beforeDate = body.beforeScheduledDate === undefined
-      ? null
-      : normalizeCalendarDateString(body.beforeScheduledDate);
+    const beforeDate =
+      body.beforeScheduledDate === undefined
+        ? null
+        : normalizeCalendarDateString(body.beforeScheduledDate);
     const limit = body.limit === undefined ? 50 : Math.trunc(body.limit);
     if (
-      !recurringId || (body.beforeScheduledDate !== undefined && !beforeDate) ||
-      !Number.isSafeInteger(limit) || limit < 1 || limit > 100
+      !recurringId ||
+      (body.beforeScheduledDate !== undefined && !beforeDate) ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 100
     ) {
-      return json({
-        success: false,
-        code: "VALIDATION_ERROR",
-        error: "Invalid occurrence list request",
-      }, 400);
+      return json(
+        {
+          success: false,
+          code: "VALIDATION_ERROR",
+          error: "Invalid occurrence list request",
+        },
+        400,
+      );
     }
     const supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -62,16 +75,19 @@ Deno.serve(async (req) => {
     const auth = await authenticateUserOrInternalSecret(req, supabase);
     const actorUserId = auth.isInternalService
       ? validUuid(body.userId)
-      : auth.userId ?? null;
+      : (auth.userId ?? null);
     if (!auth.success || !actorUserId) {
-      return json({
-        success: false,
-        code: "UNAUTHORIZED",
-        error: auth.error ?? "Authentication required",
-      }, auth.statusCode ?? 401);
+      return json(
+        {
+          success: false,
+          code: "UNAUTHORIZED",
+          error: auth.error ?? "Authentication required",
+        },
+        auth.statusCode ?? 401,
+      );
     }
     const { data, error } = await supabase.rpc(
-      "list_recurring_occurrences_v1",
+      "list_recurring_occurrences_v2",
       {
         p_actor_user_id: actorUserId,
         p_recurring_id: recurringId,
@@ -80,7 +96,8 @@ Deno.serve(async (req) => {
       },
     );
     if (error) {
-      const code = String(error.message).match(/OCCURRENCE_[A-Z_]+/)?.[0] ??
+      const code =
+        String(error.message).match(/OCCURRENCE_[A-Z_]+/)?.[0] ??
         "OCCURRENCE_FAILED";
       return json(
         { success: false, code, error: error.message },
@@ -89,10 +106,13 @@ Deno.serve(async (req) => {
     }
     return json({ success: true, data });
   } catch (error) {
-    return json({
-      success: false,
-      code: "VALIDATION_ERROR",
-      error: error instanceof Error ? error.message : "Invalid request",
-    }, 400);
+    return json(
+      {
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: error instanceof Error ? error.message : "Invalid request",
+      },
+      400,
+    );
   }
 });

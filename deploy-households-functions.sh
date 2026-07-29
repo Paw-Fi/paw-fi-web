@@ -135,6 +135,12 @@ supabase functions deploy skip-recurring-occurrence --project-ref $PROJECT_REF
 echo "✅ skip-recurring-occurrence deployed"
 echo ""
 
+# Step 19: Deploy recurring-read 
+echo "📦 [19/19] Deploying recurring-read function..."
+supabase functions deploy recurring-read  --project-ref $PROJECT_REF
+echo "✅recurring-read  deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"
