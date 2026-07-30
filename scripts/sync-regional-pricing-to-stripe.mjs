@@ -31,18 +31,15 @@ const PRICE_TARGETS = [
     ],
   },
   {
-    id: "plus_commitment_monthly",
-    label: "Plus monthly with 12-month commitment",
+    id: "plus_yearly",
+    label: "Plus yearly paid upfront",
     amountKey: "yearly",
-    amountDivisor: 12,
     expectedType: "recurring",
-    expectedInterval: "month",
-    productEnvironmentNames: [
-      "STRIPE_PLUS_COMMITMENT_PRODUCT_ID",
-      "STRIPE_PLUS_YEARLY_PRODUCT_ID",
-    ],
+    expectedInterval: "year",
+    productEnvironmentNames: ["STRIPE_PLUS_YEARLY_PRODUCT_ID"],
     templatePriceEnvironmentNames: [
-      "STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID",
+      "STRIPE_YEARLY_PLUS_PLAN_ID",
+      "STRIPE_PLUS_YEARLY_PRICE_ID",
     ],
   },
   {
@@ -165,7 +162,7 @@ export function buildMultiCurrencyPlanPricing(catalogPricing, target) {
 export function resolvePriceTargets(environment) {
   return PRICE_TARGETS.map((target) => {
     const productEnvironmentName = target.productEnvironmentNames.find((name) =>
-      environment[name]?.trim(),
+      environment[name]?.trim()
     );
     const configuredProductId = productEnvironmentName
       ? environment[productEnvironmentName].trim()
@@ -176,16 +173,16 @@ export function resolvePriceTargets(environment) {
       );
     }
 
-    const templatePriceEnvironmentName =
-      target.templatePriceEnvironmentNames.find((name) =>
-        environment[name]?.trim(),
-      );
+    const templatePriceEnvironmentName = target.templatePriceEnvironmentNames
+      .find((name) => environment[name]?.trim());
     const templatePriceId = templatePriceEnvironmentName
       ? environment[templatePriceEnvironmentName].trim()
       : "";
     if (!configuredProductId && !templatePriceId) {
       fail(
-        `${target.label}: set one of ${target.productEnvironmentNames.join(", ")}` +
+        `${target.label}: set one of ${
+          target.productEnvironmentNames.join(", ")
+        }` +
           ` (preferred), or ${target.templatePriceEnvironmentNames.join(", ")}`,
       );
     }
@@ -230,7 +227,9 @@ export function validateTemplatePrice(target, price, expectedLivemode) {
     price.recurring?.interval !== target.expectedInterval
   ) {
     issues.push(
-      `expected ${target.expectedInterval} interval, received ${price.recurring?.interval ?? "none"}`,
+      `expected ${target.expectedInterval} interval, received ${
+        price.recurring?.interval ?? "none"
+      }`,
     );
   }
   return issues;
@@ -238,8 +237,9 @@ export function validateTemplatePrice(target, price, expectedLivemode) {
 
 export function validateTargetProduct(product, expectedLivemode) {
   const issues = [];
-  if (product.livemode !== expectedLivemode)
+  if (product.livemode !== expectedLivemode) {
     issues.push("API key mode mismatch");
+  }
   if (!product.active) issues.push("Product is inactive");
   if (!String(product.id ?? "").startsWith("prod_")) {
     issues.push("Product ID is missing");
@@ -260,22 +260,23 @@ export function validateRegionalStripePrice({
   }
   if (String(price.currency).toLowerCase() !== pricing.defaultCurrency) {
     issues.push(
-      `expected default currency ${pricing.defaultCurrency.toUpperCase()}, received ${String(price.currency).toUpperCase()}`,
+      `expected default currency ${pricing.defaultCurrency.toUpperCase()}, received ${
+        String(price.currency).toUpperCase()
+      }`,
     );
   }
 
   const actualCurrencies = new Set([
     String(price.currency).toLowerCase(),
     ...Object.keys(price.currency_options ?? {}).map((value) =>
-      value.toLowerCase(),
+      value.toLowerCase()
     ),
   ]);
   const expectedCurrencies = Object.keys(pricing.currencyAmounts);
   for (const currency of expectedCurrencies) {
-    const actualAmount =
-      currency === pricing.defaultCurrency
-        ? stripeUnitAmount(price)
-        : stripeUnitAmount(price.currency_options?.[currency]);
+    const actualAmount = currency === pricing.defaultCurrency
+      ? stripeUnitAmount(price)
+      : stripeUnitAmount(price.currency_options?.[currency]);
     const expectedAmount = pricing.currencyAmounts[currency];
     if (actualAmount !== expectedAmount) {
       issues.push(
@@ -431,7 +432,9 @@ export async function main(argv = process.argv.slice(2)) {
       );
       if (templateIssues.length > 0) {
         fail(
-          `${target.label} fallback Price is invalid: ${templateIssues.join("; ")}`,
+          `${target.label} fallback Price is invalid: ${
+            templateIssues.join("; ")
+          }`,
         );
       }
       resolvedProductId = productId(template);
@@ -464,13 +467,13 @@ export async function main(argv = process.argv.slice(2)) {
       const existing = await findPriceByLookupKey(stripe, desired.lookupKey);
       const issues = existing
         ? validateRegionalStripePrice({
-            target: desired.target,
-            pricing: desired.pricing,
-            price: existing,
-            expectedProductId: targetConfigurations.get(desired.target.id)
-              .productId,
-            expectedLivemode,
-          })
+          target: desired.target,
+          pricing: desired.pricing,
+          price: existing,
+          expectedProductId: targetConfigurations.get(desired.target.id)
+            .productId,
+          expectedLivemode,
+        })
         : [];
       return { ...desired, existing, issues };
     }),
@@ -524,8 +527,7 @@ export async function main(argv = process.argv.slice(2)) {
   );
 }
 
-const isMainModule =
-  process.argv[1] &&
+const isMainModule = process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMainModule) {

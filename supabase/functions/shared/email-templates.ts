@@ -31,19 +31,23 @@ export const subscriptionCreatedTemplate = (data: {
   const subscriptionMessage = data.isLifetime
     ? "Your Moneko Plus Lifetime access is now active, with no recurring subscription charges."
     : data.endDate
-      ? `Your subscription is now active and is scheduled to renew on ${formatDate(
-          data.endDate,
-        )}.`
-      : "Your Moneko Plus subscription is now active.";
+    ? `Your subscription is now active and is scheduled to renew on ${
+      formatDate(
+        data.endDate,
+      )
+    }.`
+    : "Your Moneko Plus subscription is now active.";
   const accessTitle = data.isLifetime
     ? "Welcome to Moneko Plus Lifetime"
     : "Welcome to Moneko Plus";
 
   const content = `
     <h1 class="title">${accessTitle}</h1>
-    <p class="subtitle">Thank you for joining Moneko. ${escapeHtml(
+    <p class="subtitle">Thank you for joining Moneko. ${
+    escapeHtml(
       subscriptionMessage,
-    )}</p>
+    )
+  }</p>
     <p>You can now use WhatsApp Capture, Email Receipt Capture, advanced budgeting tools, and Bank Sync where supported. A great way to get started is to log your next expense in Moneko.</p>
     ${renderButton("Open Moneko", sanitizeUrl(LINKS.appHome))}
     ${mobileDownloadCtasHtml()}
@@ -72,34 +76,33 @@ export const subscriptionUpdatedTemplate = (data: {
   dashboardUrl: string;
   changeType: "upgrade" | "downgrade" | "renewal" | "interval_changed";
 }) => {
-  const title =
-    data.changeType === "upgrade"
-      ? "Welcome to Moneko Plus"
-      : data.changeType === "downgrade"
-        ? "Your Moneko Plan Has Changed"
-        : data.changeType === "interval_changed"
-          ? "Your Billing Schedule Has Changed"
-          : "Your Moneko Subscription Has Renewed";
+  const title = data.changeType === "upgrade"
+    ? "Welcome to Moneko Plus"
+    : data.changeType === "downgrade"
+    ? "Your Moneko Plan Has Changed"
+    : data.changeType === "interval_changed"
+    ? "Your Billing Schedule Has Changed"
+    : "Your Moneko Subscription Has Renewed";
 
-  const subtitle =
-    data.changeType === "upgrade"
-      ? "Your upgrade is complete."
-      : data.changeType === "downgrade"
-        ? "Your Moneko Plus access has ended."
-        : data.changeType === "interval_changed"
-          ? "Your billing schedule has changed."
-          : "Your subscription has renewed.";
+  const subtitle = data.changeType === "upgrade"
+    ? "Your upgrade is complete."
+    : data.changeType === "downgrade"
+    ? "Your Moneko Plus access has ended."
+    : data.changeType === "interval_changed"
+    ? "Your billing schedule has changed."
+    : "Your subscription has renewed.";
 
-  const valueMessage =
-    data.changeType === "upgrade"
-      ? "You now have access to WhatsApp Capture, Email Receipt Capture, advanced budgeting tools, and Bank Sync where supported."
-      : data.changeType === "downgrade"
-        ? "Your Moneko Plus access has ended, but you can continue tracking and managing your finances with Moneko Free."
-        : data.changeType === "interval_changed"
-          ? `Your updated billing schedule is now in effect. Your Moneko access continues through ${formatDate(
-              data.endDate,
-            )}.`
-          : `Your Moneko Plus access continues through ${formatDate(data.endDate)}.`;
+  const valueMessage = data.changeType === "upgrade"
+    ? "You now have access to WhatsApp Capture, Email Receipt Capture, advanced budgeting tools, and Bank Sync where supported."
+    : data.changeType === "downgrade"
+    ? "Your Moneko Plus access has ended, but you can continue tracking and managing your finances with Moneko Free."
+    : data.changeType === "interval_changed"
+    ? `Your updated billing schedule is now in effect. Your Moneko access continues through ${
+      formatDate(
+        data.endDate,
+      )
+    }.`
+    : `Your Moneko Plus access continues through ${formatDate(data.endDate)}.`;
 
   const content = `
     <h1 class="title">${escapeHtml(title)}</h1>
@@ -142,19 +145,23 @@ export const subscriptionCanceledTemplate = (data: {
       "Your Moneko Plus access is no longer active, but you can continue using Moneko Free.";
   } else {
     subtitle = data.endDate
-      ? `You’ll continue to have access to all Moneko Plus features until ${formatDate(
+      ? `You’ll continue to have access to all Moneko Plus features until ${
+        formatDate(
           data.endDate,
-        )}.`
+        )
+      }.`
       : "You’ll continue to have access to Moneko Plus until the end of your current billing period.";
   }
 
   const content = `
     <h1 class="title">${escapeHtml(title)}</h1>
     <p class="subtitle">${escapeHtml(subtitle)}</p>
-    ${renderButton(
+    ${
+    renderButton(
       data.immediateCancel ? "View Plans" : "Open Moneko",
       sanitizeUrl(data.immediateCancel ? LINKS.pricing : LINKS.appHome),
-    )}
+    )
+  }
     ${mobileDownloadCtasHtml()}
     <p>If you’re open to sharing, just reply and let us know what Moneko was missing or what we could have done better. Even a short response would be really helpful.</p>
     <p>Thank you for giving Moneko a try.</p>
@@ -230,10 +237,12 @@ export const refundProcessedTemplate = (data: {
   const content = `
     <h1 class="title">Your Refund Has Been Processed</h1>
     <p>${renderGreeting(data.name)}</p>
-    <p class="subtitle">We have processed your refund of ${formatCurrency(
+    <p class="subtitle">We have processed your refund of ${
+    formatCurrency(
       data.amount,
       data.currency,
-    )}.</p>
+    )
+  }.</p>
     <p>The funds will be returned to your original payment method. Most refunds appear within 5-10 business days, depending on your bank or card provider.</p>
     <p>If the refund has not appeared after 10 business days, reply to this email and our support team will help you.</p>
     <p>The Moneko Team</p>
@@ -262,20 +271,22 @@ export const refundFailedTemplate = (data: {
   const content = `
     <h1 class="title">We Couldn’t Complete Your Refund</h1>
     <p>${renderGreeting(data.name)}</p>
-    <p class="subtitle">Your refund of ${formatCurrency(
+    <p class="subtitle">Your refund of ${
+    formatCurrency(
       data.amount,
       data.currency,
-    )} could not be completed.</p>
+    )
+  } could not be completed.</p>
     ${
-      data.failureReason
-        ? `<p><strong>Reason:</strong> ${escapeHtml(data.failureReason)}</p>`
-        : ""
-    }
+    data.failureReason
+      ? `<p><strong>Reason:</strong> ${escapeHtml(data.failureReason)}</p>`
+      : ""
+  }
     ${
-      data.accessRestored
-        ? "<p>Your Moneko Plus Lifetime access has been restored because the refund did not complete.</p>"
-        : ""
-    }
+    data.accessRestored
+      ? "<p>Your Moneko Plus Lifetime access has been restored because the refund did not complete.</p>"
+      : ""
+  }
     <p>Please reply to this email so our support team can arrange another way to return the funds.</p>
     <p>The Moneko Team</p>
   `;
@@ -313,19 +324,19 @@ export const paymentFailedTemplate = (data: {
 
   const content = `
     <h1 class="title">We Couldn’t Process Your Moneko Payment</h1>
-    <p class="subtitle">We couldn’t process your latest payment for ${escapeHtml(
+    <p class="subtitle">We couldn’t process your latest payment for ${
+    escapeHtml(
       data.planName,
-    )}.</p>
+    )
+  }.</p>
     ${
-      data.failureReason
-        ? `<p>Reason: ${escapeHtml(data.failureReason)}</p>`
-        : ""
-    }
+    data.failureReason ? `<p>Reason: ${escapeHtml(data.failureReason)}</p>` : ""
+  }
     ${
-      isDowngraded
-        ? `<p>Your Moneko Plus access has ended, but you can continue using Moneko Free. Update your payment details to reactivate Moneko Plus.</p>`
-        : `<p>Please update your payment details to keep your Moneko Plus access active.</p>`
-    }
+    isDowngraded
+      ? `<p>Your Moneko Plus access has ended, but you can continue using Moneko Free. Update your payment details to reactivate Moneko Plus.</p>`
+      : `<p>Please update your payment details to keep your Moneko Plus access active.</p>`
+  }
     ${renderButton(paymentActionText, sanitizeUrl(paymentActionUrl))}
     <p>If you believe this is an error, please contact our support team for assistance.</p>
     <p>The Moneko Team</p>
@@ -353,9 +364,11 @@ export const trialEndingTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Your Moneko Plus Trial Ends Soon</h1>
-    <p class="subtitle">Your ${escapeHtml(data.planName)} trial will end on ${formatDate(
+    <p class="subtitle">Your ${escapeHtml(data.planName)} trial will end on ${
+    formatDate(
       data.trialEndDate,
-    )}.</p>
+    )
+  }.</p>
     <p>Choose a plan before your trial ends to continue using Moneko Plus without interruption.</p>
     ${renderButton("Choose a Plan", sanitizeUrl(LINKS.membership))}
     <p>If you have any questions, just reply to this email and our support team will help you out.</p>
@@ -383,12 +396,14 @@ export const referralAcceptedTemplate = (data: {
   const content = `
     <h1 class="title">Your Friend Joined Moneko Through Your Referral</h1>
     <p class="subtitle">${renderGreeting(data.referrerName)} ${
-      data.refereeName
-        ? `${escapeHtml(
-            data.refereeName,
-          )} completed their purchase through your referral link.`
-        : "Your friend completed their purchase through your referral link."
-    }</p>
+    data.refereeName
+      ? `${
+        escapeHtml(
+          data.refereeName,
+        )
+      } completed their purchase through your referral link.`
+      : "Your friend completed their purchase through your referral link."
+  }</p>
     <p>Thanks for recommending Moneko. Your referral helped them receive 50% off Moneko Plus Lifetime.</p>
     ${mobileDownloadCtasHtml()}
     <p>Keep sharing your link to help more people discover Moneko and claim the discounted lifetime offer.</p>
@@ -416,12 +431,16 @@ export const referralSuccessfulTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Welcome to Moneko Plus Lifetime</h1>
-    <p class="subtitle">${renderGreeting(
+    <p class="subtitle">${
+    renderGreeting(
       data.name,
-    )} Your referral purchase is complete.</p>
-    <p>Your Moneko Plus Lifetime access is now active, with no recurring subscription charges. Thanks to ${escapeHtml(
+    )
+  } Your referral purchase is complete.</p>
+    <p>Your Moneko Plus Lifetime access is now active, with no recurring subscription charges. Thanks to ${
+    escapeHtml(
       data.referrerName,
-    )} for inviting you.</p>
+    )
+  } for inviting you.</p>
     ${renderButton("Open Moneko", sanitizeUrl(LINKS.appHome))}
     ${mobileDownloadCtasHtml()}
     <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
@@ -482,14 +501,13 @@ export const householdInviteTemplate = (data: {
 }) => {
   const inviter = data.inviterName?.trim();
   const household = data.householdName?.trim();
-  const title =
-    inviter && household
-      ? `${inviter} invited you to ${household}`
-      : inviter
-        ? `${inviter} invited you to a shared space`
-        : household
-          ? `You are invited to ${household}`
-          : "You are invited to join a shared space";
+  const title = inviter && household
+    ? `${inviter} invited you to ${household}`
+    : inviter
+    ? `${inviter} invited you to a shared space`
+    : household
+    ? `You are invited to ${household}`
+    : "You are invited to join a shared space";
   const subtitle = household
     ? `Join ${household} on Moneko to manage shared expenses and budgets together.`
     : "Join your shared space on Moneko to manage expenses and budgets together.";
@@ -499,12 +517,14 @@ export const householdInviteTemplate = (data: {
     <h1 class="title">${escapeHtml(title)}</h1>
     <p class="subtitle">${escapeHtml(subtitle)}</p>
     ${
-      safeMessage
-        ? `<p><strong>Personal message:</strong></p><p>${escapeHtml(
-            safeMessage,
-          )}</p>`
-        : ""
-    }
+    safeMessage
+      ? `<p><strong>Personal message:</strong></p><p>${
+        escapeHtml(
+          safeMessage,
+        )
+      }</p>`
+      : ""
+  }
     <p>Click the button below to accept your invitation.</p>
     ${renderButton("Accept Invitation", sanitizeUrl(data.inviteUrl))}
     <p>If you did not expect this email, you can safely ignore it.</p>
@@ -523,10 +543,10 @@ export const householdInviteTemplate = (data: {
       inviter && household
         ? `${inviter} invited you to ${household} on Moneko`
         : inviter
-          ? `${inviter} invited you to a space on Moneko`
-          : household
-            ? `Invitation to join ${household} on Moneko`
-            : "Invitation to join a space on Moneko",
+        ? `${inviter} invited you to a space on Moneko`
+        : household
+        ? `Invitation to join ${household} on Moneko`
+        : "Invitation to join a space on Moneko",
     ),
   };
 };
@@ -542,24 +562,30 @@ export const courseCompletionTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Congratulations on Completing Your Course</h1>
-    <p class="subtitle">${renderGreeting(
+    <p class="subtitle">${
+    renderGreeting(
       data.name,
-    )} You successfully completed the <strong>${escapeHtml(
+    )
+  } You successfully completed the <strong>${
+    escapeHtml(
       data.courseName,
-    )}</strong> course on ${formatDate(data.completionDate)}.</p>
+    )
+  }</strong> course on ${formatDate(data.completionDate)}.</p>
     <p>Thank you for taking another step in building your financial knowledge.</p>
     ${
-      data.certificateUrl
-        ? renderButton("Download Certificate", sanitizeUrl(data.certificateUrl))
-        : ""
-    }
+    data.certificateUrl
+      ? renderButton("Download Certificate", sanitizeUrl(data.certificateUrl))
+      : ""
+  }
     ${
-      data.nextCourseUrl
-        ? `<p>Ready for your next challenge? <a href="${sanitizeUrl(
-            data.nextCourseUrl,
-          )}">Check out recommended courses</a> to continue your learning journey.</p>`
-        : ""
-    }
+    data.nextCourseUrl
+      ? `<p>Ready for your next challenge? <a href="${
+        sanitizeUrl(
+          data.nextCourseUrl,
+        )
+      }">Check out recommended courses</a> to continue your learning journey.</p>`
+      : ""
+  }
     ${mobileDownloadCtasHtml()}
     <p>Keep up the great work.</p>
     <p>The Moneko Team</p>
@@ -591,31 +617,37 @@ export const invoiceFinalizedTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Your Invoice Is Ready</h1>
-    <p class="subtitle">A new invoice for ${escapeHtml(
+    <p class="subtitle">A new invoice for ${
+    escapeHtml(
       data.planName,
-    )} is ready to view.</p>
-    <p><strong>Amount:</strong> ${formatCurrency(
+    )
+  } is ready to view.</p>
+    <p><strong>Amount:</strong> ${
+    formatCurrency(
       data.amount,
       data.currency,
-    )}</p>
+    )
+  }</p>
     ${
-      data.dueDate
-        ? `<p><strong>Due Date:</strong> ${formatDate(data.dueDate)}</p>`
-        : ""
-    }
+    data.dueDate
+      ? `<p><strong>Due Date:</strong> ${formatDate(data.dueDate)}</p>`
+      : ""
+  }
     ${renderButton("View Invoice", sanitizeUrl(data.invoiceUrl))}
     ${
-      data.invoicePdfUrl
-        ? `<p>You can also <a href="${sanitizeUrl(
-            data.invoicePdfUrl,
-          )}">download the PDF version</a>.</p>`
-        : ""
-    }
+    data.invoicePdfUrl
+      ? `<p>You can also <a href="${
+        sanitizeUrl(
+          data.invoicePdfUrl,
+        )
+      }">download the PDF version</a>.</p>`
+      : ""
+  }
     ${
-      data.dueDate
-        ? "<p>Please review the invoice and complete payment by the due date if needed.</p>"
-        : "<p>If you have automatic payments enabled, your payment method will be charged automatically.</p>"
-    }
+    data.dueDate
+      ? "<p>Please review the invoice and complete payment by the due date if needed.</p>"
+      : "<p>If you have automatic payments enabled, your payment method will be charged automatically.</p>"
+  }
     <p>If you have any questions about this invoice, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
@@ -680,20 +712,24 @@ export const invoiceUpcomingTemplate = (data: {
 
   const content = `
     <h1 class="title">Upcoming Subscription Renewal</h1>
-    <p class="subtitle">Your ${escapeHtml(
+    <p class="subtitle">Your ${
+    escapeHtml(
       data.planName,
-    )} subscription is scheduled to renew on ${formatDate(data.chargeDate)}.</p>
-    <p><strong>Amount:</strong> ${formatCurrency(
+    )
+  } subscription is scheduled to renew on ${formatDate(data.chargeDate)}.</p>
+    <p><strong>Amount:</strong> ${
+    formatCurrency(
       data.amount,
       data.currency,
-    )}</p>
+    )
+  }</p>
     <p><strong>Renewal Date:</strong> ${formatDate(data.chargeDate)}</p>
     <p>Your subscription is scheduled to renew on this date. The payment method on file will be charged.</p>
     ${
-      shouldShowPaymentUpdate
-        ? "<p>Please ensure your payment method is up to date to avoid any interruption in service.</p>"
-        : ""
-    }
+    shouldShowPaymentUpdate
+      ? "<p>Please ensure your payment method is up to date to avoid any interruption in service.</p>"
+      : ""
+  }
     ${renderButton(actionText, sanitizeUrl(actionUrl))}
     <p>If you want to make changes to your subscription or cancel, please do so before the renewal date.</p>
     <p>The Moneko Team</p>
@@ -709,9 +745,11 @@ export const invoiceUpcomingTemplate = (data: {
     ),
     text: htmlToText(content),
     subject: sanitizeSubject(
-      `Your ${data.planName} Subscription Renews on ${formatDate(
-        data.chargeDate,
-      )}`,
+      `Your ${data.planName} Subscription Renews on ${
+        formatDate(
+          data.chargeDate,
+        )
+      }`,
     ),
   };
 };
@@ -727,28 +765,36 @@ export const paymentActionRequiredTemplate = (data: {
   dashboardUrl: string;
 }) => {
   const expiryText = data.expiryHours
-    ? `Please complete this additional security check within ${data.expiryHours} ${pluralize(
+    ? `Please complete this additional security check within ${data.expiryHours} ${
+      pluralize(
         data.expiryHours,
         "hour",
-      )} to avoid subscription interruption.`
+      )
+    } to avoid subscription interruption.`
     : "";
 
   const content = `
     <h1 class="title">Verify Your Moneko Payment</h1>
-    <p class="subtitle">Your bank requires additional verification before we can complete your ${escapeHtml(
+    <p class="subtitle">Your bank requires additional verification before we can complete your ${
+    escapeHtml(
       data.planName,
-    )} payment.</p>
-    <p><strong>Amount:</strong> ${formatCurrency(
+    )
+  } payment.</p>
+    <p><strong>Amount:</strong> ${
+    formatCurrency(
       data.amount,
       data.currency,
-    )}</p>
+    )
+  }</p>
     <p>Your bank requires an additional security check to complete this payment.</p>
     ${renderButton("Authenticate Payment", sanitizeUrl(data.authenticationUrl))}
     ${expiryText ? `<p>${escapeHtml(expiryText)}</p>` : ""}
     <p>This additional verification helps protect your payment.</p>
-    <p>If you don't recognize this charge, please <a href="${sanitizeUrl(
+    <p>If you don't recognize this charge, please <a href="${
+    sanitizeUrl(
       LINKS.membership,
-    )}">review your subscription</a> immediately.</p>
+    )
+  }">review your subscription</a> immediately.</p>
     <p>The Moneko Team</p>
   `;
 
@@ -775,16 +821,20 @@ export const paymentMethodUpdatedTemplate = (data: {
   const content = `
     <h1 class="title">Your Payment Method Was Updated</h1>
     <p class="subtitle">Your new payment method will be used for future Moneko subscription payments.</p>
-    <p><strong>Payment Method:</strong> ${escapeHtml(
+    <p><strong>Payment Method:</strong> ${
+    escapeHtml(
       data.paymentMethodType,
-    )}</p>
+    )
+  }</p>
     ${
-      data.paymentMethodDetails
-        ? `<p><strong>Details:</strong> ${escapeHtml(
-            data.paymentMethodDetails,
-          )}</p>`
-        : ""
-    }
+    data.paymentMethodDetails
+      ? `<p><strong>Details:</strong> ${
+        escapeHtml(
+          data.paymentMethodDetails,
+        )
+      }</p>`
+      : ""
+  }
     ${renderButton("Manage Payment Methods", sanitizeUrl(LINKS.membership))}
     <p>If you didn't make this change, please contact our support team immediately.</p>
     <p>The Moneko Team</p>
@@ -813,9 +863,11 @@ export const discountExpiringTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Your Moneko Discount Expires Soon</h1>
-    <p class="subtitle">Your ${data.discountPercent}% promotional discount expires on ${formatDate(
+    <p class="subtitle">Your ${data.discountPercent}% promotional discount expires on ${
+    formatDate(
       data.expiryDate,
-    )}.</p>
+    )
+  }.</p>
     <p>Complete your Moneko Plus subscription before this date to use the discounted price.</p>
     <p><strong>Discount Amount:</strong> ${data.discountPercent}% off</p>
     <p><strong>Expires:</strong> ${formatDate(data.expiryDate)}</p>
@@ -858,23 +910,29 @@ export const invoicePaymentSucceededTemplate = (data: {
     : "Payment Received — Thank You";
   const content = `
     <h1 class="title">${escapeHtml(title)}</h1>
-    <p class="subtitle">We've successfully received your payment for ${escapeHtml(
+    <p class="subtitle">We've successfully received your payment for ${
+    escapeHtml(
       data.planName,
-    )}.</p>
+    )
+  }.</p>
     <p><strong>Invoice Number:</strong> ${escapeHtml(data.invoiceNumber)}</p>
-    <p><strong>Amount Paid:</strong> ${formatCurrency(
+    <p><strong>Amount Paid:</strong> ${
+    formatCurrency(
       data.amount,
       data.currency,
-    )}</p>
+    )
+  }</p>
     <p><strong>Payment Date:</strong> ${formatDate(data.paymentDate)}</p>
     ${renderButton("View Invoice", sanitizeUrl(data.invoiceUrl))}
     ${
-      data.invoicePdfUrl
-        ? `<p>You can also <a href="${sanitizeUrl(
-            data.invoicePdfUrl,
-          )}">download the invoice PDF</a> for your records.</p>`
-        : ""
-    }
+    data.invoicePdfUrl
+      ? `<p>You can also <a href="${
+        sanitizeUrl(
+          data.invoicePdfUrl,
+        )
+      }">download the invoice PDF</a> for your records.</p>`
+      : ""
+  }
     <p>This receipt confirms that your payment was processed successfully. Your subscription remains active, and your current plan access continues.</p>
     <p><a href="${sanitizeUrl(LINKS.membership)}">Manage Subscription</a></p>
     <p>If you have any questions about this payment, just reply to this email and our support team will help you out.</p>
@@ -911,10 +969,10 @@ export const notificationTemplate = (data: {
     <p class="subtitle">${renderGreeting(data.name)}</p>
     <p>${escapeHtml(data.message)}</p>
     ${
-      data.actionUrl && data.actionText
-        ? renderButton(escapeHtml(data.actionText), sanitizeUrl(data.actionUrl))
-        : ""
-    }
+    data.actionUrl && data.actionText
+      ? renderButton(escapeHtml(data.actionText), sanitizeUrl(data.actionUrl))
+      : ""
+  }
     <p>The Moneko Team</p>
   `;
 
@@ -939,9 +997,11 @@ export const mobileBetaWelcomeTemplate = (data: { name: string }) => {
       <li><strong>Bank Sync where supported</strong> - Keep eligible accounts up to date automatically.</li>
     </ul>
     ${mobileDownloadCtasHtml()}
-    <p>Need help or have feedback about Moneko? Reply to this email or contact us at <a href="${sanitizeUrl(
+    <p>Need help or have feedback about Moneko? Reply to this email or contact us at <a href="${
+    sanitizeUrl(
       LINKS.support,
-    )}">hello@moneko.io</a>.</p>
+    )
+  }">hello@moneko.io</a>.</p>
     <p class="muted">The Moneko Team</p>
   `;
 
@@ -968,44 +1028,51 @@ export const inviteReminderInviterTemplate = (data: {
   reminderTier: 1 | 2 | 3;
 }) => {
   const inviteePerson = data.inviteeName || "Your invitee";
-  const timeText =
-    data.daysSinceInvite === 1
-      ? "yesterday"
-      : `${data.daysSinceInvite} days ago`;
+  const timeText = data.daysSinceInvite === 1
+    ? "yesterday"
+    : `${data.daysSinceInvite} days ago`;
 
   let title: string;
   let subtitle: string;
 
   if (data.reminderTier === 3) {
     title = "Your Invitation is Expiring Soon";
-    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${escapeHtml(
-      data.householdName,
-    )} yet, and your invitation expires in 2 days.`;
+    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${
+      escapeHtml(
+        data.householdName,
+      )
+    } yet, and your invitation expires in 2 days.`;
   } else if (data.reminderTier === 2) {
     title = "Your Invitation is Still Pending";
-    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${escapeHtml(
-      data.householdName,
-    )} yet.`;
+    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${
+      escapeHtml(
+        data.householdName,
+      )
+    } yet.`;
   } else {
     title = "Pending Invitation";
-    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${escapeHtml(
-      data.householdName,
-    )} yet.`;
+    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${
+      escapeHtml(
+        data.householdName,
+      )
+    } yet.`;
   }
 
   const content = `
     <h1 class="title">${title}</h1>
     <p class="subtitle">${subtitle}</p>
-    <p>You invited ${escapeHtml(inviteePerson)} to join ${escapeHtml(
+    <p>You invited ${escapeHtml(inviteePerson)} to join ${
+    escapeHtml(
       data.householdName,
-    )} ${timeText}.</p>
+    )
+  } ${timeText}.</p>
     ${
-      data.reminderTier === 3
-        ? `<p>The invitation expires in two days. You can send them a reminder or share the invitation link directly.</p>`
-        : data.reminderTier === 2
-          ? `<p>You may want to send them a quick reminder or share the invitation link directly.</p>`
-          : `<p>They may have missed the email or need a gentle reminder. Feel free to reach out to them directly.</p>`
-    }
+    data.reminderTier === 3
+      ? `<p>The invitation expires in two days. You can send them a reminder or share the invitation link directly.</p>`
+      : data.reminderTier === 2
+      ? `<p>You may want to send them a quick reminder or share the invitation link directly.</p>`
+      : `<p>They may have missed the email or need a gentle reminder. Feel free to reach out to them directly.</p>`
+  }
     ${renderButton("View Invitation", sanitizeUrl(data.inviteUrl))}
     <p>You can also copy and share the invitation link with them via your preferred messaging app.</p>
     <p>The Moneko Team</p>
@@ -1024,8 +1091,8 @@ export const inviteReminderInviterTemplate = (data: {
       data.reminderTier === 3
         ? `Reminder: Your invitation to ${data.householdName} expires soon`
         : `${
-            data.inviteeName || "Your invitee"
-          } hasn't joined ${data.householdName} yet`,
+          data.inviteeName || "Your invitee"
+        } hasn't joined ${data.householdName} yet`,
     ),
   };
 };
@@ -1049,34 +1116,51 @@ export const inviteReminderInviteeTemplate = (data: {
   let bodyMessage: string;
 
   if (data.reminderTier === 3) {
-    title = `Your Invitation to ${escapeHtml(
-      data.householdName,
-    )} Expires in ${daysUntilExpiry} ${pluralize(daysUntilExpiry, "Day")}`;
-    subtitle = `${escapeHtml(data.inviterName)} invited you to join ${escapeHtml(
-      data.householdName,
-    )} on Moneko.`;
-    bodyMessage = `Your invitation expires in ${daysUntilExpiry} ${pluralize(
-      daysUntilExpiry,
-      "day",
-    )}. You can manage shared expenses, budgets, and settlements together with ${escapeHtml(
-      data.inviterName,
-    )}.`;
+    title = `Your Invitation to ${
+      escapeHtml(
+        data.householdName,
+      )
+    } Expires in ${daysUntilExpiry} ${pluralize(daysUntilExpiry, "Day")}`;
+    subtitle = `${escapeHtml(data.inviterName)} invited you to join ${
+      escapeHtml(
+        data.householdName,
+      )
+    } on Moneko.`;
+    bodyMessage = `Your invitation expires in ${daysUntilExpiry} ${
+      pluralize(
+        daysUntilExpiry,
+        "day",
+      )
+    }. You can manage shared expenses, budgets, and settlements together with ${
+      escapeHtml(
+        data.inviterName,
+      )
+    }.`;
   } else if (data.reminderTier === 2) {
-    title = `Reminder: Your Invitation to ${escapeHtml(
-      data.householdName,
-    )} Is Still Available`;
-    subtitle = `${escapeHtml(data.inviterName)} invited you to join ${escapeHtml(
-      data.householdName,
-    )} on Moneko.`;
-    bodyMessage = `It's been ${data.daysSinceInvite} days since the invitation was sent. Once you join, you can manage shared expenses, budgets, and settlements together.`;
+    title = `Reminder: Your Invitation to ${
+      escapeHtml(
+        data.householdName,
+      )
+    } Is Still Available`;
+    subtitle = `${escapeHtml(data.inviterName)} invited you to join ${
+      escapeHtml(
+        data.householdName,
+      )
+    } on Moneko.`;
+    bodyMessage =
+      `It's been ${data.daysSinceInvite} days since the invitation was sent. Once you join, you can manage shared expenses, budgets, and settlements together.`;
   } else {
-    title = `${escapeHtml(data.inviterName)} invited you to join ${escapeHtml(
-      data.householdName,
-    )}`;
+    title = `${escapeHtml(data.inviterName)} invited you to join ${
+      escapeHtml(
+        data.householdName,
+      )
+    }`;
     subtitle = "Join your shared space on Moneko.";
-    bodyMessage = `${escapeHtml(
-      data.inviterName,
-    )} sent you an invitation ${data.daysSinceInvite} days ago. Once you join, you can manage shared expenses and budgets together.`;
+    bodyMessage = `${
+      escapeHtml(
+        data.inviterName,
+      )
+    } sent you an invitation ${data.daysSinceInvite} days ago. Once you join, you can manage shared expenses and budgets together.`;
   }
 
   const content = `
@@ -1085,12 +1169,14 @@ export const inviteReminderInviteeTemplate = (data: {
     <p>${subtitle}</p>
     <p>${bodyMessage}</p>
     ${
-      data.personalMessage
-        ? `<p><strong>Personal message from ${escapeHtml(
-            data.inviterName,
-          )}:</strong></p><p><em>"${escapeHtml(data.personalMessage)}"</em></p>`
-        : ""
-    }
+    data.personalMessage
+      ? `<p><strong>Personal message from ${
+        escapeHtml(
+          data.inviterName,
+        )
+      }:</strong></p><p><em>"${escapeHtml(data.personalMessage)}"</em></p>`
+      : ""
+  }
     ${renderButton("Accept Invitation", sanitizeUrl(data.inviteUrl))}
     <p><strong>Why join a space on Moneko?</strong></p>
     <ul>
@@ -1113,13 +1199,15 @@ export const inviteReminderInviteeTemplate = (data: {
     text: htmlToText(content),
     subject: sanitizeSubject(
       data.reminderTier === 3
-        ? `Your invitation to ${data.householdName} expires in ${daysUntilExpiry} ${pluralize(
+        ? `Your invitation to ${data.householdName} expires in ${daysUntilExpiry} ${
+          pluralize(
             daysUntilExpiry,
             "day",
-          )}`
+          )
+        }`
         : data.reminderTier === 2
-          ? `Reminder: Your invitation to ${data.householdName} is still available`
-          : `${data.inviterName} invited you to join ${data.householdName} on Moneko`,
+        ? `Reminder: Your invitation to ${data.householdName} is still available`
+        : `${data.inviterName} invited you to join ${data.householdName} on Moneko`,
     ),
   };
 };

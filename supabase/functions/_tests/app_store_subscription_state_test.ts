@@ -1,9 +1,10 @@
 /// <reference lib="deno.ns" />
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
-  Status,
+  AutoRenewStatus,
   type JWSRenewalInfoDecodedPayload,
   type JWSTransactionDecodedPayload,
+  Status,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 
 import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
@@ -93,6 +94,46 @@ Deno.test(
 
     assertEquals(result.status, "past_due");
     assertEquals(result.currentPeriodEnd, "2026-03-23T00:30:21.000Z");
+  },
+);
+
+Deno.test(
+  "app store subscription state: records disabled renewal without ending current access",
+  () => {
+    const result = resolveAppStoreSubscriptionLifecycle({
+      transaction: createTransaction({
+        expiresDate: Date.UTC(2026, 3, 18, 0, 30, 21),
+      }),
+      renewalInfo: createRenewalInfo({
+        autoRenewStatus: AutoRenewStatus.OFF,
+        renewalDate: Date.UTC(2026, 3, 18, 0, 30, 21),
+      }),
+      subscriptionStatus: Status.ACTIVE,
+      nowMs: Date.UTC(2026, 2, 20, 0, 0, 0),
+    });
+
+    assertEquals(result.status, "active");
+    assertEquals(result.cancelAtPeriodEnd, true);
+  },
+);
+
+Deno.test(
+  "app store subscription state: records enabled renewal",
+  () => {
+    const result = resolveAppStoreSubscriptionLifecycle({
+      transaction: createTransaction({
+        expiresDate: Date.UTC(2026, 3, 18, 0, 30, 21),
+      }),
+      renewalInfo: createRenewalInfo({
+        autoRenewStatus: AutoRenewStatus.ON,
+        renewalDate: Date.UTC(2026, 3, 18, 0, 30, 21),
+      }),
+      subscriptionStatus: Status.ACTIVE,
+      nowMs: Date.UTC(2026, 2, 20, 0, 0, 0),
+    });
+
+    assertEquals(result.status, "active");
+    assertEquals(result.cancelAtPeriodEnd, false);
   },
 );
 

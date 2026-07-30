@@ -276,8 +276,10 @@ serve(async (req) => {
       }
 
       // Downgrading to free means canceling the subscription
+      const effectiveCancellationEnd = (subscription as any)
+        .current_period_end;
       const periodEnd = new Date(
-        (subscription as any).current_period_end || Date.now(),
+        effectiveCancellationEnd || Date.now(),
       ).toLocaleDateString();
       return new Response(
         JSON.stringify({
@@ -292,7 +294,7 @@ serve(async (req) => {
           futureRecurringAmount: 0,
           totalProration: 0,
           currency: "usd",
-          currentPeriodEnd: (subscription as any).current_period_end,
+          currentPeriodEnd: effectiveCancellationEnd,
           message:
             `Your subscription will be canceled and you'll return to the free plan on ${periodEnd}. You'll continue to have access to your current plan until then.`,
         }),

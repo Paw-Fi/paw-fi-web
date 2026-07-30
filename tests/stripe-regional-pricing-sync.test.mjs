@@ -48,30 +48,28 @@ test("workspace catalog can produce exactly three multi-currency Prices", async 
   const targets = [
     monthlyTarget,
     {
-      id: "plus_commitment_monthly",
-      label: "Plus monthly with 12-month commitment",
+      id: "plus_yearly",
+      label: "Plus yearly paid upfront",
       amountKey: "yearly",
-      amountDivisor: 12,
     },
     { id: "lifetime", label: "Lifetime", amountKey: "lifetime" },
   ];
   const prices = targets.map((target) =>
-    buildMultiCurrencyPlanPricing(catalogPricing, target),
+    buildMultiCurrencyPlanPricing(catalogPricing, target)
   );
 
   assert.equal(prices.length, 3);
   assert.equal(Object.keys(prices[0].currencyAmounts).length, 43);
 });
 
-test("commitment pricing divides the annual catalog price into monthly installments", () => {
+test("yearly pricing charges the annual catalog price upfront", () => {
   const pricing = buildMultiCurrencyPlanPricing(buildCatalogMarkets(catalog), {
-    id: "plus_commitment_monthly",
-    label: "Plus monthly with 12-month commitment",
+    id: "plus_yearly",
+    label: "Plus yearly paid upfront",
     amountKey: "yearly",
-    amountDivisor: 12,
   });
 
-  assert.deepEqual(pricing.currencyAmounts, { eur: 625, usd: 667 });
+  assert.deepEqual(pricing.currencyAmounts, { eur: 7499, usd: 7999 });
 });
 
 test("catalog becomes one amount per currency for a plan", () => {
@@ -166,12 +164,12 @@ test("price target resolution prefers direct Product IDs", () => {
 test("price target resolution retains existing Price-ID fallback", () => {
   const targets = resolvePriceTargets({
     STRIPE_PLUS_MONTHLY_PRICE_ID: "price_monthly",
-    STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID: "price_commitment",
+    STRIPE_PLUS_YEARLY_PRICE_ID: "price_yearly",
     STRIPE_LIFETIME_PRICE_ID: "price_lifetime",
   });
   assert.deepEqual(
     targets.map((target) => target.templatePriceId),
-    ["price_monthly", "price_commitment", "price_lifetime"],
+    ["price_monthly", "price_yearly", "price_lifetime"],
   );
 });
 

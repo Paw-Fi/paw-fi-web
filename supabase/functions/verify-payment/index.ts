@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
@@ -54,6 +55,9 @@ type VerifyPaymentResponse = {
     plan: string;
     status: string;
     billing_interval: string | null;
+    payment_interval?: string | null;
+    commitment_months?: number | null;
+    commitment_end?: string | null;
     current_period_end: string | null;
     cancel_at_period_end: boolean;
     trial_end: string | null;
@@ -578,6 +582,41 @@ serve(async (req: Request) => {
     // Retrieve the subscription from Stripe
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
+    const { data: existingSubscription, error: existingSubscriptionError } =
+      await supabase
+        .from("subscriptions")
+        .select("provider, plan, status, stripe_subscription_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+    if (existingSubscriptionError) {
+      throw new Error(
+        `subscriptions lookup failed: ${existingSubscriptionError.message}`,
+      );
+    }
+    const existingOwnsDifferentEntitlement =
+      existingSubscription?.plan !== "free" &&
+      ["active", "trialing", "past_due", "paused"].includes(
+        String(existingSubscription?.status || ""),
+      ) &&
+      (existingSubscription?.plan === "lifetime" ||
+        existingSubscription?.provider !== "stripe" ||
+        (Boolean(existingSubscription?.stripe_subscription_id) &&
+          existingSubscription?.stripe_subscription_id !== subscriptionId));
+    if (existingOwnsDifferentEntitlement) {
+      return new Response(
+        JSON.stringify({
+          verified: false,
+          error:
+            "A different active subscription already owns this account entitlement.",
+          code: "EXISTING_ENTITLEMENT_CONFLICT",
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const entitlement = resolveRecurringPaymentEntitlement(subscription);
     if (!entitlement.verified) {
       return new Response(
@@ -659,6 +698,10 @@ serve(async (req: Request) => {
         plan,
         status,
         billing_interval: billingInterval,
+        payment_interval: billingInterval,
+        commitment_months: null,
+        commitment_end: null,
+        current_price_id: subscription.items.data[0]?.price?.id ?? null,
         current_period_end: currentPeriodEnd,
         cancel_at_period_end: cancelAtPeriodEnd,
         trial_start: safeUnixToISO(subscription.trial_start),
@@ -708,6 +751,9 @@ serve(async (req: Request) => {
           plan,
           status,
           billing_interval: billingInterval,
+          payment_interval: billingInterval,
+          commitment_months: null,
+          commitment_end: null,
           current_period_end: currentPeriodEnd || null,
           cancel_at_period_end: cancelAtPeriodEnd,
           trial_end: trialEnd,

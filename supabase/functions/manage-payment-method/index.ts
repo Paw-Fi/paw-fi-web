@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
-import { subscriptionHasCommitmentPrice } from "../shared/stripe-subscription-prices.ts";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 
@@ -416,29 +415,11 @@ serve(async (req) => {
       case "create_portal_session": {
         // Create a billing portal session for the customer
         // This allows customers to manage their subscription, payment methods, and billing history
-        const stripeSubscription = await stripe.subscriptions.retrieve(
-          subscription.stripe_subscription_id,
-        );
-        const isCommitment = subscriptionHasCommitmentPrice(stripeSubscription);
-        const commitmentPortalConfiguration = Deno.env.get(
-          "STRIPE_COMMITMENT_PORTAL_CONFIGURATION_ID",
-        );
-        if (
-          isCommitment &&
-          !commitmentPortalConfiguration?.startsWith("bpc_")
-        ) {
-          throw new Error(
-            "STRIPE_COMMITMENT_PORTAL_CONFIGURATION_ID is not configured",
-          );
-        }
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: subscription.stripe_customer_id,
           return_url: `${
             req.headers.get("origin") || "https://moneko.io"
           }/dashboard/user-settings/membership`,
-          ...(isCommitment
-            ? { configuration: commitmentPortalConfiguration }
-            : {}),
         });
 
         return new Response(

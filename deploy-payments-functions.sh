@@ -12,7 +12,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="pbopcsmrcykdzbilpilf"
+PROJECT_REF="qbuynyxyemigtnvdujts"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  Deploying Payments Functions to Supabase"
@@ -110,7 +110,7 @@ echo "   Required (Stripe / web checkout):"
 echo "   - STRIPE_SECRET_KEY=sk_..."
 echo "   - STRIPE_WEBHOOK_SECRET=whsec_..."
 echo "   - STRIPE_MONTHLY_PLUS_PLAN_ID=price_..."
-echo "   - STRIPE_YEARLY_PLUS_PLAN_ID=price_...
+echo "   - STRIPE_YEARLY_PLUS_PLAN_ID=price_..."
 echo "   - STRIPE_MONTHLY_PREMIUM_PLAN_ID=price_..."
 echo "   - STRIPE_YEARLY_PREMIUM_PLAN_ID=price_... "
 echo "   - SUPABASE_URL=https://<project>.supabase.co"

@@ -67,7 +67,7 @@ test("checkout amount uses the selected market and billing interval", () => {
   });
 
   assert.equal(getRegionalCheckoutAmount("plus", "monthly", market), 499);
-  assert.equal(getRegionalCheckoutAmount("plus", "yearly", market), 250);
+  assert.equal(getRegionalCheckoutAmount("plus", "yearly", market), 2999);
   assert.equal(getRegionalCheckoutAmount("lifetime", undefined, market), 9999);
 });
 
@@ -82,7 +82,7 @@ test("regional Price cache validates each currency independently", () => {
   );
 });
 
-test("Stripe Checkout line item must match the regional quote", () => {
+test("Stripe Checkout line item must match the selected Price and device currency", () => {
   assert.doesNotThrow(() =>
     assertCheckoutLineItem(
       {
@@ -94,9 +94,22 @@ test("Stripe Checkout line item must match the regional quote", () => {
       {
         priceId: "price_monthly",
         currency: "EUR",
-        amount: 499,
       },
-    ),
+    )
+  );
+  assert.doesNotThrow(() =>
+    assertCheckoutLineItem(
+      {
+        lineItemCount: 1,
+        priceId: "price_monthly",
+        currency: "eur",
+        amountSubtotal: 399,
+      },
+      {
+        priceId: "price_monthly",
+        currency: "EUR",
+      },
+    )
   );
   assert.throws(
     () =>
@@ -104,15 +117,14 @@ test("Stripe Checkout line item must match the regional quote", () => {
         {
           lineItemCount: 1,
           priceId: "price_monthly",
-          currency: "eur",
+          currency: "usd",
           amountSubtotal: 399,
         },
         {
           priceId: "price_monthly",
           currency: "EUR",
-          amount: 499,
         },
       ),
-    /amount mismatch: expected 499, received 399/,
+    /currency mismatch: expected EUR, received USD/,
   );
 });

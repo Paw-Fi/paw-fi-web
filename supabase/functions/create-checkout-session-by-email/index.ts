@@ -334,6 +334,43 @@ serve(async (req: Request) => {
       );
     }
 
+    if (
+      plan === "lifetime" &&
+      existingSub?.plan === "lifetime" &&
+      existingSub?.status === "active"
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: "This user already has Lifetime access.",
+          code: "LIFETIME_ALREADY_OWNED",
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      plan !== "lifetime" &&
+      existingSub?.provider === "stripe" &&
+      ["active", "trialing", "past_due", "paused", "incomplete"].includes(
+        String(existingSub.status || ""),
+      )
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "This user already has a Stripe subscription. Manage the existing subscription instead of starting another checkout.",
+          code: "ACTIVE_STRIPE_SUBSCRIPTION_EXISTS",
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // SECURITY: Check trial eligibility based on subscription history
     // A user is eligible for trial ONLY if no subscription row exists at all
     // If a row exists (even with stripe_subscription_id = NULL), it means they had a trial before
@@ -411,6 +448,60 @@ serve(async (req: Request) => {
           },
           {
             onConflict: "user_id",
+          },
+        );
+      }
+    }
+
+    if (plan !== "lifetime") {
+      const openCheckoutSessions = await stripe.checkout.sessions.list({
+        customer: customerId,
+        status: "open",
+        limit: 100,
+      });
+      const matchingOpenSession = openCheckoutSessions.data.find(
+        (candidate) =>
+          candidate.mode === "subscription" &&
+          candidate.metadata?.user_id === userId &&
+          candidate.metadata?.plan === plan &&
+          candidate.metadata?.billing_interval === billingInterval &&
+          candidate.metadata?.commitment_months === "0" &&
+          candidate.metadata?.promo_code === (promoCode ?? ""),
+      );
+      if (matchingOpenSession?.url) {
+        return new Response(
+          JSON.stringify({
+            checkoutUrl: matchingOpenSession.url,
+            sessionId: matchingOpenSession.id,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const stripeSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: 100,
+      });
+      const existingLiveStripeSubscription = stripeSubscriptions.data.find(
+        (candidate) =>
+          ["active", "trialing", "past_due", "paused", "incomplete"].includes(
+            candidate.status,
+          ),
+      );
+      if (existingLiveStripeSubscription) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "This user already has a Stripe subscription. Manage the existing subscription instead of starting another checkout.",
+            code: "ACTIVE_STRIPE_SUBSCRIPTION_EXISTS",
+          }),
+          {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           },
         );
       }
@@ -700,14 +791,20 @@ serve(async (req: Request) => {
         subscription_data: {
           metadata: {
             user_id: userId, // Use snake_case for Stripe metadata
-            plan: plan,
+            plan,
             billing_interval: billingInterval,
+            payment_interval: billingInterval,
+            commitment_months: "0",
           },
         },
         // Session metadata - for tracking checkout process only
         metadata: {
           user_id: userId,
           checkout_type: "subscription",
+          plan,
+          billing_interval: billingInterval,
+          commitment_months: "0",
+          promo_code: promoCode ?? "",
           created_by: "email_api",
         },
       };

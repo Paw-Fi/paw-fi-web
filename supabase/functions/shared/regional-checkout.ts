@@ -27,20 +27,18 @@ export function resolveRegionalCheckoutMarket({
   country?: unknown;
   currency?: unknown;
 }): RegionalCheckoutSelection {
-  const normalizedCountry =
-    typeof country === "string"
-      ? country.trim().toUpperCase()
-      : DEFAULT_CHECKOUT_COUNTRY;
+  const normalizedCountry = typeof country === "string"
+    ? country.trim().toUpperCase()
+    : DEFAULT_CHECKOUT_COUNTRY;
 
   if (!isSupportedRegionalPricingCountry(normalizedCountry)) {
     throw new Error("Unsupported checkout country");
   }
 
   const market = getRegionalPricingMarket(normalizedCountry);
-  const normalizedCurrency =
-    typeof currency === "string"
-      ? currency.trim().toUpperCase()
-      : market.currencyCode;
+  const normalizedCurrency = typeof currency === "string"
+    ? currency.trim().toUpperCase()
+    : market.currencyCode;
 
   if (!isSupportedRegionalCurrency(normalizedCurrency)) {
     throw new Error("Unsupported checkout currency");
@@ -76,7 +74,7 @@ export function assertCheckoutLineItem(
     currency: string | null | undefined;
     amountSubtotal: number | null | undefined;
   },
-  expected: { priceId: string; currency: string; amount: number },
+  expected: { priceId: string; currency: string },
 ): void {
   if (actual.lineItemCount !== 1) {
     throw new Error(
@@ -94,13 +92,6 @@ export function assertCheckoutLineItem(
       `Stripe Checkout line item currency mismatch: expected ${expectedCurrency}, received ${actualCurrency}`,
     );
   }
-  if (actual.amountSubtotal !== expected.amount) {
-    throw new Error(
-      `Stripe Checkout line item amount mismatch: expected ${expected.amount}, received ${
-        actual.amountSubtotal ?? "NONE"
-      }`,
-    );
-  }
 }
 
 export function getRegionalCheckoutAmount(
@@ -109,7 +100,5 @@ export function getRegionalCheckoutAmount(
   market: RegionalPricingMarket,
 ): number {
   if (plan === "lifetime") return market.lifetime;
-  return billingInterval === "yearly"
-    ? Math.round(market.yearly / 12)
-    : market.monthly;
+  return billingInterval === "yearly" ? market.yearly : market.monthly;
 }

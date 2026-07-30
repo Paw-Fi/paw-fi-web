@@ -1,8 +1,8 @@
-import { Variants, motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion, Variants } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { BudgetingComparisonLinks } from "@/components/geo/budgeting-comparison-links";
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
@@ -17,15 +17,15 @@ import {
 } from "@/components/ui/card";
 import {
   Check,
-  Rocket,
-  Loader2,
-  Zap,
-  Target,
-  Users,
-  Sparkles,
-  ShieldCheck,
   ChevronRight,
   Globe2,
+  Loader2,
+  Rocket,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Users,
+  Zap,
 } from "lucide-react";
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
@@ -38,14 +38,14 @@ import { getPricingTiers } from "@/data/pricing-plans";
 import {
   DEFAULT_REGIONAL_PRICING_COUNTRY,
   detectRegionalPricingCountry,
+  formatRegionalPrice,
   getRegionalCountryOptions,
   getRegionalPriceLabels,
   saveRegionalPricingCountry,
-  formatRegionalPrice,
 } from "@/lib/regional-pricing";
 
 // Added new pro-max components
-import { BentoGrid, BentoCard } from "@/components/ui/bento-grid";
+import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { OrbitingCircles } from "@/components/ui/orbiting-circles";
@@ -212,7 +212,7 @@ export function PricingRouteComponent() {
     {
       question: "Can I switch billing later?",
       answer:
-        "You can switch from monthly billing to the discounted 12-month commitment. Changes away from a commitment take effect after its 12 monthly payments are complete.",
+        "You can switch between monthly billing and the discounted yearly plan. The yearly plan is paid upfront and changes take effect at the applicable renewal date.",
     },
     {
       question: "What payment methods do you accept?",
@@ -227,17 +227,12 @@ export function PricingRouteComponent() {
     {
       question: "What is your cancellation and refund policy?",
       answer:
-        "Monthly subscriptions can be canceled anytime. The discounted option commits you to 12 monthly payments; cancellation prevents the next 12-month commitment from starting. For billing questions, contact hello@moneko.io.",
+        "Monthly subscriptions can be canceled anytime. The discounted yearly plan is paid upfront and cancellation prevents the next yearly renewal. For billing questions, contact hello@moneko.io.",
     },
     {
-      question: "Why do I still get charged after canceling the Annual Plan?",
+      question: "What happens when I cancel the Annual Plan?",
       answer:
-        "The discounted Annual Plan includes a 12-month commitment. Canceling prevents the next annual commitment from starting, but your remaining monthly payments continue until all 12 payments are complete.",
-    },
-    {
-      question: "Can I stop paying immediately after canceling?",
-      answer:
-        "No. If you choose the Annual Plan, monthly payments continue until the current 12-month commitment has been fulfilled.",
+        "The Annual Plan remains available through the paid yearly period. Cancellation prevents the next annual renewal, and there are no remaining monthly installments.",
     },
     {
       question: "What does the AI help with in Moneko?",
@@ -278,23 +273,22 @@ export function PricingRouteComponent() {
 
       setIsLoading(false);
 
-      const selectedPlan =
-        planId === "plus_lifetime"
-          ? { plan: "lifetime", billing: undefined }
-          : planId === "plus_monthly"
-            ? { plan: "plus", billing: "monthly" }
-            : { plan: "plus", billing: "yearly" };
+      const selectedPlan = planId === "plus_lifetime"
+        ? { plan: "lifetime", billing: undefined }
+        : planId === "plus_monthly"
+        ? { plan: "plus", billing: "monthly" }
+        : { plan: "plus", billing: "yearly" };
 
       navigate({
         to: "/checkout",
         search: selectedPlan.billing
           ? {
-              plan: selectedPlan.plan,
-              billing: selectedPlan.billing,
-            }
+            plan: selectedPlan.plan,
+            billing: selectedPlan.billing,
+          }
           : {
-              plan: selectedPlan.plan,
-            },
+            plan: selectedPlan.plan,
+          },
       });
     } catch (err) {
       console.error("Error handling subscription:", err);
@@ -396,7 +390,8 @@ export function PricingRouteComponent() {
       component: (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-emerald-500/10 to-transparent">
           <div className="group/mock relative">
-            <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 opacity-25 blur transition duration-500 group-hover/mock:opacity-75"></div>
+            <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-emerald-400 to-green-500 opacity-25 blur transition duration-500 group-hover/mock:opacity-75">
+            </div>
             <div className="bg-card relative flex items-center gap-3 rounded-xl border p-4">
               <div className="rounded-full bg-[#25D366] p-2">
                 <Check className="h-4 w-4 text-white" />

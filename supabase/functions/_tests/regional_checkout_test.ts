@@ -7,13 +7,13 @@ import {
 } from "../shared/regional-checkout.ts";
 
 Deno.test(
-  "Stripe commitment checkout resolves in US, Singapore, and Australia",
+  "Stripe yearly checkout resolves to the upfront annual total",
   () => {
     for (const country of ["US", "SG", "AU"]) {
       const selection = resolveRegionalCheckoutMarket({ country });
       assertEquals(
         getRegionalCheckoutAmount("plus", "yearly", selection.market),
-        Math.round(selection.market.yearly / 12),
+        selection.market.yearly,
       );
     }
   },

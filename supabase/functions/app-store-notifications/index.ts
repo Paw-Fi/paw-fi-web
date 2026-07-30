@@ -24,6 +24,10 @@ import {
   matchesVerifiedAppStoreTransaction,
 } from "../shared/app-store-api.ts";
 import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
+import {
+  isEarlyCommitmentTermination,
+  resolveAnnualCommitmentSnapshot,
+} from "../shared/subscription-commitment.ts";
 import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
 import {
   type AppStoreCandidateUserSource,
@@ -326,6 +330,31 @@ function isFreeTrialTransaction(
 
 function toStoredAppStoreEnvironment(value: AppStoreEnvironment): string {
   return value === "sandbox" ? "Sandbox" : "Production";
+}
+
+function resolveAppStoreCommitmentTerms(
+  transaction: JWSTransactionDecodedPayload,
+): { months: 12; end: string } | null {
+  const transactionRecord = transaction as Record<string, unknown>;
+  const billingPlanType = String(
+    transactionRecord.billingPlanType ?? "",
+  ).toUpperCase();
+  const commitmentInfo = transactionRecord.commitmentInfo as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  const commitmentExpiresDate = Number(commitmentInfo?.commitmentExpiresDate);
+  if (
+    billingPlanType !== "MONTHLY" ||
+    Number(commitmentInfo?.totalBillingPeriods) !== 12 ||
+    !Number.isFinite(commitmentExpiresDate)
+  ) {
+    return null;
+  }
+
+  const end = new Date(commitmentExpiresDate);
+  if (Number.isNaN(end.getTime())) return null;
+  return { months: 12, end: end.toISOString() };
 }
 
 function looksLikeStripeSubscriptionId(value: unknown): value is string {
@@ -680,6 +709,8 @@ async function decodeNotification(signedPayload: string): Promise<
   }
   | {
     kind: "transaction";
+    notificationType: string;
+    subtype: string | null;
     transaction: JWSTransactionDecodedPayload;
     environment: AppStoreEnvironment;
   }
@@ -831,6 +862,8 @@ async function decodeNotification(signedPayload: string): Promise<
 
   return {
     kind: "transaction",
+    notificationType,
+    subtype,
     transaction: verifiedTransaction,
     environment: toAppStoreEnvironmentLabel(
       asString(verifiedTransaction.environment),
@@ -913,32 +946,23 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { transaction, environment } = decodedNotification;
+    const { notificationType, subtype, transaction, environment } =
+      decodedNotification;
     const storeProductId = asString(transaction.productId);
     const originalTransactionId = asString(transaction.originalTransactionId);
     const transactionId = asString(transaction.transactionId);
     const inAppOwnershipType = normalizeAppStoreInAppOwnershipType(
       (transaction as Record<string, unknown>).inAppOwnershipType,
     );
-    const transactionRecord = transaction as Record<string, unknown>;
-    const billingPlanType = String(
-      transactionRecord.billingPlanType ?? "",
-    ).toUpperCase();
-    const commitmentInfo = transactionRecord.commitmentInfo as
-      | Record<string, unknown>
-      | null
-      | undefined;
-    const commitmentMonths = billingPlanType === "MONTHLY" &&
-        Number(commitmentInfo?.totalBillingPeriods) === 12
-      ? 12
-      : null;
-    const commitmentExpiresDate = Number(commitmentInfo?.commitmentExpiresDate);
-    const commitmentEnd =
-      commitmentMonths === 12 && Number.isFinite(commitmentExpiresDate)
-        ? new Date(commitmentExpiresDate).toISOString()
-        : null;
+    const submittedCommitmentTerms = resolveAppStoreCommitmentTerms(
+      transaction,
+    );
+    let commitmentMonths = submittedCommitmentTerms?.months ?? null;
+    let commitmentEnd = submittedCommitmentTerms?.end ?? null;
     notificationLogContext = getAppStoreDiagnosticsContext({
       phase: "decoded_notification",
+      notificationType,
+      subtype,
       environment,
       storeProductId,
       originalTransactionId,
@@ -1140,7 +1164,7 @@ serve(async (req: Request): Promise<Response> => {
       await supabase
         .from("subscriptions")
         .select(
-          "provider, plan, current_period_end, status, billing_interval, store_product_id, stripe_subscription_id, app_store_original_transaction_id, trial_start, trial_end, lifetime_source, lifetime_source_id",
+          "provider, plan, current_period_end, status, billing_interval, payment_interval, commitment_months, commitment_end, cancel_at_period_end, store_product_id, stripe_subscription_id, app_store_original_transaction_id, trial_start, trial_end, lifetime_source, lifetime_source_id",
         )
         .eq("user_id", resolvedUserId)
         .maybeSingle();
@@ -1180,6 +1204,8 @@ serve(async (req: Request): Promise<Response> => {
       periodEndSource = "revocation_date";
     }
     let resolvedLifecycleStatus: string | null = null;
+    let resolvedCancelAtPeriodEnd: boolean | null = null;
+    let resolvedAuthoritativeLifecycle = false;
 
     if (catalogProduct.plan !== "lifetime" && transactionId) {
       try {
@@ -1212,6 +1238,8 @@ serve(async (req: Request): Promise<Response> => {
           });
 
           resolvedLifecycleStatus = lifecycle.status;
+          resolvedCancelAtPeriodEnd = lifecycle.cancelAtPeriodEnd;
+          resolvedAuthoritativeLifecycle = true;
           if (lifecycle.currentPeriodEnd) {
             resolvedExpiresIso = lifecycle.currentPeriodEnd;
             periodEndSource = "subscription_status";
@@ -1252,6 +1280,28 @@ serve(async (req: Request): Promise<Response> => {
           }),
         });
       }
+    }
+
+    const statusSensitiveNotificationTypes = new Set([
+      "DID_CHANGE_RENEWAL_PREF",
+      "DID_CHANGE_RENEWAL_STATUS",
+      "DID_FAIL_TO_RENEW",
+      "DID_RENEW",
+      "EXPIRED",
+      "GRACE_PERIOD_EXPIRED",
+      "PRICE_INCREASE",
+      "RENEWAL_EXTENDED",
+      "RENEWAL_EXTENSION",
+      "SUBSCRIBED",
+    ]);
+    if (
+      catalogProduct.plan !== "lifetime" &&
+      statusSensitiveNotificationTypes.has(notificationType) &&
+      !resolvedAuthoritativeLifecycle
+    ) {
+      throw new Error(
+        `Unable to resolve authoritative App Store lifecycle for ${notificationType}`,
+      );
     }
 
     if (catalogProduct.plan !== "lifetime" && !resolvedExpiresIso) {
@@ -1363,6 +1413,37 @@ serve(async (req: Request): Promise<Response> => {
 
     const status = resolvedLifecycleStatus ??
       deriveLifecycleStatus(effectiveTransaction);
+    const effectiveCommitmentTerms = resolveAppStoreCommitmentTerms(
+      effectiveTransaction,
+    );
+    if (effectiveCommitmentTerms) {
+      commitmentMonths = effectiveCommitmentTerms.months;
+      commitmentEnd = effectiveCommitmentTerms.end;
+    }
+    const isSameAppStoreSubscription =
+      existingSubscription?.provider === "app_store" &&
+      existingSubscription?.store_product_id === storeProductId &&
+      existingSubscription?.app_store_original_transaction_id ===
+        originalTransactionId;
+    const commitmentSnapshot = resolveAnnualCommitmentSnapshot({
+      incomingMonths: commitmentMonths,
+      incomingEnd: commitmentEnd,
+      existingMonths: existingSubscription?.commitment_months,
+      existingEnd: existingSubscription?.commitment_end,
+      sameSubscription: isSameAppStoreSubscription,
+      renews: (status === "active" || status === "trialing") &&
+        resolvedCancelAtPeriodEnd === false,
+      subscriptionStartUnixSeconds:
+        (Number(effectiveTransaction.purchaseDate) || Date.now()) / 1000,
+    });
+    commitmentMonths = commitmentSnapshot?.months ?? null;
+    commitmentEnd = commitmentSnapshot?.end ?? null;
+    const cancelAtPeriodEnd = status === "canceled"
+      ? false
+      : resolvedCancelAtPeriodEnd ??
+        (isSameAppStoreSubscription
+          ? Boolean(existingSubscription?.cancel_at_period_end)
+          : false);
     const existingTrialStart = asString(existingSubscription?.trial_start);
     const existingTrialEnd = asString(existingSubscription?.trial_end);
     let trialStartIso = status === "trialing"
@@ -1469,6 +1550,33 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    if (
+      status === "canceled" &&
+      isSameAppStoreSubscription &&
+      existingSubscription?.status !== "canceled" &&
+      isEarlyCommitmentTermination({
+        commitmentMonths: existingSubscription?.commitment_months,
+        commitmentEnd: existingSubscription?.commitment_end,
+        terminatedAt: new Date(),
+      })
+    ) {
+      await reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: new Error(
+          "App Store annual commitment terminated before commitment end",
+        ),
+        context: getAppStoreDiagnosticsContext({
+          phase: "early_commitment_termination",
+          userId: resolvedUserId,
+          storeProductId,
+          originalTransactionId,
+          transactionId,
+          commitmentEnd: existingSubscription?.commitment_end ?? null,
+          status,
+        }),
+      });
+    }
+
     const entitlementDecision = decideSubscriptionEntitlementMutation(
       existingSubscription
         ? {
@@ -1565,7 +1673,7 @@ serve(async (req: Request): Promise<Response> => {
       trial_start: trialStartIso,
       trial_end: trialEndIso,
       ended_at: status === "canceled" ? new Date().toISOString() : null,
-      cancel_at_period_end: false,
+      cancel_at_period_end: cancelAtPeriodEnd,
       bound_to_user_id: null,
       bound_to_household_id: null,
       stripe_customer_id: null,

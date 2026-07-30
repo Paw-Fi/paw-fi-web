@@ -1,7 +1,7 @@
 import {
-  Status,
   type JWSRenewalInfoDecodedPayload,
   type JWSTransactionDecodedPayload,
+  Status,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 
 export type AppStoreSubscriptionLifecycleStatus =
@@ -19,33 +19,41 @@ export function resolveAppStoreSubscriptionLifecycle(params: {
     | "offerType"
     | "revocationDate"
   >;
-  statusTransaction?: Pick<
-    JWSTransactionDecodedPayload,
-    "expiresDate" | "offerDiscountType" | "offerIdentifier" | "offerType"
-  > | null;
-  renewalInfo?: Pick<
-    JWSRenewalInfoDecodedPayload,
-    "gracePeriodExpiresDate" | "renewalDate"
-  > | null;
+  statusTransaction?:
+    | Pick<
+      JWSTransactionDecodedPayload,
+      "expiresDate" | "offerDiscountType" | "offerIdentifier" | "offerType"
+    >
+    | null;
+  renewalInfo?:
+    | Pick<
+      JWSRenewalInfoDecodedPayload,
+      "autoRenewStatus" | "gracePeriodExpiresDate" | "renewalDate"
+    >
+    | null;
   subscriptionStatus?: Status | number | null;
   nowMs: number;
 }): {
   status: AppStoreSubscriptionLifecycleStatus;
   currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean | null;
 } {
   const transactionExpiresMs = parseEpochMs(params.transaction.expiresDate);
   const renewalDateMs = parseEpochMs(params.renewalInfo?.renewalDate);
   const gracePeriodExpiresMs = parseEpochMs(
     params.renewalInfo?.gracePeriodExpiresDate,
   );
+  const cancelAtPeriodEnd = resolveAutoRenewCancellation(
+    params.renewalInfo?.autoRenewStatus,
+  );
 
   const currentPeriodEndMs =
     params.subscriptionStatus === Status.BILLING_GRACE_PERIOD
       ? pickLatestEpochMs([
-          gracePeriodExpiresMs,
-          renewalDateMs,
-          transactionExpiresMs,
-        ])
+        gracePeriodExpiresMs,
+        renewalDateMs,
+        transactionExpiresMs,
+      ])
       : pickLatestEpochMs([renewalDateMs, transactionExpiresMs]);
 
   if (
@@ -55,6 +63,7 @@ export function resolveAppStoreSubscriptionLifecycle(params: {
     return {
       status: "canceled",
       currentPeriodEnd: toIsoOrNull(currentPeriodEndMs),
+      cancelAtPeriodEnd: false,
     };
   }
 
@@ -62,6 +71,7 @@ export function resolveAppStoreSubscriptionLifecycle(params: {
     return {
       status: "past_due",
       currentPeriodEnd: toIsoOrNull(currentPeriodEndMs),
+      cancelAtPeriodEnd,
     };
   }
 
@@ -72,6 +82,7 @@ export function resolveAppStoreSubscriptionLifecycle(params: {
     return {
       status: "canceled",
       currentPeriodEnd: toIsoOrNull(currentPeriodEndMs),
+      cancelAtPeriodEnd: false,
     };
   }
 
@@ -79,24 +90,31 @@ export function resolveAppStoreSubscriptionLifecycle(params: {
     return {
       status: "canceled",
       currentPeriodEnd: toIsoOrNull(currentPeriodEndMs),
+      cancelAtPeriodEnd: false,
     };
   }
 
-  const renewalExtendsBeyondSubmittedTransaction =
-    renewalDateMs !== null &&
+  const renewalExtendsBeyondSubmittedTransaction = renewalDateMs !== null &&
     (transactionExpiresMs === null || renewalDateMs > transactionExpiresMs);
-  const currentEntitlementTransaction =
-    params.statusTransaction ??
+  const currentEntitlementTransaction = params.statusTransaction ??
     (!renewalExtendsBeyondSubmittedTransaction ? params.transaction : null);
 
   return {
-    status:
-      currentEntitlementTransaction &&
-      isFreeTrialTransaction(currentEntitlementTransaction)
-        ? "trialing"
-        : "active",
+    status: currentEntitlementTransaction &&
+        isFreeTrialTransaction(currentEntitlementTransaction)
+      ? "trialing"
+      : "active",
     currentPeriodEnd: toIsoOrNull(currentPeriodEndMs),
+    cancelAtPeriodEnd,
   };
+}
+
+function resolveAutoRenewCancellation(value: unknown): boolean | null {
+  if (value === null || value === undefined) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (parsed === 0) return true;
+  if (parsed === 1) return false;
+  return null;
 }
 
 function parseEpochMs(value: unknown): number | null {
@@ -112,7 +130,7 @@ function pickLatestEpochMs(values: Array<number | null>): number | null {
   if (finiteValues.length === 0) return null;
 
   return finiteValues.reduce((latest, value) =>
-    value > latest ? value : latest,
+    value > latest ? value : latest
   );
 }
 
@@ -128,14 +146,12 @@ function isFreeTrialTransaction(
     "offerDiscountType" | "offerType" | "offerIdentifier"
   >,
 ): boolean {
-  const offerDiscountType =
-    typeof transaction.offerDiscountType === "string"
-      ? transaction.offerDiscountType.toUpperCase()
-      : "";
-  const offerIdentifier =
-    typeof transaction.offerIdentifier === "string"
-      ? transaction.offerIdentifier.toLowerCase()
-      : "";
+  const offerDiscountType = typeof transaction.offerDiscountType === "string"
+    ? transaction.offerDiscountType.toUpperCase()
+    : "";
+  const offerIdentifier = typeof transaction.offerIdentifier === "string"
+    ? transaction.offerIdentifier.toLowerCase()
+    : "";
   const offerType = Number(transaction.offerType);
 
   return (

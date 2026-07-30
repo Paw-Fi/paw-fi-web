@@ -7,15 +7,11 @@ import {
 import {
   getPlanFromPriceId,
   getPriceId,
-  isCommitmentPriceId,
-  isCommitmentStripePrice,
-  subscriptionHasCommitmentPrice,
 } from "../shared/stripe-subscription-prices.ts";
 
 const managedEnvKeys = [
   "STRIPE_MONTHLY_PLUS_PLAN_ID",
   "STRIPE_YEARLY_PLUS_PLAN_ID",
-  "STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID",
   "STRIPE_LIFETIME_PRICE_ID",
   "STRIPE_MONTHLY_PREMIUM_PLAN_ID",
   "STRIPE_YEARLY_PREMIUM_PLAN_ID",
@@ -53,55 +49,16 @@ function withEnv(fn: () => void | Promise<void>): Promise<void> | void {
   }
 }
 
-Deno.test(
-  "stripe prices: new yearly selections use the monthly commitment price while legacy yearly remains resolvable",
-  () =>
-    withEnv(() => {
-      Deno.env.set("STRIPE_YEARLY_PLUS_PLAN_ID", "price_plus_yearly_legacy");
-      Deno.env.set(
-        "STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID",
-        "price_plus_commitment_monthly",
-      );
+Deno.test("stripe prices: yearly selections use the paid-upfront yearly price", () =>
+  withEnv(() => {
+    Deno.env.set("STRIPE_YEARLY_PLUS_PLAN_ID", "price_plus_yearly");
 
-      assertEquals(
-        getPriceId("plus", "yearly"),
-        "price_plus_commitment_monthly",
-      );
-      assertEquals(getPlanFromPriceId("price_plus_commitment_monthly"), {
-        plan: "plus",
-        interval: "yearly",
-      });
-      assertEquals(isCommitmentPriceId("price_plus_commitment_monthly"), true);
-      assertEquals(isCommitmentPriceId("price_plus_yearly_legacy"), false);
-      assertEquals(
-        isCommitmentStripePrice({
-          id: "price_regional",
-          lookup_key: "moneko_plus_commitment_monthly_v7",
-        }),
-        true,
-      );
-      assertEquals(
-        subscriptionHasCommitmentPrice({
-          items: {
-            data: [
-              { price: { id: "price_other" } },
-              {
-                price: {
-                  id: "price_regional",
-                  lookup_key: "moneko_plus_commitment_monthly_v7",
-                },
-              },
-            ],
-          },
-        }),
-        true,
-      );
-      assertEquals(getPlanFromPriceId("price_plus_yearly_legacy"), {
-        plan: "plus",
-        interval: "yearly",
-      });
-    }),
-);
+    assertEquals(getPriceId("plus", "yearly"), "price_plus_yearly");
+    assertEquals(getPlanFromPriceId("price_plus_yearly"), {
+      plan: "plus",
+      interval: "yearly",
+    });
+  }));
 
 Deno.test(
   "stripe prices: premium launch requires monthly and yearly price IDs",

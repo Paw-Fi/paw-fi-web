@@ -2,10 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
-import {
-  getPriceId,
-  subscriptionHasCommitmentPrice,
-} from "../shared/stripe-subscription-prices.ts";
+import { getPriceId } from "../shared/stripe-subscription-prices.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import type {
   BillingInterval,
@@ -13,11 +10,6 @@ import type {
 } from "../shared/subscription-constants.ts";
 import { buildCheckoutPageUrl } from "../shared/checkout-redirect.ts";
 import { getSubscriptionChangePolicy } from "../shared/subscription-change-policy.ts";
-import {
-  commitmentCancellationParams,
-  isCommitmentActive,
-  resolveCommitmentEnd,
-} from "../shared/subscription-commitment.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -29,23 +21,15 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function resolveStripeCommitment(
-  subscription: Record<string, any>,
-  stripeSubscription?: Stripe.Subscription,
-): Promise<{ isActive: boolean; end: string | null }> {
-  const current = stripeSubscription ??
-    (await stripe.subscriptions.retrieve(subscription.stripe_subscription_id));
-  if (!subscriptionHasCommitmentPrice(current)) {
-    return { isActive: false, end: null };
+async function releaseStripeScheduleIfPresent(
+  stripeSubscription: Stripe.Subscription,
+): Promise<void> {
+  const scheduleId = typeof stripeSubscription.schedule === "string"
+    ? stripeSubscription.schedule
+    : stripeSubscription.schedule?.id;
+  if (scheduleId) {
+    await stripe.subscriptionSchedules.release(scheduleId);
   }
-  const end = resolveCommitmentEnd({
-    previousCommitmentEnd: subscription.commitment_end,
-    subscriptionStartUnixSeconds:
-      Number(current.metadata?.commitment_started_at) ||
-      current.trial_end ||
-      current.start_date,
-  });
-  return { isActive: isCommitmentActive(end), end };
 }
 
 serve(async (req) => {
@@ -232,7 +216,9 @@ serve(async (req) => {
         if (plan === "free") {
           if (
             !subscription ||
-            subscription.status !== "active" ||
+            !["active", "trialing", "past_due"].includes(
+              subscription.status,
+            ) ||
             currentPlan === "free"
           ) {
             return new Response(
@@ -247,14 +233,15 @@ serve(async (req) => {
             );
           }
 
-          // Cancel the subscription at period end
-          const commitment = await resolveStripeCommitment(subscription);
-          const commitmentActive = commitment.isActive;
+          // Cancel the subscription at period end. Any pending plan-change
+          // schedule must be released first so it cannot override cancellation.
+          const currentStripeSubscription = await stripe.subscriptions.retrieve(
+            subscription.stripe_subscription_id,
+          );
+          await releaseStripeScheduleIfPresent(currentStripeSubscription);
           const canceledSubscription = await stripe.subscriptions.update(
             subscription.stripe_subscription_id,
-            commitmentActive
-              ? commitmentCancellationParams(commitment.end!)
-              : { cancel_at_period_end: true },
+            { cancel_at_period_end: true },
           );
 
           // Update the subscription in the database
@@ -262,6 +249,9 @@ serve(async (req) => {
             .from("subscriptions")
             .update({
               cancel_at_period_end: true,
+              pending_plan: null,
+              pending_interval: null,
+              pending_effective_date: null,
               updated_at: new Date().toISOString(),
             })
             .eq("id", subscription.id);
@@ -269,9 +259,8 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: commitmentActive
-                ? "Subscription will end after the 12-month commitment"
-                : "Subscription will be canceled at the end of the billing period",
+              message:
+                "Subscription will be canceled at the end of the billing period",
               subscription: canceledSubscription,
               isDowngrade: true,
             }),
@@ -356,12 +345,6 @@ serve(async (req) => {
         }
 
         const subscriptionItemId = stripeSubscription.items.data[0].id;
-        const commitment = await resolveStripeCommitment(
-          subscription,
-          stripeSubscription,
-        );
-        const shouldDeferForCommitment = commitment.isActive &&
-          !changePolicy.isUpgrade;
 
         if (changePolicy.billingBehavior === "no_change") {
           return new Response(
@@ -380,11 +363,7 @@ serve(async (req) => {
         }
 
         // Immediate changes: plan upgrades and same-plan billing interval changes.
-        if (
-          changePolicy.billingBehavior === "immediate" &&
-          !shouldDeferForCommitment
-        ) {
-          const commitmentStartedAt = Math.floor(Date.now() / 1000);
+        if (changePolicy.billingBehavior === "immediate") {
           const updateParams: any = {
             items: [
               {
@@ -395,13 +374,8 @@ serve(async (req) => {
             metadata: {
               plan,
               billing_interval: billingInterval,
-              payment_interval: billingInterval === "yearly"
-                ? "monthly"
-                : billingInterval,
-              commitment_months: billingInterval === "yearly" ? "12" : "0",
-              commitment_started_at: billingInterval === "yearly"
-                ? String(commitmentStartedAt)
-                : "",
+              payment_interval: billingInterval,
+              commitment_months: "0",
             },
             proration_behavior: "always_invoice", // Immediate charge with proration
             payment_behavior: "error_if_incomplete",
@@ -418,18 +392,10 @@ serve(async (req) => {
             .update({
               plan,
               billing_interval: billingInterval,
-              payment_interval: billingInterval === "yearly"
-                ? "monthly"
-                : billingInterval,
-              commitment_months: billingInterval === "yearly" ? 12 : null,
-              commitment_end: billingInterval === "yearly"
-                ? new Date(
-                  new Date(commitmentStartedAt * 1000).setUTCFullYear(
-                    new Date(commitmentStartedAt * 1000).getUTCFullYear() +
-                      1,
-                  ),
-                ).toISOString()
-                : null,
+              payment_interval: billingInterval,
+              commitment_months: null,
+              commitment_end: null,
+              current_price_id: priceId,
               cancel_at_period_end: false,
               pending_plan: null,
               pending_interval: null,
@@ -464,6 +430,7 @@ serve(async (req) => {
           // Update schedule with two phases:
           // Phase 1: Current plan until period end
           // Phase 2: New plan starting at period end
+          const scheduledChangeUnix = stripeSubscription.current_period_end;
           await stripe.subscriptionSchedules.update(schedule.id, {
             end_behavior: "release", // Release subscription back to normal billing
             phases: [
@@ -475,9 +442,7 @@ serve(async (req) => {
                   },
                 ],
                 start_date: stripeSubscription.current_period_start,
-                end_date: shouldDeferForCommitment
-                  ? Math.floor(new Date(commitment.end!).getTime() / 1000)
-                  : stripeSubscription.current_period_end,
+                end_date: scheduledChangeUnix,
               },
               {
                 items: [
@@ -490,10 +455,8 @@ serve(async (req) => {
                 metadata: {
                   plan,
                   billing_interval: billingInterval,
-                  payment_interval: billingInterval === "yearly"
-                    ? "monthly"
-                    : billingInterval,
-                  commitment_months: billingInterval === "yearly" ? "12" : "0",
+                  payment_interval: billingInterval,
+                  commitment_months: "0",
                 },
               },
             ],
@@ -505,11 +468,9 @@ serve(async (req) => {
             .update({
               pending_plan: plan,
               pending_interval: billingInterval,
-              pending_effective_date: shouldDeferForCommitment
-                ? commitment.end
-                : new Date(
-                  stripeSubscription.current_period_end * 1000,
-                ).toISOString(),
+              pending_effective_date: new Date(
+                stripeSubscription.current_period_end * 1000,
+              ).toISOString(),
               updated_at: new Date().toISOString(),
             })
             .eq("id", subscription.id);
@@ -517,19 +478,16 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({
               success: true,
-              message: shouldDeferForCommitment
-                ? `Subscription will change after the 12-month commitment`
-                : `Subscription will change to ${plan} (${billingInterval}) at end of current period`,
+              message:
+                `Subscription will change to ${plan} (${billingInterval}) at end of current period`,
               subscription: stripeSubscription,
               isUpgrade: false,
               pendingChange: {
                 plan,
                 billingInterval,
-                effectiveDate: shouldDeferForCommitment
-                  ? commitment.end
-                  : new Date(
-                    stripeSubscription.current_period_end * 1000,
-                  ).toISOString(),
+                effectiveDate: new Date(
+                  stripeSubscription.current_period_end * 1000,
+                ).toISOString(),
               },
             }),
             {
@@ -550,8 +508,7 @@ serve(async (req) => {
       case "cancel": {
         if (
           !subscription ||
-          (subscription.status !== "active" &&
-            subscription.status !== "trialing")
+          !["active", "trialing", "past_due"].includes(subscription.status)
         ) {
           return new Response(
             JSON.stringify({ error: "No active subscription to cancel" }),
@@ -576,14 +533,15 @@ serve(async (req) => {
           );
         }
 
-        // Cancel the subscription at period end
-        const commitment = await resolveStripeCommitment(subscription);
-        const commitmentActive = commitment.isActive;
+        // Cancel the subscription at period end. Any pending plan-change
+        // schedule must be released first so it cannot override cancellation.
+        const currentStripeSubscription = await stripe.subscriptions.retrieve(
+          subscription.stripe_subscription_id,
+        );
+        await releaseStripeScheduleIfPresent(currentStripeSubscription);
         const canceledSubscription = await stripe.subscriptions.update(
           subscription.stripe_subscription_id,
-          commitmentActive
-            ? commitmentCancellationParams(commitment.end!)
-            : { cancel_at_period_end: true },
+          { cancel_at_period_end: true },
         );
 
         // Update the subscription in the database
@@ -591,6 +549,9 @@ serve(async (req) => {
           .from("subscriptions")
           .update({
             cancel_at_period_end: true,
+            pending_plan: null,
+            pending_interval: null,
+            pending_effective_date: null,
             updated_at: new Date().toISOString(),
           })
           .eq("id", subscription.id);
@@ -598,9 +559,8 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             success: true,
-            message: commitmentActive
-              ? "Subscription will end after the 12-month commitment"
-              : "Subscription will be canceled at the end of the billing period",
+            message:
+              "Subscription will be canceled at the end of the billing period",
             subscription: canceledSubscription,
           }),
           {
@@ -634,22 +594,6 @@ serve(async (req) => {
             }),
             {
               status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-
-        const commitment = await resolveStripeCommitment(subscription);
-        if (commitment.isActive) {
-          return new Response(
-            JSON.stringify({
-              error:
-                "This subscription cannot be canceled immediately during its 12-month commitment.",
-              code: "SUBSCRIPTION_COMMITMENT_ACTIVE",
-              commitmentEnd: commitment.end,
-            }),
-            {
-              status: 409,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );

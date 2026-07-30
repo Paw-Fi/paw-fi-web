@@ -6,6 +6,9 @@ export interface VerifiedPaymentSubscriptionSnapshot {
   plan: string;
   status: string;
   billing_interval: string | null;
+  payment_interval?: string | null;
+  commitment_months?: number | null;
+  commitment_end?: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   trial_end: string | null;

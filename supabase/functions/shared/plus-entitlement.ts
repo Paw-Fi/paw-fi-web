@@ -45,7 +45,7 @@ export function isSubscriptionRequired(
 }
 
 export function buildSubscriptionRequiredMessage(feature: string): string {
-  return `Moneko Plus is required to use ${feature}. Subscribe to continue: ${PRICING_URL}`;
+  return `To use ${feature}, you'll need an active Moneko Plus plan. If your trial or subscription has ended, you can continue here: ${PRICING_URL}`;
 }
 
 export function jsonSubscriptionRequired(feature: string): {

@@ -23,6 +23,7 @@ import {
   matchesVerifiedAppStoreTransaction,
 } from "../shared/app-store-api.ts";
 import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
+import { resolveAnnualCommitmentSnapshot } from "../shared/subscription-commitment.ts";
 import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
 import {
   ensureAppStoreOwnership,
@@ -510,12 +511,31 @@ serve(async (req: Request) => {
     const { data: existingSub } = await supabase
       .from("subscriptions")
       .select(
-        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, trial_start, trial_end, current_period_end, billing_interval, store_product_id, app_store_original_transaction_id, lifetime_source, lifetime_source_id",
+        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, trial_start, trial_end, current_period_end, billing_interval, payment_interval, commitment_months, commitment_end, cancel_at_period_end, store_product_id, app_store_original_transaction_id, lifetime_source, lifetime_source_id",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (
+      (existingSub as any)?.provider === "stripe" &&
+      ["active", "trialing", "past_due", "paused"].includes(
+        String((existingSub as any)?.status || ""),
+      )
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Your subscription is managed through Stripe. Cancel it before purchasing through the App Store.",
+          code: "SUBSCRIPTION_MANAGED_BY_STRIPE",
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
     if ((existingSub as any)?.bound_to_user_id) {
       const boundToUserId = (existingSub as any).bound_to_user_id as string;
@@ -614,6 +634,7 @@ serve(async (req: Request) => {
       let appStoreBillingPlanType: string | null = null;
       let appStoreCommitmentMonths: number | null = null;
       let appStoreCommitmentEnd: string | null = null;
+      let appStoreCancelAtPeriodEnd: boolean | null = null;
       // Use the environment from ENV secret as default.
       // Will be updated based on JWS payload or App Store Server API response if available.
       // See ENV configuration comments at the top of this file for details.
@@ -985,17 +1006,13 @@ serve(async (req: Request) => {
           string,
           unknown
         >;
-        const decodedHintRecord = decodedHint as Record<string, unknown>;
         appStoreBillingPlanType = String(
-          verifiedTransactionRecord.billingPlanType ??
-            decodedHintRecord.billingPlanType ??
-            "",
+          verifiedTransactionRecord.billingPlanType ?? "",
         ).toUpperCase() || null;
-        const commitmentInfo = (verifiedTransactionRecord.commitmentInfo ??
-          decodedHintRecord.commitmentInfo) as
-            | Record<string, unknown>
-            | null
-            | undefined;
+        const commitmentInfo = verifiedTransactionRecord.commitmentInfo as
+          | Record<string, unknown>
+          | null
+          | undefined;
         const totalBillingPeriods = Number(commitmentInfo?.totalBillingPeriods);
         const commitmentExpiresDate = Number(
           commitmentInfo?.commitmentExpiresDate,
@@ -1362,6 +1379,7 @@ serve(async (req: Request) => {
           if (lifecycle.currentPeriodEnd) {
             currentPeriodEnd = lifecycle.currentPeriodEnd;
             status = lifecycle.status;
+            appStoreCancelAtPeriodEnd = lifecycle.cancelAtPeriodEnd;
             console.log("Using Apple's verified expiry date:", {
               userId,
               transactionId: decodedTransaction.transactionId ?? null,
@@ -2102,6 +2120,30 @@ serve(async (req: Request) => {
         );
       }
 
+      const isSameAppStoreSubscription =
+        (existingSub as any)?.provider === "app_store" &&
+        (existingSub as any)?.store_product_id === storeProductId &&
+        (existingSub as any)?.app_store_original_transaction_id ===
+          originalTransactionId;
+      const commitmentSnapshot = resolveAnnualCommitmentSnapshot({
+        incomingMonths: appStoreCommitmentMonths,
+        incomingEnd: appStoreCommitmentEnd,
+        existingMonths: (existingSub as any)?.commitment_months,
+        existingEnd: (existingSub as any)?.commitment_end,
+        sameSubscription: isSameAppStoreSubscription,
+        renews: (status === "active" || status === "trialing") &&
+          appStoreCancelAtPeriodEnd === false,
+        subscriptionStartUnixSeconds: now / 1000,
+      });
+      appStoreCommitmentMonths = commitmentSnapshot?.months ?? null;
+      appStoreCommitmentEnd = commitmentSnapshot?.end ?? null;
+      const cancelAtPeriodEnd = status === "canceled"
+        ? false
+        : appStoreCancelAtPeriodEnd ??
+          (isSameAppStoreSubscription
+            ? Boolean((existingSub as any)?.cancel_at_period_end)
+            : false);
+
       const subscriptionUpdate: Record<string, unknown> = {
         user_id: userId,
         provider: "app_store",
@@ -2125,7 +2167,7 @@ serve(async (req: Request) => {
         current_period_end: plan === "lifetime" ? null : currentPeriodEnd,
         trial_start: appStoreTrialStart,
         trial_end: appStoreTrialEnd,
-        cancel_at_period_end: false,
+        cancel_at_period_end: cancelAtPeriodEnd,
         app_store_transaction_id: transactionId,
         app_store_original_transaction_id: originalTransactionId,
         app_store_environment: environmentString,

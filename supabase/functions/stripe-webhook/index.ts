@@ -36,9 +36,7 @@ import {
   getPlanFromPriceId,
   resolveInvoicePlanFromLinePrices,
   resolveSubscriptionPlanFromPrice,
-  subscriptionHasCommitmentPrice,
 } from "../shared/stripe-subscription-prices.ts";
-import { resolveCommitmentEnd } from "../shared/subscription-commitment.ts";
 import { resolveStripeCurrentPeriodEnd } from "../shared/stripe-subscription-period.ts";
 import { resolveStripeSubscriptionUserCandidate } from "../shared/stripe-subscription-user.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -128,6 +126,13 @@ const ACCESS_GRANTING_STATUSES = new Set<string>([
   "trialing",
   "past_due",
 ]);
+const LIVE_SUBSCRIPTION_STATUSES = new Set<string>([
+  "active",
+  "trialing",
+  "past_due",
+  "paused",
+  "incomplete",
+]);
 const TERMINAL_DOWNGRADE_STATUSES = new Set<string>([
   "canceled",
   "incomplete_expired",
@@ -136,6 +141,10 @@ const TERMINAL_DOWNGRADE_STATUSES = new Set<string>([
 
 function isAccessGrantingStatus(status: string): boolean {
   return ACCESS_GRANTING_STATUSES.has(status);
+}
+
+function isLiveSubscriptionStatus(status: string): boolean {
+  return LIVE_SUBSCRIPTION_STATUSES.has(status);
 }
 
 function isTerminalDowngradeStatus(status: string): boolean {
@@ -177,6 +186,9 @@ async function downgradeOwnerSubscriptionToFree(params: {
       plan: "free",
       status: params.status,
       billing_interval: null,
+      payment_interval: null,
+      commitment_months: null,
+      commitment_end: null,
       stripe_subscription_id: params.stripeSubscriptionId ?? null,
       current_period_end: null,
       cancel_at_period_end: false,
@@ -302,6 +314,51 @@ async function getInvoicePaymentIntentId(
   return typeof paymentIntent === "string"
     ? paymentIntent
     : (paymentIntent.id ?? null);
+}
+
+async function cancelAndRefundDuplicateStripeSubscription(params: {
+  subscription: Stripe.Subscription;
+  eventId: string;
+  userId: string;
+  canonicalSubscriptionId: string;
+}): Promise<void> {
+  const latestInvoiceId = typeof params.subscription.latest_invoice === "string"
+    ? params.subscription.latest_invoice
+    : params.subscription.latest_invoice?.id;
+  let paymentIntentId: string | null = null;
+  let amountPaid = 0;
+
+  if (latestInvoiceId) {
+    const invoice = await stripe.invoices.retrieve(latestInvoiceId);
+    amountPaid = invoice.amount_paid;
+    paymentIntentId = await getInvoicePaymentIntentId(invoice);
+  }
+
+  await stripe.subscriptions.cancel(params.subscription.id, { prorate: false });
+
+  if (amountPaid > 0 && paymentIntentId) {
+    await stripe.refunds.create(
+      { payment_intent: paymentIntentId },
+      {
+        idempotencyKey:
+          `duplicate_subscription_refund:${params.subscription.id}`,
+      },
+    );
+  }
+
+  await reportStripeWebhookError(
+    "duplicate_live_subscription_canceled",
+    new Error("Canceled a duplicate live Stripe subscription"),
+    {
+      eventId: params.eventId,
+      userId: params.userId,
+      canonicalSubscriptionId: params.canonicalSubscriptionId,
+      duplicateSubscriptionId: params.subscription.id,
+      latestInvoiceId,
+      paymentIntentId,
+      amountPaid,
+    },
+  );
 }
 
 serve(async (req) => {
@@ -1621,14 +1678,14 @@ async function handleSubscriptionUpdated(
 
     const userId = user.id;
     const status = subscription.status;
-    const cancelAtPeriodEnd = Boolean(
+    let cancelAtPeriodEnd = Boolean(
       subscription.cancel_at_period_end || subscription.cancel_at,
     );
 
     const { data: previousSub, error: previousSubError } = await supabase
       .from("subscriptions")
       .select(
-        "provider, plan, billing_interval, payment_interval, commitment_months, commitment_end, status, stripe_subscription_id, app_store_original_transaction_id, current_price_id, cancel_at_period_end, current_period_end, ended_at, last_event_id, pending_plan, pending_interval, pending_effective_date",
+        "provider, plan, billing_interval, payment_interval, status, stripe_subscription_id, app_store_original_transaction_id, current_price_id, cancel_at_period_end, current_period_end, ended_at, last_event_id, pending_plan, pending_interval, pending_effective_date",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -1644,14 +1701,74 @@ async function handleSubscriptionUpdated(
       previousSub.status === "active" &&
       previousSub.stripe_subscription_id !== subscription.id
     ) {
-      console.log(
-        "Ignoring recurring subscription event for active Lifetime user",
-        {
-          userId: redactUserId(userId),
-          incomingSubscriptionId: subscription.id,
-        },
-      );
+      if (isLiveSubscriptionStatus(status)) {
+        await cancelAndRefundDuplicateStripeSubscription({
+          subscription,
+          eventId,
+          userId,
+          canonicalSubscriptionId: `lifetime:${userId}`,
+        });
+      } else {
+        console.log(
+          "Ignoring terminal recurring subscription event for active Lifetime user",
+          {
+            userId: redactUserId(userId),
+            incomingSubscriptionId: subscription.id,
+          },
+        );
+      }
       return;
+    }
+
+    if (
+      previousSub?.provider &&
+      previousSub.provider !== "stripe" &&
+      previousSub.plan !== "free" &&
+      ["active", "trialing", "past_due", "paused"].includes(
+        String(previousSub.status || ""),
+      ) &&
+      isLiveSubscriptionStatus(status)
+    ) {
+      await cancelAndRefundDuplicateStripeSubscription({
+        subscription,
+        eventId,
+        userId,
+        canonicalSubscriptionId: `${previousSub.provider}:${
+          previousSub.app_store_original_transaction_id ?? userId
+        }`,
+      });
+      return;
+    }
+
+    let allowIncomingStripeReplacement = false;
+    if (
+      previousSub?.stripe_subscription_id &&
+      previousSub.stripe_subscription_id !== subscription.id &&
+      isLiveSubscriptionStatus(status)
+    ) {
+      try {
+        const canonicalSubscription = await stripe.subscriptions.retrieve(
+          previousSub.stripe_subscription_id,
+        );
+        if (isLiveSubscriptionStatus(canonicalSubscription.status)) {
+          await cancelAndRefundDuplicateStripeSubscription({
+            subscription,
+            eventId,
+            userId,
+            canonicalSubscriptionId: canonicalSubscription.id,
+          });
+          return;
+        }
+        allowIncomingStripeReplacement = isTerminalDowngradeStatus(
+          canonicalSubscription.status,
+        );
+      } catch (lookupError: any) {
+        if (lookupError?.code === "resource_missing") {
+          allowIncomingStripeReplacement = true;
+        } else {
+          throw lookupError;
+        }
+      }
     }
 
     const entitlementDecision = decideSubscriptionEntitlementMutation(
@@ -1660,7 +1777,9 @@ async function handleSubscriptionUpdated(
           provider: previousSub.provider,
           plan: previousSub.plan,
           status: previousSub.status,
-          stripeSubscriptionId: previousSub.stripe_subscription_id,
+          stripeSubscriptionId: allowIncomingStripeReplacement
+            ? subscription.id
+            : previousSub.stripe_subscription_id,
           appStoreOriginalTransactionId:
             previousSub.app_store_original_transaction_id,
         }
@@ -1695,71 +1814,6 @@ async function handleSubscriptionUpdated(
     const previousCurrentPriceId = previousSub?.current_price_id as
       | string
       | null;
-
-    if (
-      previousSub?.stripe_subscription_id &&
-      previousSub.stripe_subscription_id !== subscription.id
-    ) {
-      let shouldAcceptIncomingSubscriptionId = false;
-
-      if (isAccessGrantingStatus(status)) {
-        try {
-          const existingStripeSubscription = await stripe.subscriptions
-            .retrieve(
-              previousSub.stripe_subscription_id,
-            );
-          const existingStripeStatus = existingStripeSubscription.status;
-
-          if (isTerminalDowngradeStatus(existingStripeStatus)) {
-            shouldAcceptIncomingSubscriptionId = true;
-          } else if (
-            isAccessGrantingStatus(existingStripeStatus) &&
-            typeof existingStripeSubscription.created === "number" &&
-            typeof subscription.created === "number" &&
-            subscription.created >= existingStripeSubscription.created
-          ) {
-            shouldAcceptIncomingSubscriptionId = true;
-          }
-        } catch (stripeError: any) {
-          reportStripeWebhookError(
-            "handle_subscription_updated_compare_subscription_ids",
-            stripeError,
-            {
-              userId,
-              incomingSubscriptionId: subscription.id,
-              existingSubscriptionId: previousSub.stripe_subscription_id,
-            },
-          );
-          console.error("Could not compare old vs incoming subscription IDs", {
-            userId: redactUserId(userId),
-            existingSubscriptionId: previousSub.stripe_subscription_id,
-            incomingSubscriptionId: subscription.id,
-            error: stripeError?.message || String(stripeError),
-          });
-        }
-      }
-
-      if (!shouldAcceptIncomingSubscriptionId) {
-        console.log(
-          "Skipping subscription update due to mismatched Stripe subscription id",
-          {
-            userId: redactUserId(userId),
-            incomingSubscriptionId: subscription.id,
-            existingSubscriptionId: previousSub.stripe_subscription_id,
-            status,
-            previousStoredStatus,
-          },
-        );
-        return;
-      }
-
-      console.log("Accepting newer Stripe subscription id for user", {
-        userId: redactUserId(userId),
-        previousSubscriptionId: previousSub.stripe_subscription_id,
-        incomingSubscriptionId: subscription.id,
-        incomingStatus: status,
-      });
-    }
 
     if (
       previousSub?.stripe_subscription_id === subscription.id &&
@@ -1801,6 +1855,10 @@ async function handleSubscriptionUpdated(
         `Subscription ${subscription.id} entered terminal status ${status}, downgrading to free`,
       );
 
+      const terminatedAt = typeof subscription.ended_at === "number" &&
+          !Number.isNaN(subscription.ended_at)
+        ? new Date(subscription.ended_at * 1000)
+        : new Date();
       await downgradeOwnerSubscriptionToFree({
         userId,
         eventId,
@@ -1808,6 +1866,7 @@ async function handleSubscriptionUpdated(
           ? "unpaid"
           : "canceled",
         stripeSubscriptionId: subscription.id,
+        endedAt: terminatedAt.toISOString(),
       });
 
       if (
@@ -1952,18 +2011,7 @@ async function handleSubscriptionUpdated(
     }
     const finalPlan = pricePlanInfo.plan;
     const finalInterval = pricePlanInfo.interval as BillingInterval;
-    const commitmentMonths = subscriptionHasCommitmentPrice(subscription)
-      ? 12
-      : null;
-    const commitmentEnd = commitmentMonths === 12
-      ? resolveCommitmentEnd({
-        previousCommitmentEnd: previousSub?.commitment_end,
-        subscriptionStartUnixSeconds:
-          Number(subscription.metadata?.commitment_started_at) ||
-          subscription.trial_end ||
-          subscription.start_date,
-      })
-      : null;
+
     const pendingChangeApplied = previousSub?.pending_plan === finalPlan &&
       previousSub?.pending_interval === finalInterval;
 
@@ -2063,9 +2111,9 @@ async function handleSubscriptionUpdated(
           play_package_name: null,
           plan: finalPlan,
           billing_interval: finalInterval,
-          payment_interval: commitmentMonths === 12 ? "monthly" : finalInterval,
-          commitment_months: commitmentMonths,
-          commitment_end: commitmentEnd,
+          payment_interval: finalInterval,
+          commitment_months: null,
+          commitment_end: null,
           status: storedStatus,
           bound_to_user_id: null,
           bound_to_household_id: null,
@@ -2207,7 +2255,9 @@ async function handleSubscriptionUpdated(
       isCustomerSubscriptionEvent &&
       cancelAtPeriodEnd &&
       (!previousSub?.cancel_at_period_end ||
-        previousAttributes.cancel_at_period_end === false)
+        previousAttributes.cancel_at_period_end === false ||
+        (previousAttributes.cancel_at === null &&
+          subscription.cancel_at !== null))
     ) {
       const emailTemplate = subscriptionCanceledTemplate({
         name,
@@ -2320,7 +2370,9 @@ async function handleSubscriptionDeleted(
 
     const { data: subData, error: subError } = await supabase
       .from("subscriptions")
-      .select("user_id, plan, status, last_event_id")
+      .select(
+        "user_id, plan, status, commitment_months, commitment_end, last_event_id",
+      )
       .eq("stripe_subscription_id", subscription.id)
       .maybeSingle();
 
@@ -2354,15 +2406,17 @@ async function handleSubscriptionDeleted(
       return;
     }
 
+    const terminatedAt = typeof subscription.ended_at === "number" &&
+        !Number.isNaN(subscription.ended_at)
+      ? new Date(subscription.ended_at * 1000)
+      : new Date();
+
     await downgradeOwnerSubscriptionToFree({
       userId,
       eventId,
       status: "canceled",
       stripeSubscriptionId: subscription.id,
-      endedAt: typeof subscription.ended_at === "number" &&
-          !Number.isNaN(subscription.ended_at)
-        ? new Date(subscription.ended_at * 1000).toISOString()
-        : new Date().toISOString(),
+      endedAt: terminatedAt.toISOString(),
     });
 
     if (wasAlreadyTerminal && !wasHandledByThisEvent) {
@@ -2922,7 +2976,9 @@ async function handleInvoicePaymentFailed(
 
     let { data: subData, error: subError } = await supabase
       .from("subscriptions")
-      .select("user_id, plan, status, last_event_id")
+      .select(
+        "user_id, plan, status, commitment_months, commitment_end, last_event_id",
+      )
       .eq("stripe_subscription_id", subscriptionId)
       .maybeSingle();
 
@@ -2944,7 +3000,9 @@ async function handleInvoicePaymentFailed(
 
       const retryLookup = await supabase
         .from("subscriptions")
-        .select("user_id, plan, status, last_event_id")
+        .select(
+          "user_id, plan, status, commitment_months, commitment_end, last_event_id",
+        )
         .eq("stripe_subscription_id", subscriptionId)
         .maybeSingle();
       subData = retryLookup.data;
@@ -3036,11 +3094,13 @@ async function handleInvoicePaymentFailed(
     const mappedStatus = mapStripeStatusToStoredStatus(latestStripeStatus);
 
     if (isTerminalDowngradeStatus(latestStripeStatus)) {
+      const terminatedAt = new Date();
       await downgradeOwnerSubscriptionToFree({
         userId,
         eventId: `invoice_payment_failed_${invoice.id}`,
         status: mappedStatus === "unpaid" ? "unpaid" : "canceled",
         stripeSubscriptionId: subscriptionId,
+        endedAt: terminatedAt.toISOString(),
       });
       console.log(
         `Subscription moved to terminal state ${latestStripeStatus}; user downgraded`,

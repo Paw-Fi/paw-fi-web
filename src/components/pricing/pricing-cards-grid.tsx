@@ -1,12 +1,4 @@
-import { Check, Info } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Check } from "lucide-react";
 
 export interface PricingCardsGridProps {
   isYearly: boolean;
@@ -86,9 +78,7 @@ export function PricingCardsGrid({
       <div className="bg-card border-border text-card-foreground relative flex flex-col rounded-3xl border p-6 shadow-md sm:p-8 dark:border-white/20 dark:bg-[#111111] dark:text-white">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <p className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
-              Moneko Plus
-            </p>
+           
             <h3 className="mt-1 text-xl font-semibold sm:text-2xl">
               {isYearly ? "Annual Plan" : "Monthly Plan"}
             </h3>
@@ -108,25 +98,11 @@ export function PricingCardsGrid({
           </span>
         </div>
         <p className="text-muted-foreground mb-6 text-sm dark:text-white/50">
-          {isYearly ? "Billed monthly for 12 months" : "Cancel anytime"}
+          {isYearly
+            ? `${pyTier.priceMonthly} billed annually upfront`
+            : "Cancel anytime"}
         </p>
-
-        {isYearly && (
-          <div className="border-border/70 bg-muted/40 mb-5 rounded-2xl border p-3.5 text-sm">
-            <div className="flex items-center gap-2 font-semibold">
-              <Check className="text-primary h-4 w-4" />
-              Only {pyTier.effectiveMonthlyPrice} deducted each month
-            </div>
-            <div className="text-muted-foreground mt-2 flex items-center gap-2">
-              <Check className="text-primary h-4 w-4" />
-              12-month commitment
-            </div>
-            <div className="text-muted-foreground mt-2 flex items-center gap-2">
-              <Check className="text-primary h-4 w-4" />
-              Save {yearlySavingsPercent}% vs monthly
-            </div>
-          </div>
-        )}
+        
 
         <button
           onClick={() => onSubscribe(isYearly ? "plus_yearly" : "plus_monthly")}
@@ -135,17 +111,8 @@ export function PricingCardsGrid({
           Subscribe Special Offer
         </button>
         <p className="text-muted-foreground mb-8 text-center text-xs dark:text-white/40">
-          {isYearly
-            ? `12-month commitment · ${pyTier.priceMonthly} total`
-            : "Cancel anytime"}
+          {isYearly ? "Paid upfront · Renews yearly" : "Cancel anytime"}
         </p>
-
-        {isYearly && (
-          <CommitmentDetails
-            monthlyPrice={pyTier.effectiveMonthlyPrice}
-            totalPrice={pyTier.priceMonthly}
-          />
-        )}
 
         <ul className="flex-1 space-y-4">
           {plusFeatures.map((feature, i) => (
@@ -196,67 +163,5 @@ export function PricingCardsGrid({
         </ul>
       </div>
     </div>
-  );
-}
-
-function CommitmentDetails({
-  monthlyPrice,
-  totalPrice,
-}: {
-  monthlyPrice: string;
-  totalPrice: string;
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="text-primary focus-visible:ring-primary mx-auto mb-8 flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          aria-label="How the Annual Plan monthly payments work"
-        >
-          <Info className="h-4 w-4" />
-          How it works
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="center"
-        className="w-[min(24rem,calc(100vw-2rem))] p-5"
-      >
-        <PopoverHeader>
-          <PopoverTitle className="text-base font-semibold">
-            Annual Plan, paid monthly
-          </PopoverTitle>
-          <PopoverDescription className="leading-6">
-            You are charged {monthlyPrice} once each month for 12 months, not{" "}
-            {totalPrice} upfront.
-          </PopoverDescription>
-        </PopoverHeader>
-
-        <div className="mt-4 space-y-4 text-sm leading-6">
-          <section>
-            <h4 className="font-semibold">How billing works</h4>
-            <p className="text-muted-foreground">
-              The total commitment is 12 payments ({totalPrice} total). You keep
-              all Plus features throughout the subscription.
-            </p>
-          </section>
-          <section className="border-border bg-muted/50 rounded-xl border p-3">
-            <h4 className="font-semibold">If you cancel</h4>
-            <p className="text-muted-foreground mt-1">
-              Cancellation prevents the next annual commitment. It does not stop
-              the current payments. Your remaining monthly payments continue
-              until all 12 are completed.
-            </p>
-          </section>
-          <section>
-            <h4 className="font-semibold">After 12 months</h4>
-            <p className="text-muted-foreground">
-              The plan renews for another 12-month commitment unless you cancel
-              before the renewal date.
-            </p>
-          </section>
-        </div>
-      </PopoverContent>
-    </Popover>
   );
 }

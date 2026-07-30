@@ -44,7 +44,6 @@ import {
   assertCheckoutLineItem,
   assertCheckoutSessionCurrency,
   buildRegionalPriceCacheKey,
-  getRegionalCheckoutAmount,
   resolveRegionalCheckoutMarket,
 } from "../shared/regional-checkout.ts";
 import { buildCheckoutRedirectUrls } from "../shared/checkout-redirect.ts";
@@ -81,7 +80,7 @@ const regionalPriceIdCache = new Map<string, string>();
 
 async function assertSessionPricingOrExpire(
   session: Stripe.Checkout.Session,
-  expected: { priceId: string; currency: string; amount: number },
+  expected: { priceId: string; currency: string },
 ): Promise<void> {
   try {
     assertCheckoutSessionCurrency(session.currency, expected.currency);
@@ -109,12 +108,11 @@ async function resolveRegionalPriceId(
   billingInterval: BillingInterval | undefined,
   market: RegionalPricingMarket,
 ): Promise<string> {
-  const planTarget =
-    plan === "lifetime"
-      ? "lifetime"
-      : billingInterval === "yearly"
-        ? "plus_commitment_monthly"
-        : "plus_monthly";
+  const planTarget = plan === "lifetime"
+    ? "lifetime"
+    : billingInterval === "yearly"
+    ? "plus_yearly"
+    : "plus_monthly";
   const lookupKey = getRegionalStripePriceLookupKey(planTarget);
   const cacheKey = buildRegionalPriceCacheKey(lookupKey, market.currencyCode);
   const cached = regionalPriceIdCache.get(cacheKey);
@@ -132,18 +130,13 @@ async function resolveRegionalPriceId(
   const regionalPrice = matches.data[0];
   if (regionalPrice) {
     const currency = market.currencyCode.toLowerCase();
-    const expectedAmount =
-      plan === "lifetime"
-        ? market.lifetime
-        : billingInterval === "yearly"
-          ? Math.round(market.yearly / 12)
-          : market.monthly;
-    const actualAmount =
-      regionalPrice.currency === currency
-        ? regionalPrice.unit_amount
-        : regionalPrice.currency_options?.[currency]?.unit_amount;
-    if (actualAmount !== expectedAmount) {
-      throw new Error(`Stripe Price amount mismatch for ${lookupKey}`);
+    const actualAmount = regionalPrice.currency === currency
+      ? regionalPrice.unit_amount
+      : regionalPrice.currency_options?.[currency]?.unit_amount;
+    if (!Number.isInteger(actualAmount) || (actualAmount ?? 0) <= 0) {
+      throw new Error(
+        `Stripe Price does not support ${market.currencyCode} for ${lookupKey}`,
+      );
     }
     regionalPriceIdCache.set(cacheKey, regionalPrice.id);
     return regionalPrice.id;
@@ -259,8 +252,9 @@ serve(async (req: Request) => {
     } catch (error) {
       return new Response(
         JSON.stringify({
-          error:
-            error instanceof Error ? error.message : "Invalid checkout market",
+          error: error instanceof Error
+            ? error.message
+            : "Invalid checkout market",
         }),
         {
           status: 400,
@@ -307,12 +301,6 @@ serve(async (req: Request) => {
       }
     }
 
-    const expectedCheckoutAmount = getRegionalCheckoutAmount(
-      plan,
-      billingInterval,
-      regionalMarket,
-    );
-
     // Get the price ID based on plan and billing interval (with validation)
     let priceId: string;
     try {
@@ -335,6 +323,7 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: "Checkout pricing is temporarily unavailable",
+          code: "CHECKOUT_PRICING_UNAVAILABLE",
         }),
         {
           status: 500,
@@ -401,8 +390,9 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription =
-        hasActiveHouseholdSubscriptionAccess(ownerSub);
+      const ownerHasActiveSubscription = hasActiveHouseholdSubscriptionAccess(
+        ownerSub,
+      );
 
       if (ownerHasActiveSubscription) {
         console.error("User is bound to active household subscription:", {
@@ -450,6 +440,23 @@ serve(async (req: Request) => {
         }),
         {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      plan === "lifetime" &&
+      existingSub?.plan === "lifetime" &&
+      existingSub?.status === "active"
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: "You already have Lifetime access.",
+          code: "LIFETIME_ALREADY_OWNED",
+        }),
+        {
+          status: 409,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
@@ -552,14 +559,97 @@ serve(async (req: Request) => {
       }
     }
 
+    if (plan !== "lifetime") {
+      // Stripe is authoritative. A stale local trial/subscription row must not
+      // block checkout after Stripe has already ended or paused it.
+      const stripeSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "all",
+        limit: 100,
+      });
+      const existingLiveStripeSubscription = stripeSubscriptions.data.find(
+        (candidate) =>
+          ["active", "trialing", "past_due", "paused", "incomplete"].includes(
+            candidate.status,
+          ),
+      );
+      if (existingLiveStripeSubscription) {
+        await reportCreateCheckoutSessionError(
+          "authoritative_active_subscription_exists",
+          new Error(
+            "Stripe customer already has a live recurring subscription",
+          ),
+          {
+            userId,
+            customerId,
+            stripeSubscriptionId: existingLiveStripeSubscription.id,
+            stripeStatus: existingLiveStripeSubscription.status,
+          },
+        );
+        return new Response(
+          JSON.stringify({
+            error:
+              "You already have a Stripe subscription. Manage the existing subscription instead of starting another checkout.",
+            code: "ACTIVE_STRIPE_SUBSCRIPTION_EXISTS",
+          }),
+          {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // Reuse an open session only after proving that no live subscription
+      // exists, otherwise a stale session could create a duplicate.
+      const openCheckoutSessions = await stripe.checkout.sessions.list({
+        customer: customerId,
+        status: "open",
+        limit: 100,
+      });
+      const matchingOpenSession = openCheckoutSessions.data.find(
+        (candidate) =>
+          candidate.mode === "subscription" &&
+          candidate.metadata?.user_id === userId &&
+          candidate.metadata?.plan === plan &&
+          candidate.metadata?.billing_interval === billingInterval &&
+          candidate.metadata?.commitment_months === "0" &&
+          candidate.metadata?.pricing_country === (requestedCountry ?? "US") &&
+          candidate.metadata?.presentment_currency === requestedCurrency &&
+          candidate.metadata?.promo_code === (promoCode ?? ""),
+      );
+      if (matchingOpenSession?.url) {
+        try {
+          await assertSessionPricingOrExpire(matchingOpenSession, {
+            priceId,
+            currency: checkoutCurrency,
+          });
+          return new Response(
+            JSON.stringify({
+              clientSecret: matchingOpenSession.client_secret,
+              checkoutUrl: matchingOpenSession.url,
+              sessionId: matchingOpenSession.id,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        } catch (error) {
+          console.warn(
+            "Expired open Checkout Session with stale pricing:",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      }
+    }
+
     try {
       const { successUrl: finalSuccessUrl, cancelUrl: finalCancelUrl } =
         buildCheckoutRedirectUrls({
           appUrl: env.appUrl,
           successUrl: typeof successUrl === "string" ? successUrl : null,
           cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
-          allowLocalhost:
-            env.appUrl.includes("localhost") ||
+          allowLocalhost: env.appUrl.includes("localhost") ||
             env.appUrl.includes("127.0.0.1"),
         });
 
@@ -606,7 +696,8 @@ serve(async (req: Request) => {
               return new Response(
                 JSON.stringify({
                   error: "Invalid promotion code",
-                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                  details:
+                    `The promotion code '${promoCode}' is not valid or has expired.`,
                 }),
                 {
                   status: 400,
@@ -727,14 +818,12 @@ serve(async (req: Request) => {
         await assertSessionPricingOrExpire(session, {
           priceId,
           currency: requestedCurrency,
-          amount: expectedCheckoutAmount,
         });
         console.log("Lifetime checkout session created:", {
           id: session.id,
           customerId,
           pricingCountry: requestedCountry,
           expectedCurrency: requestedCurrency,
-          expectedAmount: expectedCheckoutAmount,
           sessionCurrency: session.currency,
           amountSubtotal: session.amount_subtotal,
         });
@@ -813,7 +902,8 @@ serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
-                details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                details:
+                  `The promotion code '${promoCode}' is not valid or has expired.`,
               }),
               {
                 status: 400,
@@ -861,9 +951,8 @@ serve(async (req: Request) => {
             user_id: userId, // Use snake_case for Stripe metadata
             plan: plan,
             billing_interval: billingInterval,
-            payment_interval:
-              billingInterval === "yearly" ? "monthly" : billingInterval,
-            commitment_months: billingInterval === "yearly" ? "12" : "0",
+            payment_interval: billingInterval,
+            commitment_months: "0",
             pricing_country: requestedCountry ?? "US",
             presentment_currency: requestedCurrency,
           },
@@ -872,7 +961,10 @@ serve(async (req: Request) => {
         metadata: {
           user_id: userId,
           checkout_type: "subscription",
-          commitment_months: billingInterval === "yearly" ? "12" : "0",
+          plan,
+          billing_interval: billingInterval,
+          commitment_months: "0",
+          promo_code: promoCode ?? "",
           pricing_country: requestedCountry ?? "US",
           presentment_currency: requestedCurrency,
         },
@@ -970,14 +1062,12 @@ serve(async (req: Request) => {
       await assertSessionPricingOrExpire(session, {
         priceId,
         currency: requestedCurrency,
-        amount: expectedCheckoutAmount,
       });
       console.log("Checkout session created:", {
         id: session.id,
         customerId,
         pricingCountry: requestedCountry,
         expectedCurrency: requestedCurrency,
-        expectedAmount: expectedCheckoutAmount,
         sessionCurrency: session.currency,
         amountSubtotal: session.amount_subtotal,
       });
@@ -1040,9 +1130,18 @@ serve(async (req: Request) => {
         currency: requestedCurrency,
       });
 
+      const failureCode = typeof stripeErr?.code === "string" &&
+          stripeErr.code.length > 0
+        ? `STRIPE_${stripeErr.code.toUpperCase()}`
+        : stripeErr?.message?.includes("currency mismatch")
+        ? "CHECKOUT_PRICE_CURRENCY_MISMATCH"
+        : stripeErr?.message?.includes("Price mismatch")
+        ? "CHECKOUT_PRICE_ID_MISMATCH"
+        : "STRIPE_SESSION_CREATION_FAILED";
       return new Response(
         JSON.stringify({
           error: "Failed to create checkout session",
+          code: failureCode,
         }),
         {
           status: 500,

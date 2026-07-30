@@ -7,7 +7,6 @@
  * IMPORTANT: Ensure all environment variables are set:
  * - STRIPE_MONTHLY_PLUS_PLAN_ID (or STRIPE_PLUS_MONTHLY_PRICE_ID)
  * - STRIPE_YEARLY_PLUS_PLAN_ID (or STRIPE_PLUS_YEARLY_PRICE_ID)
- * - STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID
  * - STRIPE_LIFETIME_PRICE_ID (one-time payment, no recurring)
  * - STRIPE_MONTHLY_PREMIUM_PLAN_ID
  * - STRIPE_YEARLY_PREMIUM_PLAN_ID
@@ -18,7 +17,6 @@ import { BillingInterval, PlanType } from "./subscription-constants.ts";
 interface PriceConfig {
   monthly: string;
   yearly: string;
-  commitmentMonthly?: string;
 }
 
 interface SubscriptionPrices {
@@ -79,8 +77,6 @@ export function getSubscriptionPrices(): SubscriptionPrices {
       yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_YEARLY_PRICE_ID") ||
         "",
-      commitmentMonthly:
-        Deno.env.get("STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID") || "",
     },
     lifetime: Deno.env.get("STRIPE_LIFETIME_PRICE_ID") || "", // One-time payment
     premium: {
@@ -153,18 +149,12 @@ export function getPriceId(plan: PlanType, interval?: BillingInterval): string {
     ? prices.premium
     : null;
 
-  const priceId = plan === "plus" && interval === "yearly"
-    ? recurringPrices?.commitmentMonthly || ""
-    : recurringPrices?.[interval] || "";
+  const priceId = recurringPrices?.[interval] || "";
 
   if (!priceId) {
     throw new Error(
       `Price ID not configured for plan "${plan}" with interval "${interval}". ` +
-        `Please set the environment variable ${
-          plan === "plus" && interval === "yearly"
-            ? "STRIPE_PLUS_COMMITMENT_MONTHLY_PRICE_ID"
-            : `STRIPE_${interval.toUpperCase()}_${plan.toUpperCase()}_PLAN_ID`
-        }`,
+        `Please set the environment variable STRIPE_${interval.toUpperCase()}_${plan.toUpperCase()}_PLAN_ID`,
     );
   }
 
@@ -194,28 +184,6 @@ export function validatePriceId(priceId: string): boolean {
   return true;
 }
 
-export function isCommitmentPriceId(
-  priceId: string | null | undefined,
-): boolean {
-  if (!priceId) return false;
-  return getSubscriptionPrices().plus.commitmentMonthly === priceId;
-}
-
-export function isCommitmentStripePrice(
-  price: { id?: string | null; lookup_key?: string | null } | null | undefined,
-): boolean {
-  if (isCommitmentPriceId(price?.id)) return true;
-  return /^moneko_plus_commitment_monthly_v\d+$/.test(price?.lookup_key ?? "");
-}
-
-export function subscriptionHasCommitmentPrice(
-  subscription: StripeSubscriptionPriceSource,
-): boolean {
-  return (subscription.items?.data ?? []).some((item) =>
-    isCommitmentStripePrice(item?.price)
-  );
-}
-
 /**
  * Get all configured price IDs
  * Useful for validation and testing
@@ -224,7 +192,6 @@ export function getAllPriceIds(): string[] {
   const prices = getSubscriptionPrices();
   const ids: string[] = [
     prices.plus.monthly,
-    prices.plus.commitmentMonthly || "",
     prices.plus.yearly,
     prices.lifetime,
   ].filter((id) => typeof id === "string" && id.trim() !== "");
@@ -281,9 +248,7 @@ export function getPlanFromPriceId(
       if (id === priceId) {
         return {
           plan: plan as PlanType,
-          interval: interval === "commitmentMonthly"
-            ? "yearly"
-            : (interval as BillingInterval),
+          interval: interval as BillingInterval,
         };
       }
     }
@@ -296,9 +261,6 @@ export function resolveSubscriptionPlanFromPrice(
   subscription: StripeSubscriptionPriceSource,
 ): { plan: PlanType; interval: BillingInterval | null } | null {
   for (const item of subscription.items?.data ?? []) {
-    if (isCommitmentStripePrice(item?.price)) {
-      return { plan: "plus", interval: "yearly" };
-    }
     const planInfo = getPlanFromPriceId(item?.price?.id);
     if (planInfo) return planInfo;
   }
@@ -310,9 +272,6 @@ export function resolveInvoicePlanFromLinePrices(
   invoice: StripeInvoicePriceSource,
 ): { plan: PlanType; interval: BillingInterval | null } | null {
   for (const line of invoice.lines?.data ?? []) {
-    if (isCommitmentStripePrice(line?.price)) {
-      return { plan: "plus", interval: "yearly" };
-    }
     const priceId = line?.price?.id || line?.pricing?.price_details?.price;
     const planInfo = getPlanFromPriceId(priceId);
     if (planInfo) return planInfo;

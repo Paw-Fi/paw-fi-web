@@ -53,8 +53,7 @@ function calculateDelay(
   attemptNumber: number,
   config: Required<RetryConfig>,
 ): number {
-  const delay =
-    config.initialDelayMs *
+  const delay = config.initialDelayMs *
     Math.pow(config.backoffMultiplier, attemptNumber - 1);
 
   // Add jitter to prevent thundering herd
@@ -177,7 +176,13 @@ export async function createCheckoutSessionWithRetry(
   stripe: Stripe,
   params: Stripe.Checkout.SessionCreateParams,
 ): Promise<Stripe.Checkout.Session> {
-  return withRetry(() => stripe.checkout.sessions.create(params));
+  // Keep one key for every network retry in this invocation. Without this,
+  // Stripe may create multiple live Checkout Sessions when the first create
+  // succeeds but its response is lost.
+  const idempotencyKey = `checkout_session:${crypto.randomUUID()}`;
+  return withRetry(() =>
+    stripe.checkout.sessions.create(params, { idempotencyKey })
+  );
 }
 
 /**

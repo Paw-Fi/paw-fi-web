@@ -14,6 +14,21 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+function hasRemainingCommitmentPayments(
+  subscription: Record<string, any>,
+): boolean {
+  if (subscription.provider !== "app_store") return false;
+  if (subscription.commitment_months !== 12) return false;
+  const commitmentEnd = Date.parse(String(subscription.commitment_end || ""));
+  const currentPeriodEnd = Date.parse(
+    String(subscription.current_period_end || ""),
+  );
+  return Number.isFinite(commitmentEnd) &&
+    commitmentEnd > Date.now() &&
+    Number.isFinite(currentPeriodEnd) &&
+    currentPeriodEnd < commitmentEnd;
+}
+
 serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
@@ -84,10 +99,18 @@ serve(async (req: Request) => {
         plan: directSubscription.plan,
         status: directSubscription.status,
         billing_interval: directSubscription.billing_interval,
+        payment_interval: directSubscription.payment_interval,
+        commitment_months: directSubscription.provider === "app_store"
+          ? directSubscription.commitment_months
+          : null,
+        commitment_end: directSubscription.provider === "app_store"
+          ? directSubscription.commitment_end
+          : null,
         current_period_end: directSubscription.current_period_end,
-        next_payment_date: directSubscription.cancel_at_period_end
-          ? null
-          : directSubscription.current_period_end,
+        next_payment_date: !directSubscription.cancel_at_period_end ||
+            hasRemainingCommitmentPayments(directSubscription)
+          ? directSubscription.current_period_end
+          : null,
         cancel_at_period_end: directSubscription.cancel_at_period_end,
         stripe_subscription_id: directSubscription.stripe_subscription_id,
         stripe_customer_id: directSubscription.stripe_customer_id,
@@ -105,9 +128,27 @@ serve(async (req: Request) => {
         directSubscription.store_product_id;
       finalSubscription.app_store_in_app_ownership_type ??=
         directSubscription.app_store_in_app_ownership_type;
-      finalSubscription.bound_to_user_id ??= directSubscription.bound_to_user_id;
+      finalSubscription.bound_to_user_id ??=
+        directSubscription.bound_to_user_id;
       finalSubscription.bound_to_household_id ??=
         directSubscription.bound_to_household_id;
+      finalSubscription.payment_interval ??=
+        directSubscription.payment_interval;
+      finalSubscription.commitment_months =
+        directSubscription.provider === "app_store"
+          ? directSubscription.commitment_months
+          : null;
+      finalSubscription.commitment_end =
+        directSubscription.provider === "app_store"
+          ? directSubscription.commitment_end
+          : null;
+      finalSubscription.cancel_at_period_end =
+        directSubscription.cancel_at_period_end;
+      finalSubscription.next_payment_date =
+        !directSubscription.cancel_at_period_end ||
+          hasRemainingCommitmentPayments(directSubscription)
+          ? directSubscription.current_period_end
+          : null;
     }
 
     // If no subscription found, return free tier info
@@ -146,8 +187,9 @@ serve(async (req: Request) => {
     let invoices: any[] = [];
 
     const provider = (finalSubscription as any).provider || "stripe";
-    const isBorrowedHouseholdSubscription =
-      Boolean((finalSubscription as any).bound_to_user_id);
+    const isBorrowedHouseholdSubscription = Boolean(
+      (finalSubscription as any).bound_to_user_id,
+    );
     const responseSubscription = isBorrowedHouseholdSubscription
       ? {
         ...finalSubscription,
@@ -220,7 +262,8 @@ serve(async (req: Request) => {
       daysUntilNextPayment = null;
     } else if (
       finalSubscription.status === "active" &&
-      !finalSubscription.cancel_at_period_end &&
+      (!finalSubscription.cancel_at_period_end ||
+        hasRemainingCommitmentPayments(finalSubscription)) &&
       finalSubscription.current_period_end
     ) {
       // Recurring plans: Calculate days until period end
