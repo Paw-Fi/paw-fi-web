@@ -1,25 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { seo } from "@/utils/seo";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { toast } from "react-toastify";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle2,
-  XCircle,
   AlertCircle,
-  Loader2,
   ArrowRight,
-  HelpCircle,
-  Receipt,
   Calendar,
+  CheckCircle2,
   CreditCard,
-  RefreshCw,
+  HelpCircle,
+  Loader2,
   Mail,
+  Receipt,
+  RefreshCw,
+  XCircle,
 } from "lucide-react";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
@@ -60,6 +62,8 @@ function PaymentStatusPage() {
   const search = useSearch({ from: "/payment-status" });
   const navigate = useNavigate();
   const prefersReducedMotion = usePrefersReducedMotion();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<string>(
@@ -91,12 +95,25 @@ function PaymentStatusPage() {
             if (error) {
               console.error("Error verifying payment:", { error, data });
               const errorResponse = data as any;
-              const errorMessage =
-                errorResponse?.error ||
+              const errorMessage = errorResponse?.error ||
                 errorResponse?.details ||
                 errorResponse?.message ||
                 error.message ||
                 "Failed to verify payment status";
+
+              if (attempt < 7) {
+                setPaymentStatus("pending");
+                setError(
+                  "Payment was received. Waiting for account activation…",
+                );
+                await new Promise((resolve) =>
+                  setTimeout(
+                    resolve,
+                    attempt < 2 ? 1000 : attempt < 5 ? 2000 : 3000,
+                  )
+                );
+                continue;
+              }
 
               setPaymentStatus("failed");
               setError(errorMessage);
@@ -106,8 +123,8 @@ function PaymentStatusPage() {
 
             if (data?.error) {
               console.error("Error in response data:", data);
-              const errorMessage =
-                data.details || data.error || "Failed to verify payment status";
+              const errorMessage = data.details || data.error ||
+                "Failed to verify payment status";
               setPaymentStatus("failed");
               setError(errorMessage);
               setIsLoading(false);
@@ -115,6 +132,9 @@ function PaymentStatusPage() {
             }
 
             if (data?.verified) {
+              await queryClient.invalidateQueries({
+                queryKey: ["subscription", user?.id],
+              });
               setPaymentStatus("success");
               setSubscriptionDetails(data.subscription);
               toast.success(
@@ -130,7 +150,7 @@ function PaymentStatusPage() {
               setTimeout(
                 resolve,
                 attempt < 2 ? 1000 : attempt < 5 ? 2000 : 3000,
-              ),
+              )
             );
           }
 
@@ -140,7 +160,9 @@ function PaymentStatusPage() {
           if (cancelled) return;
           setPaymentStatus("failed");
           setError(
-            err instanceof Error ? err.message : "Failed to verify payment status",
+            err instanceof Error
+              ? err.message
+              : "Failed to verify payment status",
           );
           setIsLoading(false);
         }
@@ -154,12 +176,12 @@ function PaymentStatusPage() {
     return () => {
       cancelled = true;
     };
-  }, [search.session_id, search.status, search.v]);
+  }, [queryClient, search.session_id, search.status, search.v, user?.id]);
 
   useEffect(() => {
     // Only update from search param if not loading/verifying
     if (!search.session_id) {
-        setPaymentStatus(search.status || "pending");
+      setPaymentStatus(search.status || "pending");
     }
   }, [search.status, search.session_id]);
 
@@ -180,7 +202,8 @@ function PaymentStatusPage() {
         icon: <Loader2 className="h-12 w-12 animate-spin text-blue-500" />,
         title: "Verifying Payment",
         description: "Please wait while we confirm your transaction...",
-        color: "bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200",
+        color:
+          "bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200",
         borderColor: "border-blue-200 dark:border-blue-800",
       };
     }
@@ -191,7 +214,8 @@ function PaymentStatusPage() {
           icon: <CheckCircle2 className="h-12 w-12 text-emerald-500" />,
           title: "Payment Successful",
           description: "Thank you! Your subscription is now active.",
-          color: "bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200",
+          color:
+            "bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200",
           borderColor: "border-emerald-200 dark:border-emerald-800",
         };
       case "failed":
@@ -207,7 +231,8 @@ function PaymentStatusPage() {
           icon: <AlertCircle className="h-12 w-12 text-gray-500" />,
           title: "Payment Canceled",
           description: "You've canceled the payment process.",
-          color: "bg-gray-50 text-gray-900 dark:bg-gray-800/50 dark:text-gray-200",
+          color:
+            "bg-gray-50 text-gray-900 dark:bg-gray-800/50 dark:text-gray-200",
           borderColor: "border-gray-200 dark:border-gray-700",
         };
       case "pending":
@@ -215,8 +240,10 @@ function PaymentStatusPage() {
         return {
           icon: <Loader2 className="h-12 w-12 animate-spin text-amber-500" />,
           title: "Payment Processing",
-          description: "Your payment is being processed. This may take a moment.",
-          color: "bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200",
+          description:
+            "Your payment is being processed. This may take a moment.",
+          color:
+            "bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200",
           borderColor: "border-amber-200 dark:border-amber-800",
         };
     }
@@ -228,8 +255,12 @@ function PaymentStatusPage() {
     <AmbientHaloLayout>
       <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-12">
         <motion.div
-          initial={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.95, y: 20 }}
-          animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
+          initial={prefersReducedMotion
+            ? undefined
+            : { opacity: 0, scale: 0.95, y: 20 }}
+          animate={prefersReducedMotion
+            ? undefined
+            : { opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="relative w-full max-w-lg"
         >
@@ -246,11 +277,13 @@ function PaymentStatusPage() {
                   damping: 20,
                   delay: 0.1,
                 }}
-                className={`mb-6 flex h-20 w-20 items-center justify-center rounded-full ${config.color.split(" ")[0]}`}
+                className={`mb-6 flex h-20 w-20 items-center justify-center rounded-full ${
+                  config.color.split(" ")[0]
+                }`}
               >
                 {config.icon}
               </motion.div>
-              
+
               <h1 className="mb-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
                 {config.title}
               </h1>
@@ -262,155 +295,187 @@ function PaymentStatusPage() {
             {/* Content Section */}
             <div className="p-8 pt-0">
               <AnimatePresence mode="wait">
-                {isLoading ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    key="loading"
-                  >
-                    <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-200">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                        <div>
-                          <p className="font-medium">Please do not close this page</p>
-                          <p className="mt-1 opacity-90">Closing this window might interrupt the verification process.</p>
+                {isLoading
+                  ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      key="loading"
+                    >
+                      <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-200">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                          <div>
+                            <p className="font-medium">
+                              Please do not close this page
+                            </p>
+                            <p className="mt-1 opacity-90">
+                              Closing this window might interrupt the
+                              verification process.
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ) : paymentStatus === "success" ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    key="success"
-                    className="text-left"
-                  >
-                    <div className="relative space-y-8 pl-10 before:absolute before:left-[17px] before:top-2 before:h-[calc(100%-20px)] before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
-                      {/* Step 1: Upgrade Confirmed */}
-                      <div className="relative">
-                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-emerald-500 text-white shadow-sm dark:border-slate-900">
-                          <span className="font-bold text-sm">1</span>
+                    </motion.div>
+                  )
+                  : paymentStatus === "success"
+                  ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      key="success"
+                      className="text-left"
+                    >
+                      <div className="relative space-y-8 pl-10 before:absolute before:left-[17px] before:top-2 before:h-[calc(100%-20px)] before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                        {/* Step 1: Upgrade Confirmed */}
+                        <div className="relative">
+                          <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-emerald-500 text-white shadow-sm dark:border-slate-900">
+                            <span className="font-bold text-sm">1</span>
+                          </div>
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                            Plan Upgraded
+                          </h3>
+                          {subscriptionDetails && (
+                            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                              Your account has been successfully upgraded to the
+                              {" "}
+                              <span className="font-medium text-emerald-600 dark:text-emerald-400 capitalize">
+                                {subscriptionDetails.plan}
+                              </span>{" "}
+                              plan.
+                            </p>
+                          )}
                         </div>
-                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                          Plan Upgraded
-                        </h3>
-                        {subscriptionDetails && (
-                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            Your account has been successfully upgraded to the{" "}
-                            <span className="font-medium text-emerald-600 dark:text-emerald-400 capitalize">
-                              {subscriptionDetails.plan}
-                            </span>{" "}
-                            plan.
+
+                        {/* Step 2: Download App */}
+                        <div className="relative">
+                          <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-blue-500 text-white shadow-sm dark:border-slate-900">
+                            <span className="font-bold text-sm">2</span>
+                          </div>
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                            Download Our App
+                          </h3>
+                          <p className="mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
+                            Get the full Moneko experience on your mobile
+                            device.
                           </p>
-                        )}
+                          <div className="flex flex-wrap gap-2">
+                            <AppleDownloadButton />
+                            <AndroidDownloadButton />
+                          </div>
+                        </div>
+
+                        {/* Step 3: Login */}
+                        <div className="relative">
+                          <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-slate-100 text-slate-500 dark:border-slate-900 dark:bg-slate-800 dark:text-slate-400">
+                            <span className="font-bold text-sm">3</span>
+                          </div>
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                            Login
+                          </h3>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                            Sign in with the same account you used for this
+                            subscription.
+                          </p>
+                        </div>
+
+                        {/* Step 4: Log Expense */}
+                        <div className="relative">
+                          <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-slate-100 text-slate-500 dark:border-slate-900 dark:bg-slate-800 dark:text-slate-400">
+                            <span className="font-bold text-sm">4</span>
+                          </div>
+                          <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                            Log an Expense
+                          </h3>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                            Start tracking your spending immediately to reach
+                            your financial goals.
+                          </p>
+                        </div>
                       </div>
 
-                      {/* Step 2: Download App */}
-                      <div className="relative">
-                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-blue-500 text-white shadow-sm dark:border-slate-900">
-                          <span className="font-bold text-sm">2</span>
-                        </div>
-                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                          Download Our App
-                        </h3>
-                        <p className="mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
-                          Get the full Moneko experience on your mobile device.
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <AppleDownloadButton />
-                          <AndroidDownloadButton />
-                        </div>
-                      </div>
-
-                      {/* Step 3: Login */}
-                      <div className="relative">
-                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-slate-100 text-slate-500 dark:border-slate-900 dark:bg-slate-800 dark:text-slate-400">
-                          <span className="font-bold text-sm">3</span>
-                        </div>
-                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                          Login
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                          Sign in with the same account you used for this subscription.
-                        </p>
-                      </div>
-
-                      {/* Step 4: Log Expense */}
-                      <div className="relative">
-                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-slate-100 text-slate-500 dark:border-slate-900 dark:bg-slate-800 dark:text-slate-400">
-                          <span className="font-bold text-sm">4</span>
-                        </div>
-                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                          Log an Expense
-                        </h3>
-                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                          Start tracking your spending immediately to reach your financial goals.
-                        </p>
-                      </div>
-                    </div>
-                    
-                   
-                  </motion.div>
-                ) : (paymentStatus === "failed" || paymentStatus === "canceled") ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    key="error-state"
-                    className="grid gap-3"
-                  >
-                    <Button 
-                      variant="default" 
-                      size="lg" 
-                      className="w-full"
-                      onClick={() => navigate({ to: "/pricing" })}
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="mt-8 w-full"
+                        onClick={() => navigate({ to: "/dashboard" })}
+                      >
+                        Open Dashboard
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  )
+                  : (paymentStatus === "failed" || paymentStatus === "canceled")
+                  ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      key="error-state"
+                      className="grid gap-3"
                     >
-                      Return to Pricing
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="lg" 
-                      className="w-full"
-                      onClick={() =>
-                        (window.location.href = "mailto:hello@moneko.io?subject=Payment%20Issue")
-                      }
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="w-full"
+                        onClick={() => navigate({ to: "/pricing" })}
+                      >
+                        Return to Pricing
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="w-full"
+                        onClick={() => (window.location.href =
+                          "mailto:hello@moneko.io?subject=Payment%20Issue")}
+                      >
+                        <Mail className="mr-2 h-4 w-4" /> Contact Support
+                      </Button>
+                    </motion.div>
+                  )
+                  : paymentStatus === "pending"
+                  ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      key="pending"
+                      className="grid gap-3"
                     >
-                      <Mail className="mr-2 h-4 w-4" /> Contact Support
-                    </Button>
-                  </motion.div>
-                ) : paymentStatus === "pending" ? (
-                  <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }}
-                    key="pending"
-                    className="grid gap-3"
-                  >
-                    <Button
-                      onClick={() => window.location.reload()}
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" /> Check Again
-                    </Button>
-                    <Button 
-                      variant="default"
-                      onClick={() => navigate({ to: "/dashboard" })}
-                      className="opacity-80"
-                    >
-                      Go to Dashboard
-                    </Button>
-                  </motion.div>
-                ) : null}
+                      <Button
+                        onClick={() => window.location.reload()}
+                        variant="outline"
+                        size="lg"
+                        className="w-full"
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Check Again
+                      </Button>
+                      <Button
+                        variant="default"
+                        onClick={() => navigate({ to: "/dashboard" })}
+                        className="opacity-80"
+                      >
+                        Go to Dashboard
+                      </Button>
+                    </motion.div>
+                  )
+                  : null}
               </AnimatePresence>
             </div>
 
             {/* Footer Help */}
-             <div className="border-t border-slate-100 bg-slate-50 px-8 py-4 text-center dark:border-white/5 dark:bg-white/5">
-                <p className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                    <HelpCircle className="h-4 w-4" />
-                    <span>Need help? <a href="mailto:hello@moneko.io" className="font-medium text-emerald-600 hover:underline dark:text-emerald-400">Email us</a></span>
-                </p>
+            <div className="border-t border-slate-100 bg-slate-50 px-8 py-4 text-center dark:border-white/5 dark:bg-white/5">
+              <p className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <HelpCircle className="h-4 w-4" />
+                <span>
+                  Need help?{" "}
+                  <a
+                    href="mailto:hello@moneko.io"
+                    className="font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+                  >
+                    Email us
+                  </a>
+                </span>
+              </p>
             </div>
           </div>
         </motion.div>
