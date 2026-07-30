@@ -6,6 +6,7 @@ import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
 import { sendUserEmail } from "../shared/email-service.ts";
 import { notificationTemplate } from "../shared/email-templates.ts";
+import { resolveUserDisplayName } from "../shared/user-display-name.ts";
 import {
   isPlaidSubscriptionPastGrace,
   shouldKeepPlaidItemBeyondSecondMonth,
@@ -252,15 +253,16 @@ async function sendPlaidRemovalReminderEmail(params: {
     return true;
   }
 
+  const userName = resolveUserDisplayName(
+    params.user.full_name,
+    params.user.email,
+    "there",
+  );
   const email = buildPlaidRemovalReminderEmail({
-    name: params.user.full_name || "",
+    name: userName,
     removalDate: params.removalDate,
   });
-  const result = await sendUserEmail(
-    params.user.email,
-    params.user.full_name || "",
-    email,
-  );
+  const result = await sendUserEmail(params.user.email, userName, email);
 
   if (!result.success) {
     await reportEdgeFunctionError({

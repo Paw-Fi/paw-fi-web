@@ -648,21 +648,27 @@ serve(async (req) => {
             continue;
 
           case "invite_accepted":
-          case "member_joined":
+          case "member_joined": {
+            const memberName = (event.payload?.member_name ||
+              "Someone") as string;
             title = "🎉 New Member!";
-            body = `Someone just joined your household "${
+            body = `${memberName} just joined your household "${
               event.payload.household_name || "household"
             }"`;
             // Target all household members except the joiner
             break;
+          }
 
           case "member_left":
-          case "member_removed":
+          case "member_removed": {
+            const memberName = (event.payload?.member_name ||
+              "A member") as string;
             title = "👋 Member Left";
-            body = `A member has left "${
+            body = `${memberName} has left "${
               event.payload.household_name || "household"
             }"`;
             break;
+          }
 
           case "member_reminded": {
             const senderName = (event.payload?.sender_name ||

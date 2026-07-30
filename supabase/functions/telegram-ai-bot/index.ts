@@ -2292,11 +2292,15 @@ Deno.serve(async (req: Request) => {
                   includeRecurringSelectionItems: true,
                 });
                 const recurringSelectionItems = Array.isArray(
-                    toolResult?._recurring_selection_items,
-                  )
+                  toolResult?._recurring_selection_items,
+                )
                   ? toolResult._recurring_selection_items
                   : [];
-                if (recurringSelectionItems.length > 0) {
+                if (
+                  toolResult &&
+                  typeof toolResult === "object" &&
+                  "_recurring_selection_items" in toolResult
+                ) {
                   sessionState = setLastListedTransactions(
                     sessionState,
                     recurringSelectionItems,
@@ -3243,6 +3247,18 @@ Deno.serve(async (req: Request) => {
                       traceId,
                       ...failure,
                     }),
+                  rememberListedTransactions: async (items) => {
+                    sessionState = setLastListedTransactions(
+                      sessionState,
+                      items,
+                    );
+                    await saveSessionState(
+                      supabase,
+                      sessionId,
+                      sessionState,
+                      debugNotes,
+                    );
+                  },
                 });
               }
             } catch (e) {

@@ -6,6 +6,7 @@ import {
   inviteReminderInviterTemplate,
 } from "../shared/email-templates.ts";
 import { sendEmail } from "../shared/email-service.ts";
+import { resolveUserDisplayName } from "../shared/user-display-name.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,6 +50,12 @@ interface EligibleInvite {
   reminder_count: number;
   last_reminder_sent_at: string | null;
   personal_message: string | null;
+}
+
+interface UserProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
 }
 
 /**
@@ -157,8 +164,10 @@ async function getEligibleInvites(
     throw new Error(`Failed to fetch user profiles: ${profilesError.message}`);
   }
 
-  const profilesById = new Map(
-    (profiles || []).map((profile: any) => [profile.id, profile]),
+  const profilesById = new Map<string, UserProfile>(
+    (profiles || []).map(
+      (profile: UserProfile) => [profile.id, profile] as const,
+    ),
   );
 
   // Transform the data to a cleaner structure
@@ -168,12 +177,20 @@ async function getEligibleInvites(
     household_id: invite.household_id,
     household_name: invite.households?.name || "Unknown Household",
     inviter_id: invite.inviter_id,
-    inviter_name: profilesById.get(invite.inviter_id)?.full_name || "Someone",
+    inviter_name: resolveUserDisplayName(
+      profilesById.get(invite.inviter_id)?.full_name,
+      profilesById.get(invite.inviter_id)?.email,
+      "Someone",
+    ),
     inviter_email: profilesById.get(invite.inviter_id)?.email || null,
     invited_email: invite.invited_email,
     invited_user_id: invite.invited_user_id,
     invitee_name: invite.invited_user_id
-      ? profilesById.get(invite.invited_user_id)?.full_name || null
+      ? resolveUserDisplayName(
+          profilesById.get(invite.invited_user_id)?.full_name,
+          profilesById.get(invite.invited_user_id)?.email,
+          "",
+        ) || null
       : null,
     expires_at: invite.expires_at,
     created_at: invite.created_at,

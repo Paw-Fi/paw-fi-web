@@ -31,6 +31,23 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Recurring Tracking, Reports & More",
+    date: "2026-07-29",
+    version: "3.0.0",
+    tags: ["Feature", "Recurring", "Reports", "Wallet", "AI"],
+    description:
+      "Moneko 3.0.0 makes recurring money management more powerful, gives you more ways to review your finances, and improves the reliability of everyday tracking.",
+    items: [
+      "Manage recurring transaction series, review their history, confirm upcoming or past occurrences, and import recurring schedules with clearer controls and smoother loading",
+      "Manage recurring schedules and individual payments through the Telegram and WhatsApp AI bots, with richer financial insights",
+      "Filter your home dashboard by a specific date period and browse reports from previous months",
+      "Selected wallets can be excluded from analytics",
+      "Added Moldovan Leu (MDL) and Mauritian Rupee (MUR), with improved currency recognition for imported transactions",
+      "Improved recovery after an account reset, pocket budget limits, spending wallet protection, email imports, and transaction editing",
+      "More reliable Android notification capture, plus refreshed loading states, navigation, theme styling, and translations",
+    ],
+  },
+  {
     title: "More Reliable Tracking & Health Reports",
     date: "2026-07-15",
     version: "2.2.6",

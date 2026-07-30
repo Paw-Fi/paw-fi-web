@@ -122,6 +122,11 @@ Deno.test(
     assertStringIncludes(deleteRecurringFunction, "recurring_occurrences");
     assertStringIncludes(deleteRecurringFunction, "actual_transaction_id");
     assertStringIncludes(deleteRecurringFunction, "end_date");
+    assertStringIncludes(deleteRecurringFunction, "privacy_scope");
+    assertStringIncludes(
+      deleteRecurringFunction,
+      'template.user_id !== actorUserId && template.privacy_scope !== "full"',
+    );
     assertStringIncludes(
       deleteRecurringFunction,
       'deleted_reason: "user_deleted"',

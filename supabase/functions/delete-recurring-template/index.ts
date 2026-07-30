@@ -51,12 +51,14 @@ function latestScheduledDate(
   const latestAllowed = endDate && endDate < today ? endDate : today;
   if (anchor > latestAllowed) return null;
 
-  const interval = Number.isInteger(rule.interval) && Number(rule.interval) > 0
-    ? Number(rule.interval)
-    : 1;
-  const frequency = typeof rule.frequency === "string"
-    ? rule.frequency.toLowerCase()
-    : "monthly";
+  const interval =
+    Number.isInteger(rule.interval) && Number(rule.interval) > 0
+      ? Number(rule.interval)
+      : 1;
+  const frequency =
+    typeof rule.frequency === "string"
+      ? rule.frequency.toLowerCase()
+      : "monthly";
   const elapsedDays = Math.floor(
     (latestAllowed.getTime() - anchor.getTime()) / 86400000,
   );
@@ -177,7 +179,7 @@ Deno.serve(async (req) => {
     const { data: template, error: templateError } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, household_id, is_recurring, recurrence_rule, deleted_at",
+        "id, user_id, household_id, privacy_scope, is_recurring, recurrence_rule, deleted_at",
       )
       .eq("id", recurringId)
       .maybeSingle();
@@ -205,7 +207,10 @@ Deno.serve(async (req) => {
         .eq("household_id", template.household_id)
         .eq("user_id", actorUserId)
         .maybeSingle();
-      if (!membership) {
+      if (
+        !membership ||
+        (template.user_id !== actorUserId && template.privacy_scope !== "full")
+      ) {
         return json(
           {
             success: false,
@@ -279,9 +284,10 @@ Deno.serve(async (req) => {
       {
         success: false,
         code: "DELETE_RECURRING_FAILED",
-        error: error instanceof Error
-          ? error.message
-          : "Unable to delete recurring template",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to delete recurring template",
       },
       500,
     );

@@ -4,6 +4,7 @@ import {
   resolveBotSpaceScope,
 } from "./household-utils.ts";
 import { createHouseholdInvite } from "../household-invites.ts";
+import { resolveUserDisplayName } from "../user-display-name.ts";
 
 type SupabaseLike = {
   from: (table: string) => any;
@@ -22,7 +23,9 @@ function readRelatedUser(value: unknown): Record<string, unknown> {
   if (Array.isArray(value)) {
     return value[0] && typeof value[0] === "object" ? value[0] : {};
   }
-  return value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 function normalizeSpaceType(args: Record<string, unknown>): boolean {
@@ -165,6 +168,11 @@ export async function createBotSpaceInvite(params: {
 
   const rawExpiry = Number(params.args.expires_in_days);
   const expiresInDays = Number.isFinite(rawExpiry) ? rawExpiry : 7;
+  const { data: inviterProfile } = await params.supabase
+    .from("users")
+    .select("full_name, email")
+    .eq("id", params.userId)
+    .maybeSingle();
   const result = await createHouseholdInvite({
     supabase: params.supabase,
     appUrl: Deno.env.get("APP_URL") || "https://moneko.io",
@@ -174,6 +182,11 @@ export async function createBotSpaceInvite(params: {
     actorUserId: params.userId,
     invitedEmail,
     personalMessage: readString(params.args.personal_message),
+    inviterName: resolveUserDisplayName(
+      inviterProfile?.full_name,
+      inviterProfile?.email,
+      "Someone",
+    ),
     householdName:
       readString(params.args.household_name) ||
       readString((space as any).name) ||

@@ -1178,12 +1178,39 @@ export function buildManageRecurringTool(
     name: "manage_recurring",
     description:
       mode === "rich"
-        ? "Add or modify a recurring transaction."
-        : "Add, update, or delete recurring transactions.",
+        ? "Create, list, update, or delete recurring transactions and manage their payment occurrences and history."
+        : "Manage recurring transactions, occurrences, and payment history.",
     parameters: {
       type: "OBJECT",
       properties: {
-        action: { type: "STRING", enum: ["add", "update", "delete"] },
+        action: {
+          type: "STRING",
+          enum: [
+            "add",
+            "update",
+            "delete",
+            "list_series",
+            "list_history",
+            "confirm_occurrence",
+            "update_occurrence",
+            "unconfirm_occurrence",
+            "skip_occurrence",
+          ],
+          ...(mode === "rich"
+            ? {
+                description:
+                  "Use update for the recurring series and update_occurrence for one confirmed payment.",
+              }
+            : {}),
+        },
+        recurring_id:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                description:
+                  "Internal recurring series id from a prior tool result; never ask the user for it.",
+              }
+            : stringSchema,
         expense_id:
           mode === "rich"
             ? {
@@ -1197,6 +1224,13 @@ export function buildManageRecurringTool(
         amount: numberSchema,
         category: stringSchema,
         currency: stringSchema,
+        currencies: {
+          type: "ARRAY",
+          items: stringSchema,
+          ...(mode === "rich"
+            ? { description: "Optional ISO currency filters for list_series." }
+            : {}),
+        },
         description: stringSchema,
         merchant: stringSchema,
         ...(options.includeDateField ? { date: stringSchema } : {}),
@@ -1231,6 +1265,26 @@ export function buildManageRecurringTool(
         owner_type: ownerTypeSchema,
         privacy_scope: privacyScopeSchema,
         wallet_name: stringSchema,
+        account_id: stringSchema,
+        scheduled_occurrence_date: {
+          type: "STRING",
+          description: "Occurrence schedule date in YYYY-MM-DD format.",
+        },
+        paid_date: {
+          type: "STRING",
+          description: "Actual payment date in YYYY-MM-DD format.",
+        },
+        before_scheduled_date: {
+          type: "STRING",
+          description:
+            "For older payment history, return occurrences before this YYYY-MM-DD date.",
+        },
+        limit: {
+          type: "NUMBER",
+          description:
+            "Maximum list size: 1-25 for series, 1-100 for payment history.",
+        },
+        update_future_amount: booleanSchema,
         space_id: stringSchema,
         space_name: stringSchema,
         space_type: {

@@ -16,6 +16,7 @@ import {
   HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT,
 } from "../shared/household-subscription-sharing.ts";
 import { fetchLatestUserContact } from "../shared/user-contacts.ts";
+import { resolveUserDisplayName } from "../shared/user-display-name.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -921,14 +922,4 @@ function formatPlanName(plan: string): string {
   if (normalized === "plus") return "Moneko Plus";
   if (normalized === "premium") return "Moneko Premium";
   return `Moneko ${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
-}
-
-function resolveUserDisplayName(
-  fullName: string | null | undefined,
-  email: string | null | undefined,
-  fallback: string,
-): string {
-  const trimmedName = fullName?.trim();
-  if (trimmedName) return trimmedName;
-  return email ? email.split("@")[0] : fallback;
 }

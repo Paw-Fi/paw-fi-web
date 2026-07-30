@@ -4714,6 +4714,16 @@ Deno.serve(async (req: Request) => {
                 readLastListedTransactions(sessionState).items || [],
               logPrefix: "twilio-whatsapp-ai-bot",
               reportFailure: reportTwilioToolInvokeFailure,
+              rememberListedTransactions: async (items) => {
+                sessionState = setLastListedTransactions(sessionState, items);
+                await saveSessionState(
+                  supabase,
+                  sessionId,
+                  sessionState,
+                  debugNotes,
+                  WHATSAPP_DEBUG,
+                );
+              },
             });
           } else if (executionToolName === "financial_insight") {
             toolResult = await executeBotFinancialInsight({
@@ -4737,11 +4747,15 @@ Deno.serve(async (req: Request) => {
             // "update the first one" resolves to an active transaction rather
             // than the synthetic projected occurrence shown by the model.
             const recurringSelectionItems = Array.isArray(
-                (toolResult as any)?._recurring_selection_items,
-              )
+              (toolResult as any)?._recurring_selection_items,
+            )
               ? (toolResult as any)._recurring_selection_items
               : [];
-            if (recurringSelectionItems.length > 0) {
+            if (
+              toolResult &&
+              typeof toolResult === "object" &&
+              "_recurring_selection_items" in toolResult
+            ) {
               sessionState = setLastListedTransactions(
                 sessionState,
                 recurringSelectionItems,
