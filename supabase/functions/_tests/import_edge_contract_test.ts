@@ -134,10 +134,7 @@ Deno.test(
       new URL("../resend-inbound-webhook/index.ts", import.meta.url),
     );
 
-    assertStringIncludes(
-      source,
-      "resolveInboundEmailText({",
-    );
+    assertStringIncludes(source, "resolveInboundEmailText({");
     assertStringIncludes(source, "html: emailContent?.html");
     assertStringIncludes(source, 'filename: "Email body"');
     assertStringIncludes(source, "text: emailBodyText");
@@ -330,7 +327,7 @@ Deno.test(
     assertStringIncludes(syncSource, '.is("removed_at", null)');
     assertStringIncludes(
       syncSource,
-      "item_status.is.null,item_status.neq.pending_removal",
+      "item_status.is.null,item_status.not.in.(removed,pending_removal)",
     );
     assertStringIncludes(processorSource, "connection.removed_at != null");
     assertStringIncludes(processorSource, 'connection.status === "disabled"');

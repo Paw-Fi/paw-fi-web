@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { assertScopeAccess } from "../shared/accounts.ts";
+import { resolvePlaidConnectionAccess } from "../shared/plaid-connection-access.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   canUsePlaidBankSync,
@@ -13,8 +13,8 @@ import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   exchangePublicToken,
   getPlaidAccountsWithItem,
-  type PlaidAccount,
   PLAID_PROVIDER,
+  type PlaidAccount,
   removePlaidItem,
 } from "../shared/plaid-client.ts";
 import { fetchAndStorePlaidInstitutionLogo } from "../shared/plaid-institution-logo.ts";
@@ -22,6 +22,7 @@ import {
   classifyPlaidDuplicateIdentity,
   type PlaidDuplicateAccountIdentity,
 } from "../shared/plaid-duplicate-identity.ts";
+import { resolveManageablePlaidDuplicateConnectionIds } from "../shared/plaid-duplicate-recovery.ts";
 import {
   buildPlaidDuplicateGroupKey,
   normalizePlaidSelectedAccountIds,
@@ -123,8 +124,8 @@ Deno.serve(async (req) => {
         },
       );
     }
-    const idempotencyKey =
-      body.idempotencyKey?.trim() || `plaid-link:${linkCompletionNonce}`;
+    const idempotencyKey = body.idempotencyKey?.trim() ||
+      `plaid-link:${linkCompletionNonce}`;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
@@ -200,12 +201,24 @@ Deno.serve(async (req) => {
 
     if (
       targetHouseholdId &&
-      !(await assertScopeAccess(supabase, authResult.userId, targetHouseholdId))
+      !(
+        await resolvePlaidConnectionAccess({
+          supabase,
+          connection: { user_id: null, household_id: targetHouseholdId },
+          userId: authResult.userId,
+        })
+      ).canManage
     ) {
-      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
-        status: 403,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "A household owner or admin must connect a bank.",
+          errorCode: "household_connection_requires_admin",
+        }),
+        {
+          status: 403,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Check idempotency - return existing connection if found
@@ -256,12 +269,12 @@ Deno.serve(async (req) => {
           );
         }
         const existingSelectedAccountIds = Array.isArray(
-          existingConnection.metadata?.plaid_selected_account_ids,
-        )
+            existingConnection.metadata?.plaid_selected_account_ids,
+          )
           ? existingConnection.metadata.plaid_selected_account_ids
-              .map((value: unknown) => String(value || "").trim())
-              .filter(Boolean)
-              .sort()
+            .map((value: unknown) => String(value || "").trim())
+            .filter(Boolean)
+            .sort()
           : [];
         if (
           existingSelectedAccountIds.length > 0 &&
@@ -293,8 +306,8 @@ Deno.serve(async (req) => {
             userId: authResult.userId,
             connectionId: existingConnection.id,
             itemId: existingConnection.provider_item_id,
-            linkSessionId:
-              existingConnection.metadata?.plaid_link_completion_session_id,
+            linkSessionId: existingConnection.metadata
+              ?.plaid_link_completion_session_id,
             linkCompletionNonce,
           });
           console.log(
@@ -306,7 +319,7 @@ Deno.serve(async (req) => {
             userId: authResult.userId,
             targetHouseholdId,
             bankAccountIds: (existingAccounts || []).map((account: any) =>
-              String(account.id || ""),
+              String(account.id || "")
             ),
           });
 
@@ -317,8 +330,8 @@ Deno.serve(async (req) => {
               targetHouseholdId: targetHouseholdId,
               accounts: (existingAccounts || []).map((account: any) => ({
                 ...account,
-                linkedWallet:
-                  linkedWallets.get(String(account.id || "")) || null,
+                linkedWallet: linkedWallets.get(String(account.id || "")) ||
+                  null,
               })),
               idempotent: true,
             }),
@@ -371,17 +384,16 @@ Deno.serve(async (req) => {
             userId: authResult.userId,
             selectedAccountIds,
             selectedAccounts: recoveredAccounts,
-            institutionId:
-              recoveredAccountsResponse.institutionId || undefined,
+            institutionId: recoveredAccountsResponse.institutionId || undefined,
             targetHouseholdId,
             excludeConnectionId: existingConnection.id,
           });
         if (hasBlockingPlaidDuplicateMatch(recoveredDuplicates)) {
-          return duplicatePlaidAccountsResponse(
-            blockingPlaidDuplicateConnectionIds(
-              recoveredDuplicates,
-              authResult.userId,
-            ),
+          return await duplicatePlaidAccountsResponseForActor(
+            recoveredDuplicates,
+            supabase,
+            authResult.userId,
+            targetHouseholdId,
             headers,
             recoveredDuplicates.ambiguousConnectionIds.length > 0,
           );
@@ -409,8 +421,8 @@ Deno.serve(async (req) => {
           userId: authResult.userId,
           connectionId: existingConnection.id,
           itemId: existingConnection.provider_item_id,
-          linkSessionId:
-            existingConnection.metadata?.plaid_link_completion_session_id,
+          linkSessionId: existingConnection.metadata
+            ?.plaid_link_completion_session_id,
           linkCompletionNonce,
         });
         return new Response(
@@ -422,8 +434,8 @@ Deno.serve(async (req) => {
               ...account,
               linkedWallet: recoveredWallets.get(account.id) || null,
             })),
-            initialSyncQueued:
-              recoveredEnqueue.enqueued || recoveredEnqueue.duplicate,
+            initialSyncQueued: recoveredEnqueue.enqueued ||
+              recoveredEnqueue.duplicate,
             idempotent: true,
             recovered: true,
           }),
@@ -447,11 +459,11 @@ Deno.serve(async (req) => {
       });
 
       if (duplicateConnections.duplicateConnectionIds.length) {
-        return duplicatePlaidAccountsResponse(
-          blockingPlaidDuplicateConnectionIds(
-            duplicateConnections,
-            authResult.userId,
-          ),
+        return await duplicatePlaidAccountsResponseForActor(
+          duplicateConnections,
+          supabase,
+          authResult.userId,
+          targetHouseholdId,
           headers,
         );
       }
@@ -516,7 +528,9 @@ Deno.serve(async (req) => {
         !accountsResponse.itemId ||
         accountsResponse.itemId !== plaidResponse.item_id
       ) {
-        throw new Error("Plaid exchange Item identity did not match /accounts/get");
+        throw new Error(
+          "Plaid exchange Item identity did not match /accounts/get",
+        );
       }
       accountsToUpsert = accountsResponse.accounts.filter((account) =>
         selectedAccountIds.includes(account.account_id)
@@ -570,11 +584,11 @@ Deno.serve(async (req) => {
             });
           }
           shouldCompensateOrphanItem = false;
-          return duplicatePlaidAccountsResponse(
-            blockingPlaidDuplicateConnectionIds(
-              authoritativeDuplicates,
-              authResult.userId,
-            ),
+          return await duplicatePlaidAccountsResponseForActor(
+            authoritativeDuplicates,
+            supabase,
+            authResult.userId,
+            targetHouseholdId,
             headers,
             authoritativeDuplicates.ambiguousConnectionIds.length > 0,
           );
@@ -588,6 +602,9 @@ Deno.serve(async (req) => {
           .eq("user_id", authResult.userId)
           .eq("provider", PLAID_PROVIDER)
           .is("removed_at", null)
+          .or(
+            "item_status.is.null,item_status.not.in.(removed,pending_removal)",
+          )
           .in("status", ["pending", "active", "needs_reauth", "error"]);
 
         if (connectionCountError) {
@@ -664,10 +681,9 @@ Deno.serve(async (req) => {
           "[plaid-exchange] Failed to fetch/store institution logo",
           JSON.stringify({
             institutionId: resolvedInstitutionId,
-            error:
-              logoError instanceof Error
-                ? logoError.message
-                : String(logoError),
+            error: logoError instanceof Error
+              ? logoError.message
+              : String(logoError),
           }),
         );
         await reportEdgeFunctionError({
@@ -683,6 +699,19 @@ Deno.serve(async (req) => {
         });
       }
 
+      if (
+        targetHouseholdId &&
+        !(
+          await resolvePlaidConnectionAccess({
+            supabase,
+            connection: { user_id: null, household_id: targetHouseholdId },
+            userId: authResult.userId,
+          })
+        ).canManage
+      ) {
+        throw new Error("PLAID_HOUSEHOLD_MANAGEMENT_REQUIRED");
+      }
+
       const upsertResult = await upsertBankConnection({
         supabase,
         userId: authResult.userId,
@@ -695,6 +724,7 @@ Deno.serve(async (req) => {
         countryCode: body.countryCode?.toUpperCase() || "US",
         idempotencyKey,
         householdId: targetHouseholdId,
+        actorUserId: authResult.userId,
         metadata: {
           institution_id: resolvedInstitutionId,
           institution_name: body.institutionName || null,
@@ -762,10 +792,10 @@ Deno.serve(async (req) => {
       const { error: connectionUpdateError } = await supabase
         .from("bank_connections")
         .update({
-          household_id:
-            targetHouseholdId ?? connectionState.household_id ?? null,
-          item_created_at:
-            connectionState.item_created_at || new Date().toISOString(),
+          household_id: targetHouseholdId ?? connectionState.household_id ??
+            null,
+          item_created_at: connectionState.item_created_at ||
+            new Date().toISOString(),
           first_billing_month_start: billingWindow.firstBillingMonthStart,
           second_billing_month_start: billingWindow.secondBillingMonthStart,
           third_billing_month_start: billingWindow.thirdBillingMonthStart,
@@ -818,8 +848,8 @@ Deno.serve(async (req) => {
       });
 
       initialSyncQueued = enqueueResult.enqueued || enqueueResult.duplicate;
-      const shouldKickProcessorNow =
-        enqueueResult.enqueued || enqueueResult.duplicate;
+      const shouldKickProcessorNow = enqueueResult.enqueued ||
+        enqueueResult.duplicate;
       if (shouldKickProcessorNow && SUPABASE_URL && INTERNAL_SERVICE_SECRET) {
         try {
           console.log(
@@ -924,6 +954,45 @@ Deno.serve(async (req) => {
       if (
         postExchangeError &&
         typeof postExchangeError === "object" &&
+        "message" in postExchangeError &&
+        String((postExchangeError as { message?: unknown }).message) ===
+          "PLAID_HOUSEHOLD_MANAGEMENT_REQUIRED"
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "A household owner or admin must connect a bank.",
+            errorCode: "household_connection_requires_admin",
+          }),
+          {
+            status: 403,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (
+        postExchangeError &&
+        typeof postExchangeError === "object" &&
+        "message" in postExchangeError &&
+        String((postExchangeError as { message?: unknown }).message) ===
+          "PLAID_CONNECTION_LIMIT_REACHED"
+      ) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Trial and free users can only keep one active bank connection. Reconnect the existing bank instead.",
+            errorCode: "plaid_connection_limit_reached",
+          }),
+          {
+            status: 403,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (
+        postExchangeError &&
+        typeof postExchangeError === "object" &&
         "code" in postExchangeError &&
         String((postExchangeError as { code?: unknown }).code) === "23505" &&
         String(
@@ -967,10 +1036,9 @@ Deno.serve(async (req) => {
       error,
       context: {
         link_session_id: body.linkSessionId || null,
-        plaid_request_id:
-          error instanceof Error && "requestId" in error
-            ? (error as { requestId?: string }).requestId || null
-            : null,
+        plaid_request_id: error instanceof Error && "requestId" in error
+          ? (error as { requestId?: string }).requestId || null
+          : null,
       },
     });
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1045,13 +1113,12 @@ async function findDuplicatePlaidConnections(params: {
     .select("id, user_id, metadata")
     .eq("provider", PLAID_PROVIDER)
     .is("removed_at", null)
+    .or("item_status.is.null,item_status.not.in.(removed,pending_removal)")
     .in("status", ["pending", "active", "needs_reauth", "error"]);
 
   connectionsQuery = params.targetHouseholdId
     ? connectionsQuery.eq("household_id", params.targetHouseholdId)
-    : connectionsQuery
-      .eq("user_id", params.userId)
-      .is("household_id", null);
+    : connectionsQuery.eq("user_id", params.userId).is("household_id", null);
 
   const { data: connections, error: connectionsError } = await connectionsQuery;
 
@@ -1098,17 +1165,19 @@ async function findDuplicatePlaidConnections(params: {
   const candidateConnectionIds = new Set<string>();
   const ambiguousConnectionIds = new Set<string>();
   const ambiguousAccounts = new Map<string, PlaidDuplicateAccountRecord>();
-  for (const account of (bankAccounts || []) as Array<{
-    id?: string | null;
-    bank_connection_id?: string | null;
-    provider_account_id?: string | null;
-    provider_persistent_account_id?: string | null;
-    name?: string | null;
-    mask?: string | null;
-    currency?: string | null;
-    type?: string | null;
-    subtype?: string | null;
-  }>) {
+  for (
+    const account of (bankAccounts || []) as Array<{
+      id?: string | null;
+      bank_connection_id?: string | null;
+      provider_account_id?: string | null;
+      provider_persistent_account_id?: string | null;
+      name?: string | null;
+      mask?: string | null;
+      currency?: string | null;
+      type?: string | null;
+      subtype?: string | null;
+    }>
+  ) {
     if (!account.id || !account.bank_connection_id) continue;
     const existingIdentity = plaidExistingAccountIdentity({
       account,
@@ -1134,8 +1203,7 @@ async function findDuplicatePlaidConnections(params: {
           ...existingIdentity,
           bankAccountId: account.id,
           bankConnectionId: account.bank_connection_id,
-          ownerUserId:
-            ownerByConnectionId.get(account.bank_connection_id) ||
+          ownerUserId: ownerByConnectionId.get(account.bank_connection_id) ||
             params.userId,
         });
       }
@@ -1160,6 +1228,14 @@ function duplicatePlaidAccountsResponse(
       error:
         "These bank accounts are already connected. Use the existing bank connection instead of linking them again.",
       errorCode: "duplicate_item_accounts",
+      recoveryCode: duplicateConnectionIds.length > 0
+        ? "manage_existing_connection"
+        : "household_connection_requires_admin",
+      // This is populated only after the caller has been filtered to an
+      // authorized owner. It is never a connection-discovery API.
+      existingConnectionId: duplicateConnectionIds.length === 1
+        ? duplicateConnectionIds[0]
+        : null,
       duplicateConnectionIds,
       identityResolution: identityIncomplete ? "incomplete" : "confirmed",
     }),
@@ -1189,22 +1265,40 @@ function hasBlockingPlaidDuplicateMatch(
   );
 }
 
-function blockingPlaidDuplicateConnectionIds(
+async function duplicatePlaidAccountsResponseForActor(
   matches: PlaidDuplicateMatchResult,
-  visibleToUserId?: string,
-): string[] {
-  return Array.from(
-    new Set([
+  supabase: any,
+  userId: string,
+  targetHouseholdId: string | null,
+  headers: Record<string, string>,
+  identityIncomplete = false,
+): Promise<Response> {
+  const recoveryAccess = await resolveManageablePlaidDuplicateConnectionIds({
+    supabase,
+    connectionIds: [
       ...matches.duplicateConnectionIds,
       ...matches.ambiguousConnectionIds,
-    ]),
-  )
-    .filter(
-      (connectionId) =>
-        !visibleToUserId ||
-        matches.ownerUserIdByConnectionId[connectionId] === visibleToUserId,
-    )
-    .sort();
+    ],
+    userId,
+    targetHouseholdId,
+  });
+  if (!recoveryAccess.canManageScope) {
+    return new Response(
+      JSON.stringify({
+        error: "Household bank connection access changed. Please restart.",
+        errorCode: "household_connection_requires_admin",
+      }),
+      {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+  return duplicatePlaidAccountsResponse(
+    recoveryAccess.connectionIds,
+    headers,
+    identityIncomplete,
+  );
 }
 
 function plaidSelectedAccountIdentity(params: {
@@ -1213,20 +1307,19 @@ function plaidSelectedAccountIdentity(params: {
 }): PlaidDuplicateAccountIdentity {
   const account = params.account;
   return {
-    providerAccountId:
-      "account_id" in account ? account.account_id : account.id,
-    persistentAccountId:
-      "persistent_account_id" in account
-        ? account.persistent_account_id
-        : null,
+    providerAccountId: "account_id" in account
+      ? account.account_id
+      : account.id,
+    persistentAccountId: "persistent_account_id" in account
+      ? account.persistent_account_id
+      : null,
     institutionId: params.institutionId,
     name: account.name,
     mask: account.mask,
-    currency:
-      "balances" in account
-        ? account.balances?.iso_currency_code ||
-          account.balances?.unofficial_currency_code
-        : null,
+    currency: "balances" in account
+      ? account.balances?.iso_currency_code ||
+        account.balances?.unofficial_currency_code
+      : null,
     type: account.type,
     subtype: account.subtype,
   };
@@ -1261,7 +1354,9 @@ async function refreshAmbiguousExistingPlaidIdentities(params: {
   ambiguousAccounts: PlaidDuplicateAccountRecord[];
 }): Promise<void> {
   const connectionIds = Array.from(
-    new Set(params.ambiguousAccounts.map((account) => account.bankConnectionId)),
+    new Set(
+      params.ambiguousAccounts.map((account) => account.bankConnectionId),
+    ),
   );
   if (connectionIds.length === 0) return;
 
@@ -1281,24 +1376,26 @@ async function refreshAmbiguousExistingPlaidIdentities(params: {
     .in("bank_connection_id", connectionIds);
   if (tokenRowsError) throw tokenRowsError;
 
-  const tokenByConnectionId = new Map(
+  const tokenByConnectionId = new Map<string, string>(
     (tokenRows || []).map((row: Record<string, unknown>) => [
       String(row.bank_connection_id || ""),
       String(row.token_encrypted || ""),
     ]),
   );
 
-  for (const connection of (connections || []) as Array<{
-    id: string;
-    user_id: string;
-    provider_item_id?: string | null;
-    metadata?: Record<string, unknown> | null;
-    access_token_encrypted?: string | null;
-    plaid_access_token_encrypted?: string | null;
-    removed_at?: string | null;
-    status?: string | null;
-    item_status?: string | null;
-  }>) {
+  for (
+    const connection of (connections || []) as Array<{
+      id: string;
+      user_id: string;
+      provider_item_id?: string | null;
+      metadata?: Record<string, unknown> | null;
+      access_token_encrypted?: string | null;
+      plaid_access_token_encrypted?: string | null;
+      removed_at?: string | null;
+      status?: string | null;
+      item_status?: string | null;
+    }>
+  ) {
     if (
       connection.removed_at ||
       connection.status === "disabled" ||
@@ -1306,8 +1403,7 @@ async function refreshAmbiguousExistingPlaidIdentities(params: {
     ) {
       continue;
     }
-    const encryptedToken =
-      tokenByConnectionId.get(connection.id) ||
+    const encryptedToken = tokenByConnectionId.get(connection.id) ||
       connection.access_token_encrypted ||
       connection.plaid_access_token_encrypted;
     if (!encryptedToken) continue;
@@ -1344,10 +1440,11 @@ async function refreshAmbiguousExistingPlaidIdentities(params: {
         const refreshed = refreshedAccounts.find(
           (account) =>
             account.account_id.trim() ===
-            existingAccount.providerAccountId?.trim(),
+              existingAccount.providerAccountId?.trim(),
         );
-        const persistentAccountId =
-          refreshed?.persistent_account_id?.trim() || null;
+        if (!refreshed) continue;
+        const persistentAccountId = refreshed.persistent_account_id?.trim() ||
+          null;
         if (!persistentAccountId) continue;
 
         const { error: updateError } = await params.supabase
@@ -1365,8 +1462,9 @@ async function refreshAmbiguousExistingPlaidIdentities(params: {
         "[plaid-exchange] Could not refresh an existing ambiguous Plaid account identity; duplicate protection will fail closed",
         JSON.stringify({
           connectionId: connection.id,
-          errorType:
-            error instanceof Error ? error.constructor.name : "UnknownError",
+          errorType: error instanceof Error
+            ? error.constructor.name
+            : "UnknownError",
         }),
       );
     }
@@ -1395,10 +1493,9 @@ async function cleanupOrphanPlaidItem(params: {
       JSON.stringify({
         itemId: params.itemId,
         stage: params.stage,
-        error:
-          cleanupError instanceof Error
-            ? cleanupError.message
-            : String(cleanupError),
+        error: cleanupError instanceof Error
+          ? cleanupError.message
+          : String(cleanupError),
       }),
     );
     return false;
@@ -1426,10 +1523,9 @@ async function persistOrphanPlaidRemovalJob(params: {
       link_completion_nonce: params.linkCompletionNonce || null,
       status: "pending",
       attempt_count: 0,
-      next_attempt_at:
-        params.stage === "exchange_escrow"
-          ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
-          : null,
+      next_attempt_at: params.stage === "exchange_escrow"
+        ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        : null,
       token_expires_at: new Date(
         Date.now() + 30 * 24 * 60 * 60 * 1000,
       ).toISOString(),

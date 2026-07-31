@@ -31,8 +31,8 @@ export async function markPlaidConnectionRemovalPending(params: {
       item_health_state: "removal_pending",
       scheduled_removal_at: nowIso,
       error_code: params.errorCode || "PLAID_REMOVE_RETRY_PENDING",
-      error_message:
-        params.errorMessage || "Plaid item removal is queued for retry.",
+      error_message: params.errorMessage ||
+        "Plaid item removal is queued for retry.",
       updated_at: nowIso,
     })
     .eq("id", params.connectionId)
@@ -75,8 +75,8 @@ async function enqueuePlaidRemovalRetry(params: {
     supabase: params.supabase,
     connectionId: params.connection.id,
     errorCode: params.errorCode || "PLAID_REMOVE_RETRY_PENDING",
-    errorMessage:
-      params.errorMessage || "Plaid item removal is queued for retry.",
+    errorMessage: params.errorMessage ||
+      "Plaid item removal is queued for retry.",
   });
 }
 
@@ -93,17 +93,25 @@ export async function removePlaidConnection(params: {
   };
   connection: PlaidRemovableConnection;
   removalReason: string;
+  actorUserId?: string;
 }): Promise<void> {
-  const encryptedToken =
-    params.connection.access_token_encrypted ||
+  const encryptedToken = params.connection.access_token_encrypted ||
     params.connection.plaid_access_token_encrypted;
 
   const { data: removalQueued, error: queueError } = await params.supabase.rpc(
-    "queue_plaid_connection_removal_v1",
-    {
-      p_connection_id: params.connection.id,
-      p_reason: params.removalReason,
-    },
+    params.actorUserId
+      ? "queue_plaid_connection_removal_v2"
+      : "queue_plaid_connection_removal_v1",
+    params.actorUserId
+      ? {
+        p_actor_user_id: params.actorUserId,
+        p_connection_id: params.connection.id,
+        p_reason: params.removalReason,
+      }
+      : {
+        p_connection_id: params.connection.id,
+        p_reason: params.removalReason,
+      },
   );
   if (queueError) throw queueError;
   if (removalQueued !== true) {
@@ -127,10 +135,9 @@ export async function removePlaidConnection(params: {
           supabase: params.supabase,
           connection: params.connection,
           removalReason: params.removalReason,
-          errorCode:
-            error instanceof PlaidError
-              ? error.code
-              : "PLAID_REMOVE_RETRY_PENDING",
+          errorCode: error instanceof PlaidError
+            ? error.code
+            : "PLAID_REMOVE_RETRY_PENDING",
           errorMessage: error instanceof Error ? error.message : null,
         });
         throw error;
@@ -158,10 +165,9 @@ export async function removePlaidConnection(params: {
       connection: params.connection,
       removalReason: params.removalReason,
       errorCode: "LOCAL_CLEANUP_RETRY_PENDING",
-      errorMessage:
-        error instanceof Error
-          ? error.message
-          : "Local bank cleanup is queued for retry.",
+      errorMessage: error instanceof Error
+        ? error.message
+        : "Local bank cleanup is queued for retry.",
     });
     throw error;
   }
