@@ -104,12 +104,33 @@ export async function getBotSpaceInfo(params: {
 
   const { data: members, error: membersError } = await params.supabase
     .from("household_members")
-    .select("user_id, role, users(full_name, email, avatar_url)")
+    .select("user_id, role")
     .eq("household_id", householdId);
   if (membersError) return { error: membersError };
 
+  const memberUserIds = [
+    ...new Set(
+      (members || [])
+        .map((member: any) => readString(member?.user_id))
+        .filter((userId: string | undefined): userId is string => !!userId),
+    ),
+  ];
+  const { data: profiles, error: profilesError } = memberUserIds.length
+    ? await params.supabase
+      .from("users")
+      .select("id, full_name, email, avatar_url")
+      .in("id", memberUserIds)
+    : { data: [], error: null };
+  if (profilesError) return { error: profilesError };
+
+  const profilesById = new Map(
+    (profiles || []).map((profile: any) => [
+      readString(profile?.id),
+      profile as Record<string, unknown>,
+    ]),
+  );
   const normalizedMembers = (members || []).map((member: any) => {
-    const user = readRelatedUser(member?.users);
+    const user = readRelatedUser(profilesById.get(readString(member?.user_id)));
     const name = readString(user.full_name);
     const email = readString(user.email);
     return {
