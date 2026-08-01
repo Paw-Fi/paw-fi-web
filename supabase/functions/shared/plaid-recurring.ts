@@ -61,6 +61,7 @@ export async function refreshPlaidRecurringTemplates(params: {
   householdId: string | null;
   accounts: RecurringAccount[];
   linkedWalletsByBankAccountId: Map<string, LinkedWalletRecord>;
+  onStage?: (stage: string) => void | Promise<void>;
 }): Promise<RecurringRefreshResult> {
   if (params.accounts.length === 0) {
     return {
@@ -84,6 +85,7 @@ export async function refreshPlaidRecurringTemplates(params: {
   let providerResponseReceived = false;
   let providerStreamCount = 0;
 
+  await params.onStage?.("load_provider_streams");
   try {
     if (providerAccounts.length === 0) {
       providerResponseReceived = true;
@@ -130,6 +132,7 @@ export async function refreshPlaidRecurringTemplates(params: {
   }
 
   if (!providerResponseReceived) {
+    await params.onStage?.("count_existing_provider_templates");
     const existingProviderCount = await activeProviderTemplateCount({
       supabase: params.supabase,
       userId: params.userId,
@@ -148,6 +151,7 @@ export async function refreshPlaidRecurringTemplates(params: {
     }
   }
 
+  await params.onStage?.("detect_ledger_candidates");
   const detectedFallbackCandidates =
     await detectLedgerRecurringCandidates(params);
   providerCandidates = providerCandidates.map((providerCandidate) => {
@@ -178,12 +182,14 @@ export async function refreshPlaidRecurringTemplates(params: {
       ),
   );
   const candidates = [...providerCandidates, ...fallbackCandidates];
+  await params.onStage?.("persist_templates");
   await persistPreparedPlaidRecurringTemplates({
     supabase: params.supabase,
     candidates,
   });
 
   if (providerResponseReceived) {
+    await params.onStage?.("retire_provider_templates");
     await retireMissingGeneratedTemplates({
       supabase: params.supabase,
       userId: params.userId,
@@ -195,6 +201,7 @@ export async function refreshPlaidRecurringTemplates(params: {
       source: "plaid",
     });
   }
+  await params.onStage?.("retire_pattern_templates");
   await retireMissingGeneratedTemplates({
     supabase: params.supabase,
     userId: params.userId,

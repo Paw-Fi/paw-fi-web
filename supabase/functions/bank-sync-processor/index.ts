@@ -30,6 +30,7 @@ const AUTO_BANK_SYNC_ENABLED =
 
 // Fixed batch size to prevent DoS attacks
 const BATCH_SIZE = 10;
+const POSTGRES_STATEMENT_TIMEOUT_CODE = "57014";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for bank-sync-processor");
@@ -177,13 +178,8 @@ Deno.serve(async (req) => {
     // Fetch pending jobs (atomic claim via update with returning)
     // Use FOR UPDATE SKIP LOCKED pattern for atomic job claiming via RPC
     const processorId = crypto.randomUUID();
-    const { data: jobs, error: jobsError } = await supabase.rpc(
-      "claim_pending_sync_jobs",
-      {
-        p_batch_size: BATCH_SIZE,
-        p_processor_id: processorId,
-      },
-    );
+    const { data: jobs, error: jobsError } =
+      await claimPendingSyncJobsWithTimeoutRetry(supabase, processorId);
 
     if (jobsError) {
       console.error("[bank-sync-processor] Failed to claim jobs", jobsError);
@@ -465,6 +461,26 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function claimPendingSyncJobsWithTimeoutRetry(
+  supabase: ReturnType<typeof createClient>,
+  processorId: string,
+) {
+  const claim = () =>
+    supabase.rpc("claim_pending_sync_jobs", {
+      p_batch_size: BATCH_SIZE,
+      p_processor_id: processorId,
+    });
+  const firstAttempt = await claim();
+  if (firstAttempt.error?.code !== POSTGRES_STATEMENT_TIMEOUT_CODE) {
+    return firstAttempt;
+  }
+
+  // SQLSTATE 57014 cancels and rolls back this atomic claim, so one retry with
+  // the same processor ID cannot duplicate ownership.
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  return await claim();
+}
 
 async function enqueueStalePlaidRecoveryJobs(
   supabase: ReturnType<typeof createClient>,
