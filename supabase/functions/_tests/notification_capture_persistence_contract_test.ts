@@ -45,3 +45,47 @@ Deno.test(
     assertStringIncludes(provenanceMigration, "field_provenance jsonb");
   },
 );
+
+Deno.test(
+  "failed notification classification persists privacy-safe model diagnostics",
+  () => {
+    assertStringIncludes(
+      classificationSource,
+      "buildAndroidNotificationFailureResult",
+    );
+    assertStringIncludes(classificationSource, "result: failureResult");
+    assertStringIncludes(classificationSource, "normalizationDiagnostics:");
+    assertStringIncludes(
+      classificationSource,
+      "classification.normalizationDiagnostics",
+    );
+    assertStringIncludes(
+      classificationSource,
+      'error: "Notification classification failed"',
+    );
+  },
+);
+
+Deno.test(
+  "failed notification classification reports a privacy-safe edge alert",
+  () => {
+    assertStringIncludes(classificationSource, "reportEdgeFunctionError");
+    assertStringIncludes(
+      classificationSource,
+      'functionName: "classify-notification-capture"',
+    );
+    assertStringIncludes(
+      classificationSource,
+      "error: new Error(failureResult.diagnosticCode)",
+    );
+    assertStringIncludes(
+      classificationSource,
+      "diagnostics: failureResult.diagnostics",
+    );
+    assertStringIncludes(
+      classificationSource,
+      "WALLET_CAPTURE_SAVE_HTTP_${saved.response.status}",
+    );
+    assertStringIncludes(classificationSource, 'stage: "wallet_capture_save"');
+  },
+);
