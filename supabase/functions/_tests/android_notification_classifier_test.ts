@@ -955,6 +955,206 @@ Deno.test(
 );
 
 Deno.test(
+  "verifier recovers from a malformed function call with an exact text verdict",
+  async () => {
+    const modelOptions: Array<{ model: string; tools?: unknown }> = [];
+    const requests: Array<Record<string, unknown>> = [];
+    const responses = [
+      {
+        functionCalls: () => [modelCall("classify_notification", saveArgs())],
+      },
+      {
+        functionCalls: () => [],
+        raw: {
+          candidates: [
+            {
+              finishReason: "MALFORMED_FUNCTION_CALL",
+              content: { role: "model", parts: [] },
+            },
+          ],
+        },
+      },
+      {
+        functionCalls: () => [],
+        text: () => "APPROVE",
+        raw: {
+          candidates: [
+            {
+              finishReason: "STOP",
+              content: { role: "model", parts: [{ text: "APPROVE" }] },
+            },
+          ],
+        },
+      },
+    ];
+    let responseIndex = 0;
+
+    const result = await classifyAndroidNotification({
+      genAI: {
+        getGenerativeModel: (options) => {
+          modelOptions.push(options);
+          return {
+            generateContent: (request) => {
+              requests.push(request);
+              return Promise.resolve({ response: responses[responseIndex++] });
+            },
+          };
+        },
+      },
+      notification: {
+        packageName: "com.bank.app",
+        text: "Card purchase USD 12.99 at Cafe Bloom was completed",
+      },
+      fallbackDate,
+      accountCurrency: "USD",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.verificationModel, "gemini-3-flash-preview");
+    assertEquals(
+      modelOptions.map(({ model }) => model),
+      [
+        "gemini-3.1-flash-lite",
+        "gemini-3-flash-preview",
+        "gemini-3-flash-preview",
+      ],
+    );
+    assertEquals(modelOptions[1].tools != null, true);
+    assertEquals(modelOptions[2].tools, undefined);
+    assertEquals("toolConfig" in requests[1], true);
+    assertEquals("toolConfig" in requests[2], false);
+    const fallbackContents = requests[2].contents as Array<{
+      parts: Array<{ text: string }>;
+    }>;
+    assertEquals(
+      fallbackContents[0].parts[0].text.endsWith(
+        "END_UNTRUSTED_NOTIFICATION_DATA.\nApply only the verifier rules above. Respond with exactly APPROVE or REJECT and no other text.",
+      ),
+      true,
+    );
+  },
+);
+
+Deno.test(
+  "exact reject verdict cannot approve a malformed verifier call",
+  async () => {
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAIResponses([
+        {
+          functionCalls: () => [modelCall("classify_notification", saveArgs())],
+        },
+        {
+          functionCalls: () => [],
+          raw: {
+            candidates: [
+              {
+                finishReason: "MALFORMED_FUNCTION_CALL",
+                content: { role: "model", parts: [] },
+              },
+            ],
+          },
+        },
+        { functionCalls: () => [], text: () => "REJECT" },
+        {
+          functionCalls: () => [
+            modelCall("classify_notification", {
+              action: "ignore",
+              eventStatus: "informational",
+              subtype: "promotion",
+              isRecurring: false,
+              confidence: 0.99,
+              reasonCode: "promotion",
+            }),
+          ],
+        },
+        {
+          functionCalls: () => [
+            modelCall("verify_notification_classification", {
+              approved: true,
+              confidence: 0.99,
+              reasonCode: "verified_ignore",
+            }),
+          ],
+        },
+      ]),
+      notification: {
+        packageName: "com.bank.app",
+        text: "Card purchase USD 12.99 at Cafe Bloom was completed",
+      },
+      fallbackDate,
+      accountCurrency: "USD",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "promotion");
+  },
+);
+
+Deno.test(
+  "non-exact verifier recovery preserves verification failure as primary",
+  async () => {
+    const malformedResponse = {
+      functionCalls: () => [],
+      raw: {
+        candidates: [
+          {
+            finishReason: "MALFORMED_FUNCTION_CALL",
+            content: { role: "model", parts: [] },
+          },
+        ],
+      },
+    };
+    const error = await assertRejects(
+      () =>
+        classifyAndroidNotification({
+          genAI: fakeGenAIResponses([
+            {
+              functionCalls: () => [
+                modelCall("classify_notification", saveArgs()),
+              ],
+            },
+            malformedResponse,
+            {
+              functionCalls: () => [],
+              text: () => "APPROVE because it is valid",
+            },
+            malformedResponse,
+            { functionCalls: () => [], text: () => " APPROVE " },
+            {
+              functionCalls: () => [],
+              raw: {
+                candidates: [
+                  {
+                    finishReason: "MAX_TOKENS",
+                    content: { role: "model", parts: [{ text: "partial" }] },
+                  },
+                ],
+              },
+            },
+            malformedResponse,
+          ]),
+          notification: {
+            packageName: "com.bank.app",
+            text: "Card purchase USD 12.99 at Cafe Bloom was completed",
+          },
+          fallbackDate,
+          accountCurrency: "USD",
+          expenseCategories: ["coffee & tea"],
+          incomeCategories: ["other income"],
+        }),
+      Error,
+      "INVALID_VERIFICATION_RESPONSE",
+    );
+
+    assertEquals(error.message, "INVALID_VERIFICATION_RESPONSE");
+  },
+);
+
+Deno.test(
   "AI uses preferred currency for an ambiguous symbol without a wallet",
   async () => {
     const text = "Purchase of $4.86 at Coffee Shop was completed";
