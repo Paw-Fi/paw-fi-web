@@ -55,7 +55,7 @@ if [[ "$ENV_NAME" == "PRODUCTION" ]]; then
   read -r -p "Type 'deploy' to confirm: " CONFIRM
   if [[ "$CONFIRM" != "deploy" ]]; then
     echo "Deployment cancelled"
-    exit 1
+    exit 1 
   fi
   echo ""
 fi
@@ -85,3 +85,4 @@ echo "     3. Verify GEMINI_API_KEY is set for AI categorization"
 echo "     4. Test iOS: trigger a Shortcuts automation and confirm 200"
 echo "     5. Test Android: toggle capture ON, send a bank notification, confirm 200"
 echo "════════════════════════════════════════════════════════════"
+  

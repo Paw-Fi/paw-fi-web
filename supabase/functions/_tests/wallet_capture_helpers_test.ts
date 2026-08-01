@@ -281,7 +281,7 @@ Deno.test("wallet capture idempotency key varies by transaction type", () => {
   assertEquals(expense === income, false);
 });
 
-Deno.test("wallet capture idempotency key preserves explicit key", () => {
+Deno.test("wallet capture idempotency key scopes explicit key by user", () => {
   assertEquals(
     buildWalletCaptureIdempotencyKey({
       explicitKey: "provided-key",
@@ -294,7 +294,7 @@ Deno.test("wallet capture idempotency key preserves explicit key", () => {
       currency: "USD",
       date: "2026-03-11",
     }),
-    "provided-key",
+    "wallet_capture:user-1:provided-key",
   );
 });
 

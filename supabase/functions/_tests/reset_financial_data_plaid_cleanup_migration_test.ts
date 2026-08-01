@@ -6,7 +6,7 @@ import {
 const migration = (
   await Deno.readTextFile(
     new URL(
-      "../../migrations/20260801120000_fix_reset_financial_data_plaid_cleanup.sql",
+      "../../migrations/20260801130000_fix_reset_financial_data_recurring_cleanup.sql",
       import.meta.url,
     ),
   )
@@ -18,6 +18,11 @@ Deno.test("financial reset replaces the authoritative reset RPC", () => {
     "create or replace function public.reset_user_financial_data()",
   );
   assertStringIncludes(migration, "current_user_id := auth.uid()");
+  assertStringIncludes(migration, "bc.household_id is null");
+  assertStringIncludes(
+    migration,
+    "join public.bank_connections account_connection",
+  );
 });
 
 Deno.test(
