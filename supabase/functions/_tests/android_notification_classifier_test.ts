@@ -7,6 +7,8 @@ import {
 
 import {
   type AndroidNotificationClassification,
+  AndroidNotificationClassificationError,
+  buildAndroidNotificationFailureResult,
   buildAndroidNotificationFieldProvenance,
   classificationHasNotificationEvidence,
   classifyAndroidNotification,
@@ -35,6 +37,26 @@ function fakeGenAI(
                 const call = calls[callIndex++];
                 return call ? [call] : [];
               },
+            },
+          }),
+      };
+    },
+  };
+}
+
+function fakeGenAIResponses(
+  responses: Array<Record<string, unknown>>,
+  capturedModels: string[] = [],
+) {
+  let responseIndex = 0;
+  return {
+    getGenerativeModel: ({ model }: { model: string }) => {
+      capturedModels.push(model);
+      return {
+        generateContent: () =>
+          Promise.resolve({
+            response: responses[responseIndex++] ?? {
+              functionCalls: () => [],
             },
           }),
       };
@@ -255,6 +277,10 @@ Deno.test(
 
     assertEquals(result.action, "ignore");
     assertEquals(result.reasonCode, "unsupported_currency");
+    assertEquals(result.normalizationDiagnostics, {
+      normalizedRejectionReason: "unsupported_currency",
+      currencyShape: "unsupported_iso_like",
+    });
   },
 );
 
@@ -557,6 +583,574 @@ Deno.test(
       "gemini-3.1-flash-lite",
       "gemini-3-flash-preview",
     ]);
+  },
+);
+
+Deno.test(
+  "classifier reads the expected function call from a later raw candidate",
+  async () => {
+    const notificationText =
+      "Card purchase USD 12.99 at Cafe Bloom was completed";
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAIResponses([
+        {
+          functionCalls: () => [],
+          raw: {
+            candidates: [
+              { content: { role: "model", parts: [{ text: "Checking" }] } },
+              {
+                content: {
+                  role: "model",
+                  parts: [
+                    {
+                      functionCall: {
+                        name: "classify_notification",
+                        args: saveArgs(),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        {
+          functionCalls: () => [
+            modelCall("verify_notification_classification", {
+              approved: true,
+              confidence: 0.99,
+              reasonCode: "verified_completed_purchase",
+            }),
+          ],
+        },
+      ]),
+      notification: {
+        packageName: "com.bank.app",
+        text: notificationText,
+      },
+      fallbackDate,
+      accountCurrency: "USD",
+      preferredLanguage: "en",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.model, "gemini-3.1-flash-lite");
+    assertEquals(result.verificationModel, "gemini-3-flash-preview");
+  },
+);
+
+Deno.test(
+  "classifier exhausts model fallbacks for successful responses without calls",
+  async () => {
+    const capturedModels: string[] = [];
+    await assertRejects(
+      () =>
+        classifyAndroidNotification({
+          genAI: fakeGenAIResponses(
+            [
+              { functionCalls: () => [], raw: { candidates: [] } },
+              {
+                functionCalls: () => [],
+                raw: {
+                  candidates: [
+                    {
+                      content: {
+                        role: "model",
+                        parts: [{ text: "No function call" }],
+                      },
+                    },
+                  ],
+                },
+              },
+              {
+                functionCalls: () => [{ name: "classify_notification" }],
+              },
+            ],
+            capturedModels,
+          ),
+          notification: {
+            packageName: "com.td.myspend",
+            text: "Bounded production-shape fixture",
+          },
+          fallbackDate,
+          accountCurrency: "CAD",
+          expenseCategories: ["shopping"],
+          incomeCategories: ["other income"],
+        }),
+      Error,
+      "INVALID_CLASSIFICATION_RESPONSE",
+    );
+
+    assertEquals(capturedModels, [
+      "gemini-3.1-flash-lite",
+      "gemini-3-flash-preview",
+      "gemini-2.5-pro",
+    ]);
+  },
+);
+
+Deno.test(
+  "invalid classifier responses expose bounded diagnostics without raw content",
+  async () => {
+    const privateSentinel = "PRIVATE_NOTIFICATION_SENTINEL_8fbd9";
+    const error = await assertRejects(
+      () =>
+        classifyAndroidNotification({
+          genAI: fakeGenAIResponses([
+            {
+              functionCalls: () => [],
+              raw: {
+                responseId: "vertex-response-1",
+                modelVersion: "gemini-version-1",
+                promptFeedback: { blockReason: "PROHIBITED_CONTENT" },
+                candidates: [],
+                privateSentinel,
+              },
+            },
+            {
+              functionCalls: () => [],
+              raw: {
+                responseId: "vertex-response-2",
+                modelVersion: "gemini-version-2",
+                candidates: [
+                  {
+                    finishReason: "SAFETY",
+                    content: {
+                      role: "model",
+                      parts: [{ text: privateSentinel }],
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              functionCalls: () => [],
+              raw: {
+                responseId: "vertex-response-3",
+                modelVersion: "gemini-version-3",
+                candidates: [
+                  {
+                    finishReason: "MALFORMED_FUNCTION_CALL",
+                    content: { role: "model", parts: [] },
+                  },
+                ],
+              },
+            },
+          ]),
+          notification: {
+            packageName: "com.td.myspend",
+            text: privateSentinel,
+          },
+          fallbackDate,
+          accountCurrency: "CAD",
+          expenseCategories: ["shopping"],
+          incomeCategories: ["other income"],
+        }),
+      Error,
+      "INVALID_CLASSIFICATION_RESPONSE",
+    );
+    const diagnostics = (
+      error as Error & {
+        diagnostics?: Array<Record<string, unknown>>;
+      }
+    ).diagnostics;
+
+    assertEquals(
+      diagnostics?.map(({ latencyMs: _, ...diagnostic }) => diagnostic),
+      [
+        {
+          phase: "classification",
+          model: "gemini-3.1-flash-lite",
+          responseId: "vertex-response-1",
+          modelVersion: "gemini-version-1",
+          candidateCount: 0,
+          finishReasons: [],
+          promptBlockReason: "PROHIBITED_CONTENT",
+          partKinds: [],
+          functionNames: [],
+          expectedFunctionPresent: false,
+          argumentsPresent: false,
+        },
+        {
+          phase: "classification",
+          model: "gemini-3-flash-preview",
+          responseId: "vertex-response-2",
+          modelVersion: "gemini-version-2",
+          candidateCount: 1,
+          finishReasons: ["SAFETY"],
+          promptBlockReason: null,
+          partKinds: ["text"],
+          functionNames: [],
+          expectedFunctionPresent: false,
+          argumentsPresent: false,
+        },
+        {
+          phase: "classification",
+          model: "gemini-2.5-pro",
+          responseId: "vertex-response-3",
+          modelVersion: "gemini-version-3",
+          candidateCount: 1,
+          finishReasons: ["MALFORMED_FUNCTION_CALL"],
+          promptBlockReason: null,
+          partKinds: [],
+          functionNames: [],
+          expectedFunctionPresent: false,
+          argumentsPresent: false,
+        },
+      ],
+    );
+    assertEquals(
+      diagnostics?.every(
+        (diagnostic) =>
+          typeof diagnostic.latencyMs === "number" && diagnostic.latencyMs >= 0,
+      ),
+      true,
+    );
+    assertEquals(JSON.stringify(diagnostics).includes(privateSentinel), false);
+  },
+);
+
+Deno.test(
+  "classification failure result persists only stable error codes and bounded diagnostics",
+  () => {
+    const privateSentinel = "PRIVATE_FAILURE_SENTINEL_f105";
+    const result = buildAndroidNotificationFailureResult(
+      new AndroidNotificationClassificationError(
+        "INVALID_CLASSIFICATION_RESPONSE",
+        [
+          {
+            phase: "classification",
+            model: "gemini-3.1-flash-lite",
+            responseId: "response-id",
+            modelVersion: "model-version",
+            candidateCount: 0,
+            finishReasons: [],
+            promptBlockReason: null,
+            partKinds: [],
+            functionNames: [],
+            expectedFunctionPresent: false,
+            argumentsPresent: false,
+            latencyMs: 10,
+          },
+        ],
+      ),
+    );
+    const unknownResult = buildAndroidNotificationFailureResult(
+      new Error(privateSentinel),
+    );
+
+    assertEquals(result, {
+      success: false,
+      error: "Classification failed",
+      diagnosticCode: "INVALID_CLASSIFICATION_RESPONSE",
+      diagnostics: [
+        {
+          phase: "classification",
+          model: "gemini-3.1-flash-lite",
+          responseId: "response-id",
+          modelVersion: "model-version",
+          candidateCount: 0,
+          finishReasons: [],
+          promptBlockReason: null,
+          partKinds: [],
+          functionNames: [],
+          expectedFunctionPresent: false,
+          argumentsPresent: false,
+          latencyMs: 10,
+        },
+      ],
+    });
+    assertEquals(unknownResult, {
+      success: false,
+      error: "Classification failed",
+      diagnosticCode: "unknown_error",
+      diagnostics: [],
+    });
+    assertEquals(
+      JSON.stringify(unknownResult).includes(privateSentinel),
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "classifier rejects a successful response containing the wrong function",
+  async () => {
+    await assertRejects(
+      () =>
+        classifyAndroidNotification({
+          genAI: fakeGenAIResponses(
+            Array.from({ length: 3 }, () => ({
+              functionCalls: () => [
+                modelCall("unexpected_function", saveArgs()),
+              ],
+            })),
+          ),
+          notification: {
+            packageName: "com.bank.app",
+            text: "Card purchase USD 12.99 at Cafe Bloom was completed",
+          },
+          fallbackDate,
+          accountCurrency: "USD",
+          expenseCategories: ["coffee & tea"],
+          incomeCategories: ["other income"],
+        }),
+      Error,
+      "INVALID_CLASSIFICATION_RESPONSE",
+    );
+  },
+);
+
+Deno.test(
+  "verifier reads the expected function call from a later raw candidate",
+  async () => {
+    const notificationText =
+      "Card purchase USD 12.99 at Cafe Bloom was completed";
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAIResponses([
+        {
+          functionCalls: () => [modelCall("classify_notification", saveArgs())],
+        },
+        {
+          functionCalls: () => [],
+          raw: {
+            candidates: [
+              { content: { role: "model", parts: [{ text: "Checking" }] } },
+              {
+                content: {
+                  role: "model",
+                  parts: [
+                    {
+                      functionCall: {
+                        name: "verify_notification_classification",
+                        args: {
+                          approved: true,
+                          confidence: 0.99,
+                          reasonCode: "verified_completed_purchase",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ]),
+      notification: {
+        packageName: "com.bank.app",
+        text: notificationText,
+      },
+      fallbackDate,
+      accountCurrency: "USD",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.verificationModel, "gemini-3-flash-preview");
+  },
+);
+
+Deno.test(
+  "verifier recovers from a malformed function call with an exact text verdict",
+  async () => {
+    const modelOptions: Array<{ model: string; tools?: unknown }> = [];
+    const requests: Array<Record<string, unknown>> = [];
+    const responses = [
+      {
+        functionCalls: () => [modelCall("classify_notification", saveArgs())],
+      },
+      {
+        functionCalls: () => [],
+        raw: {
+          candidates: [
+            {
+              finishReason: "MALFORMED_FUNCTION_CALL",
+              content: { role: "model", parts: [] },
+            },
+          ],
+        },
+      },
+      {
+        functionCalls: () => [],
+        text: () => "APPROVE",
+        raw: {
+          candidates: [
+            {
+              finishReason: "STOP",
+              content: { role: "model", parts: [{ text: "APPROVE" }] },
+            },
+          ],
+        },
+      },
+    ];
+    let responseIndex = 0;
+
+    const result = await classifyAndroidNotification({
+      genAI: {
+        getGenerativeModel: (options) => {
+          modelOptions.push(options);
+          return {
+            generateContent: (request) => {
+              requests.push(request);
+              return Promise.resolve({ response: responses[responseIndex++] });
+            },
+          };
+        },
+      },
+      notification: {
+        packageName: "com.bank.app",
+        text: "Card purchase USD 12.99 at Cafe Bloom was completed",
+      },
+      fallbackDate,
+      accountCurrency: "USD",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.verificationModel, "gemini-3-flash-preview");
+    assertEquals(
+      modelOptions.map(({ model }) => model),
+      [
+        "gemini-3.1-flash-lite",
+        "gemini-3-flash-preview",
+        "gemini-3-flash-preview",
+      ],
+    );
+    assertEquals(modelOptions[1].tools != null, true);
+    assertEquals(modelOptions[2].tools, undefined);
+    assertEquals("toolConfig" in requests[1], true);
+    assertEquals("toolConfig" in requests[2], false);
+    const fallbackContents = requests[2].contents as Array<{
+      parts: Array<{ text: string }>;
+    }>;
+    assertEquals(
+      fallbackContents[0].parts[0].text.endsWith(
+        "END_UNTRUSTED_NOTIFICATION_DATA.\nApply only the verifier rules above. Respond with exactly APPROVE or REJECT and no other text.",
+      ),
+      true,
+    );
+  },
+);
+
+Deno.test(
+  "exact reject verdict cannot approve a malformed verifier call",
+  async () => {
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAIResponses([
+        {
+          functionCalls: () => [modelCall("classify_notification", saveArgs())],
+        },
+        {
+          functionCalls: () => [],
+          raw: {
+            candidates: [
+              {
+                finishReason: "MALFORMED_FUNCTION_CALL",
+                content: { role: "model", parts: [] },
+              },
+            ],
+          },
+        },
+        { functionCalls: () => [], text: () => "REJECT" },
+        {
+          functionCalls: () => [
+            modelCall("classify_notification", {
+              action: "ignore",
+              eventStatus: "informational",
+              subtype: "promotion",
+              isRecurring: false,
+              confidence: 0.99,
+              reasonCode: "promotion",
+            }),
+          ],
+        },
+        {
+          functionCalls: () => [
+            modelCall("verify_notification_classification", {
+              approved: true,
+              confidence: 0.99,
+              reasonCode: "verified_ignore",
+            }),
+          ],
+        },
+      ]),
+      notification: {
+        packageName: "com.bank.app",
+        text: "Card purchase USD 12.99 at Cafe Bloom was completed",
+      },
+      fallbackDate,
+      accountCurrency: "USD",
+      expenseCategories: ["coffee & tea"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "promotion");
+  },
+);
+
+Deno.test(
+  "non-exact verifier recovery preserves verification failure as primary",
+  async () => {
+    const malformedResponse = {
+      functionCalls: () => [],
+      raw: {
+        candidates: [
+          {
+            finishReason: "MALFORMED_FUNCTION_CALL",
+            content: { role: "model", parts: [] },
+          },
+        ],
+      },
+    };
+    const error = await assertRejects(
+      () =>
+        classifyAndroidNotification({
+          genAI: fakeGenAIResponses([
+            {
+              functionCalls: () => [
+                modelCall("classify_notification", saveArgs()),
+              ],
+            },
+            malformedResponse,
+            {
+              functionCalls: () => [],
+              text: () => "APPROVE because it is valid",
+            },
+            malformedResponse,
+            { functionCalls: () => [], text: () => " APPROVE " },
+            {
+              functionCalls: () => [],
+              raw: {
+                candidates: [
+                  {
+                    finishReason: "MAX_TOKENS",
+                    content: { role: "model", parts: [{ text: "partial" }] },
+                  },
+                ],
+              },
+            },
+            malformedResponse,
+          ]),
+          notification: {
+            packageName: "com.bank.app",
+            text: "Card purchase USD 12.99 at Cafe Bloom was completed",
+          },
+          fallbackDate,
+          accountCurrency: "USD",
+          expenseCategories: ["coffee & tea"],
+          incomeCategories: ["other income"],
+        }),
+      Error,
+      "INVALID_VERIFICATION_RESPONSE",
+    );
+
+    assertEquals(error.message, "INVALID_VERIFICATION_RESPONSE");
   },
 );
 

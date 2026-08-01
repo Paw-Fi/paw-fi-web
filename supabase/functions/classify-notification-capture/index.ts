@@ -9,6 +9,7 @@ import {
 import {
   type AndroidNotificationClassification,
   type AndroidNotificationInput,
+  buildAndroidNotificationFailureResult,
   buildAndroidNotificationFieldProvenance,
   classifyAndroidNotification,
 } from "../shared/android-notification-classifier.ts";
@@ -25,6 +26,7 @@ import {
   savedExpenseMatchesRecurringReplacement,
 } from "../shared/android-recurring-capture.ts";
 import { loadCategoryContext } from "../shared/category-resolution.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   hasPlusEntitlement,
   jsonSubscriptionRequired,
@@ -136,8 +138,9 @@ async function claimClassificationEvent(params: {
     },
   );
   if (error) throw error;
-  const result =
-    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const result = data && typeof data === "object"
+    ? (data as Record<string, unknown>)
+    : {};
   if (result.status === "cached" && result.result) {
     return {
       status: "cached",
@@ -219,8 +222,8 @@ async function sendDecisionPush(params: {
       deep_link: params.deepLink ?? "moneko://home",
     },
     firebaseProjectId: Deno.env.get("FIREBASE_PROJECT_ID") || "",
-    firebaseServiceAccountJson:
-      Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "",
+    firebaseServiceAccountJson: Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") ||
+      "",
     iosBundleId: Deno.env.get("IOS_BUNDLE_ID") || "com.moneko.mobile",
   });
 }
@@ -265,9 +268,11 @@ async function invokeWalletCapture(params: {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const internalKey = resolveAnyInternalFunctionKey();
-  const url = `${Deno.env.get(
-    "SUPABASE_URL",
-  )}/functions/v1/save-wallet-transaction`;
+  const url = `${
+    Deno.env.get(
+      "SUPABASE_URL",
+    )
+  }/functions/v1/save-wallet-transaction`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -295,8 +300,8 @@ async function invokeWalletCapture(params: {
           params.classification.currencySource === "account_context"
             ? "ai_account_context"
             : params.classification.currencySource === "user_preference"
-              ? "ai_user_preference"
-              : "ai_notification_explicit",
+            ? "ai_user_preference"
+            : "ai_notification_explicit",
         currencyAmbiguous: params.classification.currencyAmbiguous,
         accountCurrency: params.accountCurrency,
         date: params.classification.date,
@@ -477,8 +482,7 @@ Deno.serve(async (req: Request) => {
     if (!(await assertScopeAccess(supabase, userId, householdId))) {
       return await rejectClaimedRequest("Destination scope is not accessible");
     }
-    const accountId =
-      requestedAccountId ??
+    const accountId = requestedAccountId ??
       (await resolveDefaultAccountIdStrict(supabase, { userId, householdId }));
     let accountCurrency: string | null = null;
     if (accountId) {
@@ -492,20 +496,18 @@ Deno.serve(async (req: Request) => {
         );
       }
       const account = await getAccountOrNull(supabase, accountId);
-      accountCurrency =
-        typeof account?.currency === "string"
-          ? account.currency.trim().toUpperCase()
-          : null;
+      accountCurrency = typeof account?.currency === "string"
+        ? account.currency.trim().toUpperCase()
+        : null;
       if (!accountCurrency) {
         return await rejectClaimedRequest("Selected account has no currency");
       }
     }
 
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    const preferredTimezone =
-      typeof contact?.preferred_timezone === "string"
-        ? contact.preferred_timezone
-        : null;
+    const preferredTimezone = typeof contact?.preferred_timezone === "string"
+      ? contact.preferred_timezone
+      : null;
     const clientDate = body.clientCreatedAt
       ? new Date(body.clientCreatedAt)
       : new Date();
@@ -534,6 +536,8 @@ Deno.serve(async (req: Request) => {
         confidence: classification.confidence,
         classifierModel: classification.model ?? null,
         verificationModel: classification.verificationModel ?? null,
+        normalizationDiagnostics: classification.normalizationDiagnostics ??
+          null,
       };
       await finalizeClassificationEvent({
         supabase,
@@ -587,7 +591,8 @@ Deno.serve(async (req: Request) => {
           supabase,
           userId,
           title: "Recurring transaction already tracked",
-          body: "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
+          body:
+            "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
           eventType: "notification_capture_recurring_existing",
           deepLink: `moneko://recurring/${recurringMatch.schedule.id}`,
           notificationId: eventId,
@@ -610,6 +615,15 @@ Deno.serve(async (req: Request) => {
       accountCurrency,
     });
     if (!saved.response.ok) {
+      await reportEdgeFunctionError({
+        functionName: "classify-notification-capture",
+        error: new Error(`WALLET_CAPTURE_SAVE_HTTP_${saved.response.status}`),
+        context: {
+          stage: "wallet_capture_save",
+          eventId,
+          status: saved.response.status,
+        },
+      });
       await finalizeClassificationEvent({
         supabase,
         eventId,
@@ -726,24 +740,28 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse(result, saved.response.status);
   } catch (error) {
-    const diagnosticCode =
-      error instanceof Error
-        ? (optionalString(error.message, 160) ?? "unknown_error")
-        : "unknown_error";
+    const failureResult = buildAndroidNotificationFailureResult(error);
     console.error("[classify-notification-capture] Request failed", {
-      error: diagnosticCode,
+      error: failureResult.diagnosticCode,
       eventId,
+      diagnostics: failureResult.diagnostics,
+    });
+    await reportEdgeFunctionError({
+      functionName: "classify-notification-capture",
+      error: new Error(failureResult.diagnosticCode),
+      context: {
+        stage: "classification",
+        eventId,
+        diagnosticCode: failureResult.diagnosticCode,
+        diagnostics: failureResult.diagnostics,
+      },
     });
     if (supabase && eventId) {
       await finalizeClassificationEvent({
         supabase,
         eventId,
         status: "failed",
-        result: {
-          success: false,
-          error: "Classification failed",
-          diagnosticCode,
-        },
+        result: failureResult,
       }).catch(() => undefined);
     }
     return jsonResponse(
