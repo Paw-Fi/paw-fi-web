@@ -6,16 +6,16 @@ import {
 const migration = (
   await Deno.readTextFile(
     new URL(
-      "../../migrations/20260801130000_fix_reset_financial_data_recurring_cleanup.sql",
+      "../../migrations/20260801130000_perform_user_financial_data_reset.sql",
       import.meta.url,
     ),
   )
 ).toLowerCase();
 
-Deno.test("financial reset replaces the authoritative reset RPC", () => {
+Deno.test("financial reset defines the private reset implementation", () => {
   assertStringIncludes(
     migration,
-    "create or replace function public.reset_user_financial_data()",
+    "create or replace function public.perform_user_financial_data_reset()",
   );
   assertStringIncludes(migration, "current_user_id := auth.uid()");
   assertStringIncludes(migration, "bc.household_id is null");

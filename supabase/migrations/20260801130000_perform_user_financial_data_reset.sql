@@ -1,4 +1,4 @@
-create or replace function public.reset_user_financial_data()
+create or replace function public.perform_user_financial_data_reset()
 returns jsonb
 language plpgsql
 security definer
@@ -308,9 +308,8 @@ exception
 end;
 $$;
 
-revoke all on function public.reset_user_financial_data()
+revoke all on function public.perform_user_financial_data_reset()
   from public, anon, authenticated;
-grant execute on function public.reset_user_financial_data() to authenticated;
 
-comment on function public.reset_user_financial_data() is
+comment on function public.perform_user_financial_data_reset() is
   'Resets all user financial data with dependency-safe recurring cleanup, queues every live Plaid connection for provider removal, sanitizes local bank tokens, and deletes every user-owned wallet.';

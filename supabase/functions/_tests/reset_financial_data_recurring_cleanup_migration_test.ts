@@ -6,7 +6,7 @@ import {
 const migration = (
   await Deno.readTextFile(
     new URL(
-      "../../migrations/20260801130000_fix_reset_financial_data_recurring_cleanup.sql",
+      "../../migrations/20260801130000_perform_user_financial_data_reset.sql",
       import.meta.url,
     ),
   )

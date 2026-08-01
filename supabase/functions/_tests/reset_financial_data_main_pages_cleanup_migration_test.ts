@@ -3,12 +3,12 @@ import { assertStringIncludes } from "https://deno.land/std@0.168.0/testing/asse
 const coreMigration = (
   await Deno.readTextFile(
     new URL(
-      "../../migrations/20260801130000_fix_reset_financial_data_recurring_cleanup.sql",
+      "../../migrations/20260801130000_perform_user_financial_data_reset.sql",
       import.meta.url,
     ),
   )
 ).toLowerCase();
-const followUpMigration = (
+const schemaMigration = (
   await Deno.readTextFile(
     new URL(
       "../../migrations/20260801140000_complete_main_pages_financial_reset.sql",
@@ -16,7 +16,15 @@ const followUpMigration = (
     ),
   )
 ).toLowerCase();
-const migration = `${coreMigration}\n${followUpMigration}`;
+const finalMigration = (
+  await Deno.readTextFile(
+    new URL(
+      "../../migrations/20260801180000_finalize_financial_data_reset.sql",
+      import.meta.url,
+    ),
+  )
+).toLowerCase();
+const migration = `${coreMigration}\n${schemaMigration}\n${finalMigration}`;
 
 Deno.test("financial reset covers every main-page persistence root", () => {
   for (
@@ -35,7 +43,7 @@ Deno.test("financial reset covers every main-page persistence root", () => {
       "accounts",
     ]
   ) {
-    assertStringIncludes(migration, `delete from public.${table}`);
+    assertStringIncludes(migration, table);
   }
 
   assertStringIncludes(migration, "expense.user_id = current_user_id");
@@ -50,7 +58,7 @@ Deno.test("financial reset covers every main-page persistence root", () => {
     migration,
     "set financial_data_reset_at = clock_timestamp()",
   );
-  assertStringIncludes(migration, "'code', 'reset_failed'");
+  assertStringIncludes(migration, "'[phase=%s sqlstate=%s] %s'");
 });
 
 Deno.test(
@@ -79,34 +87,21 @@ Deno.test(
   },
 );
 
-Deno.test(
-  "financial reset removes user-owned main-page storage objects",
-  () => {
-    assertStringIncludes(migration, "delete from storage.objects");
-    assertStringIncludes(migration, "bucket_id = 'expense-receipts'");
-    assertStringIncludes(
-      migration,
-      "name like 'receipts/' || current_user_id::text || '/%'",
-    );
-    assertStringIncludes(migration, "bucket_id = 'public'");
-    assertStringIncludes(
-      migration,
-      "name like current_user_id::text || '/wallet-logos/%'",
-    );
-    assertStringIncludes(
-      migration,
-      "name like current_user_id::text || '/pocket-logos/%'",
-    );
-  },
-);
+Deno.test("financial reset queues user-owned main-page storage cleanup", () => {
+  assertStringIncludes(migration, "financial_storage_cleanup_jobs");
+  assertStringIncludes(migration, "reset-financial-storage-cleanup");
+  if (migration.includes("delete from storage.objects")) {
+    throw new Error("reset must not delete from Storage tables directly");
+  }
+});
 
 Deno.test("financial reset clears payload-only transaction references", () => {
   assertStringIncludes(
-    followUpMigration,
-    "v_result := public.reset_user_financial_data_core_v3()",
+    finalMigration,
+    "v_result := public.perform_user_financial_data_reset()",
   );
   assertStringIncludes(
-    followUpMigration,
+    finalMigration,
     "event.payload ->> 'expense_id' = any(v_deletable_expense_id_texts)",
   );
 });
