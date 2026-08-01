@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import {
   assertEquals,
   assertStringIncludes,
@@ -14,6 +16,7 @@ import {
   normalizeTransactionDateAndDescription,
   parseTransactionsJsonToItems,
   resolveHouseholdContext,
+  sanitizeTransactionSourceGrounding,
   validateTransactionSourceGrounding,
 } from "../shared/analyze-core.ts";
 
@@ -249,6 +252,86 @@ Deno.test(
         description: "SUNRIC SHOPPING PTE. LTD.",
         merchant: "SUNRIC SHOPPING PTE. LTD.",
         transactionTime: "16:35:00",
+      },
+    );
+  },
+);
+
+Deno.test(
+  "analyze-core: strips an ungrounded optional time without dropping a grounded receipt",
+  () => {
+    const sourceText =
+      "Grab receipt\nTotal PaidS$8.10\nYour Trip2.14 km • 7 mins\nMall Entrance, The Riverwalk10:59AM\nMadisson House Padel11:06AM";
+    const item = {
+      type: "expense",
+      amount: 8.1,
+      category: "taxi & ride apps",
+      currency: "SGD",
+      merchant: "Grab",
+      date: "2026-08-01",
+      transactionTime: "10:59:00",
+    };
+
+    assertEquals(
+      validateTransactionSourceGrounding({ sourceText, item }),
+      {
+        grounded: false,
+        reasons: ["TIME_NOT_FOUND_IN_SOURCE"],
+      },
+    );
+    assertEquals(
+      sanitizeTransactionSourceGrounding({ sourceText, item }),
+      {
+        grounded: true,
+        reasons: [],
+        item: {
+          type: "expense",
+          amount: 8.1,
+          category: "taxi & ride apps",
+          currency: "SGD",
+          merchant: "Grab",
+          date: "2026-08-01",
+        },
+        removedFields: [
+          {
+            field: "transactionTime",
+            reason: "TIME_NOT_FOUND_IN_SOURCE",
+          },
+        ],
+      },
+    );
+  },
+);
+
+Deno.test(
+  "analyze-core: optional field sanitization does not admit a fabricated amount",
+  () => {
+    assertEquals(
+      sanitizeTransactionSourceGrounding({
+        sourceText: "Grab receipt\nTotal PaidS$8.10\nRiverwalk10:59AM",
+        item: {
+          type: "expense",
+          amount: 81,
+          currency: "SGD",
+          merchant: "Grab",
+          transactionTime: "10:59:00",
+        },
+      }),
+      {
+        grounded: false,
+        reasons: ["AMOUNT_NOT_FOUND_IN_SOURCE"],
+        item: {
+          type: "expense",
+          amount: 81,
+          currency: "SGD",
+          merchant: "Grab",
+        },
+        removedFields: [
+          {
+            field: "transactionTime",
+            reason: "TIME_NOT_FOUND_IN_SOURCE",
+          },
+        ],
       },
     );
   },

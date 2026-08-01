@@ -21,7 +21,7 @@ import {
   type AnalyzeRequestBody,
   extractLabeledTransactionFallback,
   runAnalyzeExpense,
-  validateTransactionSourceGrounding,
+  sanitizeTransactionSourceGrounding,
 } from "../shared/analyze-core.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { localDateTimeToUtcIso } from "../shared/timezone.ts";
@@ -2075,8 +2075,9 @@ export async function handleResendInboundWebhook(
               item: Record<string, unknown>;
               reasons: string[];
             }> = [];
-            bodyItems = bodyItems.filter((item) => {
-              const grounding = validateTransactionSourceGrounding({
+            const sanitizedItems: typeof bodyItems = [];
+            for (const item of bodyItems) {
+              const grounding = sanitizeTransactionSourceGrounding({
                 sourceText: emailBodyText,
                 item: item as unknown as Record<string, unknown>,
               });
@@ -2085,9 +2086,20 @@ export async function handleResendInboundWebhook(
                   item: item as unknown as Record<string, unknown>,
                   reasons: grounding.reasons,
                 });
+                continue;
               }
-              return grounding.grounded;
-            });
+              if (grounding.removedFields.length > 0) {
+                console.warn(
+                  "[resend-inbound-webhook] removed ungrounded optional AI fields",
+                  {
+                    emailId: emailData.email_id,
+                    removedFields: grounding.removedFields,
+                  },
+                );
+              }
+              sanitizedItems.push(grounding.item as unknown as typeof item);
+            }
+            bodyItems = sanitizedItems;
             if (rejectedItems.length > 0) {
               await reportEdgeFunctionError({
                 functionName: "resend-inbound-webhook",

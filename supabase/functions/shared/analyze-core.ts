@@ -820,6 +820,37 @@ export function validateTransactionSourceGrounding(params: {
   return { grounded: reasons.length === 0, reasons };
 }
 
+export function sanitizeTransactionSourceGrounding(params: {
+  sourceText: string;
+  item: Record<string, unknown>;
+}): {
+  grounded: boolean;
+  reasons: string[];
+  item: Record<string, unknown>;
+  removedFields: Array<{ field: string; reason: string }>;
+} {
+  const validation = validateTransactionSourceGrounding(params);
+  const item = { ...params.item };
+  const removedFields: Array<{ field: string; reason: string }> = [];
+  const reasons = validation.reasons.filter((reason) => {
+    if (reason !== "TIME_NOT_FOUND_IN_SOURCE") return true;
+
+    delete item.transactionTime;
+    removedFields.push({
+      field: "transactionTime",
+      reason,
+    });
+    return false;
+  });
+
+  return {
+    grounded: reasons.length === 0,
+    reasons,
+    item,
+    removedFields,
+  };
+}
+
 function extractGroundingExplicitCurrencies(text: string): string[] {
   const strongCodes = resolveStrongCurrencyEvidenceCodesFromOCRText(text);
   return strongCodes.filter((code) => {
