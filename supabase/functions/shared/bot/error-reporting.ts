@@ -57,23 +57,30 @@ export async function reportBotBackendError({
 
 export function shouldReportBotToolResultError(error: unknown): boolean {
   if (error == null) return false;
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-        ? error
-        : String(error);
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === "string"
+    ? error
+    : String(error);
   if (!message.trim()) return false;
   if (
-    /failed|internal|database|timeout|unexpected|configuration|not supported|\[object Object\]/i.test(
-      message,
-    )
+    /failed|internal|database|timeout|unexpected|configuration|not supported|\[object Object\]/i
+      .test(
+        message,
+      )
   ) {
     return true;
   }
-  return !/required|invalid|not found|no matching|no pending|no updates|no longer available|select a|choose a|provide |confirmation required|do not have access|don't have access|permission|only space|already exists|cannot have|must be|unknown space/i.test(
-    message,
-  );
+  return !/required|invalid|not found|no matching|no pending|no updates|no longer available|select a|choose a|provide |confirmation required|do not have access|don't have access|permission|only space|already exists|cannot have|must be|unknown space|more than one wallet named/i
+    .test(
+      message,
+    );
+}
+
+export function shouldReportBotToolResult(toolResult: unknown): boolean {
+  const result = toolResult as Record<string, unknown> | null | undefined;
+  if (result?._backend_failure_reported === true) return false;
+  return shouldReportBotToolResultError(result?.error);
 }
 
 export async function reportBotToolInvokeFailure({
@@ -84,10 +91,10 @@ export async function reportBotToolInvokeFailure({
   formatted,
   error,
   context,
-}: BotToolInvokeFailureParams): Promise<void> {
+}: BotToolInvokeFailureParams): Promise<boolean> {
   try {
     const responseDetails = await readInvokeErrorResponseDetails(error);
-    await reportEdgeFunctionError({
+    return await reportEdgeFunctionError({
       functionName,
       error: new Error(`${targetFunction} failed: ${formatted}`),
       context: {
@@ -115,5 +122,6 @@ export async function reportBotToolInvokeFailure({
       targetFunction,
       error: String(reportError),
     });
+    return false;
   }
 }

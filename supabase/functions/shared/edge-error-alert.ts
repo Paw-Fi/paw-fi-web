@@ -148,7 +148,7 @@ export async function reportEdgeFunctionError({
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !serviceRoleKey) return;
+  if (!supabaseUrl || !serviceRoleKey) return false;
 
   const normalized = normalizeError(error);
   const message = scrubSensitiveText(
@@ -198,10 +198,12 @@ export async function reportEdgeFunctionError({
         setTimeout(() => reject(new Error("edge error report timeout")), 1200);
       }),
     ]);
+    return true;
   } catch (reportError) {
     console.warn("[edge-error-alert] failed to record", {
       functionName,
       reportError,
     });
+    return false;
   }
 }

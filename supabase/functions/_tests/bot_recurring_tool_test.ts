@@ -39,15 +39,17 @@ Deno.test(
       "unconfirm_occurrence",
       "skip_occurrence",
     ]);
-    for (const field of [
-      "recurring_id",
-      "scheduled_occurrence_date",
-      "paid_date",
-      "before_scheduled_date",
-      "limit",
-      "update_future_amount",
-      "account_id",
-    ]) {
+    for (
+      const field of [
+        "recurring_id",
+        "scheduled_occurrence_date",
+        "paid_date",
+        "before_scheduled_date",
+        "limit",
+        "update_future_amount",
+        "account_id",
+      ]
+    ) {
       assert(field in properties, `manage_recurring exposes ${field}`);
     }
   },
@@ -123,17 +125,16 @@ Deno.test(
           return Promise.resolve({
             data: {
               success: true,
-              data:
-                name === "recurring-read"
-                  ? {
-                      id: "22222222-2222-4222-8222-222222222222",
-                      household_id: null,
-                      account_id: "33333333-3333-4333-8333-333333333333",
-                      amount_cents: 120000,
-                      currency: "EUR",
-                      recurrence_rule: { frequency: "monthly" },
-                    }
-                  : {},
+              data: name === "recurring-read"
+                ? {
+                  id: "22222222-2222-4222-8222-222222222222",
+                  household_id: null,
+                  account_id: "33333333-3333-4333-8333-333333333333",
+                  amount_cents: 120000,
+                  currency: "EUR",
+                  recurrence_rule: { frequency: "monthly" },
+                }
+                : {},
             },
             error: null,
           });
@@ -229,6 +230,39 @@ Deno.test(
       preserve_original_tool_args: true,
     });
     assertEquals("error" in result, false);
+  },
+);
+
+Deno.test(
+  "recurring backend failures are marked after detailed reporting",
+  async () => {
+    const failures: any[] = [];
+    const result = await executeManageRecurringTool({
+      ...recurringParams(
+        {
+          functions: {
+            invoke: () =>
+              Promise.resolve({
+                data: null,
+                error: new Error("Edge Function returned 404"),
+              }),
+          },
+        },
+        {
+          action: "delete",
+          recurring_id: "22222222-2222-4222-8222-222222222222",
+        },
+      ),
+      reportFailure: (failure) => {
+        failures.push(failure);
+        return Promise.resolve(true);
+      },
+    });
+
+    assertEquals(result._backend_failure_reported, true);
+    assertEquals(result.action, "delete");
+    assertEquals(failures.length, 1);
+    assertEquals(failures[0].targetFunction, "delete-recurring-template");
   },
 );
 

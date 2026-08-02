@@ -29,6 +29,9 @@ const deleteExpenseFunction = await Deno.readTextFile(
 const deleteRecurringFunction = await Deno.readTextFile(
   new URL("../delete-recurring-template/index.ts", import.meta.url),
 );
+const householdDeployScript = await Deno.readTextFile(
+  new URL("../../../deploy-households-functions.sh", import.meta.url),
+);
 
 Deno.test("lifecycle RPCs hard-lock every settlement lineage reference", () => {
   assertStringIncludes(
@@ -133,3 +136,10 @@ Deno.test(
     );
   },
 );
+
+Deno.test("recurring template deletion is included in deployment", () => {
+  assertStringIncludes(
+    householdDeployScript,
+    "supabase functions deploy delete-recurring-template",
+  );
+});

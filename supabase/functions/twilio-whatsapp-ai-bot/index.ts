@@ -64,7 +64,7 @@ import {
   getInvokeHttpStatus,
   reportBotBackendError,
   reportBotToolInvokeFailure,
-  shouldReportBotToolResultError,
+  shouldReportBotToolResult,
 } from "../shared/bot/error-reporting.ts";
 import {
   buildGeminiHighDemandMessage,
@@ -618,7 +618,7 @@ async function reportTwilioToolInvokeFailure(params: {
   error?: unknown;
   context?: Record<string, unknown>;
 }) {
-  await reportBotToolInvokeFailure({
+  return await reportBotToolInvokeFailure({
     functionName: "twilio-whatsapp-ai-bot",
     ...params,
   });
@@ -2120,11 +2120,11 @@ Deno.serve(async (req: Request) => {
           toolResult = { error: String(e) };
         }
 
-        if (shouldReportBotToolResultError(toolResult?.error)) {
+        if (shouldReportBotToolResult(toolResult)) {
           await reportBotBackendError({
             functionName: "twilio-whatsapp-ai-bot",
             phase: "app_tool_result",
-            error: toolResult.error,
+            error: (toolResult as any).error,
             context: { toolName: call.name },
           });
         }
@@ -4249,7 +4249,26 @@ Deno.serve(async (req: Request) => {
                               }, code: ${code ?? "none"})`,
                             );
                           }
-                          toolResult = { error: formatted };
+                          const backendFailureReported =
+                            await reportTwilioToolInvokeFailure({
+                              toolName: "update_transaction",
+                              targetFunction: "update-expense",
+                              formatted,
+                              error: error ?? (data as any)?.error,
+                              context: {
+                                status,
+                                code,
+                                backendMessage: (data as any)?.error,
+                                updatesKeys: Object.keys(updates),
+                                candidateSummary,
+                              },
+                            });
+                          toolResult = {
+                            error: formatted,
+                            ...(backendFailureReported
+                              ? { _backend_failure_reported: true }
+                              : {}),
+                          };
                         }
                       }
                     }
@@ -4785,7 +4804,7 @@ Deno.serve(async (req: Request) => {
           error: (toolResult as any)?.error || null,
         });
 
-        if (shouldReportBotToolResultError((toolResult as any)?.error)) {
+        if (shouldReportBotToolResult(toolResult)) {
           await reportBotBackendError({
             functionName: "twilio-whatsapp-ai-bot",
             phase: "tool_result",

@@ -70,7 +70,7 @@ import {
 import {
   reportBotBackendError,
   reportBotToolInvokeFailure,
-  shouldReportBotToolResultError,
+  shouldReportBotToolResult,
 } from "../shared/bot/error-reporting.ts";
 import {
   buildGeminiHighDemandMessage as buildGeminiBusyMessage,
@@ -630,7 +630,7 @@ async function reportTelegramToolInvokeFailure(params: {
   error?: unknown;
   context?: Record<string, unknown>;
 }) {
-  await reportBotToolInvokeFailure({
+  return await reportBotToolInvokeFailure({
     functionName: "telegram-ai-bot",
     ...params,
   });
@@ -2910,26 +2910,32 @@ Deno.serve(async (req: Request) => {
                               httpStatus ?? status ?? "unknown"
                             }, code: ${code ?? "none"})`,
                           );
-                          await reportBotToolInvokeFailure({
-                            functionName: "telegram-ai-bot",
-                            traceId,
-                            toolName: "update_transaction",
-                            targetFunction: "update-expense",
-                            formatted,
-                            error: error ?? data?.error,
-                            context: {
-                              tool: "update-expense",
-                              internalKeyConfigured:
-                                Boolean(internalFunctionKey),
-                              httpStatus,
-                              status,
-                              code,
-                              updatesKeys: Object.keys(updates),
-                              candidateSummary,
-                              expenseId,
-                            },
-                          });
-                          toolResult = { error: formatted };
+                          const backendFailureReported =
+                            await reportBotToolInvokeFailure({
+                              functionName: "telegram-ai-bot",
+                              traceId,
+                              toolName: "update_transaction",
+                              targetFunction: "update-expense",
+                              formatted,
+                              error: error ?? data?.error,
+                              context: {
+                                tool: "update-expense",
+                                internalKeyConfigured:
+                                  Boolean(internalFunctionKey),
+                                httpStatus,
+                                status,
+                                code,
+                                updatesKeys: Object.keys(updates),
+                                candidateSummary,
+                                expenseId,
+                              },
+                            });
+                          toolResult = {
+                            error: formatted,
+                            ...(backendFailureReported
+                              ? { _backend_failure_reported: true }
+                              : {}),
+                          };
                         }
                       }
                     }
@@ -3265,7 +3271,7 @@ Deno.serve(async (req: Request) => {
               toolResult = { error: String(e) };
             }
 
-            if (shouldReportBotToolResultError(toolResult?.error)) {
+            if (shouldReportBotToolResult(toolResult)) {
               await reportBotBackendError({
                 functionName: "telegram-ai-bot",
                 phase: "tool_result",

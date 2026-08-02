@@ -7,7 +7,11 @@ import {
   isWriteMutationToolName,
   shouldBlockUnsafeTransactionMutationClaim,
 } from "../shared/bot/mutation-claim-guard.ts";
-import { shouldReportBotToolResultError } from "../shared/bot/error-reporting.ts";
+import {
+  shouldReportBotToolResult,
+  shouldReportBotToolResultError,
+} from "../shared/bot/error-reporting.ts";
+import { sanitizeBotToolResultForModel } from "../shared/bot/household-utils.ts";
 import { buildTransactionMutationFailureText } from "../shared/bot/transaction-tool.ts";
 
 Deno.test(
@@ -86,6 +90,40 @@ Deno.test("treats duplicate wallet names as user-actionable ambiguity", () => {
   assertEquals(
     buildTransactionMutationFailureText("update_transaction", { error }),
     `I couldn't update that transaction. ${error}`,
+  );
+});
+
+Deno.test(
+  "does not report or expose an already reported backend failure",
+  () => {
+    const result = {
+      error: "Edge Function returned a non-2xx status code",
+      _backend_failure_reported: true,
+    };
+
+    assertEquals(shouldReportBotToolResult(result), false);
+    assertEquals(sanitizeBotToolResultForModel(result), {
+      error: "Edge Function returned a non-2xx status code",
+    });
+  },
+);
+
+Deno.test("returns non-technical action-specific backend failure text", () => {
+  const technicalError =
+    "name=FunctionsHttpError | message=Edge Function returned a non-2xx status code | context(status=500)";
+
+  assertEquals(
+    buildTransactionMutationFailureText("update_transaction", {
+      error: technicalError,
+    }),
+    "I couldn't update that transaction right now. Please try again in a moment.",
+  );
+  assertEquals(
+    buildTransactionMutationFailureText("manage_recurring", {
+      action: "delete",
+      error: technicalError,
+    }),
+    "I couldn't delete that recurring transaction right now. Please try again in a moment.",
   );
 });
 

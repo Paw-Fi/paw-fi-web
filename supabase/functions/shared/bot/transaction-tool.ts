@@ -2,6 +2,7 @@ import { buildInternalInvokeHeaders } from "../auth.ts";
 import { normalizeCurrencyCode } from "../currency-normalize.ts";
 import { CURRENCY_SYMBOLS } from "../currency-symbols.ts";
 import { normalizeCalendarDateString } from "../date-normalization.ts";
+import { shouldReportBotToolResultError } from "./error-reporting.ts";
 import { formatInvokeError } from "../formatting-helpers.ts";
 import { resolveCurrencyFromOCR } from "../ocr-currency-resolver.ts";
 import {
@@ -100,8 +101,7 @@ function resolveTransactionToolCurrency(
 
   const resolution = resolveCurrencyFromOCR({
     detectedCurrencyCode: rawCurrency || null,
-    detectedCurrencySymbol:
-      normalizeOptionalString(input.currency_symbol) ||
+    detectedCurrencySymbol: normalizeOptionalString(input.currency_symbol) ||
       normalizeOptionalString(input.currencySymbol) ||
       null,
     rawOcrText: collectCurrencyEvidenceText(input, fallback),
@@ -151,9 +151,9 @@ export function normalizeTransactionToolArgs(
 ):
   | { ok: true; transaction: NormalizedTransactionToolArgs }
   | {
-      ok: false;
-      error: string;
-    } {
+    ok: false;
+    error: string;
+  } {
   const input = args && typeof args === "object" ? args : {};
 
   const typeResult = normalizeAiToolTransactionType(input.type);
@@ -308,29 +308,28 @@ export async function invokeTransactionSave(
     householdId: normalizedHouseholdId,
     isPortfolio: params.isPortfolio === true,
     isRecurring: params.isRecurring === true,
-    recurrence_rule:
-      params.isRecurring === true ? params.recurrence_rule || null : undefined,
+    recurrence_rule: params.isRecurring === true
+      ? params.recurrence_rule || null
+      : undefined,
     clientCreatedAt: new Date().toISOString(),
   };
 
-  const body =
-    type === "income"
-      ? {
-          ...commonBody,
-          source: params.source,
-          ownerType:
-            params.ownerType === "space"
-              ? "household"
-              : params.ownerType || "me",
-          privacyScope: params.privacyScope || "full",
-          payerUserId: params.payerUserId,
-          customSplits: params.customSplits,
-        }
-      : {
-          ...commonBody,
-          payerUserId: params.payerUserId,
-          customSplits: params.customSplits,
-        };
+  const body = type === "income"
+    ? {
+      ...commonBody,
+      source: params.source,
+      ownerType: params.ownerType === "space"
+        ? "household"
+        : params.ownerType || "me",
+      privacyScope: params.privacyScope || "full",
+      payerUserId: params.payerUserId,
+      customSplits: params.customSplits,
+    }
+    : {
+      ...commonBody,
+      payerUserId: params.payerUserId,
+      customSplits: params.customSplits,
+    };
 
   return await supabase.functions.invoke(
     type === "income" ? "save-income" : "save-expense",
@@ -353,8 +352,9 @@ export async function invokeTransactionDelete(
   success: boolean;
   formatted: string;
 }> {
-  const normalizedExpenseId =
-    typeof expenseId === "string" ? expenseId.trim() : "";
+  const normalizedExpenseId = typeof expenseId === "string"
+    ? expenseId.trim()
+    : "";
   if (!UUID_REGEX.test(normalizedExpenseId)) {
     return {
       data: null,
@@ -383,8 +383,8 @@ export async function invokeTransactionDelete(
   const formatted = success
     ? ""
     : errorMessageSource
-      ? formatInvokeError(errorMessageSource) || fallbackError
-      : fallbackError;
+    ? formatInvokeError(errorMessageSource) || fallbackError
+    : fallbackError;
 
   return {
     data,
@@ -436,6 +436,9 @@ export function buildTransactionMutationFailureText(
     return "I couldn't save those transactions right now. Please try again in a moment.";
   }
   if (toolName === "update_transaction") {
+    if (shouldReportBotToolResultError(error)) {
+      return "I couldn't update that transaction right now. Please try again in a moment.";
+    }
     return `I couldn't update that transaction. ${error}`;
   }
   if (toolName === "delete_transaction") {
@@ -452,7 +455,16 @@ export function buildTransactionMutationFailureText(
       // model turn them into a natural clarification in the preferred language.
       return null;
     }
-    return `I couldn't save that recurring transaction right now. ${error}`;
+    const action = (toolResult as Record<string, any> | null)?.action;
+    const verb = action === "delete"
+      ? "delete"
+      : action === "update" || action === "update_occurrence"
+      ? "update"
+      : "save";
+    if (shouldReportBotToolResultError(error)) {
+      return `I couldn't ${verb} that recurring transaction right now. Please try again in a moment.`;
+    }
+    return `I couldn't ${verb} that recurring transaction. ${error}`;
   }
   return null;
 }

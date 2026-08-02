@@ -141,6 +141,12 @@ supabase functions deploy recurring-read  --project-ref $PROJECT_REF
 echo "✅recurring-read  deployed"
 echo ""
 
+# Deploy delete-recurring-template
+echo "📦 Deploying delete-recurring-template function..."
+supabase functions deploy delete-recurring-template --project-ref $PROJECT_REF
+echo "✅ delete-recurring-template deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"

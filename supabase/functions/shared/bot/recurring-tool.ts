@@ -47,7 +47,7 @@ type ExecuteManageRecurringParams = {
   spaceMap: Map<string, BotSpaceMeta>;
   lastListedTransactions: LastListedTransaction[];
   logPrefix: string;
-  reportFailure?: (failure: BotToolInvokeFailure) => Promise<void>;
+  reportFailure?: (failure: BotToolInvokeFailure) => Promise<boolean>;
   rememberListedTransactions?: (
     items: LastListedTransaction[],
   ) => Promise<void>;
@@ -70,8 +70,12 @@ type RecurringAction = (typeof recurringActions)[number];
 async function reportFailure(
   params: ExecuteManageRecurringParams,
   failure: Omit<BotToolInvokeFailure, "toolName">,
-): Promise<void> {
-  await params.reportFailure?.({ toolName: "manage_recurring", ...failure });
+): Promise<boolean> {
+  if (!params.reportFailure) return false;
+  return await params.reportFailure({
+    toolName: "manage_recurring",
+    ...failure,
+  });
 }
 
 function buildRecurringSelectionClarification(
@@ -92,10 +96,9 @@ function buildRecurringSelectionClarification(
 }
 
 async function resolveRecurringSelection(params: ExecuteManageRecurringParams) {
-  const expenseIdDirect =
-    [params.args.recurring_id, params.args.expense_id]
-      .find((value) => typeof value === "string" && value.trim())
-      ?.trim() || "";
+  const expenseIdDirect = [params.args.recurring_id, params.args.expense_id]
+    .find((value) => typeof value === "string" && value.trim())
+    ?.trim() || "";
   const spaceNameByHouseholdId = (householdId: string | null | undefined) =>
     householdId ? params.spaceMap.get(householdId)?.name || null : null;
 
@@ -134,7 +137,7 @@ function normalizeCalendarDate(value: unknown): string | null {
   }
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) ||
-    date.toISOString().slice(0, 10) !== value
+      date.toISOString().slice(0, 10) !== value
     ? null
     : value;
 }
@@ -164,7 +167,7 @@ async function invokeRecurringFunction(
   }
 
   const formatted = formatInvokeError(error ?? data?.error) || fallbackMessage;
-  await reportFailure(params, {
+  const backendFailureReported = await reportFailure(params, {
     targetFunction,
     formatted,
     error: error ?? data?.error,
@@ -172,7 +175,9 @@ async function invokeRecurringFunction(
   });
   return {
     error: formatted,
+    action,
     ...(typeof data?.code === "string" ? { code: data.code } : {}),
+    ...(backendFailureReported ? { _backend_failure_reported: true } : {}),
   };
 }
 
@@ -201,10 +206,9 @@ function sanitizeSeriesListResult(
         latest_actionable_occurrence_date:
           row.latest_actionable_occurrence_date,
         actionable_count: row.actionable_count,
-        space:
-          typeof row.household_id === "string"
-            ? params.spaceMap.get(row.household_id)?.name
-            : "personal",
+        space: typeof row.household_id === "string"
+          ? params.spaceMap.get(row.household_id)?.name
+          : "personal",
       })),
       has_more: (data as Record<string, unknown>).has_more === true,
     },
@@ -228,8 +232,9 @@ function sanitizeHistoryResult(
         status: row.status,
         confirmation_source: row.confirmation_source,
         paid_date: row.paid_date,
-        amount:
-          row.amount_cents == null ? null : Number(row.amount_cents) / 100,
+        amount: row.amount_cents == null
+          ? null
+          : Number(row.amount_cents) / 100,
         currency: row.currency,
         confirmed_at: row.confirmed_at,
       })),
@@ -242,14 +247,15 @@ function sanitizeHistoryResult(
 export async function executeManageRecurringTool(
   params: ExecuteManageRecurringParams,
 ): Promise<Record<string, unknown>> {
-  const action = String(params.args.action || "")
+  const requestedAction = String(params.args.action || "")
     .trim()
     .toLowerCase();
-  if (!recurringActions.includes(action as RecurringAction)) {
+  if (!recurringActions.includes(requestedAction as RecurringAction)) {
     return {
       error: `action must be one of: ${recurringActions.join(", ")}.`,
     };
   }
+  const action = requestedAction as RecurringAction;
 
   if (action === "list_series") {
     const limit = normalizeLimit(params.args.limit, 25);
@@ -259,11 +265,11 @@ export async function executeManageRecurringTool(
     const scope = resolveBotSpaceScope(params.args, params.spaceMap);
     const requestedCurrencies = Array.isArray(params.args.currencies)
       ? params.args.currencies.map((value: unknown) =>
-          String(value).trim().toUpperCase(),
-        )
+        String(value).trim().toUpperCase()
+      )
       : params.args.currency
-        ? [String(params.args.currency).trim().toUpperCase()]
-        : [];
+      ? [String(params.args.currency).trim().toUpperCase()]
+      : [];
     if (
       requestedCurrencies.some(
         (value: string) => !VALID_CURRENCIES.includes(value),
@@ -271,10 +277,9 @@ export async function executeManageRecurringTool(
     ) {
       return { error: "currencies must contain valid ISO currency codes." };
     }
-    const currencies =
-      requestedCurrencies.length > 0
-        ? Array.from(new Set(requestedCurrencies))
-        : undefined;
+    const currencies = requestedCurrencies.length > 0
+      ? Array.from(new Set(requestedCurrencies))
+      : undefined;
     const result = await invokeRecurringFunction(
       params,
       action,
@@ -289,12 +294,11 @@ export async function executeManageRecurringTool(
       "Failed to list recurring transactions",
     );
     const responseData = result.data;
-    const rows =
-      responseData &&
-      typeof responseData === "object" &&
-      Array.isArray((responseData as Record<string, unknown>).items)
-        ? (responseData as { items: unknown[] }).items
-        : [];
+    const rows = responseData &&
+        typeof responseData === "object" &&
+        Array.isArray((responseData as Record<string, unknown>).items)
+      ? (responseData as { items: unknown[] }).items
+      : [];
     const selectionItems = rows
       .map(normalizeLastListedTransactionFromRow)
       .filter((item): item is LastListedTransaction => item !== null);
@@ -315,10 +319,9 @@ export async function executeManageRecurringTool(
     }
     const limit = normalizeLimit(params.args.limit, 50);
     if (limit === null) return { error: "limit must be between 1 and 100." };
-    const beforeScheduledDate =
-      params.args.before_scheduled_date === undefined
-        ? undefined
-        : normalizeCalendarDate(params.args.before_scheduled_date);
+    const beforeScheduledDate = params.args.before_scheduled_date === undefined
+      ? undefined
+      : normalizeCalendarDate(params.args.before_scheduled_date);
     if (
       params.args.before_scheduled_date !== undefined &&
       !beforeScheduledDate
@@ -380,36 +383,32 @@ export async function executeManageRecurringTool(
             "paid_date and amount greater than 0 are required to confirm an occurrence.",
         };
       }
-      const hasWalletHint =
-        params.args.wallet_name !== undefined ||
+      const hasWalletHint = params.args.wallet_name !== undefined ||
         params.args.wallet_id !== undefined ||
         params.args.account_id !== undefined;
       const wallet = hasWalletHint
         ? await resolveWalletForTransactionToolCall(
-            params.supabase,
-            params.userId,
-            series.household_id || null,
-            params.args,
-            params.logPrefix,
-          )
+          params.supabase,
+          params.userId,
+          series.household_id || null,
+          params.args,
+          params.logPrefix,
+        )
         : { accountId: series.account_id || null, error: undefined };
       if (wallet.error) return { error: wallet.error };
-      const hasSplitHints =
-        Array.isArray(params.args.member_splits) &&
+      const hasSplitHints = Array.isArray(params.args.member_splits) &&
         params.args.member_splits.length > 0;
-      const hasPayerHint =
-        typeof params.args.payer_name === "string" &&
+      const hasPayerHint = typeof params.args.payer_name === "string" &&
         params.args.payer_name.trim().length > 0;
-      const splitConfig =
-        series.household_id && (hasSplitHints || hasPayerHint)
-          ? await resolveHouseholdSplitConfig(
-              params.supabase,
-              series.household_id,
-              params.userId,
-              amount,
-              params.args,
-            )
-          : {};
+      const splitConfig = series.household_id && (hasSplitHints || hasPayerHint)
+        ? await resolveHouseholdSplitConfig(
+          params.supabase,
+          series.household_id,
+          params.userId,
+          amount,
+          params.args,
+        )
+        : {};
       return await invokeRecurringFunction(
         params,
         action,
@@ -443,17 +442,15 @@ export async function executeManageRecurringTool(
     }
 
     if (action === "update_occurrence") {
-      const paidDate =
-        params.args.paid_date === undefined
-          ? undefined
-          : normalizeCalendarDate(params.args.paid_date);
+      const paidDate = params.args.paid_date === undefined
+        ? undefined
+        : normalizeCalendarDate(params.args.paid_date);
       if (params.args.paid_date !== undefined && !paidDate) {
         return { error: "paid_date must use YYYY-MM-DD." };
       }
-      const amount =
-        params.args.amount === undefined
-          ? undefined
-          : Number(params.args.amount);
+      const amount = params.args.amount === undefined
+        ? undefined
+        : Number(params.args.amount);
       if (amount !== undefined && (!Number.isFinite(amount) || amount <= 0)) {
         return { error: "amount must be greater than 0." };
       }
@@ -469,18 +466,17 @@ export async function executeManageRecurringTool(
       if (optionalFields.every((value) => value === undefined)) {
         return { error: "Provide at least one occurrence field to update." };
       }
-      const hasWalletHint =
-        params.args.wallet_name !== undefined ||
+      const hasWalletHint = params.args.wallet_name !== undefined ||
         params.args.wallet_id !== undefined ||
         params.args.account_id !== undefined;
       const wallet = hasWalletHint
         ? await resolveWalletForTransactionToolCall(
-            params.supabase,
-            params.userId,
-            series.household_id || null,
-            params.args,
-            params.logPrefix,
-          )
+          params.supabase,
+          params.userId,
+          series.household_id || null,
+          params.args,
+          params.logPrefix,
+        )
         : null;
       if (wallet?.error) return { error: wallet.error };
       return await invokeRecurringFunction(
@@ -509,10 +505,9 @@ export async function executeManageRecurringTool(
       );
     }
 
-    const targetFunction =
-      action === "unconfirm_occurrence"
-        ? "unconfirm-recurring-occurrence"
-        : "skip-recurring-occurrence";
+    const targetFunction = action === "unconfirm_occurrence"
+      ? "unconfirm-recurring-occurrence"
+      : "skip-recurring-occurrence";
     return await invokeRecurringFunction(
       params,
       action,
@@ -576,16 +571,15 @@ export async function executeManageRecurringTool(
       anchor_date: transaction.date!,
       projection_enabled: true,
     };
-    const splitConfig =
-      householdId && scope.spaceMeta?.isPortfolio !== true
-        ? await resolveHouseholdSplitConfig(
-            params.supabase,
-            householdId,
-            params.userId,
-            transaction.amount,
-            params.args,
-          )
-        : {};
+    const splitConfig = householdId && scope.spaceMeta?.isPortfolio !== true
+      ? await resolveHouseholdSplitConfig(
+        params.supabase,
+        householdId,
+        params.userId,
+        transaction.amount,
+        params.args,
+      )
+      : {};
     const wallet = await resolveWalletForTransactionToolCall(
       params.supabase,
       params.userId,
@@ -596,8 +590,7 @@ export async function executeManageRecurringTool(
     if (wallet.error) return { error: wallet.error };
     const currency = resolveWalletTransactionCurrency({
       wallet,
-      walletName:
-        params.args.wallet_name ||
+      walletName: params.args.wallet_name ||
         params.args.wallet_id ||
         params.args.account_id,
       transactionCurrency: transaction.currency,
@@ -633,12 +626,12 @@ export async function executeManageRecurringTool(
     const success = !error && data?.success === true;
     if (success) return { success: true };
 
-    const formatted =
-      formatInvokeError(error ?? data?.error) ||
+    const formatted = formatInvokeError(error ?? data?.error) ||
       "Failed to save recurring transaction";
-    await reportFailure(params, {
-      targetFunction:
-        transaction.type === "income" ? "save-income" : "save-expense",
+    const backendFailureReported = await reportFailure(params, {
+      targetFunction: transaction.type === "income"
+        ? "save-income"
+        : "save-expense",
       formatted,
       error: error ?? data?.error,
       context: {
@@ -649,7 +642,11 @@ export async function executeManageRecurringTool(
         householdId,
       },
     });
-    return { error: formatted };
+    return {
+      error: formatted,
+      action,
+      ...(backendFailureReported ? { _backend_failure_reported: true } : {}),
+    };
   }
 
   const resolved = await resolveRecurringSelection(params);
@@ -686,11 +683,11 @@ export async function executeManageRecurringTool(
   const scope = hasExplicitScope
     ? resolveBotSpaceScope(params.args, params.spaceMap)
     : {
-        householdId: existing.household_id || null,
-        spaceMeta: existing.household_id
-          ? params.spaceMap.get(existing.household_id)
-          : undefined,
-      };
+      householdId: existing.household_id || null,
+      spaceMeta: existing.household_id
+        ? params.spaceMap.get(existing.household_id)
+        : undefined,
+    };
   const householdId = scope.householdId;
   const date = normalizeDateInput(
     params.args.anchor_date ?? params.args.date,
@@ -732,8 +729,7 @@ export async function executeManageRecurringTool(
   }
   if (hasExplicitScope) updates.household_id = householdId;
 
-  const hasExplicitWallet =
-    params.args.wallet_name !== undefined ||
+  const hasExplicitWallet = params.args.wallet_name !== undefined ||
     params.args.wallet_id !== undefined ||
     params.args.account_id !== undefined;
   if (hasExplicitWallet) {
@@ -747,8 +743,7 @@ export async function executeManageRecurringTool(
     if (wallet.error) return { error: wallet.error };
     const currency = resolveWalletTransactionCurrency({
       wallet,
-      walletName:
-        params.args.wallet_name ||
+      walletName: params.args.wallet_name ||
         params.args.wallet_id ||
         params.args.account_id,
       transactionCurrency: updates.currency || existing.currency,
@@ -760,28 +755,24 @@ export async function executeManageRecurringTool(
     updates.currency = currency.currency;
   }
 
-  const hasSplitHints =
-    Array.isArray(params.args.member_splits) &&
+  const hasSplitHints = Array.isArray(params.args.member_splits) &&
     params.args.member_splits.length > 0;
-  const hasPayerHint =
-    typeof params.args.payer_name === "string" &&
+  const hasPayerHint = typeof params.args.payer_name === "string" &&
     params.args.payer_name.trim().length > 0;
-  const amountMajor =
-    params.args.amount != null
-      ? Number(params.args.amount)
-      : Number(existing.amount_cents || 0) / 100;
-  const splitConfig =
-    householdId &&
-    scope.spaceMeta?.isPortfolio !== true &&
-    (hasSplitHints || hasPayerHint)
-      ? await resolveHouseholdSplitConfig(
-          params.supabase,
-          householdId,
-          params.userId,
-          amountMajor,
-          params.args,
-        )
-      : {};
+  const amountMajor = params.args.amount != null
+    ? Number(params.args.amount)
+    : Number(existing.amount_cents || 0) / 100;
+  const splitConfig = householdId &&
+      scope.spaceMeta?.isPortfolio !== true &&
+      (hasSplitHints || hasPayerHint)
+    ? await resolveHouseholdSplitConfig(
+      params.supabase,
+      householdId,
+      params.userId,
+      amountMajor,
+      params.args,
+    )
+    : {};
 
   const requestBody: Record<string, unknown> = {
     userId: params.userId,
@@ -818,14 +809,17 @@ export async function executeManageRecurringTool(
   const success = !error && data?.success === true;
   if (success) return { success: true };
 
-  const formatted =
-    formatInvokeError(error ?? data?.error) ||
+  const formatted = formatInvokeError(error ?? data?.error) ||
     "Failed to update recurring transaction";
-  await reportFailure(params, {
+  const backendFailureReported = await reportFailure(params, {
     targetFunction: "update-expense",
     formatted,
     error: error ?? data?.error,
     context: { action, expenseId, updateKeys: Object.keys(updates) },
   });
-  return { error: formatted };
+  return {
+    error: formatted,
+    action,
+    ...(backendFailureReported ? { _backend_failure_reported: true } : {}),
+  };
 }
