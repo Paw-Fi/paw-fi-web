@@ -150,7 +150,7 @@ BEGIN
     'com.bank.app',
     'Bank',
     100,
-    'android_notification_classifier_v5',
+    'android_notification_classifier_v7',
     repeat('a', 64),
     3
   );
@@ -161,7 +161,7 @@ BEGIN
         'error', 'Classification failed',
         'diagnosticCode', 'INVALID_VERIFICATION_RESPONSE',
         'retryable', FALSE,
-        'pipelineVersion', 'android_notification_classifier_v5'
+        'pipelineVersion', 'android_notification_classifier_v7'
       ),
       updated_at = NOW()
   WHERE id = (v_ai_claim ->> 'eventId')::UUID;
@@ -171,7 +171,7 @@ BEGIN
     'com.bank.app',
     'Bank',
     100,
-    'android_notification_classifier_v5',
+    'android_notification_classifier_v7',
     repeat('a', 64),
     3
   );
@@ -181,7 +181,7 @@ BEGIN
     'com.bank.app',
     'Bank',
     100,
-    'android_notification_classifier_v5',
+    'android_notification_classifier_v7',
     repeat('b', 64),
     3
   );
@@ -202,7 +202,7 @@ BEGIN
         'error', 'Classification failed',
         'diagnosticCode', 'NOTIFICATION_CLASSIFICATION_TIMEOUT',
         'retryable', TRUE,
-        'pipelineVersion', 'android_notification_classifier_v5'
+        'pipelineVersion', 'android_notification_classifier_v7'
       ),
       updated_at = NOW()
   WHERE id = (v_ai_context_reclaim ->> 'eventId')::UUID;
@@ -212,7 +212,7 @@ BEGIN
     'com.bank.app',
     'Bank',
     100,
-    'android_notification_classifier_v5',
+    'android_notification_classifier_v7',
     repeat('b', 64),
     3
   );
@@ -224,7 +224,7 @@ BEGIN
         'error', 'Classification failed',
         'diagnosticCode', 'NOTIFICATION_CLASSIFICATION_TIMEOUT',
         'retryable', TRUE,
-        'pipelineVersion', 'android_notification_classifier_v5'
+        'pipelineVersion', 'android_notification_classifier_v7'
       ),
       updated_at = NOW()
   WHERE id = (v_ai_retry_two ->> 'eventId')::UUID;
@@ -234,7 +234,7 @@ BEGIN
     'com.bank.app',
     'Bank',
     100,
-    'android_notification_classifier_v5',
+    'android_notification_classifier_v7',
     repeat('b', 64),
     3
   );
@@ -246,7 +246,7 @@ BEGIN
         'error', 'Classification failed',
         'diagnosticCode', 'NOTIFICATION_CLASSIFICATION_TIMEOUT',
         'retryable', TRUE,
-        'pipelineVersion', 'android_notification_classifier_v5'
+        'pipelineVersion', 'android_notification_classifier_v7'
       ),
       updated_at = NOW()
   WHERE id = (v_ai_retry_three ->> 'eventId')::UUID;
@@ -256,7 +256,7 @@ BEGIN
     'com.bank.app',
     'Bank',
     100,
-    'android_notification_classifier_v5',
+    'android_notification_classifier_v7',
     repeat('b', 64),
     3
   );
