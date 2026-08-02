@@ -7,6 +7,7 @@ import {
   isWriteMutationToolName,
   shouldBlockUnsafeTransactionMutationClaim,
 } from "../shared/bot/mutation-claim-guard.ts";
+import { shouldReportBotToolResultError } from "../shared/bot/error-reporting.ts";
 import { buildTransactionMutationFailureText } from "../shared/bot/transaction-tool.ts";
 
 Deno.test(
@@ -74,6 +75,17 @@ Deno.test("does not expose recurring selection instructions to users", () => {
         "No matching transaction found. Ask user to list recent transactions first or provide more details.",
     }),
     null,
+  );
+});
+
+Deno.test("treats duplicate wallet names as user-actionable ambiguity", () => {
+  const error =
+    "More than one wallet named 'Cash' exists in the selected scope. Please rename one of them or be more specific.";
+
+  assertEquals(shouldReportBotToolResultError(error), false);
+  assertEquals(
+    buildTransactionMutationFailureText("update_transaction", { error }),
+    `I couldn't update that transaction. ${error}`,
   );
 });
 

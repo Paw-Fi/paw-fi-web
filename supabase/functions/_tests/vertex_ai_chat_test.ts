@@ -505,3 +505,57 @@ Deno.test("createVertexGenerativeAI maps generateContent onto Vertex generateCon
     },
   ]);
 });
+
+Deno.test("createVertexGenerativeAI preserves enum response configuration", async () => {
+  const capturedBodies: Array<Record<string, unknown>> = [];
+  const ai = createVertexGenerativeAI({
+    project: "moneko-prod",
+    location: "global",
+    accessToken: "access-token",
+    fetchImpl: async (_input: string | URL | Request, init?: RequestInit) => {
+      capturedBodies.push(JSON.parse(String(init?.body)));
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              finishReason: "STOP",
+              content: {
+                role: "model",
+                parts: [{ text: "APPROVE" }],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  });
+
+  const result = await ai
+    .getGenerativeModel({ model: "gemini-2.5-pro" })
+    .generateContent({
+      contents: [{ role: "user", parts: [{ text: "Verify fixture" }] }],
+      generationConfig: {
+        maxOutputTokens: 1024,
+        temperature: 0,
+        thinkingConfig: { thinkingBudget: 512 },
+        responseMimeType: "text/x.enum",
+        responseSchema: {
+          type: "STRING",
+          enum: ["APPROVE", "REJECT"],
+        },
+      },
+    });
+
+  assertEquals(capturedBodies[0].generationConfig, {
+    maxOutputTokens: 1024,
+    temperature: 0,
+    thinkingConfig: { thinkingBudget: 512 },
+    responseMimeType: "text/x.enum",
+    responseSchema: {
+      type: "STRING",
+      enum: ["APPROVE", "REJECT"],
+    },
+  });
+  assertEquals(result.response.text(), "APPROVE");
+});
