@@ -4,6 +4,7 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { isTransientBankNetworkError } from "../shared/bank-retry.ts";
 import {
   canUsePlaidBankSync,
   loadPlaidUserAccessState,
@@ -40,6 +41,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const MANUAL_SYNC_COOLDOWN_HOURS = 24;
 const POSTGRES_STATEMENT_TIMEOUT_CODE = "57014";
 const SYNC_LOCK_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
+const SYNC_LEASE_NETWORK_RETRY_DELAYS_MS = [250, 750] as const;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for plaid-sync-transactions");
@@ -554,11 +556,23 @@ async function syncConnection(params: {
     ) {
       return;
     }
-    const leaseResult = await params.supabase.rpc("extend_bank_sync_lock_v2", {
-      p_bank_connection_id: params.connection.id,
-      p_lock_token: lockToken,
-      p_lock_seconds: 900,
-    });
+    const extendLease = () =>
+      params.supabase.rpc("extend_bank_sync_lock_v2", {
+        p_bank_connection_id: params.connection.id,
+        p_lock_token: lockToken,
+        p_lock_seconds: 900,
+      });
+    let leaseResult = await extendLease();
+    for (const delayMs of SYNC_LEASE_NETWORK_RETRY_DELAYS_MS) {
+      if (
+        !leaseResult.error ||
+        !isTransientSyncTransportError(leaseResult.error)
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      leaseResult = await extendLease();
+    }
     if (leaseResult.error) throw leaseResult.error;
     if (leaseResult.data !== true) {
       throw createPlaidSyncLeaseLostError("Plaid sync lock lease was lost");
@@ -1041,6 +1055,27 @@ async function syncConnection(params: {
       return summary;
     }
 
+    if (isTransientSyncTransportError(error)) {
+      summary.errorCode = "SYNC_NETWORK_ERROR";
+      summary.error =
+        "Bank sync network connection was interrupted and will retry";
+      await auditUpdate({
+        status: "failed",
+        error_message: summary.error,
+        error_code: summary.errorCode,
+        finished_at: new Date().toISOString(),
+      });
+      await reportEdgeFunctionError({
+        functionName: "plaid-sync-transactions",
+        error,
+        context: {
+          phase: "sync_network_error",
+          connection_id: params.connection.id,
+        },
+      });
+      return summary;
+    }
+
     if (errorCode === POSTGRES_STATEMENT_TIMEOUT_CODE) {
       summary.errorCode = "SYNC_DATABASE_TIMEOUT";
       summary.error = "Bank sync database work timed out and will retry";
@@ -1193,6 +1228,15 @@ function createPlaidSyncLeaseLostError(message: string): Error & {
   code: "40001";
 } {
   return Object.assign(new Error(message), { code: "40001" as const });
+}
+
+function isTransientSyncTransportError(error: unknown): boolean {
+  if (error instanceof PlaidError) return false;
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String((error as { code?: unknown }).code || "")
+      : "";
+  return code.length === 0 && isTransientBankNetworkError(error);
 }
 
 function formatUnknownErrorMessage(error: unknown): string {

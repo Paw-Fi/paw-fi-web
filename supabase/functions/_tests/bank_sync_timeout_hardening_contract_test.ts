@@ -69,3 +69,18 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "Plaid lease transport resets retry without degrading connection health",
+  () => {
+    assertStringIncludes(plaidSyncSource, "SYNC_LEASE_NETWORK_RETRY_DELAYS_MS");
+    assertStringIncludes(
+      plaidSyncSource,
+      'summary.errorCode = "SYNC_NETWORK_ERROR"',
+    );
+    assertStringIncludes(plaidSyncSource, "isTransientSyncTransportError");
+    assertStringIncludes(plaidSyncSource, "error instanceof PlaidError");
+    assertStringIncludes(plaidSyncSource, "code.length === 0");
+    assertStringIncludes(plaidSyncSource, 'phase: "sync_network_error"');
+  },
+);

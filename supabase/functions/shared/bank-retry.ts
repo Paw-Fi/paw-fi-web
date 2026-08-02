@@ -29,8 +29,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function calculateDelay(attempt: number, options: Required<Omit<RetryOptions, "retryOnStatuses">>): number {
-  const baseDelay = options.initialDelayMs * Math.pow(options.backoffMultiplier, attempt - 1);
+function calculateDelay(
+  attempt: number,
+  options: Required<Omit<RetryOptions, "retryOnStatuses">>,
+): number {
+  const baseDelay =
+    options.initialDelayMs * Math.pow(options.backoffMultiplier, attempt - 1);
   const jitter = Math.random() * 0.3 * baseDelay;
   return Math.min(baseDelay + jitter, options.maxDelayMs);
 }
@@ -47,21 +51,40 @@ function parseRetryAfterMs(value: string | null): number {
 }
 
 export function isTransientBankNetworkError(error: unknown): boolean {
-  const message = error instanceof Error
-    ? error.message
-    : typeof error === "string"
-      ? error
-      : "";
+  if (
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    String((error as { code?: unknown }).code || "").length > 0
+  ) {
+    return false;
+  }
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : error && typeof error === "object"
+          ? [
+              (error as { message?: unknown }).message,
+              (error as { details?: unknown }).details,
+            ]
+              .filter((value): value is string => typeof value === "string")
+              .join(" ")
+          : "";
   const normalized = message.toLowerCase();
   return TRANSIENT_NETWORK_ERROR_MARKERS.some((marker) =>
-    normalized.includes(marker)
+    normalized.includes(marker),
   );
 }
 
 /** Retries read-only Supabase operations after Edge-to-PostgREST transport failures. */
 export async function withTransientBankReadRetry<T>(
   operation: () => Promise<T>,
-  options: Pick<RetryOptions, "maxRetries" | "initialDelayMs" | "maxDelayMs" | "backoffMultiplier"> = {},
+  options: Pick<
+    RetryOptions,
+    "maxRetries" | "initialDelayMs" | "maxDelayMs" | "backoffMultiplier"
+  > = {},
 ): Promise<T> {
   const resolvedOptions = { ...DEFAULT_RETRY_OPTIONS, ...options };
 
@@ -69,7 +92,10 @@ export async function withTransientBankReadRetry<T>(
     try {
       return await operation();
     } catch (error) {
-      if (!isTransientBankNetworkError(error) || attempt > resolvedOptions.maxRetries) {
+      if (
+        !isTransientBankNetworkError(error) ||
+        attempt > resolvedOptions.maxRetries
+      ) {
         throw error;
       }
       await sleep(calculateDelay(attempt, resolvedOptions));
@@ -86,17 +112,29 @@ export async function fetchWithRetry(
   const retryStatuses = options.retryOnStatuses ?? DEFAULT_RETRY_STATUSES;
   let lastError: unknown;
 
-  for (let attempt = 1; attempt <= resolvedOptions.maxRetries + 1; attempt += 1) {
+  for (
+    let attempt = 1;
+    attempt <= resolvedOptions.maxRetries + 1;
+    attempt += 1
+  ) {
     try {
       const response = await fetch(input, init);
       if (response.ok) return response;
 
-      if (!retryStatuses.includes(response.status) || attempt > resolvedOptions.maxRetries) {
+      if (
+        !retryStatuses.includes(response.status) ||
+        attempt > resolvedOptions.maxRetries
+      ) {
         return response;
       }
 
-      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
-      const delay = Math.max(retryAfterMs, calculateDelay(attempt, resolvedOptions));
+      const retryAfterMs = parseRetryAfterMs(
+        response.headers.get("retry-after"),
+      );
+      const delay = Math.max(
+        retryAfterMs,
+        calculateDelay(attempt, resolvedOptions),
+      );
       await sleep(delay);
       continue;
     } catch (error) {
