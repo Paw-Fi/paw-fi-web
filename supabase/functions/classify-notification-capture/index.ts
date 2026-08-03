@@ -40,7 +40,10 @@ import {
   createVertexGenerativeAI,
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
-import { getLocalYyyyMmDdInTimeZone } from "../shared/wallet-capture.ts";
+import {
+  getLocalYyyyMmDdInTimeZone,
+  resolveWalletCaptureAccountForCurrency,
+} from "../shared/wallet-capture.ts";
 import { sendNotificationCapturePushBestEffort } from "../shared/notification-capture-push.ts";
 
 const MAX_REQUEST_BYTES = 32_000;
@@ -129,11 +132,11 @@ async function claimClassificationEvent(params: {
   contextHash: string;
 }): Promise<
   | {
-      status: "claimed";
-      id: string;
-      processingToken: string;
-      attemptNumber: number;
-    }
+    status: "claimed";
+    id: string;
+    processingToken: string;
+    attemptNumber: number;
+  }
   | { status: "cached"; result: Record<string, unknown> }
   | { status: "processing" }
   | { status: "rate_limited" }
@@ -152,8 +155,9 @@ async function claimClassificationEvent(params: {
     },
   );
   if (error) throw error;
-  const result =
-    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const result = data && typeof data === "object"
+    ? (data as Record<string, unknown>)
+    : {};
   if (result.status === "cached" && result.result) {
     return {
       status: "cached",
@@ -252,8 +256,8 @@ async function sendDecisionPush(params: {
       deep_link: params.deepLink ?? "moneko://home",
     },
     firebaseProjectId: Deno.env.get("FIREBASE_PROJECT_ID") || "",
-    firebaseServiceAccountJson:
-      Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") || "",
+    firebaseServiceAccountJson: Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") ||
+      "",
     iosBundleId: Deno.env.get("IOS_BUNDLE_ID") || "com.moneko.mobile",
   });
 }
@@ -298,9 +302,11 @@ async function invokeWalletCapture(params: {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const internalKey = resolveAnyInternalFunctionKey();
-  const url = `${Deno.env.get(
-    "SUPABASE_URL",
-  )}/functions/v1/save-wallet-transaction`;
+  const url = `${
+    Deno.env.get(
+      "SUPABASE_URL",
+    )
+  }/functions/v1/save-wallet-transaction`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -316,7 +322,7 @@ async function invokeWalletCapture(params: {
       clientCreatedAt: params.body.clientCreatedAt,
       householdId: params.body.householdId,
       isPortfolio: params.body.isPortfolio === true,
-      accountId: params.accountId,
+      ...(params.accountId ? { accountId: params.accountId } : {}),
       suppressNotification: params.classification.isRecurring,
       transaction: {
         merchantName: params.classification.merchant,
@@ -328,8 +334,8 @@ async function invokeWalletCapture(params: {
           params.classification.currencySource === "account_context"
             ? "ai_account_context"
             : params.classification.currencySource === "user_preference"
-              ? "ai_user_preference"
-              : "ai_notification_explicit",
+            ? "ai_user_preference"
+            : "ai_notification_explicit",
         currencyAmbiguous: params.classification.currencyAmbiguous,
         accountCurrency: params.accountCurrency,
         date: params.classification.date,
@@ -470,8 +476,7 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
-    const accountId =
-      requestedAccountId ??
+    const accountId = requestedAccountId ??
       (await resolveDefaultAccountIdStrict(supabase, { userId, householdId }));
     let accountCurrency: string | null = null;
     if (accountId) {
@@ -489,10 +494,9 @@ Deno.serve(async (req: Request) => {
         );
       }
       const account = await getAccountOrNull(supabase, accountId);
-      accountCurrency =
-        typeof account?.currency === "string"
-          ? account.currency.trim().toUpperCase()
-          : null;
+      accountCurrency = typeof account?.currency === "string"
+        ? account.currency.trim().toUpperCase()
+        : null;
       if (!accountCurrency) {
         return jsonResponse(
           { success: false, error: "Selected account has no currency" },
@@ -502,10 +506,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    const preferredTimezone =
-      typeof contact?.preferred_timezone === "string"
-        ? contact.preferred_timezone
-        : null;
+    const preferredTimezone = typeof contact?.preferred_timezone === "string"
+      ? contact.preferred_timezone
+      : null;
     const clientDate = body.clientCreatedAt
       ? new Date(body.clientCreatedAt)
       : new Date();
@@ -518,14 +521,12 @@ Deno.serve(async (req: Request) => {
         householdId,
         accountId,
         accountCurrency,
-        preferredCurrency:
-          typeof contact?.preferred_currency === "string"
-            ? contact.preferred_currency
-            : null,
-        preferredLanguage:
-          typeof contact?.preferred_language === "string"
-            ? contact.preferred_language
-            : null,
+        preferredCurrency: typeof contact?.preferred_currency === "string"
+          ? contact.preferred_currency
+          : null,
+        preferredLanguage: typeof contact?.preferred_language === "string"
+          ? contact.preferred_language
+          : null,
         expenseCategories: Array.from(categoryContext.allowedExpenseSet),
         incomeCategories: Array.from(categoryContext.allowedIncomeSet),
       },
@@ -606,8 +607,8 @@ Deno.serve(async (req: Request) => {
         pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
         classifierModel: classification.model ?? null,
         verificationModel: classification.verificationModel ?? null,
-        normalizationDiagnostics:
-          classification.normalizationDiagnostics ?? null,
+        normalizationDiagnostics: classification.normalizationDiagnostics ??
+          null,
       };
       await finalizeClassificationEvent({
         supabase,
@@ -628,6 +629,17 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(result);
     }
 
+    const captureAccountId = await resolveWalletCaptureAccountForCurrency(
+      supabase,
+      {
+        userId,
+        householdId,
+        accountId,
+        accountCurrency,
+        transactionCurrency: classification.currency!,
+      },
+    );
+
     let replacedSchedule: AndroidRecurringScheduleRow | null = null;
     if (classification.isRecurring && classification.recurrenceRule) {
       const schedules = await loadRecurringSchedules({
@@ -640,7 +652,7 @@ Deno.serve(async (req: Request) => {
         amountCents: Math.round(classification.amount! * 100),
         currency: classification.currency!,
         transactionType: classification.transactionType!,
-        accountId,
+        accountId: captureAccountId,
         frequency: classification.recurrenceRule.frequency,
         date: classification.date,
       });
@@ -664,7 +676,8 @@ Deno.serve(async (req: Request) => {
           supabase,
           userId,
           title: "Recurring transaction already tracked",
-          body: "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
+          body:
+            "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
           eventType: "notification_capture_recurring_existing",
           deepLink: `moneko://recurring/${recurringMatch.schedule.id}`,
           notificationId: eventId,
@@ -683,8 +696,8 @@ Deno.serve(async (req: Request) => {
       notification,
       classification,
       eventKey,
-      accountId,
-      accountCurrency,
+      accountId: captureAccountId,
+      accountCurrency: classification.currency!,
     });
     if (!saved.response.ok) {
       const saveFailureResult = buildAndroidNotificationDependencyFailure(
@@ -699,6 +712,11 @@ Deno.serve(async (req: Request) => {
             stage: "wallet_capture_save",
             eventId,
             status: saved.response.status,
+            dependencyCode: optionalString(saved.payload.code, 80),
+            accountCurrency,
+            transactionCurrency: classification.currency,
+            currencySource: classification.currencySource,
+            reassignedAccount: captureAccountId !== accountId,
           },
         });
       }
@@ -774,7 +792,7 @@ Deno.serve(async (req: Request) => {
             amountCents: Math.round(classification.amount! * 100),
             currency: classification.currency!,
             transactionType: classification.transactionType!,
-            accountId,
+            accountId: captureAccountId,
             frequency: classification.recurrenceRule.frequency,
           },
         )
@@ -853,8 +871,9 @@ Deno.serve(async (req: Request) => {
         result: failureResult,
       }).catch(() => undefined);
     }
-    const failureStatus =
-      httpStatusForAndroidNotificationFailure(failureResult);
+    const failureStatus = httpStatusForAndroidNotificationFailure(
+      failureResult,
+    );
     return jsonResponse(
       {
         success: false,

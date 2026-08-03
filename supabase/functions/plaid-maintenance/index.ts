@@ -284,6 +284,21 @@ async function reconcileStaleItems(
   supabase: ReturnType<typeof createServiceClient>,
 ) {
   const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: activeJob, error: activeJobError } = await supabase
+    .from("bank_sync_jobs")
+    .select("id")
+    .eq("status", "processing")
+    .gte(
+      "processing_started_at",
+      new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    )
+    .limit(1)
+    .maybeSingle();
+  if (activeJobError) throw activeJobError;
+  if (activeJob?.id) {
+    return { enqueued: 0, deferred: true };
+  }
+
   const { data: connections, error } = await supabase
     .from("bank_connections")
     .select(
@@ -291,7 +306,13 @@ async function reconcileStaleItems(
     )
     .eq("provider", PLAID_PROVIDER)
     .in("status", ["active", "pending"])
-    .is("removed_at", null);
+    .is("removed_at", null)
+    .or("item_status.is.null,item_status.not.in.(removed,pending_removal)")
+    .or(
+      `needs_resync.eq.true,plaid_recurring_refresh_pending.eq.true,last_successful_sync_at.is.null,last_successful_sync_at.lt.${staleBefore},last_webhook_received_at.is.null,last_webhook_received_at.lt.${staleBefore}`,
+    )
+    .order("last_successful_sync_at", { ascending: true, nullsFirst: true })
+    .limit(20);
 
   if (error) {
     throw error;
@@ -333,7 +354,7 @@ async function reconcileStaleItems(
     }
   }
 
-  return { enqueued };
+  return { enqueued, deferred: false };
 }
 
 async function enforceLifecyclePolicies(

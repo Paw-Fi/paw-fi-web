@@ -888,7 +888,7 @@ Deno.test(
       error: "Classification failed",
       diagnosticCode: "INVALID_CLASSIFICATION_RESPONSE",
       retryable: false,
-      pipelineVersion: "android_notification_classifier_v7",
+      pipelineVersion: "android_notification_classifier_v8",
       diagnostics: [
         {
           phase: "classification",
@@ -911,7 +911,7 @@ Deno.test(
       error: "Classification failed",
       diagnosticCode: "unknown_error",
       retryable: true,
-      pipelineVersion: "android_notification_classifier_v7",
+      pipelineVersion: "android_notification_classifier_v8",
       diagnostics: [],
     });
     assertEquals(

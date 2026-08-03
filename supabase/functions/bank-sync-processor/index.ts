@@ -5,7 +5,10 @@ import {
   buildInternalInvokeHeaders,
   resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
-import { withTransientBankReadRetry } from "../shared/bank-retry.ts";
+import {
+  isTransientBankNetworkError,
+  withTransientBankReadRetry,
+} from "../shared/bank-retry.ts";
 import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
 import { requiresPlaidRelinkForError } from "../shared/plaid-update-mode.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -29,7 +32,7 @@ const AUTO_BANK_SYNC_ENABLED =
   Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() !== "false";
 
 // Fixed batch size to prevent DoS attacks
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 3;
 const POSTGRES_STATEMENT_TIMEOUT_CODE = "57014";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -162,24 +165,16 @@ Deno.serve(async (req) => {
 
     let recoveryQueued = 0;
     let webhooksRecovered = 0;
-    if (AUTO_BANK_SYNC_ENABLED) {
-      try {
-        webhooksRecovered = await recoverStalePlaidWebhookEvents(supabase);
-        recoveryQueued = await enqueueStalePlaidRecoveryJobs(supabase as any);
-      } catch (recoveryError) {
-        await reportEdgeFunctionError({
-          functionName: "bank-sync-processor",
-          error: recoveryError,
-          context: { phase: "enqueue_stale_plaid_recovery" },
-        });
-      }
-    }
 
     // Fetch pending jobs (atomic claim via update with returning)
     // Use FOR UPDATE SKIP LOCKED pattern for atomic job claiming via RPC
     const processorId = crypto.randomUUID();
-    const { data: jobs, error: jobsError } =
-      await claimPendingSyncJobsWithTimeoutRetry(supabase, processorId);
+    let claimResult = await claimPendingSyncJobsWithTimeoutRetry(
+      supabase,
+      processorId,
+    );
+    let jobs = claimResult.data;
+    let jobsError = claimResult.error;
 
     if (jobsError) {
       console.error("[bank-sync-processor] Failed to claim jobs", jobsError);
@@ -192,6 +187,71 @@ Deno.serve(async (req) => {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },
       });
+    }
+
+    if (!jobs || jobs.length === 0) {
+      const { data: activeJob, error: activeJobError } = await supabase
+        .from("bank_sync_jobs")
+        .select("id")
+        .eq("status", "processing")
+        .gte(
+          "processing_started_at",
+          new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        )
+        .limit(1)
+        .maybeSingle();
+      if (activeJobError) throw activeJobError;
+      if (activeJob?.id) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            processed: 0,
+            recoveryQueued: 0,
+            webhooksRecovered: 0,
+            message: "Another bank sync processor is active",
+          }),
+          {
+            status: 200,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      try {
+        webhooksRecovered = await recoverStalePlaidWebhookEvents(supabase);
+        recoveryQueued = await enqueueStalePlaidRecoveryJobs(supabase as any);
+      } catch (recoveryError) {
+        await reportEdgeFunctionError({
+          functionName: "bank-sync-processor",
+          error: isTransientBankNetworkError(recoveryError)
+            ? new Error("Bank sync recovery transport failed after retries")
+            : recoveryError,
+          context: { phase: "enqueue_stale_plaid_recovery" },
+        });
+      }
+
+      if (recoveryQueued > 0 || webhooksRecovered > 0) {
+        claimResult = await claimPendingSyncJobsWithTimeoutRetry(
+          supabase,
+          processorId,
+        );
+        jobs = claimResult.data;
+        jobsError = claimResult.error;
+        if (jobsError) {
+          await reportEdgeFunctionError({
+            functionName: "bank-sync-processor",
+            error: jobsError,
+            context: { phase: "claim_recovered_sync_jobs" },
+          });
+          return new Response(
+            JSON.stringify({ error: "Failed to claim recovered jobs" }),
+            {
+              status: 500,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
     }
 
     if (!jobs || jobs.length === 0) {
@@ -486,10 +546,10 @@ async function enqueueStalePlaidRecoveryJobs(
   supabase: ReturnType<typeof createClient>,
 ): Promise<number> {
   const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data: connections, error } = await withTransientBankReadRetry(
+  const connections = await withTransientBankReadRetry(
     async () => {
       // Build a fresh query for each retry; PostgREST builders are single-use.
-      return await supabase
+      const { data, error } = await supabase
         .from("bank_connections")
         .select("id, status, error_code, plaid_not_ready_retry_at")
         .eq("provider", PLAID_PROVIDER)
@@ -501,6 +561,8 @@ async function enqueueStalePlaidRecoveryJobs(
         )
         .order("last_successful_sync_at", { ascending: true, nullsFirst: true })
         .limit(BATCH_SIZE);
+      if (error) throw error;
+      return data || [];
     },
     {
       maxRetries: 2,
@@ -508,10 +570,9 @@ async function enqueueStalePlaidRecoveryJobs(
       maxDelayMs: 1000,
     },
   );
-  if (error) throw error;
 
   let queued = 0;
-  for (const connection of connections || []) {
+  for (const connection of connections) {
     if (
       connection.plaid_not_ready_retry_at &&
       Date.parse(String(connection.plaid_not_ready_retry_at)) > Date.now()

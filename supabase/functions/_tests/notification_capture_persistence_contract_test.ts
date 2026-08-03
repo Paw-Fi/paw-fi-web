@@ -109,6 +109,25 @@ Deno.test("downstream save failures persist bounded retry policy", () => {
 });
 
 Deno.test(
+  "classified currency re-resolves the wallet before downstream save",
+  () => {
+    assertStringIncludes(
+      classificationSource,
+      "resolveWalletCaptureAccountForCurrency(",
+    );
+    assertStringIncludes(
+      classificationSource,
+      "transactionCurrency: classification.currency!",
+    );
+    assertStringIncludes(classificationSource, "accountId: captureAccountId");
+    assertStringIncludes(
+      classificationSource,
+      "...(params.accountId ? { accountId: params.accountId } : {}),",
+    );
+  },
+);
+
+Deno.test(
   "notification classification persists bounded field provenance",
   () => {
     assertStringIncludes(
@@ -165,6 +184,10 @@ Deno.test(
       "WALLET_CAPTURE_SAVE_HTTP_${saved.response.status}",
     );
     assertStringIncludes(classificationSource, 'stage: "wallet_capture_save"');
+    assertStringIncludes(
+      classificationSource,
+      "dependencyCode: optionalString(saved.payload.code, 80)",
+    );
     assertStringIncludes(
       classificationSource,
       "httpStatusForAndroidNotificationFailure",

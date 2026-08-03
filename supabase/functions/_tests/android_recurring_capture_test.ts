@@ -98,6 +98,23 @@ Deno.test("recurring matching treats a missing wallet as unknown", () => {
 });
 
 Deno.test(
+  "an unresolved capture wallet cannot match an account-bound schedule",
+  () => {
+    const result = findAndroidRecurringCaptureMatch([existing], {
+      merchant: "Spotify",
+      amountCents: 1099,
+      currency: "USD",
+      transactionType: "expense",
+      accountId: null,
+      frequency: "monthly",
+      date: "2026-07-15",
+    });
+
+    assertEquals(result, null);
+  },
+);
+
+Deno.test(
   "recurring matching still rejects two different known wallets",
   () => {
     const result = findAndroidRecurringCaptureMatch([existing], {
@@ -169,3 +186,34 @@ Deno.test("non-recurring duplicate cannot close an existing schedule", () => {
     false,
   );
 });
+
+Deno.test(
+  "an unresolved expected wallet cannot close an account-bound schedule",
+  () => {
+    assertEquals(
+      savedExpenseMatchesRecurringReplacement(
+        {
+          id: "recurring-2",
+          amount_cents: 1299,
+          currency: "USD",
+          type: "expense",
+          account_id: "wallet-1",
+          is_recurring: true,
+          recurrence_rule: {
+            frequency: "monthly",
+            anchor_date: "2026-07-15",
+          },
+        },
+        {
+          replacedScheduleId: "recurring-1",
+          amountCents: 1299,
+          currency: "USD",
+          transactionType: "expense",
+          accountId: null,
+          frequency: "monthly",
+        },
+      ),
+      false,
+    );
+  },
+);

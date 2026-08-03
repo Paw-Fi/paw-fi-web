@@ -1,4 +1,7 @@
-import { assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import {
+  assert,
+  assertStringIncludes,
+} from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 const processorSource = await Deno.readTextFile(
   new URL("../bank-sync-processor/index.ts", import.meta.url),
@@ -9,9 +12,21 @@ const plaidSyncSource = await Deno.readTextFile(
 const recurringSource = await Deno.readTextFile(
   new URL("../shared/plaid-recurring.ts", import.meta.url),
 );
+const webhookSource = await Deno.readTextFile(
+  new URL("../plaid-webhook/index.ts", import.meta.url),
+);
+const maintenanceSource = await Deno.readTextFile(
+  new URL("../plaid-maintenance/index.ts", import.meta.url),
+);
 const migrationSource = await Deno.readTextFile(
   new URL(
     "../../migrations/20260801200000_harden_bank_sync_timeout_paths.sql",
+    import.meta.url,
+  ),
+);
+const loadControlMigrationSource = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260802210000_serialize_bank_sync_recovery_load.sql",
     import.meta.url,
   ),
 );
@@ -84,3 +99,54 @@ Deno.test(
     assertStringIncludes(plaidSyncSource, 'phase: "sync_network_error"');
   },
 );
+
+Deno.test(
+  "bank sync workers cannot amplify overlapping recovery batches",
+  () => {
+    assertStringIncludes(processorSource, "const BATCH_SIZE = 3");
+    assertStringIncludes(
+      loadControlMigrationSource,
+      "bank_connections_plaid_recovery_scan_idx",
+    );
+    assertStringIncludes(
+      loadControlMigrationSource,
+      "bank_sync_jobs_single_worker",
+    );
+    assertStringIncludes(
+      loadControlMigrationSource,
+      "active_job.status = 'processing'",
+    );
+    assertStringIncludes(
+      processorSource,
+      "Another bank sync processor is active",
+    );
+    assertStringIncludes(processorSource, '"processing_started_at"');
+    assert(
+      processorSource.indexOf("claimPendingSyncJobsWithTimeoutRetry(") <
+        processorSource.indexOf(
+          "webhooksRecovered = await recoverStalePlaidWebhookEvents",
+        ),
+    );
+  },
+);
+
+Deno.test(
+  "webhook event transitions retry rolled-back statement timeouts",
+  () => {
+    assertStringIncludes(
+      webhookSource,
+      "error?.code === POSTGRES_STATEMENT_TIMEOUT_CODE",
+    );
+    assertStringIncludes(webhookSource, "const retry = await transition()");
+  },
+);
+
+Deno.test("hourly Plaid recovery defers to an active bounded processor", () => {
+  assertStringIncludes(
+    maintenanceSource,
+    "return { enqueued: 0, deferred: true }",
+  );
+  assertStringIncludes(maintenanceSource, '.eq("status", "processing")');
+  assertStringIncludes(maintenanceSource, '"processing_started_at"');
+  assertStringIncludes(maintenanceSource, ".limit(20)");
+});

@@ -472,6 +472,7 @@ async function syncConnection(params: {
   const isInitialOrUserRepairSync = cooldownExemptItemStatuses.has(
     params.connection.item_status ?? "",
   );
+  let syncDatabasePhase = "create_sync_audit";
 
   if (params.enforceManualCooldown && !isInitialOrUserRepairSync) {
     const lastSuccessfulSyncAt = params.connection.last_successful_sync_at
@@ -516,6 +517,7 @@ async function syncConnection(params: {
   };
 
   const lockToken = crypto.randomUUID();
+  syncDatabasePhase = "acquire_sync_lock";
   const lockResult = await params.supabase.rpc("acquire_bank_sync_lock_v2", {
     p_bank_connection_id: params.connection.id,
     p_lock_token: lockToken,
@@ -562,6 +564,7 @@ async function syncConnection(params: {
         p_lock_token: lockToken,
         p_lock_seconds: 900,
       });
+    syncDatabasePhase = "extend_sync_lock";
     let leaseResult = await extendLease();
     for (const delayMs of SYNC_LEASE_NETWORK_RETRY_DELAYS_MS) {
       if (
@@ -609,6 +612,7 @@ async function syncConnection(params: {
         (account.type === "loan" &&
           (account.subtype === "mortgage" || account.subtype === "student")),
     );
+    syncDatabasePhase = "prepare_plaid_accounts";
     const refreshedAccounts = await preparePlaidAccounts({
       supabase: params.supabase,
       userId: params.userId,
@@ -676,6 +680,7 @@ async function syncConnection(params: {
       throw new Error("Bank connection belongs to a different space");
     }
     const effectiveTargetHouseholdId = connectionHouseholdId;
+    syncDatabasePhase = "load_linked_wallets";
     const linkedWalletsByBankAccountId = await loadLinkedWalletsForBankAccounts(
       {
         supabase: params.supabase,
@@ -784,6 +789,7 @@ async function syncConnection(params: {
           })),
       );
 
+      syncDatabasePhase = "prepare_transaction_mutations";
       const prepared = await preparePlaidTransactionMutations({
         supabase: params.supabase,
         userId: params.userId,
@@ -820,6 +826,7 @@ async function syncConnection(params: {
       .filter((id): id is string => Boolean(id));
     let removedBankAccountIds = Array.from(new Set(providerRemovalAccountIds));
     if (removedIds.length && removalScopeAccountIds.length) {
+      syncDatabasePhase = "resolve_removed_bank_accounts";
       const { data: removedRows, error: removedRowsError } =
         await params.supabase
           .from("expenses")
@@ -851,7 +858,10 @@ async function syncConnection(params: {
     summary.syncStatus = readPlaidSyncStatusMetadata(mergedSyncMetadata);
     const isReady =
       batch.transactionsUpdateStatus?.trim().toUpperCase() !== "NOT_READY";
+    const recurringRefreshRequired =
+      isReady && summary.syncStatus?.historicalUpdateComplete === true;
     await extendSyncLease(true);
+    syncDatabasePhase = "apply_atomic_sync_batch";
     const { data: atomicResult, error: atomicError } =
       await params.supabase.rpc("apply_plaid_sync_batch_v2", {
         p_user_id: params.userId,
@@ -875,8 +885,7 @@ async function syncConnection(params: {
             }
           : {},
         p_is_ready: isReady,
-        p_recurring_refresh_required:
-          isReady && summary.syncStatus?.historicalUpdateComplete === true,
+        p_recurring_refresh_required: recurringRefreshRequired,
         p_lock_token: lockToken,
         p_audit_id: auditId ?? null,
       });
@@ -901,6 +910,7 @@ async function syncConnection(params: {
 
     if (isReady) {
       try {
+        syncDatabasePhase = "rebind_linked_expenses";
         await rebindLinkedPlaidExpensesForConnection({
           supabase: params.supabase,
           userId: params.userId,
@@ -920,7 +930,7 @@ async function syncConnection(params: {
       }
     }
 
-    if (isReady && summary.syncStatus?.historicalUpdateComplete === true) {
+    if (recurringRefreshRequired) {
       let recurringRefreshPhase = "initialize";
       try {
         const recurringResult = await refreshPlaidRecurringTemplates({
@@ -1001,7 +1011,9 @@ async function syncConnection(params: {
         console.warn("[plaid-sync] Recurring refresh failed", recurringError);
         await reportEdgeFunctionError({
           functionName: "plaid-sync-transactions",
-          error: recurringError,
+          error: isTransientSyncTransportError(recurringError)
+            ? new Error("Bank sync transport failed after retries")
+            : recurringError,
           context: {
             phase: "refresh_recurring_templates",
             recurring_refresh_phase: recurringRefreshPhase,
@@ -1067,7 +1079,7 @@ async function syncConnection(params: {
       });
       await reportEdgeFunctionError({
         functionName: "plaid-sync-transactions",
-        error,
+        error: new Error("Bank sync transport failed after retries"),
         context: {
           phase: "sync_network_error",
           connection_id: params.connection.id,
@@ -1090,6 +1102,7 @@ async function syncConnection(params: {
         error,
         context: {
           phase: "sync_database_timeout",
+          sync_database_phase: syncDatabasePhase,
           connection_id: params.connection.id,
         },
       });

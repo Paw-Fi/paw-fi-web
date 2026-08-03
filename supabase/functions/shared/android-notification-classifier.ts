@@ -10,7 +10,7 @@ export const ANDROID_NOTIFICATION_MODELS = [
 // Bump when model, prompt, or validation behavior changes so old terminal
 // failures can be evaluated by the new pipeline.
 export const ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION =
-  "android_notification_classifier_v7";
+  "android_notification_classifier_v8";
 const TERMINAL_CLASSIFICATION_ERRORS = new Set([
   "INVALID_CLASSIFICATION_RESPONSE",
   "INVALID_VERIFICATION_RESPONSE",

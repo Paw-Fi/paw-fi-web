@@ -117,11 +117,7 @@ export function findAndroidRecurringCaptureMatch(
       continue;
     }
     const scheduleAccountId = schedule.account_id ?? null;
-    if (
-      scheduleAccountId &&
-      candidate.accountId &&
-      scheduleAccountId !== candidate.accountId
-    ) {
+    if (scheduleAccountId && scheduleAccountId !== candidate.accountId) {
       continue;
     }
     if (!scheduleMatchesDate(schedule, candidate)) continue;
@@ -149,11 +145,7 @@ export function savedExpenseMatchesRecurringReplacement(
     return false;
   }
   const savedAccountId = saved.account_id ?? null;
-  if (
-    savedAccountId &&
-    expected.accountId &&
-    savedAccountId !== expected.accountId
-  ) {
+  if (savedAccountId && savedAccountId !== expected.accountId) {
     return false;
   }
   return (

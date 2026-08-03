@@ -89,6 +89,22 @@ export function usesAiUserPreferredCurrency(
   return tx.currencyEvidenceType === AI_USER_PREFERENCE_CURRENCY_EVIDENCE;
 }
 
+export function isAiUserPreferredCurrencyContextValid(params: {
+  payloadCurrency: string | null;
+  preferredCurrency: string | null;
+  accountCurrency: string | null;
+}): boolean {
+  const payloadCurrency = params.payloadCurrency?.trim().toUpperCase() ?? "";
+  const preferredCurrency = params.preferredCurrency?.trim().toUpperCase() ??
+    "";
+  const accountCurrency = params.accountCurrency?.trim().toUpperCase() ?? "";
+  return (
+    payloadCurrency.length > 0 &&
+    payloadCurrency === preferredCurrency &&
+    (!accountCurrency || payloadCurrency === accountCurrency)
+  );
+}
+
 function walletCaptureCurrencyEvidenceText(tx: WalletTransactionLike): string {
   const verifiedEvidence = tx.currencyEvidenceRaw?.trim();
   if (verifiedEvidence) return verifiedEvidence;
@@ -274,6 +290,28 @@ export async function resolveWalletCaptureDefaultAccount(
     );
   }
   return typeof data === "string" && data ? data : null;
+}
+
+export async function resolveWalletCaptureAccountForCurrency(
+  supabase: Parameters<typeof resolveWalletCaptureDefaultAccount>[0],
+  params: {
+    userId: string;
+    householdId: string | null;
+    accountId: string | null;
+    accountCurrency: string | null;
+    transactionCurrency: string;
+  },
+): Promise<string | null> {
+  const transactionCurrency = params.transactionCurrency.trim().toUpperCase();
+  const accountCurrency = params.accountCurrency?.trim().toUpperCase() ?? null;
+  if (params.accountId && accountCurrency === transactionCurrency) {
+    return params.accountId;
+  }
+  return await resolveWalletCaptureDefaultAccount(supabase, {
+    userId: params.userId,
+    householdId: params.householdId,
+    currency: transactionCurrency,
+  });
 }
 
 export function buildWalletCaptureIdempotencyKey(params: {

@@ -756,7 +756,7 @@ async function upsertPlaidRecurringTemplates(params: {
         let existingQuery = params.supabase
           .from("expenses")
           .select(
-            "id, date, account_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, deleted_at, deleted_reason, provider_fields, user_overrides",
+            "id, user_id, date, account_id, contact_id, amount_cents, currency, category, raw_text, merchant, source, type, is_recurring, recurrence_rule, household_id, provider, bank_account_id, provider_transaction_id, idempotency_key, deleted_at, deleted_reason, provider_fields, user_overrides",
           )
           .eq("user_id", candidate.userId)
           .eq("idempotency_key", candidate.idempotencyKey)
@@ -894,8 +894,41 @@ const PLAID_RECURRING_TEMPLATE_VISIBLE_FIELDS = [
   "household_id",
 ] as const;
 
+const PLAID_RECURRING_TEMPLATE_PERSISTED_FIELDS = [
+  ...PLAID_RECURRING_TEMPLATE_VISIBLE_FIELDS,
+  "user_id",
+  "contact_id",
+  "provider",
+  "bank_account_id",
+  "provider_transaction_id",
+  "idempotency_key",
+  "deleted_at",
+  "deleted_reason",
+  "provider_fields",
+] as const;
+
 function sameJsonValue(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+  return (
+    JSON.stringify(normalizeJsonValue(left)) ===
+    JSON.stringify(normalizeJsonValue(right))
+  );
+}
+
+function normalizeJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((nestedValue) =>
+      nestedValue === undefined ? null : normalizeJsonValue(nestedValue),
+    );
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, nestedValue]) => nestedValue !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nestedValue]) => [key, normalizeJsonValue(nestedValue)]),
+    );
+  }
+  return value ?? null;
 }
 
 export function mergePlaidRecurringTemplatePayload(
@@ -935,7 +968,11 @@ export function mergePlaidRecurringTemplatePayload(
     }
   }
 
-  return merged;
+  return PLAID_RECURRING_TEMPLATE_PERSISTED_FIELDS.some(
+    (field) => !sameJsonValue(existing[field], merged[field]),
+  )
+    ? merged
+    : null;
 }
 
 export interface PreparedPlaidTransactionMutations {

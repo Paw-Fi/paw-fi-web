@@ -17,6 +17,7 @@ import { verifyPlaidWebhook } from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const POSTGRES_STATEMENT_TIMEOUT_CODE = "57014";
 const WEBHOOK_BUILD_MARKER = "20260721-webhook-operation-probe-v1";
 const SUPABASE_HOST = (() => {
   try {
@@ -335,9 +336,10 @@ Deno.serve(async (req) => {
         .eq("id", connection.id)
         .is("removed_at", null)
         .neq("status", "disabled");
-      connectionUpdateQuery = connection.item_status == null
-        ? connectionUpdateQuery.is("item_status", null)
-        : connectionUpdateQuery.eq("item_status", connection.item_status);
+      connectionUpdateQuery =
+        connection.item_status == null
+          ? connectionUpdateQuery.is("item_status", null)
+          : connectionUpdateQuery.eq("item_status", connection.item_status);
       const { data: updatedConnections, error: connectionUpdateError } =
         await connectionUpdateQuery.select("id");
       if (connectionUpdateError) throw connectionUpdateError;
@@ -408,9 +410,10 @@ Deno.serve(async (req) => {
           .eq("id", connection.id)
           .is("removed_at", null)
           .neq("status", "disabled");
-        itemUpdateQuery = connection.item_status == null
-          ? itemUpdateQuery.is("item_status", null)
-          : itemUpdateQuery.eq("item_status", connection.item_status);
+        itemUpdateQuery =
+          connection.item_status == null
+            ? itemUpdateQuery.is("item_status", null)
+            : itemUpdateQuery.eq("item_status", connection.item_status);
         const { data: updatedConnections, error: updateError } =
           await itemUpdateQuery.select("id");
 
@@ -563,16 +566,21 @@ async function transitionBankWebhookEvent(params: {
   if (!params.lockToken) {
     throw new Error("Webhook transition requires a live claim");
   }
-  const { data: status, error } = await params.supabase.rpc(
-    "complete_bank_webhook_event_v2",
-    {
+  const transition = () =>
+    params.supabase.rpc("complete_bank_webhook_event_v2", {
       p_event_id: params.eventId,
       p_lock_token: params.lockToken,
       p_outcome: params.outcome,
       p_error: params.error || null,
       p_retry_delay_seconds: params.retryDelaySeconds || null,
-    },
-  );
+    });
+  let { data: status, error } = await transition();
+  if (error?.code === POSTGRES_STATEMENT_TIMEOUT_CODE) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const retry = await transition();
+    status = retry.data;
+    error = retry.error;
+  }
   if (error) throw error;
   if (status === "lost_claim") {
     throw new Error("Webhook processing claim was lost before completion");
@@ -708,9 +716,10 @@ async function applyPlaidAccountRevokedWebhook(params: {
     .eq("id", params.connection.id)
     .is("removed_at", null)
     .neq("status", "disabled");
-  connectionUpdateQuery = params.connection.item_status == null
-    ? connectionUpdateQuery.is("item_status", null)
-    : connectionUpdateQuery.eq("item_status", params.connection.item_status);
+  connectionUpdateQuery =
+    params.connection.item_status == null
+      ? connectionUpdateQuery.is("item_status", null)
+      : connectionUpdateQuery.eq("item_status", params.connection.item_status);
   const { error: connectionUpdateError } = await connectionUpdateQuery;
 
   if (connectionUpdateError) {

@@ -1,4 +1,5 @@
 import { normalizeCategory } from "./category-colors.ts";
+import { withTransientBankReadRetry } from "./bank-retry.ts";
 import {
   type LinkedWalletRecord,
   persistPreparedPlaidRecurringTemplates,
@@ -494,33 +495,39 @@ async function detectLedgerRecurringCandidates(params: {
   linkedWalletsByBankAccountId: Map<string, LinkedWalletRecord>;
 }): Promise<PlaidRecurringTemplateCandidate[]> {
   if (params.accounts.length === 0) return [];
-  let query = params.supabase
-    .from("expenses")
-    .select(
-      "bank_account_id, provider_transaction_id, account_id, amount_cents, currency, date, type, category, raw_text, merchant, analytics_class, classification_review_state",
-    )
-    .eq("user_id", params.userId)
-    .eq("provider", "plaid")
-    .is("deleted_at", null)
-    .eq("provider_pending", false)
-    .eq("analytics_is_final", true)
-    .in(
-      "bank_account_id",
-      params.accounts.map((account) => account.id),
-    )
-    .order("date", { ascending: false })
-    .limit(10000);
-  query = params.householdId
-    ? query.eq("household_id", params.householdId)
-    : query.is("household_id", null);
-  const { data, error } = await query;
-  if (error) throw error;
+  const data = await withTransientBankReadRetry(
+    async () => {
+      let query = params.supabase
+        .from("expenses")
+        .select(
+          "bank_account_id, provider_transaction_id, account_id, amount_cents, currency, date, type, category, raw_text, merchant, analytics_class, classification_review_state",
+        )
+        .eq("user_id", params.userId)
+        .eq("provider", "plaid")
+        .is("deleted_at", null)
+        .eq("provider_pending", false)
+        .eq("analytics_is_final", true)
+        .in(
+          "bank_account_id",
+          params.accounts.map((account) => account.id),
+        )
+        .order("date", { ascending: false })
+        .limit(10000);
+      query = params.householdId
+        ? query.eq("household_id", params.householdId)
+        : query.is("household_id", null);
+      const { data: rows, error } = await query;
+      if (error) throw error;
+      return rows || [];
+    },
+    { maxRetries: 2, initialDelayMs: 250, maxDelayMs: 1000 },
+  );
 
   const groups = new Map<string, LedgerRecurringRow[]>();
   const accountById = new Map(
     params.accounts.map((account) => [account.id, account]),
   );
-  for (const row of (data || []) as LedgerRecurringRow[]) {
+  for (const row of data as LedgerRecurringRow[]) {
     const merchantKey = normalizeMerchant(row.merchant || row.raw_text);
     if (!merchantKey || !row.bank_account_id || row.amount_cents <= 0) continue;
     const analyticsType = recurringTypeForLedgerRow(

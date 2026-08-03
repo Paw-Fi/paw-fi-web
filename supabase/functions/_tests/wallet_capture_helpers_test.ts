@@ -5,9 +5,11 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   buildWalletCaptureIdempotencyKey,
   getLocalYyyyMmDdInTimeZone,
+  isAiUserPreferredCurrencyContextValid,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureRecurrenceRule,
   normalizeWalletCaptureSource,
+  resolveWalletCaptureAccountForCurrency,
   resolveWalletCaptureCurrency,
   resolveWalletCaptureDefaultAccount,
   resolveWalletCaptureScope,
@@ -18,6 +20,87 @@ import {
   usesAiAccountCurrencyContext,
   usesAiUserPreferredCurrency,
 } from "../shared/wallet-capture.ts";
+
+Deno.test(
+  "wallet capture replaces a mismatched configured wallet with a same-currency default",
+  async () => {
+    const rpcCalls: Array<Record<string, unknown>> = [];
+    const accountId = await resolveWalletCaptureAccountForCurrency(
+      {
+        rpc: (_name, args) => {
+          rpcCalls.push(args);
+          return Promise.resolve({
+            data: "0fd283b7-3e4f-42eb-ac75-bceb9992c917",
+            error: null,
+          });
+        },
+      },
+      {
+        userId: "5a19c60a-b328-4ad5-9897-9f010780fc69",
+        householdId: null,
+        accountId: "92f31125-6785-4c93-91d7-d0f1b0da7e8a",
+        accountCurrency: "USD",
+        transactionCurrency: "EUR",
+      },
+    );
+
+    assertEquals(accountId, "0fd283b7-3e4f-42eb-ac75-bceb9992c917");
+    assertEquals(rpcCalls, [
+      {
+        p_user_id: "5a19c60a-b328-4ad5-9897-9f010780fc69",
+        p_household_id: null,
+        p_currency: "EUR",
+      },
+    ]);
+  },
+);
+
+Deno.test(
+  "wallet capture keeps a configured wallet when its currency matches",
+  async () => {
+    let didResolveDefault = false;
+    const accountId = await resolveWalletCaptureAccountForCurrency(
+      {
+        rpc: () => {
+          didResolveDefault = true;
+          return Promise.resolve({ data: null, error: null });
+        },
+      },
+      {
+        userId: "5a19c60a-b328-4ad5-9897-9f010780fc69",
+        householdId: null,
+        accountId: "92f31125-6785-4c93-91d7-d0f1b0da7e8a",
+        accountCurrency: "eur",
+        transactionCurrency: "EUR",
+      },
+    );
+
+    assertEquals(accountId, "92f31125-6785-4c93-91d7-d0f1b0da7e8a");
+    assertEquals(didResolveDefault, false);
+  },
+);
+
+Deno.test(
+  "AI preferred currency accepts only matching preference and wallet contexts",
+  () => {
+    assertEquals(
+      isAiUserPreferredCurrencyContextValid({
+        payloadCurrency: "SGD",
+        preferredCurrency: "sgd",
+        accountCurrency: "SGD",
+      }),
+      true,
+    );
+    assertEquals(
+      isAiUserPreferredCurrencyContextValid({
+        payloadCurrency: "SGD",
+        preferredCurrency: "SGD",
+        accountCurrency: "USD",
+      }),
+      false,
+    );
+  },
+);
 
 Deno.test("wallet capture source normalizes Android legacy alias", () => {
   assertEquals(

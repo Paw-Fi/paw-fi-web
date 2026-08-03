@@ -46,6 +46,7 @@ import {
   buildWalletCaptureIdempotencyKey,
   getLocalYyyyMmDdInTimeZone,
   hasAmbiguousWalletCaptureCurrencyEvidence,
+  isAiUserPreferredCurrencyContextValid,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureRecurrenceRule,
   normalizeWalletCaptureSource,
@@ -2260,9 +2261,11 @@ Deno.serve(async (req: Request) => {
     if (
       captureSource === "android_notification_listener" &&
       usesAiUserPreferredCurrency(tx) &&
-      (selectedAccountCurrency != null ||
-        !preferredCurrency ||
-        payloadCurrencyCode !== preferredCurrency.toUpperCase())
+      !isAiUserPreferredCurrencyContextValid({
+        payloadCurrency: payloadCurrencyCode,
+        preferredCurrency,
+        accountCurrency: selectedAccountCurrency,
+      })
     ) {
       logWalletCaptureValidationFailure(
         "ai_user_preferred_currency_mismatch",
