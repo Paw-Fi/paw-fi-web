@@ -44,7 +44,6 @@ import {
   getLocalYyyyMmDdInTimeZone,
   resolveWalletCaptureAccountForCurrency,
 } from "../shared/wallet-capture.ts";
-import { sendNotificationCapturePushBestEffort } from "../shared/notification-capture-push.ts";
 
 const MAX_REQUEST_BYTES = 32_000;
 const MAX_FIELD_LENGTH = 2_000;
@@ -216,50 +215,6 @@ async function finalizeClassificationEvent(params: {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("STALE_CLASSIFICATION_CLAIM");
-}
-
-function ignoredMessage(
-  classification: AndroidNotificationClassification,
-): string {
-  switch (classification.reasonCode) {
-    case "promotion":
-      return "Moneko identified a promotion, so nothing was added.";
-    case "not_posted":
-      return "Moneko could not confirm a completed transaction, so nothing was added.";
-    case "transfer_requires_wallets":
-      return "Moneko found a transfer, but could not safely resolve both wallets.";
-    case "rate_limited":
-      return "Moneko paused AI capture after unusually high notification activity.";
-    default:
-      return "Moneko could not verify this notification, so nothing was added.";
-  }
-}
-
-async function sendDecisionPush(params: {
-  supabase: any;
-  userId: string;
-  title: string;
-  body: string;
-  eventType: string;
-  deepLink?: string;
-  notificationId: string;
-}): Promise<void> {
-  await sendNotificationCapturePushBestEffort({
-    supabase: params.supabase,
-    userId: params.userId,
-    title: params.title,
-    body: params.body,
-    data: {
-      event_type: params.eventType,
-      notification_type: "android_notification_capture",
-      notification_id: params.notificationId,
-      deep_link: params.deepLink ?? "moneko://home",
-    },
-    firebaseProjectId: Deno.env.get("FIREBASE_PROJECT_ID") || "",
-    firebaseServiceAccountJson: Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON") ||
-      "",
-    iosBundleId: Deno.env.get("IOS_BUNDLE_ID") || "com.moneko.mobile",
-  });
 }
 
 function previousDate(date: string): string {
@@ -618,14 +573,6 @@ Deno.serve(async (req: Request) => {
         classification,
         result,
       });
-      await sendDecisionPush({
-        supabase,
-        userId,
-        title: "Notification not added",
-        body: ignoredMessage(classification),
-        eventType: "notification_capture_ignored",
-        notificationId: eventId,
-      });
       return jsonResponse(result);
     }
 
@@ -671,16 +618,6 @@ Deno.serve(async (req: Request) => {
           status: "ignored",
           classification,
           result,
-        });
-        await sendDecisionPush({
-          supabase,
-          userId,
-          title: "Recurring transaction already tracked",
-          body:
-            "This completed notification is already covered by an existing recurring schedule. No duplicate was added.",
-          eventType: "notification_capture_recurring_existing",
-          deepLink: `moneko://recurring/${recurringMatch.schedule.id}`,
-          notificationId: eventId,
         });
         return jsonResponse(result);
       }
@@ -766,7 +703,6 @@ Deno.serve(async (req: Request) => {
     });
     committedResponse = { body: result, status: saved.response.status };
 
-    let didReplaceSchedule = false;
     if (
       replacedSchedule &&
       expenseId &&
@@ -807,33 +743,8 @@ Deno.serve(async (req: Request) => {
           .eq("id", replacedSchedule.id)
           .eq("user_id", userId);
         if (closeError) throw closeError;
-        didReplaceSchedule = true;
       }
     }
-    const savedIsRecurring = savedData.is_recurring === true;
-    if (
-      classification.isRecurring &&
-      expenseId &&
-      savedIsRecurring &&
-      (!replacedSchedule || didReplaceSchedule)
-    ) {
-      await sendDecisionPush({
-        supabase,
-        userId,
-        title: didReplaceSchedule
-          ? "Recurring transaction replaced"
-          : "Recurring transaction created",
-        body: didReplaceSchedule
-          ? "Moneko ended the previous recurring schedule and created a replacement for the updated amount."
-          : "Moneko created a recurring transaction from a completed notification.",
-        eventType: didReplaceSchedule
-          ? "notification_capture_recurring_replaced"
-          : "notification_capture_recurring_created",
-        deepLink: `moneko://recurring/${expenseId}`,
-        notificationId: eventId,
-      });
-    }
-
     return jsonResponse(result, saved.response.status);
   } catch (error) {
     if (committedResponse) {
