@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { trackDownloadClick } from "@/lib/download-attribution";
+import { PLAY_STORE_URL } from "@/lib/external-links";
 
 export const AndroidDownloadButton = (props: {
   className?: string;
@@ -8,7 +9,7 @@ export const AndroidDownloadButton = (props: {
   return (
     <div className="flex shrink-0 items-center justify-center">
       <a
-        href="https://play.google.com/store/apps/details?id=com.moneko.mobile"
+        href={PLAY_STORE_URL}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {

@@ -37,7 +37,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useSubscription } from "@/hooks/use-subscription";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { DISCORD_URL } from "@/lib/external-links";
+import { APP_STORE_URL, DISCORD_URL } from "@/lib/external-links";
 import { HomeHeader } from "@/components/index/header";
 
 // Route search params type
@@ -149,7 +149,7 @@ function ReferralPage() {
   const subTrialEligible = !subscription || subscription.plan === "free";
 
   const openAppStore = () => {
-    window.open("https://apps.apple.com/app/moneko/id6753925279", "_blank");
+    window.open(APP_STORE_URL, "_blank");
   };
 
   // Determine which view to show

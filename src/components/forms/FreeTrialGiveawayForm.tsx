@@ -17,8 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { coupleBudgetingKeys } from "@/hooks/use-couple-budgeting-waitlist";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
-
-const APPSTORE_URL = "https://apps.apple.com/app/moneko/id6753925279";
+import { APP_STORE_URL } from "@/lib/external-links";
 
 export type SelectOption = { value: string; label: string };
 export type MultiOption = { id: string; label: string };
@@ -194,7 +193,7 @@ export function FreeTrialGiveawayForm({
     e.preventDefault();
     setResult({});
     if (hasClaimed) {
-      window.location.href = APPSTORE_URL;
+      window.location.href = APP_STORE_URL;
       return;
     }
 
@@ -245,7 +244,7 @@ export function FreeTrialGiveawayForm({
           interestedMobileFeatures: [],
           devicePreference: "",
         });
-        window.location.href = APPSTORE_URL;
+        window.location.href = APP_STORE_URL;
       } else {
         setResult(response);
       }

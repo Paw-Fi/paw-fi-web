@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   BarChart3,
@@ -62,6 +63,7 @@ import {
   type DownloadAttributionSession,
   type DownloadAttributionSourceSummary,
 } from "@/hooks/use-download-attribution-sessions";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/creator/source-tracker/")({
   component: SourceTrackerPage,
@@ -74,6 +76,11 @@ type RangePreset =
   | "last_30_days"
   | "this_month"
   | "custom";
+
+interface OnboardingSourceCount {
+  source: string;
+  count: number;
+}
 
 function SourceTrackerPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -112,6 +119,17 @@ function SourceTrackerPage() {
       end: dateToIso(priorEnd),
     };
   }, [normalizedRange.end, normalizedRange.start]);
+
+  const onboardingSourcesQuery = useQuery({
+    queryKey: [
+      "creator-onboarding-heard-about-sources",
+      normalizedRange.start,
+      normalizedRange.end,
+      refreshKey,
+    ],
+    queryFn: () =>
+      fetchOnboardingSourceCounts(normalizedRange.start, normalizedRange.end),
+  });
 
   const rowsInRange = useMemo(
     () =>
@@ -415,6 +433,69 @@ function SourceTrackerPage() {
             </div>
           </CardContent>
         </Card>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold text-white">
+              Onboarding Sources
+            </h2>
+            <p className="text-sm text-white/45">
+              {onboardingSourcesQuery.isLoading
+                ? "Loading sources..."
+                : `${(onboardingSourcesQuery.data?.length ?? 0).toLocaleString()} sources`}
+            </p>
+          </div>
+          <Card className="border-white/10 bg-slate-900/50">
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableHead className="text-white/60">Source</TableHead>
+                    <TableHead className="text-right text-white/60">
+                      Responses
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {onboardingSourcesQuery.data?.map((source) => (
+                    <TableRow
+                      key={source.source}
+                      className="border-white/10 hover:bg-white/5"
+                    >
+                      <TableCell className="font-medium text-white">
+                        {source.source}
+                      </TableCell>
+                      <TableCell className="text-right text-white/80">
+                        {source.count.toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!onboardingSourcesQuery.isLoading &&
+                    (onboardingSourcesQuery.data?.length ?? 0) === 0 && (
+                      <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableCell
+                          colSpan={2}
+                          className="py-8 text-center text-white/45"
+                        >
+                          No onboarding source responses in this date range.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                </TableBody>
+              </Table>
+              {onboardingSourcesQuery.isLoading && (
+                <p className="py-8 text-center text-sm text-white/45">
+                  Loading onboarding source responses...
+                </p>
+              )}
+              {onboardingSourcesQuery.error && (
+                <p className="pt-4 text-sm text-red-200">
+                  Unable to load onboarding source responses.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </section>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
@@ -801,6 +882,28 @@ function MetricCard({
       </CardContent>
     </Card>
   );
+}
+
+async function fetchOnboardingSourceCounts(
+  startDate: string,
+  endDate: string,
+): Promise<OnboardingSourceCount[]> {
+  const { data, error } = await supabase.rpc(
+    "get_creator_onboarding_heard_about_sources",
+    {
+      p_start_date: startDate,
+      p_end_date: endDate,
+    },
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((row) => ({
+    source: String(row.source),
+    count: Number(row.count),
+  }));
 }
 
 function InsightCard({

@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { trackDownloadClick } from "@/lib/download-attribution";
+import { APP_STORE_URL } from "@/lib/external-links";
 
 export const AppleDownloadButton = (props: {
   className?: string;
@@ -8,7 +9,7 @@ export const AppleDownloadButton = (props: {
   return (
     <div className="flex shrink-0 items-center justify-center">
       <a
-        href="https://apps.apple.com/app/moneko/id6753925279"
+        href={APP_STORE_URL}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {

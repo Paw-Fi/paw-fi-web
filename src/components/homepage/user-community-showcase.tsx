@@ -11,6 +11,7 @@ import {
   type Review,
 } from "@/data/app-store-reviews";
 import { useReducedVisualEffects } from "@/hooks/use-reduced-visual-effects";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/external-links";
 
 /**
  * Star Rating Component - Displays partial stars for decimal ratings
@@ -59,10 +60,6 @@ const StarRating: React.FC<StarRatingProps> = ({
   );
 };
 
-// App Store and Play Store URLs
-const APP_STORE_URL = "https://apps.apple.com/app/moneko/id6753925279";
-const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.moneko.mobile";
 const INITIAL_REVIEW_ID = "review-021";
 const REVIEW_ROW_DURATIONS = [
   "[--duration:70s]",
