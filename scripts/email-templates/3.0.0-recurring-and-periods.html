@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="supported-color-schemes" content="light dark" />
+  <title>Moneko 3.0.0 — Money, in rhythm</title>
+  <style>
+    body, table, td, a {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    table {
+      border-collapse: collapse !important;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      outline: none;
+      text-decoration: none;
+      display: block;
+    }
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    a {
+      text-decoration: none;
+    }
+
+    @media screen and (max-width: 640px) {
+      .shell {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .outer-padding {
+        padding: 20px 12px 32px !important;
+      }
+      .card-padding {
+        padding: 28px 20px !important;
+      }
+      .headline {
+        font-size: 30px !important;
+        line-height: 1.1 !important;
+        letter-spacing: -0.8px !important;
+      }
+      .section-title {
+        font-size: 20px !important;
+      }
+      .feature-gif {
+        border-radius: 10px !important;
+      }
+      .store-button {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 0 10px !important;
+      }
+      .store-table {
+        width: 100% !important;
+      }
+      .cta-btn {
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        text-align: center !important;
+      }
+    }
+
+    /* Dark Mode Overrides */
+    @media (prefers-color-scheme: dark) {
+      body, .email-body {
+        background-color: #0b0e14 !important;
+        color: #f8fafc !important;
+      }
+      .email-card {
+        background-color: #121723 !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .text-primary {
+        color: #f8fafc !important;
+      }
+      .text-secondary {
+        color: #cbd5e1 !important;
+      }
+      .text-muted {
+        color: #64748b !important;
+      }
+      .text-eyebrow {
+        color: #a78bfa !important;
+      }
+      .divider {
+        border-top-color: #1e293b !important;
+      }
+      .cta-btn {
+        background-color: #8b5cf6 !important;
+        color: #ffffff !important;
+      }
+      .store-btn-bg {
+        background-color: #000000 !important;
+        border: 1px solid #27354a !important;
+      }
+      .community-link {
+        background-color: #182030 !important;
+        border: 1px solid #26334d !important;
+        color: #a78bfa !important;
+      }
+    }
+
+    /* Outlook / Webmail Dark Mode Overrides */
+    [data-ogsc] body, [data-ogsc] .email-body { background-color: #0b0e14 !important; color: #f8fafc !important; }
+    [data-ogsc] .email-card { background-color: #121723 !important; border: none !important; box-shadow: none !important; }
+    [data-ogsc] .text-primary { color: #f8fafc !important; }
+    [data-ogsc] .text-secondary { color: #cbd5e1 !important; }
+    [data-ogsc] .text-muted { color: #64748b !important; }
+    [data-ogsc] .text-eyebrow { color: #a78bfa !important; }
+    [data-ogsc] .divider { border-top-color: #1e293b !important; }
+    [data-ogsc] .cta-btn { background-color: #8b5cf6 !important; color: #ffffff !important; }
+    [data-ogsc] .store-btn-bg { background-color: #000000 !important; border: 1px solid #27354a !important; }
+    [data-ogsc] .community-link { background-color: #182030 !important; border: 1px solid #26334d !important; color: #a78bfa !important; }
+  </style>
+</head>
+<body class="email-body" bgcolor="#f8f9fa" style="margin:0; padding:0; background-color:#f8f9fa; color:#0f172a; font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased;">
+
+  <!-- Preheader Snippet -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all; font-size:1px; line-height:1px; color:#f8f9fa;">
+    Meet Moneko 3.0.0: clearer recurring payments and a new way to explore every financial period.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="email-body" bgcolor="#f8f9fa" style="background-color:#f8f9fa;">
+    <tr>
+      <td class="outer-padding" align="center" style="padding:40px 16px 56px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" class="shell" style="max-width:600px; margin:0 auto;">
+          
+          <!-- Header Logo & Version -->
+          <tr>
+            <td style="padding:0 4px 20px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <span class="text-primary" style="font-size:15px; font-weight:800; letter-spacing:2px; color:#0f172a; text-transform:uppercase;">MONEKO</span>
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <span class="text-muted" style="font-size:12px; font-weight:600; letter-spacing:0.5px; color:#64748b;">3.0.0</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Email Card -->
+          <tr>
+            <td class="email-card" style="background-color:#ffffff; border:none; border-radius:28px; box-shadow:0 4px 24px rgba(15, 23, 42, 0.05); overflow:hidden;">
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                
+                <!-- Hero & Intro -->
+                <tr>
+                  <td class="card-padding" style="padding:40px 36px 32px;">
+                    <p class="text-eyebrow" style="margin:0 0 14px; font-size:11px; font-weight:700; letter-spacing:1.5px; color:#7c3aed; text-transform:uppercase;">
+                      A MORE INTENTIONAL MONEY RHYTHM
+                    </p>
+                    <h1 class="headline text-primary" style="margin:0 0 20px; font-size:36px; line-height:1.1; letter-spacing:-1px; font-weight:800; color:#0f172a;">
+                      Money moves.<br />Now your plan moves with it.
+                    </h1>
+                    <p class="text-primary" style="margin:0 0 16px; font-size:16px; font-weight:600; color:#0f172a;">
+                      Hey {{first_name}},
+                    </p>
+                    <p class="text-secondary" style="margin:0; font-size:15px; line-height:1.65; color:#475569;">
+                      A recurring payment should never feel like a question mark. And a financial month should not disappear the moment it ends. Moneko 3.0.0 brings your recurring payments and financial periods into one clearer, calmer flow.
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr>
+                  <td style="padding:0 36px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td class="divider" style="border-top:1px solid #f1f5f9; font-size:0; line-height:0;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Feature 1: Date Periods (Inverted First) -->
+                <tr>
+                  <td class="card-padding" style="padding:32px 36px;">
+                    <p class="text-eyebrow" style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:1.5px; color:#7c3aed; text-transform:uppercase;">
+                      YOUR MONTHS, IN CONTEXT
+                    </p>
+                    <h2 class="section-title text-primary" style="margin:0 0 10px; font-size:22px; line-height:1.25; letter-spacing:-0.4px; font-weight:700; color:#0f172a;">
+                      Every period tells part of your story.
+                    </h2>
+                    <p class="text-secondary" style="margin:0 0 20px; font-size:14px; line-height:1.65; color:#475569;">
+                      Browse your dashboard by date period, then revisit previous months in reports to see the pattern behind the numbers.
+                    </p>
+                    <div>
+                      <img
+                        class="feature-gif"
+                        src="https://firebasestorage.googleapis.com/v0/b/paw-fi-3c4f7.firebasestorage.app/o/email_template_photos%2F3.0.0%2Fdashboard.gif?alt=media&amp;token=e25da2a0-7078-4788-9278-cbe535a4e7bd"
+                        alt="Browsing dashboard date periods in Moneko"
+                        width="100%"
+                        style="width:100%; max-width:528px; height:auto; border-radius:12px; display:block;"
+                      />
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr>
+                  <td style="padding:0 36px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td class="divider" style="border-top:1px solid #f1f5f9; font-size:0; line-height:0;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Feature 2: Recurring Payments (Inverted Second) -->
+                <tr>
+                  <td class="card-padding" style="padding:32px 36px;">
+                    <p class="text-eyebrow" style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:1.5px; color:#7c3aed; text-transform:uppercase;">
+                      RECURRING, UNDER CONTROL
+                    </p>
+                    <h2 class="section-title text-primary" style="margin:0 0 10px; font-size:22px; line-height:1.25; letter-spacing:-0.4px; font-weight:700; color:#0f172a;">
+                      A history you can trust.<br />A payment you can confirm.
+                    </h2>
+                    <p class="text-secondary" style="margin:0 0 20px; font-size:14px; line-height:1.65; color:#475569;">
+                      Open any recurring series to see what has happened, what is next, and confirm an upcoming or past occurrence the moment it is real.
+                    </p>
+                    <div>
+                      <img
+                        class="feature-gif"
+                        src="https://firebasestorage.googleapis.com/v0/b/paw-fi-3c4f7.firebasestorage.app/o/email_template_photos%2F3.0.0%2Frecurring.gif?alt=media&amp;token=45263cbd-8263-4e98-87ae-bcc47497810f"
+                        alt="Viewing payment history and confirming a recurring transaction in Moneko"
+                        width="100%"
+                        style="width:100%; max-width:528px; height:auto; border-radius:12px; display:block;"
+                      />
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr>
+                  <td style="padding:0 36px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td class="divider" style="border-top:1px solid #f1f5f9; font-size:0; line-height:0;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Release Details -->
+                <tr>
+                  <td class="card-padding" style="padding:32px 36px;">
+                    <p class="text-eyebrow" style="margin:0 0 16px; font-size:11px; font-weight:700; letter-spacing:1.5px; color:#7c3aed; text-transform:uppercase;">
+                      MORE IN THIS RELEASE
+                    </p>
+
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding-bottom:16px;">
+                          <p class="text-primary" style="margin:0 0 4px; font-size:15px; font-weight:700; color:#0f172a;">Analytics that reflects real life</p>
+                          <p class="text-secondary" style="margin:0; font-size:14px; line-height:1.55; color:#475569;">Exclude selected wallets when you want a cleaner picture of your spending.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding-bottom:16px;">
+                          <p class="text-primary" style="margin:0 0 4px; font-size:15px; font-weight:700; color:#0f172a;">Your AI bot, more capable</p>
+                          <p class="text-secondary" style="margin:0; font-size:14px; line-height:1.55; color:#475569;">Manage recurring schedules and individual payments from Telegram or WhatsApp.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <p class="text-primary" style="margin:0 0 4px; font-size:15px; font-weight:700; color:#0f172a;">A smoother everyday experience</p>
+                          <p class="text-secondary" style="margin:0; font-size:14px; line-height:1.55; color:#475569;">Improvements across imports, notifications, transaction editing, loading states, and currency support.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr>
+                  <td style="padding:0 36px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td class="divider" style="border-top:1px solid #f1f5f9; font-size:0; line-height:0;">&nbsp;</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- CTA Section -->
+                <tr>
+                  <td class="card-padding" align="center" style="padding:36px; text-align:center;">
+                    <h2 class="text-primary" style="margin:0 0 20px; font-size:20px; font-weight:700; color:#0f172a;">Ready to find your rhythm?</h2>
+                    
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;">
+                      <tr>
+                        <td align="center">
+                          <a href="https://moneko.io/changelog" class="cta-btn" style="display:inline-block; background-color:#0f172a; color:#ffffff; padding:14px 28px; border-radius:99px; font-size:14px; font-weight:700; letter-spacing:0.2px; text-decoration:none;">See what’s new in 3.0.0 →</a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p class="text-muted" style="margin:18px 0 0; font-size:13px; color:#64748b;">
+                      Update Moneko on your device to get the latest features.
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Store Download Links -->
+          <tr>
+            <td style="padding:28px 4px 0; text-align:center;">
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto;">
+                <tr>
+                  <!-- App Store -->
+                  <td class="store-button" align="center" style="padding:0 5px;">
+                    <a href="https://apps.apple.com/app/moneko/id6753925279" style="text-decoration:none;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" class="store-btn-bg" style="background-color:#000000; border-radius:10px; width:155px;">
+                        <tr>
+                          <td style="padding:8px 10px; vertical-align:middle; width:26px;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" width="20" alt="Apple App Store" style="filter:invert(1); display:block;" />
+                          </td>
+                          <td style="padding:8px 10px 8px 0; text-align:left; vertical-align:middle;">
+                            <div style="color:#ffffff; font-size:9px; line-height:1;">Download on the</div>
+                            <div style="color:#ffffff; font-size:15px; font-weight:600; line-height:1.2;">App Store</div>
+                          </td>
+                        </tr>
+                      </table>
+                    </a>
+                  </td>
+
+                  <!-- Google Play -->
+                  <td class="store-button" align="center" style="padding:0 5px;">
+                    <a href="https://play.google.com/store/apps/details?id=com.moneko.mobile" style="text-decoration:none;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" class="store-btn-bg" style="background-color:#000000; border-radius:10px; width:155px;">
+                        <tr>
+                          <td style="padding:8px 10px; vertical-align:middle; width:32px;">
+                            <img src="https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/marketing/google-play%20(1).png" width="26" alt="Google Play" style="display:block;" />
+                          </td>
+                          <td style="padding:8px 10px 8px 0; text-align:left; vertical-align:middle;">
+                            <div style="color:#ffffff; font-size:9px; line-height:1;">GET IT ON</div>
+                            <div style="color:#ffffff; font-size:15px; font-weight:600; line-height:1.2;">Google Play</div>
+                          </td>
+                        </tr>
+                      </table>
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer Community & Copyright -->
+          <tr>
+            <td style="padding:24px 8px 0; text-align:center;">
+              
+              <!-- Community Badges -->
+              <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 16px;">
+                <tr>
+                  <td>
+                    <a href="https://www.reddit.com/r/monekobudget/" class="community-link" style="display:inline-block; padding:5px 14px; background-color:#ffffff; border:1px solid #e2e8f0; border-radius:99px; color:#7c3aed; font-size:12px; font-weight:600; text-decoration:none;">Reddit</a>
+                  </td>
+                  <td style="width:6px;"></td>
+                  <td>
+                    <a href="https://discord.gg/M2Dgujvtze" class="community-link" style="display:inline-block; padding:5px 14px; background-color:#ffffff; border:1px solid #e2e8f0; border-radius:99px; color:#7c3aed; font-size:12px; font-weight:600; text-decoration:none;">Discord</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p class="text-muted" style="margin:0; font-size:12px; line-height:1.7; color:#64748b;">
+                © 2026 Moneko AI. All rights reserved.<br />
+                If you no longer wish to receive updates, <a href="{{unsubscribe_url}}" style="color:#7c3aed; text-decoration:underline;">unsubscribe here</a>.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
