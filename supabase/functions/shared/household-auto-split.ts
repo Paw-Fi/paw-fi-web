@@ -179,6 +179,44 @@ export type CreateAutoSplitResult =
   | { kind: "invalid"; code: string; error: string }
   | { kind: "failed"; error: unknown };
 
+/// Creates a required household parent and its split in one database
+/// transaction. Callers must validate/build the split before invoking this;
+/// unlike the legacy insert-then-commit path, an RPC error cannot leave the
+/// parent visible without a split group.
+export async function createHouseholdTransactionWithSplit({
+  supabase,
+  actorUserId,
+  transaction,
+  group,
+  lines,
+  targetAccountId = null,
+  isRecurringTemplate = false,
+}: {
+  // deno-lint-ignore no-explicit-any
+  supabase: any;
+  actorUserId: string;
+  transaction: Record<string, unknown>;
+  group: SplitGroupRecord;
+  lines: SplitLineRecord[];
+  targetAccountId?: string | null;
+  isRecurringTemplate?: boolean;
+}) {
+  return await supabase.rpc("households_create_transaction_with_split_v1", {
+    p_actor_user_id: actorUserId,
+    p_expense: transaction,
+    p_split_group_id: group.id,
+    p_household_id: group.household_id,
+    p_payer_user_id: group.payer_user_id,
+    p_split_type: group.split_type,
+    p_currency: group.currency,
+    p_total_amount_cents: group.total_amount_cents,
+    p_description: group.description,
+    p_lines: lines,
+    p_target_account_id: targetAccountId,
+    p_is_recurring_template: isRecurringTemplate,
+  });
+}
+
 const ALLOWED_SPLIT_TYPES = new Set([
   "equal",
   "amount",
@@ -1475,6 +1513,7 @@ export async function createHouseholdAutoSplitForTransaction({
   settings,
   explicitCustomSplits,
   payerUserId,
+  isRecurringTemplate = false,
 }: {
   // deno-lint-ignore no-explicit-any
   supabase: any;
@@ -1485,6 +1524,7 @@ export async function createHouseholdAutoSplitForTransaction({
   settings: HouseholdAutoSplitSettings;
   explicitCustomSplits?: unknown;
   payerUserId?: string | null;
+  isRecurringTemplate?: boolean;
 }): Promise<CreateAutoSplitResult> {
   const transactionId = typeof transaction.id === "string"
     ? transaction.id
@@ -1538,7 +1578,10 @@ export async function createHouseholdAutoSplitForTransaction({
     };
   }
 
-  const { error: commitError } = await commitHouseholdSplitRecords({
+  const commitSplit = isRecurringTemplate
+    ? commitRecurringTemplateSplitRecords
+    : commitHouseholdSplitRecords;
+  const { error: commitError } = await commitSplit({
     supabase,
     actorUserId,
     group: buildResult.group,

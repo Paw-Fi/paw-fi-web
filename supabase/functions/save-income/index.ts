@@ -23,11 +23,15 @@ import {
   resolveDefaultAccountId,
 } from "../shared/accounts.ts";
 import {
-  createHouseholdAutoSplitForTransaction,
+  buildHouseholdSplitRecords,
+  createHouseholdTransactionWithSplit,
   type CustomSplits,
   fetchHouseholdAutoSplitSettings,
   type HouseholdAutoSplitSettings,
   type HouseholdMemberRow,
+  resolveEffectiveSplit,
+  type SplitGroupRecord,
+  type SplitLineRecord,
 } from "../shared/household-auto-split.ts";
 import { normalizeClientCreatedAt } from "../shared/transaction-request-validation.ts";
 
@@ -155,8 +159,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule =
-      body.recurrence_rule ?? (body as any).recurrenceRule;
+    const legacyRecurrenceRule = body.recurrence_rule ??
+      (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -166,8 +170,8 @@ Deno.serve(async (req: Request) => {
 
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
+    const resolvedCategory = sanitizedCategory ??
+      normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -310,10 +314,9 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate =
-        body.recurrence_rule.end_date == null
-          ? undefined
-          : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate = body.recurrence_rule.end_date == null
+        ? undefined
+        : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -461,13 +464,12 @@ Deno.serve(async (req: Request) => {
     const requestedAccountIdRaw = hasCamelAccountId
       ? bodyRecord.accountId
       : hasSnakeAccountId
-        ? bodyRecord.account_id
-        : undefined;
-    const requestedAccountId =
-      requestedAccountIdRaw == null ||
-      String(requestedAccountIdRaw).trim().length === 0
-        ? null
-        : sanitizeUuid(String(requestedAccountIdRaw));
+      ? bodyRecord.account_id
+      : undefined;
+    const requestedAccountId = requestedAccountIdRaw == null ||
+        String(requestedAccountIdRaw).trim().length === 0
+      ? null
+      : sanitizeUuid(String(requestedAccountIdRaw));
     if (
       hasRequestedAccountId &&
       requestedAccountIdRaw != null &&
@@ -504,6 +506,7 @@ Deno.serve(async (req: Request) => {
 
     // Build income record
     const incomeRecord: any = {
+      id: crypto.randomUUID(),
       contact_id: contactId,
       user_id: userId,
       type: "income", // CRITICAL: Set transaction type to income
@@ -533,7 +536,51 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const shouldFinalizeHouseholdSplit = resolvedHouseholdId != null &&
+      !isPortfolio &&
+      resolveEffectiveSplit(
+          body.customSplits,
+          householdAutoSplitSettings,
+        ).kind === "customSplits";
+
+    let preparedHouseholdSplit:
+      | { group: SplitGroupRecord; lines: SplitLineRecord[] }
+      | null = null;
+    if (shouldFinalizeHouseholdSplit) {
+      if (householdMembers.length === 0) {
+        return errorResponse(
+          "Unable to load household members for split",
+          500,
+          "SERVER_ERROR",
+        );
+      }
+      const effectiveSplit = resolveEffectiveSplit(
+        body.customSplits,
+        householdAutoSplitSettings,
+      );
+      if (effectiveSplit.kind !== "customSplits") {
+        return errorResponse("Unable to prepare household split", 500);
+      }
+      const buildResult = buildHouseholdSplitRecords({
+        householdId: resolvedHouseholdId!,
+        transactionId: incomeRecord.id,
+        payerUserId: body.payerUserId ?? userId,
+        amountCents,
+        currency,
+        description: body.description || null,
+        members: householdMembers,
+        customSplits: effectiveSplit.customSplits,
+        reconcileMemberChanges: effectiveSplit.source === "default",
+      });
+      if (!buildResult.ok) {
+        return errorResponse(buildResult.error, 400, "VALIDATION_ERROR");
+      }
+      preparedHouseholdSplit = buildResult;
+    }
+
     // Check for duplicate (idempotency)
+    // deno-lint-ignore no-explicit-any
+    let income: any = null;
     if (normalizedIdempotencyKey) {
       let existingIncomeQuery = supabase
         .from("expenses")
@@ -564,6 +611,16 @@ Deno.serve(async (req: Request) => {
 
       const existingIncome = existingIncomeRows?.[0] ?? null;
       if (existingIncome) {
+        if (
+          Number(existingIncome.amount_cents) !== amountCents ||
+          String(existingIncome.currency ?? "").toUpperCase() !== currency
+        ) {
+          return errorResponse(
+            "Idempotency key was already used for a different income",
+            409,
+            "VALIDATION_ERROR",
+          );
+        }
         console.log(
           "[save-income] Duplicate detected (idempotency), returning existing:",
           existingIncome.id,
@@ -583,55 +640,44 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Insert income into expenses table (with type='income')
-    const { data: income, error: incomeError } = await supabase
-      .from("expenses")
-      .insert(incomeRecord)
-      .select()
-      .single();
+    if (!income) {
+      const atomicResult = preparedHouseholdSplit == null
+        ? null
+        : await createHouseholdTransactionWithSplit({
+          supabase,
+          actorUserId: userId,
+          transaction: incomeRecord,
+          group: preparedHouseholdSplit.group,
+          lines: preparedHouseholdSplit.lines,
+          targetAccountId: accountId,
+          isRecurringTemplate: body.isRecurring === true,
+        });
+      const { data: insertedIncome, error: incomeError } = atomicResult ??
+        await supabase
+          .from("expenses")
+          .insert(incomeRecord)
+          .select()
+          .single();
 
-    if (incomeError) {
-      console.error("[save-income] Error saving income:", incomeError);
-      return errorResponse("Failed to save income", 500, "SERVER_ERROR");
+      if (incomeError) {
+        console.error("[save-income] Error saving income:", incomeError);
+        return errorResponse("Failed to save income", 500, "SERVER_ERROR");
+      }
+      income = atomicResult == null
+        ? insertedIncome
+        : (insertedIncome as Record<string, unknown>).expense;
     }
 
     console.log("[save-income] Income saved successfully:", income.id);
 
     let responseIncome = income;
     let splitSkipped = false;
-
-    if (resolvedHouseholdId && !isPortfolio) {
-      const splitResult = await createHouseholdAutoSplitForTransaction({
-        supabase,
-        householdId: resolvedHouseholdId,
-        transaction: income as Record<string, unknown>,
-        actorUserId: userId,
-        members: householdMembers,
-        settings: householdAutoSplitSettings,
-        explicitCustomSplits: body.customSplits,
-        payerUserId: body.payerUserId ?? null,
-      });
-
-      if (splitResult.kind === "created") {
-        responseIncome = splitResult.transaction;
-      } else if (splitResult.kind === "skipped") {
-        splitSkipped = true;
-        warningMessage =
-          warningMessage ?? "Income saved to household without split lines";
-      } else if (splitResult.kind === "invalid") {
-        console.warn("[save-income] Invalid household split payload:", {
-          code: splitResult.code,
-          error: splitResult.error,
-        });
-        warningMessage = warningMessage ?? splitResult.error;
-      } else if (splitResult.kind === "failed") {
-        console.error(
-          "[save-income] Failed to create household split:",
-          splitResult.error,
-        );
-        warningMessage =
-          warningMessage ?? "Income saved but split group creation failed";
-      }
+    if (resolvedHouseholdId && !isPortfolio && !shouldFinalizeHouseholdSplit) {
+      // Settings and custom allocations were evaluated before insertion.  This
+      // path is an intentional unsplit save; never re-evaluate settings after
+      // the parent is visible, because a later change could retroactively
+      // split an idempotent transaction.
+      splitSkipped = true;
     }
 
     // Learn/ensure custom category + preference mapping for future AI categorization

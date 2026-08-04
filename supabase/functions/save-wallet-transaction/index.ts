@@ -37,10 +37,12 @@ import {
 import { normalizeCategoryForStorage } from "../shared/category-colors.ts";
 import { assertAccountInScope, getAccountOrNull } from "../shared/accounts.ts";
 import {
-  createHouseholdAutoSplitForTransaction,
+  buildHouseholdSplitRecords,
+  createHouseholdTransactionWithSplit,
   fetchHouseholdAutoSplitSettings,
   type HouseholdAutoSplitSettings,
   type HouseholdMemberRow,
+  resolveEffectiveSplit,
 } from "../shared/household-auto-split.ts";
 import {
   buildWalletCaptureIdempotencyKey,
@@ -1209,21 +1211,6 @@ async function releaseWalletCaptureIdempotencyClaim(
       error,
     );
   }
-}
-
-async function deleteIncompleteWalletCaptureExpense(params: {
-  supabase: any;
-  expenseId: string;
-  userId: string;
-  idempotencyKey: string;
-}): Promise<void> {
-  const { error } = await params.supabase
-    .from("expenses")
-    .delete()
-    .eq("id", params.expenseId)
-    .eq("user_id", params.userId)
-    .eq("wallet_capture_idempotency_key", params.idempotencyKey);
-  if (error) throw error;
 }
 
 async function claimWalletCaptureIdempotencyKey(
@@ -2607,30 +2594,88 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ── Save expense ──────────────────────────────────────────────────
-    const { data: expense, error: expenseError } = await supabase
-      .from("expenses")
-      .insert({
-        contact_id: contactId,
-        user_id: userId,
-        type: transactionType,
-        amount_cents: amountCents,
-        category: resolvedCategory,
-        date: normalizedDate,
-        raw_text: description,
-        merchant: merchantForStorage,
-        currency,
-        breakdown: null,
-        receipt_image_url: null,
-        created_at: body.clientCreatedAt || new Date().toISOString(),
-        is_recurring: isRecurring,
-        recurrence_rule: recurrenceRule,
-        household_id: householdId,
-        account_id: accountId,
-        wallet_capture_idempotency_key: requestIdempotencyKey,
+    // ── Save transaction ──────────────────────────────────────────────
+    // Build the complete split before the parent exists. A required split is
+    // committed by one database RPC, so no observer can see a parent-only row.
+    const transactionId = crypto.randomUUID();
+    const transactionRecord = {
+      id: transactionId,
+      contact_id: contactId,
+      user_id: userId,
+      type: transactionType,
+      amount_cents: amountCents,
+      category: resolvedCategory,
+      date: normalizedDate,
+      raw_text: description,
+      merchant: merchantForStorage,
+      currency,
+      breakdown: null,
+      receipt_image_url: null,
+      created_at: body.clientCreatedAt || new Date().toISOString(),
+      is_recurring: isRecurring,
+      recurrence_rule: recurrenceRule,
+      household_id: householdId,
+      account_id: accountId,
+      wallet_capture_idempotency_key: requestIdempotencyKey,
+    };
+    let preparedHouseholdSplit:
+      | ReturnType<typeof buildHouseholdSplitRecords>
+      | null = null;
+    if (householdId && requiresHouseholdSplit) {
+      const effectiveSplit = resolveEffectiveSplit(
+        null,
+        householdAutoSplitSettings,
+      );
+      if (effectiveSplit.kind === "customSplits") {
+        preparedHouseholdSplit = buildHouseholdSplitRecords({
+          householdId,
+          transactionId,
+          payerUserId: userId,
+          amountCents,
+          currency,
+          description,
+          members: householdMembers,
+          customSplits: effectiveSplit.customSplits,
+          reconcileMemberChanges: effectiveSplit.source === "default",
+        });
+        if (!preparedHouseholdSplit.ok) {
+          await releaseAndroidWalletCaptureEvent(
+            supabase,
+            androidCaptureClaimId,
+            "household_split_invalid",
+          );
+          await releaseWalletCaptureIdempotencyClaim(
+            supabase,
+            idempotencyClaimId,
+          );
+          return errorResponse(
+            preparedHouseholdSplit.error,
+            400,
+            "VALIDATION_ERROR",
+          );
+        }
+      }
+    }
+    const atomicResult = preparedHouseholdSplit?.ok === true
+      ? await createHouseholdTransactionWithSplit({
+        supabase,
+        actorUserId: userId,
+        transaction: transactionRecord,
+        group: preparedHouseholdSplit.group,
+        lines: preparedHouseholdSplit.lines,
+        targetAccountId: accountId,
+        isRecurringTemplate: isRecurring,
       })
-      .select()
-      .single();
+      : null;
+    const { data: insertedTransaction, error: expenseError } = atomicResult ??
+      await supabase
+        .from("expenses")
+        .insert(transactionRecord)
+        .select()
+        .single();
+    const expense = atomicResult == null
+      ? insertedTransaction
+      : (insertedTransaction as Record<string, unknown>)?.expense;
 
     if (expenseError) {
       if (expenseError.code === "23505") {
@@ -2645,40 +2690,6 @@ Deno.serve(async (req: Request) => {
 
         if (existingExpense) {
           const responseExistingExpense = existingExpense;
-          if (requiresHouseholdSplit && !existingExpense.split_group_id) {
-            const splitResult = await createHouseholdAutoSplitForTransaction({
-              supabase,
-              householdId,
-              transaction: existingExpense as Record<string, unknown>,
-              actorUserId: userId,
-              members: householdMembers,
-              settings: householdAutoSplitSettings,
-              payerUserId: userId,
-            });
-            if (
-              splitResult.kind === "invalid" ||
-              splitResult.kind === "failed"
-            ) {
-              await releaseAndroidWalletCaptureEvent(
-                supabase,
-                androidCaptureClaimId,
-                "household_split_repair_failed",
-              );
-              await releaseWalletCaptureIdempotencyClaim(
-                supabase,
-                idempotencyClaimId,
-              );
-              return errorResponse(
-                splitResult.kind === "invalid"
-                  ? splitResult.error
-                  : "Failed to create household split",
-                splitResult.kind === "invalid" ? 400 : 500,
-                splitResult.kind === "invalid"
-                  ? "VALIDATION_ERROR"
-                  : "SERVER_ERROR",
-              );
-            }
-          }
           const duplicateResponse = {
             success: true,
             duplicate: true,
@@ -2756,7 +2767,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Household split ───────────────────────────────────────────────
-    let responseExpense = expense;
+    const responseExpense = expense;
 
     if (householdId && isPortfolio) {
       // Portfolio: save with household_id but no split
@@ -2809,65 +2820,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (householdId && requiresHouseholdSplit) {
-      const splitResult = await createHouseholdAutoSplitForTransaction({
-        supabase,
-        householdId,
-        transaction: expense as Record<string, unknown>,
-        actorUserId: userId,
-        members: householdMembers,
-        settings: householdAutoSplitSettings,
-        payerUserId: userId,
-      });
-      if (splitResult.kind === "created") {
-        responseExpense = splitResult.transaction;
-      } else if (splitResult.kind === "invalid") {
-        console.warn(
-          "[save-wallet-transaction] Invalid household split settings:",
-          splitResult.error,
-        );
-        await deleteIncompleteWalletCaptureExpense({
-          supabase,
-          expenseId: expense.id,
-          userId,
-          idempotencyKey: requestIdempotencyKey,
-        });
-        await releaseAndroidWalletCaptureEvent(
-          supabase,
-          androidCaptureClaimId,
-          "household_split_invalid",
-        );
-        await releaseWalletCaptureIdempotencyClaim(
-          supabase,
-          idempotencyClaimId,
-        );
-        return errorResponse(splitResult.error, 400, "VALIDATION_ERROR");
-      } else if (splitResult.kind === "failed") {
-        console.error(
-          "[save-wallet-transaction] Household split creation failed:",
-          splitResult.error,
-        );
-        await deleteIncompleteWalletCaptureExpense({
-          supabase,
-          expenseId: expense.id,
-          userId,
-          idempotencyKey: requestIdempotencyKey,
-        });
-        await releaseAndroidWalletCaptureEvent(
-          supabase,
-          androidCaptureClaimId,
-          "household_split_failed",
-        );
-        await releaseWalletCaptureIdempotencyClaim(
-          supabase,
-          idempotencyClaimId,
-        );
-        return errorResponse(
-          "Failed to create household split",
-          500,
-          "SERVER_ERROR",
-        );
-      }
-
       if (captureSource !== "android_notification_listener") {
         let actorName = "Someone";
         try {

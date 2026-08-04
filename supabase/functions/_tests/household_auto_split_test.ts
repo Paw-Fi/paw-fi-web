@@ -11,6 +11,7 @@ import {
   commitHouseholdSplitRecords,
   commitHouseholdSplitRecordsWithPatch,
   createHouseholdAutoSplitForTransaction,
+  createHouseholdTransactionWithSplit,
   type CustomSplits,
   expectedSplitParentFromTransaction,
   type HouseholdAutoSplitSettings,
@@ -31,6 +32,66 @@ const members = [
 ];
 
 const twoMembers = members.slice(0, 2);
+
+Deno.test(
+  "atomic household create maps the complete live and recurring RPC intent",
+  async () => {
+    const calls: Array<{ name: string; payload: Record<string, unknown> }> = [];
+    const supabase = {
+      rpc(name: string, payload: Record<string, unknown>) {
+        calls.push({ name, payload });
+        return Promise.resolve({
+          data: { expense: { id: "tx-1" } },
+          error: null,
+        });
+      },
+    };
+    const split = buildHouseholdSplitRecords({
+      householdId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      transactionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      payerUserId: members[0].user_id,
+      amountCents: 3000,
+      currency: "usd",
+      description: "Atomic mapping",
+      members,
+      customSplits: null,
+    });
+    if (!split.ok) throw new Error(split.error);
+    const transaction = {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      user_id: members[0].user_id,
+      household_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      amount_cents: 3000,
+      currency: "USD",
+      import_request_key: "request-key",
+      wallet_capture_idempotency_key: "capture-key",
+    };
+
+    await createHouseholdTransactionWithSplit({
+      supabase,
+      actorUserId: members[0].user_id,
+      transaction,
+      group: split.group,
+      lines: split.lines,
+      targetAccountId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    });
+    await createHouseholdTransactionWithSplit({
+      supabase,
+      actorUserId: members[0].user_id,
+      transaction,
+      group: split.group,
+      lines: split.lines,
+      targetAccountId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      isRecurringTemplate: true,
+    });
+
+    assertEquals(calls[0].name, "households_create_transaction_with_split_v1");
+    assertEquals(calls[0].payload.p_expense, transaction);
+    assertEquals(calls[0].payload.p_lines, split.lines);
+    assertEquals(calls[0].payload.p_is_recurring_template, false);
+    assertEquals(calls[1].payload.p_is_recurring_template, true);
+  },
+);
 
 Deno.test("re-split request parser accepts aliases and rejects ambiguity", () => {
   assertEquals(parseExplicitReSplitRequested({}), {
