@@ -1,7 +1,5 @@
 /// <reference lib="deno.ns" />
 
-import { runAnalyzeExpense } from "../analyze-core.ts";
-
 export function buildGeminiHighDemandMessage(language?: string | null): string {
   const normalized = String(language || "en")
     .trim()
@@ -172,6 +170,10 @@ export async function runAnalyzeExpenseWithTimeout(
   logPrefix = "ai-bot",
 ): Promise<any> {
   try {
+    // Loading document parsers eagerly pulls Node-compatibility shims into
+    // every text-only bot request. Supabase Edge isolates can reject those
+    // shims while settling microtasks, so load them only for media analysis.
+    const { runAnalyzeExpense } = await import("../analyze-core.ts");
     const analysisPromise = runAnalyzeExpense(payload, apiKey || "");
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error("timeout")), timeoutMs);

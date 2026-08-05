@@ -2,7 +2,11 @@ import {
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "./transaction-tool.ts";
-import { resolveWalletTransactionCurrency } from "./wallet-scope.ts";
+import {
+  resolveWalletForTransactionToolCall,
+  resolveWalletTransactionCurrency,
+} from "./wallet-scope.ts";
+import { buildRecurrenceRule } from "./date-utils.ts";
 
 function assertEquals(actual: unknown, expected: unknown, message?: string) {
   const actualJson = JSON.stringify(actual);
@@ -234,3 +238,28 @@ Deno.test(
     );
   },
 );
+
+Deno.test("an empty wallet hint is rejected instead of clearing account_id", async () => {
+  const result = await resolveWalletForTransactionToolCall(
+    {
+      from: () => {
+        throw new Error("A malformed wallet hint must not query accounts.");
+      },
+    },
+    "00000000-0000-4000-8000-000000000000",
+    null,
+    { wallet_id: null },
+  );
+
+  assertEquals(result, { error: "Wallet id must be a non-empty UUID." });
+});
+
+Deno.test("object-form recurring rules default an omitted frequency to monthly", () => {
+  assertEquals(
+    buildRecurrenceRule(
+      { recurrence_rule: { anchor_date: "2026-08-04" } },
+      "2026-08-04",
+    ),
+    { anchor_date: "2026-08-04", frequency: "monthly" },
+  );
+});

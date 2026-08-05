@@ -2,7 +2,6 @@ import { buildInternalInvokeHeaders } from "../auth.ts";
 import { normalizeCurrencyCode } from "../currency-normalize.ts";
 import { CURRENCY_SYMBOLS } from "../currency-symbols.ts";
 import { normalizeCalendarDateString } from "../date-normalization.ts";
-import { shouldReportBotToolResultError } from "./error-reporting.ts";
 import { formatInvokeError } from "../formatting-helpers.ts";
 import { resolveCurrencyFromOCR } from "../ocr-currency-resolver.ts";
 import {
@@ -392,79 +391,4 @@ export async function invokeTransactionDelete(
     success,
     formatted,
   };
-}
-
-export function buildTransactionMutationFailureText(
-  toolName: string | null,
-  toolResult: unknown,
-): string | null {
-  const error =
-    typeof (toolResult as Record<string, any> | null)?.error === "string"
-      ? (toolResult as Record<string, string>).error.trim()
-      : "";
-  if (!error) return null;
-
-  if (toolName === "add_transaction") {
-    if (error.startsWith("Invalid amount")) {
-      return "I need an amount greater than 0 before I can save that. What amount should I use?";
-    }
-    if (error === "category is required.") {
-      return "Which category should I use for that transaction?";
-    }
-    if (error === "type must be expense or income.") {
-      return "Should I save that as an expense or income?";
-    }
-    if (error.startsWith("Invalid date")) {
-      return "Which date should I use for that transaction?";
-    }
-    if (
-      error === "merchant must be a string." ||
-      error === "description must be a string." ||
-      error === "merchant must be less than 256 characters."
-    ) {
-      return "I couldn't understand one of the transaction details. Please resend it with the amount, category, and date.";
-    }
-    if (
-      error === "You do not have access to that space." ||
-      error === "You do not have access to that space"
-    ) {
-      return error;
-    }
-    return "I couldn't save that transaction right now. Please try again in a moment.";
-  }
-  if (toolName === "add_transactions_batch") {
-    return "I couldn't save those transactions right now. Please try again in a moment.";
-  }
-  if (toolName === "update_transaction") {
-    if (shouldReportBotToolResultError(error)) {
-      return "I couldn't update that transaction right now. Please try again in a moment.";
-    }
-    return `I couldn't update that transaction. ${error}`;
-  }
-  if (toolName === "delete_transaction") {
-    return `I couldn't delete that transaction. ${error}`;
-  }
-  if (toolName === "manage_recurring") {
-    if (
-      error.startsWith("No matching transaction found") ||
-      error.startsWith("Invalid selection_index") ||
-      error.startsWith("That transaction is no longer available") ||
-      error === "Unable to verify the selected transaction."
-    ) {
-      // Selection errors are model instructions, not user-facing copy. Let the
-      // model turn them into a natural clarification in the preferred language.
-      return null;
-    }
-    const action = (toolResult as Record<string, any> | null)?.action;
-    const verb = action === "delete"
-      ? "delete"
-      : action === "update" || action === "update_occurrence"
-      ? "update"
-      : "save";
-    if (shouldReportBotToolResultError(error)) {
-      return `I couldn't ${verb} that recurring transaction right now. Please try again in a moment.`;
-    }
-    return `I couldn't ${verb} that recurring transaction. ${error}`;
-  }
-  return null;
 }

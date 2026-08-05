@@ -15,6 +15,23 @@ export type BotSpaceMeta = {
   isPortfolio: boolean;
 };
 
+export function listBotSpaceIds(
+  spaceMap: Map<string, BotSpaceMeta>,
+  scope: "all" | "private" | "shared" = "all",
+): string[] {
+  return Array.from(
+    new Set(
+      Array.from(spaceMap.values())
+        .filter((space) =>
+          scope === "all" ||
+          (scope === "private" ? space.isPortfolio : !space.isPortfolio)
+        )
+        .map((space) => space.id)
+        .filter((id) => typeof id === "string" && id.length > 0),
+    ),
+  );
+}
+
 export function upsertBotSpaceMetaFromToolResult(
   toolResult: unknown,
   spaceMap: Map<string, BotSpaceMeta>,
@@ -116,17 +133,34 @@ export function sanitizeBotUserFacingText(value: string): string {
 
 export function shouldApplyPreferredSpaceDefault(
   toolName: string | null | undefined,
+  args: Record<string, unknown> | null | undefined = null,
 ): boolean {
+  // A default space is a write destination, not a hidden filter on a read.
+  // In particular, applying it to recurring list/history calls makes the
+  // saved selection list disagree with a previous cross-space list.
+  const recurringAction = String(args?.action || "").trim().toLowerCase();
+  if (toolName === "manage_recurring") {
+    // Existing recurring records own their space. Injecting a preferred
+    // destination into a confirmation/update can override the list context
+    // that selected that existing record.
+    return recurringAction === "add";
+  }
+  if (
+    [
+      "list_expenses",
+      "generate_chart_url",
+      "financial_insight",
+      "get_budget",
+      "list_wallets",
+    ].includes(toolName || "")
+  ) {
+    return false;
+  }
   return (
     !!toolName &&
     [
       "add_transaction",
       "add_transactions_batch",
-      "list_expenses",
-      "generate_chart_url",
-      "financial_insight",
-      "manage_recurring",
-      "get_budget",
       "draft_budget",
       "confirm_budget",
       "set_budget",
@@ -144,8 +178,11 @@ export function applyPreferredSpaceDefaultToToolCall(
   call: { name?: string | null; args?: Record<string, unknown> | null },
   preferredSpaceId: string | null | undefined,
 ): void {
-  if (!preferredSpaceId || !shouldApplyPreferredSpaceDefault(call.name)) return;
   const args = call.args && typeof call.args === "object" ? call.args : {};
+  if (!preferredSpaceId || !shouldApplyPreferredSpaceDefault(call.name, args)) {
+    call.args = args;
+    return;
+  }
   if (hasExplicitBotSpaceScope(args) || isExplicitPersonalScope(args)) {
     call.args = args;
     return;

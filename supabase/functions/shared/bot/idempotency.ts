@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { reportEdgeFunctionError } from "../edge-error-alert.ts";
 
 export type IdempotencyRecord = {
   status: "processing" | "done" | "failed";
@@ -8,6 +9,17 @@ export type IdempotencyRecord = {
   delivery?: string;
   error?: string;
 };
+
+async function reportIdempotencyError(
+  operation: "reserve" | "read_duplicate" | "update",
+  error: unknown,
+): Promise<void> {
+  await reportEdgeFunctionError({
+    functionName: "shared/bot/idempotency",
+    error,
+    context: { operation },
+  });
+}
 
 export async function reserveIdempotency(
   supabase: SupabaseClient,
@@ -26,11 +38,15 @@ export async function reserveIdempotency(
   if (!error) return { status: "new" };
 
   if (error.code === "23505") {
-    const { data } = await supabase
+    const { data, error: readError } = await supabase
       .from("idempotency_keys")
       .select("result")
       .eq("key", key)
       .maybeSingle();
+    if (readError) {
+      console.error("[bot-idempotency] duplicate read error:", readError);
+      await reportIdempotencyError("read_duplicate", readError);
+    }
     return {
       status: "duplicate",
       result: (data?.result as IdempotencyRecord) || null,
@@ -38,6 +54,7 @@ export async function reserveIdempotency(
   }
 
   console.error("[bot-idempotency] reserve error:", error);
+  await reportIdempotencyError("reserve", error);
   return { status: "new" };
 }
 
@@ -54,5 +71,6 @@ export async function updateIdempotency(
     .eq("key", key);
   if (error) {
     console.error("[bot-idempotency] update error:", error);
+    await reportIdempotencyError("update", error);
   }
 }

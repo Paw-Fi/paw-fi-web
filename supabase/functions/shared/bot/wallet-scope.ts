@@ -108,7 +108,17 @@ export async function resolveWalletForTransactionToolCall(
   args: Record<string, unknown>,
   logPrefix = "ai-bot",
 ): Promise<ResolvedWalletInScope> {
-  if (args.wallet_name !== undefined) {
+  const hasWalletName = Object.prototype.hasOwnProperty.call(
+    args,
+    "wallet_name",
+  );
+  const hasWalletId = Object.prototype.hasOwnProperty.call(args, "wallet_id") ||
+    Object.prototype.hasOwnProperty.call(args, "account_id");
+
+  if (hasWalletName) {
+    if (typeof args.wallet_name !== "string" || !args.wallet_name.trim()) {
+      return { error: "Wallet name must be a non-empty string." };
+    }
     return resolveWalletIdInScope(
       supabase,
       userId,
@@ -124,7 +134,9 @@ export async function resolveWalletForTransactionToolCall(
       : typeof args.account_id === "string" && args.account_id.trim()
         ? args.account_id.trim()
         : "";
-  if (!rawAccountId) return {};
+  if (!rawAccountId) {
+    return hasWalletId ? { error: "Wallet id must be a non-empty UUID." } : {};
+  }
   if (!UUID_REGEX.test(rawAccountId)) {
     return { error: "Invalid wallet id." };
   }

@@ -12,7 +12,7 @@ import {
   shouldReportBotToolResultError,
 } from "../shared/bot/error-reporting.ts";
 import { sanitizeBotToolResultForModel } from "../shared/bot/household-utils.ts";
-import { buildTransactionMutationFailureText } from "../shared/bot/transaction-tool.ts";
+import { finalizeBotResponseText } from "../shared/bot/response-finalization.ts";
 
 Deno.test(
   "blocks transaction saved claim when no write mutation succeeded",
@@ -68,18 +68,16 @@ Deno.test("identifies write mutation tool names", () => {
   assertEquals(isWriteMutationToolName("add_transaction"), true);
   assertEquals(isWriteMutationToolName("add_transactions_batch"), true);
   assertEquals(isWriteMutationToolName("manage_recurring"), true);
+  assertEquals(
+    isWriteMutationToolName("manage_recurring", { action: "list_history" }),
+    false,
+  );
+  assertEquals(
+    isWriteMutationToolName("manage_recurring", { action: "list_series" }),
+    false,
+  );
   assertEquals(isWriteMutationToolName("generate_chart_url"), false);
   assertEquals(isWriteMutationToolName(null), false);
-});
-
-Deno.test("does not expose recurring selection instructions to users", () => {
-  assertEquals(
-    buildTransactionMutationFailureText("manage_recurring", {
-      error:
-        "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-    }),
-    null,
-  );
 });
 
 Deno.test("treats duplicate wallet names as user-actionable ambiguity", () => {
@@ -87,10 +85,6 @@ Deno.test("treats duplicate wallet names as user-actionable ambiguity", () => {
     "More than one wallet named 'Cash' exists in the selected scope. Please rename one of them or be more specific.";
 
   assertEquals(shouldReportBotToolResultError(error), false);
-  assertEquals(
-    buildTransactionMutationFailureText("update_transaction", { error }),
-    `I couldn't update that transaction. ${error}`,
-  );
 });
 
 Deno.test(
@@ -108,28 +102,141 @@ Deno.test(
   },
 );
 
-Deno.test("returns non-technical action-specific backend failure text", () => {
-  const technicalError =
-    "name=FunctionsHttpError | message=Edge Function returned a non-2xx status code | context(status=500)";
+Deno.test("does not replace recurring history with a mutation safety fallback", () => {
+  const response = "You have 2 unconfirmed recurring payments this month.";
+  assertEquals(
+    finalizeBotResponseText({
+      finalResponseText: response,
+      toolSucceededAny: true,
+      lastBudgetPockets: null,
+      lastToolCallName: "manage_recurring",
+      lastToolResult: { success: true, action: "list_history" },
+      writeMutationSucceededAny: false,
+      emptyFallbackText: "Please try again.",
+    }),
+    response,
+  );
+});
+
+Deno.test("keeps a friendly recurring confirmation clarification", () => {
+  const response = "I have the amount as ¥888. What date was it paid?";
+  assertEquals(
+    finalizeBotResponseText({
+      finalResponseText: response,
+      toolSucceededAny: false,
+      lastBudgetPockets: null,
+      lastToolCallName: "manage_recurring",
+      lastToolResult: {
+        action: "confirm_occurrence",
+        error:
+          "paid_date and amount greater than 0 are required to confirm an occurrence.",
+      },
+      writeMutationSucceededAny: false,
+      emptyFallbackText: "Please try again.",
+    }),
+    response,
+  );
+});
+
+Deno.test("keeps a friendly clarification for other tool failures", () => {
+  const response = "Which wallet should I use for that transfer?";
+  assertEquals(
+    finalizeBotResponseText({
+      finalResponseText: response,
+      toolSucceededAny: false,
+      lastBudgetPockets: null,
+      lastToolCallName: "create_wallet_transfer",
+      lastToolResult: { error: "from_wallet_name is required." },
+      writeMutationSucceededAny: false,
+      emptyFallbackText: "Please try again.",
+    }),
+    response,
+  );
+});
+
+Deno.test("never sends internal tool fields to the user", () => {
+  assertEquals(
+    finalizeBotResponseText({
+      finalResponseText:
+        "I couldn't save that recurring transaction. paid_date and amount greater than 0 are required to confirm an occurrence.",
+      toolSucceededAny: false,
+      lastBudgetPockets: null,
+      lastToolCallName: "manage_recurring",
+      lastToolResult: {
+        action: "confirm_occurrence",
+        error:
+          "paid_date and amount greater than 0 are required to confirm an occurrence.",
+      },
+      writeMutationSucceededAny: false,
+      emptyFallbackText: "Please try again.",
+    }),
+    "I couldn't complete that just yet. Please check the details and try again.",
+  );
+});
+
+Deno.test("never repeats an earlier tool error after a later tool call", () => {
+  assertEquals(
+    finalizeBotResponseText({
+      finalResponseText: "The account could not be resolved for this split expense.",
+      toolSucceededAny: true,
+      lastBudgetPockets: null,
+      lastToolCallName: "list_expenses",
+      lastToolResult: { success: true },
+      toolErrorTexts: ["The account could not be resolved for this split expense."],
+      writeMutationSucceededAny: false,
+      emptyFallbackText: "Please try again.",
+    }),
+    "I couldn't complete that just yet. Please check the details and try again.",
+  );
+});
+
+Deno.test("never mentions tool execution to the user", () => {
+  assertEquals(
+    finalizeBotResponseText({
+      finalResponseText:
+        "I couldn't complete that action because the tool did not confirm success.",
+      toolSucceededAny: false,
+      lastBudgetPockets: null,
+      lastToolCallName: "manage_recurring",
+      lastToolResult: { error: "Something went wrong." },
+      writeMutationSucceededAny: false,
+      emptyFallbackText: "Please try again.",
+    }),
+    "I couldn't complete that just yet. Please check the details and try again.",
+  );
+});
+
+Deno.test("every Telegram and WhatsApp chat path uses the shared finalizer", async () => {
+  const whatsappSource = await Deno.readTextFile(
+    new URL("../twilio-whatsapp-ai-bot/index.ts", import.meta.url),
+  );
+  const telegramSource = await Deno.readTextFile(
+    new URL("../telegram-ai-bot/index.ts", import.meta.url),
+  );
 
   assertEquals(
-    buildTransactionMutationFailureText("update_transaction", {
-      error: technicalError,
-    }),
-    "I couldn't update that transaction right now. Please try again in a moment.",
+    (whatsappSource.match(/finalizeBotResponseText\(/g) || []).length,
+    2,
   );
   assertEquals(
-    buildTransactionMutationFailureText("manage_recurring", {
-      action: "delete",
-      error: technicalError,
-    }),
-    "I couldn't delete that recurring transaction right now. Please try again in a moment.",
+    (whatsappSource.match(/sanitizeBotUserFacingText\(finalResponseText\)/g) || [])
+      .length,
+    2,
+  );
+  assertEquals(
+    (telegramSource.match(/finalizeBotResponseText\(/g) || []).length,
+    1,
+  );
+  assertEquals(
+    (telegramSource.match(/sanitizeBotUserFacingText\(finalResponseText\)/g) || [])
+      .length,
+    1,
   );
 });
 
 Deno.test("returns safe fallback for blocked mutation claim", () => {
   assertEquals(
     buildUnsafeMutationClaimFallback(),
-    "I couldn't save that transaction yet because the save step didn't complete. Please send it again or confirm the amount, category, and date.",
+    "I couldn't save that transaction just yet. Please try again in a moment.",
   );
 });

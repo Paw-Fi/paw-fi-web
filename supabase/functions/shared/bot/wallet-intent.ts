@@ -36,5 +36,5 @@ export function shouldBlockUnsafeWalletMutationClaim(params: {
 }
 
 export function buildUnsafeWalletMutationClaimFallback(): string {
-  return "I couldn't complete that wallet action yet because the wallet tool did not confirm success. Please try again.";
+  return "I couldn't complete that wallet action just yet. Please try again in a moment.";
 }

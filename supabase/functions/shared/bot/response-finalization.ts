@@ -1,6 +1,5 @@
 import { buildBudgetDoneText } from "./budget-utils.ts";
 import {
-  buildGenericMutationFailureText,
   buildUnsafeGenericMutationClaimFallback,
   buildUnsafeMutationClaimFallback,
   diagnoseUnsafeTransactionMutationClaim,
@@ -11,8 +10,6 @@ import {
   buildUnsafeWalletMutationClaimFallback,
   shouldBlockUnsafeWalletMutationClaim,
 } from "./wallet-intent.ts";
-import { buildTransactionMutationFailureText } from "./transaction-tool.ts";
-import { buildWalletMutationFailureText } from "./wallet-tools.ts";
 
 type MutationClaimGuardKind = "transaction" | "wallet" | "generic";
 
@@ -23,26 +20,27 @@ type MutationClaimGuardLogContext = {
   reason?: string;
 };
 
-export function buildBotMutationFailureText(
-  toolName: string | null,
-  toolResult: unknown,
-  options: { includeDeleteTransactionFallback?: boolean } = {},
-): string | null {
-  const sharedText = buildTransactionMutationFailureText(toolName, toolResult);
-  if (sharedText) return sharedText;
-  const walletText = buildWalletMutationFailureText(toolName, toolResult);
-  if (walletText) return walletText;
-  const genericText = buildGenericMutationFailureText(toolName, toolResult);
-  if (genericText) return genericText;
-  if (options.includeDeleteTransactionFallback && toolName === "delete_transaction") {
-    return "I couldn't delete that transaction right now. Please try again in a moment.";
-  }
-  return null;
+const INTERNAL_TOOL_JARGON_PATTERN =
+  /\b(?:tool|[a-z][a-z0-9]*_[a-z0-9_]+|edge\s+function|backend|server|database|api|non-2xx|rpc|http\s*\d{3}|status\s*(?:code|=)|uuid|internal\s+key)\b/i;
+
+function hasInternalToolJargon(params: {
+  responseText: string;
+  toolErrorTexts: readonly string[];
+}): boolean {
+  const responseText = params.responseText.trim();
+  if (INTERNAL_TOOL_JARGON_PATTERN.test(responseText)) return true;
+  const normalizedResponseText = responseText.toLowerCase();
+  return params.toolErrorTexts.some((error) => {
+    const normalizedError = error.trim().toLowerCase();
+    return normalizedError.length >= 12 &&
+      normalizedResponseText.includes(normalizedError);
+  });
 }
 
 export function applyBotMutationClaimGuards(params: {
   finalResponseText: string;
   lastToolCallName: string | null;
+  lastToolResult: unknown;
   writeMutationSucceededAny: boolean;
   onBlocked?: (
     kind: MutationClaimGuardKind,
@@ -52,6 +50,7 @@ export function applyBotMutationClaimGuards(params: {
   let finalResponseText = params.finalResponseText;
   const shouldCheckTransactionClaim = isWriteMutationToolName(
     params.lastToolCallName,
+    params.lastToolResult,
   );
   const finalDiag = shouldCheckTransactionClaim
     ? diagnoseUnsafeTransactionMutationClaim({
@@ -69,7 +68,7 @@ export function applyBotMutationClaimGuards(params: {
     finalResponseText = buildUnsafeMutationClaimFallback();
   }
   if (
-    isWriteMutationToolName(params.lastToolCallName) &&
+    isWriteMutationToolName(params.lastToolCallName, params.lastToolResult) &&
     shouldBlockUnsafeWalletMutationClaim({
       responseText: finalResponseText,
       writeMutationSucceeded: params.writeMutationSucceededAny,
@@ -83,7 +82,7 @@ export function applyBotMutationClaimGuards(params: {
     finalResponseText = buildUnsafeWalletMutationClaimFallback();
   }
   if (
-    isWriteMutationToolName(params.lastToolCallName) &&
+    isWriteMutationToolName(params.lastToolCallName, params.lastToolResult) &&
     shouldBlockUnsafeGenericMutationClaim({
       responseText: finalResponseText,
       writeMutationSucceeded: params.writeMutationSucceededAny,
@@ -105,9 +104,9 @@ export function finalizeBotResponseText(params: {
   lastBudgetPockets: Array<{ name: string; percentage: number }> | null;
   lastToolCallName: string | null;
   lastToolResult: any;
+  toolErrorTexts?: readonly string[];
   writeMutationSucceededAny: boolean;
   emptyFallbackText: string;
-  mutationFailureOptions?: { includeDeleteTransactionFallback?: boolean };
   onMutationClaimBlocked?: (
     kind: MutationClaimGuardKind,
     context: MutationClaimGuardLogContext,
@@ -122,28 +121,30 @@ export function finalizeBotResponseText(params: {
     finalResponseText = buildBudgetDoneText(params.lastBudgetPockets);
   }
 
-  const mutationFailureText = buildBotMutationFailureText(
-    params.lastToolCallName,
-    params.lastToolResult,
-    params.mutationFailureOptions,
-  );
-  if (typeof mutationFailureText === "string") {
-    finalResponseText = mutationFailureText;
-  }
-
   if (
     (!finalResponseText || !finalResponseText.trim()) &&
     params.lastToolCallName === "update_transaction" &&
     typeof params.lastToolResult?.error === "string" &&
     params.lastToolResult.error.trim()
   ) {
-    const errorSnippet = params.lastToolResult.error.trim().slice(0, 180);
-    finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
+    finalResponseText =
+      "I couldn't update that transaction right now. Please try again in a moment.";
+  }
+
+  if (
+    hasInternalToolJargon({
+      responseText: finalResponseText,
+      toolErrorTexts: params.toolErrorTexts || [],
+    })
+  ) {
+    finalResponseText =
+      "I couldn't complete that just yet. Please check the details and try again.";
   }
 
   finalResponseText = applyBotMutationClaimGuards({
     finalResponseText,
     lastToolCallName: params.lastToolCallName,
+    lastToolResult: params.lastToolResult,
     writeMutationSucceededAny: params.writeMutationSucceededAny,
     onBlocked: params.onMutationClaimBlocked,
   });

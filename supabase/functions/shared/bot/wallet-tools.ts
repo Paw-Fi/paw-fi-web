@@ -444,25 +444,3 @@ export async function createBotWalletTransferFromToolCall(params: {
     note: args.note,
   });
 }
-
-export function buildWalletMutationFailureText(
-  toolName: string | null,
-  toolResult: unknown,
-): string | null {
-  const error =
-    typeof (toolResult as Record<string, any> | null)?.error === "string"
-      ? (toolResult as Record<string, string>).error.trim()
-      : "";
-  if (!error) return null;
-
-  if (toolName === "create_wallet") {
-    return `I couldn't create that wallet. ${error}`;
-  }
-  if (toolName === "update_wallet") {
-    return `I couldn't update that wallet. ${error}`;
-  }
-  if (toolName === "create_wallet_transfer") {
-    return `I couldn't move money between those wallets. ${error}`;
-  }
-  return null;
-}

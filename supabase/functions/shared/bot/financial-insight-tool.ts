@@ -9,6 +9,7 @@ import {
 import {
   type BotSpaceMeta,
   ensureHouseholdMember,
+  listBotSpaceIds,
   resolveBotSpaceScope,
 } from "./household-utils.ts";
 import { resolveWalletIdInScope } from "./wallet-scope.ts";
@@ -178,11 +179,13 @@ export async function executeBotFinancialInsight(params: {
     });
     if (scope.error) return { error: scope.error };
     const householdId =
-      scope.householdIds.length === 1 ? scope.householdIds[0] : null;
+      !scope.isAggregate && scope.householdIds.length === 1
+        ? scope.householdIds[0]
+        : null;
 
     const walletName =
       typeof args.wallet_name === "string" ? args.wallet_name.trim() : "";
-    if (walletName && scope.householdIds.length > 1) {
+    if (walletName && scope.isAggregate) {
       return {
         error: "Please choose one specific space before selecting a wallet.",
       };
@@ -215,7 +218,15 @@ export async function executeBotFinancialInsight(params: {
       .eq("is_recurring", true)
       .is("deleted_at", null);
 
-    if (scope.householdIds.length === 1) {
+    if (scope.includePersonal && scope.householdIds.length > 0) {
+      const accessibleIds = scope.householdIds.join(",");
+      actualQuery = actualQuery.or(
+        `and(contact_id.eq.${params.contactId},household_id.is.null),household_id.in.(${accessibleIds})`,
+      );
+      recurringQuery = recurringQuery.or(
+        `and(contact_id.eq.${params.contactId},household_id.is.null),household_id.in.(${accessibleIds})`,
+      );
+    } else if (scope.householdIds.length === 1) {
       actualQuery = actualQuery.eq("household_id", scope.householdIds[0]);
       recurringQuery = recurringQuery.eq("household_id", scope.householdIds[0]);
     } else if (scope.householdIds.length > 1) {
@@ -261,7 +272,7 @@ export async function executeBotFinancialInsight(params: {
       })),
     };
     const budgetCents =
-      wallet.accountId || scope.householdIds.length > 1
+      wallet.accountId || scope.isAggregate
         ? null
         : await loadBudgetCents({
             supabase: params.supabase,
@@ -394,6 +405,8 @@ async function resolveInsightScope(params: {
 }): Promise<{
   householdIds: string[];
   spaceName: string | null;
+  includePersonal: boolean;
+  isAggregate: boolean;
   error?: string;
 }> {
   const normalizedScope = String(params.args.space_scope || "")
@@ -401,31 +414,46 @@ async function resolveInsightScope(params: {
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
   if (["personal", "personal_account"].includes(normalizedScope)) {
-    return { householdIds: [], spaceName: null };
+    return {
+      householdIds: [],
+      spaceName: null,
+      includePersonal: true,
+      isAggregate: false,
+    };
   }
 
   const resolved = resolveBotSpaceScope(params.args, params.spaceMap);
+  const isAllSpaces = ["all", "all_spaces"].includes(normalizedScope);
   let householdIds: string[] = [];
+  let includePersonal = false;
   if (resolved.householdId) {
     if (!params.spaceMap.has(resolved.householdId)) {
-      return { householdIds: [], spaceName: null, error: "Unknown space" };
+      return {
+        householdIds: [],
+        spaceName: null,
+        includePersonal: false,
+        isAggregate: false,
+        error: "Unknown space",
+      };
     }
     householdIds = [resolved.householdId];
+  } else if (!normalizedScope || isAllSpaces) {
+    includePersonal = true;
+    householdIds = listBotSpaceIds(params.spaceMap);
   } else if (
     ["shared", "shared_space", "private_space"].includes(normalizedScope)
   ) {
     const wantsPrivate = normalizedScope === "private_space";
-    householdIds = Array.from(
-      new Set(
-        Array.from(params.spaceMap.values())
-          .filter((space) => space.isPortfolio === wantsPrivate)
-          .map((space) => space.id),
-      ),
+    householdIds = listBotSpaceIds(
+      params.spaceMap,
+      wantsPrivate ? "private" : "shared",
     );
     if (!householdIds.length) {
       return {
         householdIds: [],
         spaceName: null,
+        includePersonal: false,
+        isAggregate: false,
         error: wantsPrivate
           ? "No private spaces are available."
           : "No shared spaces are available.",
@@ -444,20 +472,24 @@ async function resolveInsightScope(params: {
       return {
         householdIds: [],
         spaceName: null,
+        includePersonal: false,
+        isAggregate: false,
         error: "You do not have access to that space",
       };
     }
   }
 
-  const spaceName =
-    householdIds.length === 1
+  const isAggregate = includePersonal || householdIds.length > 1;
+  const spaceName = includePersonal
+    ? "All spaces"
+    : householdIds.length === 1
       ? (params.spaceMap.get(householdIds[0])?.name ?? null)
       : householdIds.length > 1
         ? normalizedScope === "private_space"
           ? "All private spaces"
           : "All shared spaces"
         : null;
-  return { householdIds, spaceName };
+  return { householdIds, spaceName, includePersonal, isAggregate };
 }
 
 async function resolveInsightWallet(params: {

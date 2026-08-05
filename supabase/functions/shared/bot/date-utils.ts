@@ -164,6 +164,19 @@ export function buildRecurrenceRule(
   const provided = args?.recurrence_rule;
   if (provided && typeof provided === "object" && !Array.isArray(provided)) {
     const rule = { ...(provided as Record<string, unknown>) };
+    // Gemini can correctly identify a recurring transaction while omitting the
+    // optional frequency field. The single-save path already treats that as a
+    // monthly recurrence; preserve the same contract for object-form rules so
+    // batch and single saves never persist `is_recurring: true` with a partial
+    // rule.
+    if (
+      typeof rule.frequency !== "string" ||
+      !rule.frequency.trim()
+    ) {
+      rule.frequency = "monthly";
+    } else {
+      rule.frequency = rule.frequency.trim().toLowerCase();
+    }
     const normalizedAnchorDate = normalizeCalendarDateString(
       normalizeDateInput(rule.anchor_date, fallbackAnchor),
     );

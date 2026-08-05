@@ -738,9 +738,11 @@ export function buildListExpensesTool(
                   "private_space",
                   "shared",
                   "shared_space",
+                  "all",
+                  "all_spaces",
                 ],
                 description:
-                  "Optional high-level scope hint: personal, private space, or shared space.",
+                  "Optional high-level scope hint. Omit it to search all accessible spaces.",
               },
             }
           : {}),
@@ -822,6 +824,8 @@ export function buildFinancialInsightTool(
             "private_space",
             "shared",
             "shared_space",
+            "all",
+            "all_spaces",
           ],
           ...(mode === "rich"
             ? { description: "Account or space scope requested by the user." }
@@ -1293,7 +1297,15 @@ export function buildManageRecurringTool(
         },
         space_scope: {
           type: "STRING",
-          enum: ["personal", "personal_account"],
+          enum: [
+            "personal",
+            "personal_account",
+            "private_space",
+            "shared",
+            "shared_space",
+            "all",
+            "all_spaces",
+          ],
         },
         payer_name: stringSchema,
         split_type: splitTypeSchema,

@@ -49,7 +49,9 @@ export interface FetchExpensesOptions {
   householdId?: string | null;
   isPortfolio?: boolean;
   portfolioHouseholdIds?: string[];
-  // Optional hints used by some bot flows (currently ignored by query logic)
+  // The complete set of spaces the authenticated bot user may read. This is
+  // used only for an unscoped read; a named space still takes precedence.
+  accessibleHouseholdIds?: string[];
   personalOnly?: boolean;
   sharedOnly?: boolean;
   sharedHouseholdIds?: string[];
@@ -76,9 +78,18 @@ export async function fetchExpensesDirect(
   if (opts.type) query = query.eq("type", opts.type);
 
   const safePortfolioIds = sanitizeUuidList(opts.portfolioHouseholdIds);
+  const safeSharedIds = sanitizeUuidList(opts.sharedHouseholdIds);
+  const safeAccessibleIds = sanitizeUuidList(opts.accessibleHouseholdIds);
+  const safeContactId = sanitizeUuid(contactId);
 
   if (opts.householdId) {
     query = query.eq("household_id", opts.householdId);
+  } else if (opts.personalOnly === true) {
+    query = query.eq("contact_id", contactId).is("household_id", null);
+  } else if (opts.sharedOnly === true) {
+    query = safeSharedIds.length
+      ? query.in("household_id", safeSharedIds)
+      : query.eq("id", NEVER_UUID);
   } else if (opts.isPortfolio === true) {
     query = query.eq("contact_id", contactId);
     if (safePortfolioIds.length) {
@@ -87,16 +98,13 @@ export async function fetchExpensesDirect(
       query = query.eq("id", NEVER_UUID);
     }
   } else {
-    if (safePortfolioIds.length) {
-      const safeContactId = sanitizeUuid(contactId);
-      if (safeContactId) {
-        const csv = safePortfolioIds.join(",");
-        query = query.or(
-          `and(contact_id.eq.${safeContactId},household_id.is.null),and(contact_id.eq.${safeContactId},household_id.in.(${csv}))`,
-        );
-      } else {
-        query = query.eq("contact_id", contactId).is("household_id", null);
-      }
+    const spaceIds = safeAccessibleIds.length
+      ? safeAccessibleIds
+      : Array.from(new Set([...safePortfolioIds, ...safeSharedIds]));
+    if (spaceIds.length && safeContactId) {
+      query = query.or(
+        `and(contact_id.eq.${safeContactId},household_id.is.null),household_id.in.(${spaceIds.join(",")})`,
+      );
     } else {
       query = query.eq("contact_id", contactId).is("household_id", null);
     }

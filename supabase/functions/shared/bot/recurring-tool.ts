@@ -10,6 +10,7 @@ import {
 import {
   type BotSpaceMeta,
   hasExplicitBotSpaceScope,
+  listBotSpaceIds,
   resolveBotSpaceScope,
   resolveHouseholdSplitConfig,
 } from "./household-utils.ts";
@@ -162,8 +163,8 @@ async function invokeRecurringFunction(
   );
   if (!error && data?.success === true) {
     return includeData
-      ? { success: true, data: data.data ?? data }
-      : { success: true };
+      ? { success: true, action, data: data.data ?? data }
+      : { success: true, action };
   }
 
   const formatted = formatInvokeError(error ?? data?.error) || fallbackMessage;
@@ -192,6 +193,7 @@ function sanitizeSeriesListResult(
     : [];
   return {
     success: true,
+    action: result.action,
     data: {
       items: rows.map((row, index) => ({
         index: index + 1,
@@ -225,6 +227,7 @@ function sanitizeHistoryResult(
     : [];
   return {
     success: true,
+    action: result.action,
     data: {
       items: rows.map((row, index) => ({
         index: index + 1,
@@ -244,6 +247,71 @@ function sanitizeHistoryResult(
   };
 }
 
+async function loadPendingOccurrenceChoices(
+  params: ExecuteManageRecurringParams,
+  recurringId: string,
+): Promise<
+  | {
+    items: Array<{
+      scheduled_occurrence_date: string;
+      amount: number;
+      currency: string;
+    }>;
+  }
+  | Record<string, unknown>
+> {
+  const result = await invokeRecurringFunction(
+    params,
+    "list_history",
+    "list-recurring-occurrences",
+    { userId: params.userId, recurringId, limit: 100 },
+    "Failed to load pending recurring payments",
+  );
+  if (!result.success) return result;
+
+  const rows = result.data && typeof result.data === "object" &&
+      Array.isArray((result.data as Record<string, unknown>).items)
+    ? ((result.data as { items: Array<Record<string, unknown>> }).items)
+    : [];
+  return {
+    items: rows
+      .filter((row) => row.status === "pending")
+      .map((row) => ({
+        scheduled_occurrence_date: String(
+          row.scheduled_occurrence_date || "",
+        ),
+        amount: Number(row.amount_cents || 0) / 100,
+        currency: String(row.currency || "").toUpperCase(),
+      }))
+      .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.scheduled_occurrence_date)),
+  };
+}
+
+function buildOccurrenceConfirmationClarification(params: {
+  pendingOccurrences: Array<{
+    scheduled_occurrence_date: string;
+    amount: number;
+    currency: string;
+  }>;
+  scheduledOccurrenceDate: string | null;
+  paidDate: string | null;
+  amount: number | null;
+}) {
+  const availableDates = params.pendingOccurrences.map(
+    (occurrence) => occurrence.scheduled_occurrence_date,
+  );
+  const scheduledDateIsPending = params.scheduledOccurrenceDate !== null &&
+    availableDates.includes(params.scheduledOccurrenceDate);
+  return {
+    status: "confirmation_details_required",
+    user_response_required: true,
+    pending_occurrences: params.pendingOccurrences,
+    needs_scheduled_occurrence_date: !scheduledDateIsPending,
+    needs_paid_date: !params.paidDate,
+    needs_amount: params.amount === null,
+  };
+}
+
 export async function executeManageRecurringTool(
   params: ExecuteManageRecurringParams,
 ): Promise<Record<string, unknown>> {
@@ -256,13 +324,30 @@ export async function executeManageRecurringTool(
     };
   }
   const action = requestedAction as RecurringAction;
+  console.log(`[${params.logPrefix}] [RecurringSeriesReadTrace]`, {
+    action,
+    selectionIndex: Number.isSafeInteger(Number(params.args.selection_index))
+      ? Number(params.args.selection_index)
+      : null,
+    hasRecurringId: typeof params.args.recurring_id === "string" ||
+      typeof params.args.expense_id === "string",
+    scheduled: normalizeCalendarDate(params.args.scheduled_occurrence_date) ||
+      "none",
+    paid: normalizeCalendarDate(params.args.paid_date) || "none",
+    hasAmount: Number.isFinite(Number(params.args.amount)) &&
+      Number(params.args.amount) > 0,
+  });
 
   if (action === "list_series") {
     const limit = normalizeLimit(params.args.limit, 25);
     if (limit === null || limit > 25) {
       return { error: "limit must be between 1 and 25." };
     }
-    const scope = resolveBotSpaceScope(params.args, params.spaceMap);
+    const normalizedScope = String(
+      params.args.space_scope || params.args.scope || "",
+    ).trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const hasExplicitScope = hasExplicitBotSpaceScope(params.args);
+    const requestedScope = resolveBotSpaceScope(params.args, params.spaceMap);
     const requestedCurrencies = Array.isArray(params.args.currencies)
       ? params.args.currencies.map((value: unknown) =>
         String(value).trim().toUpperCase()
@@ -280,28 +365,94 @@ export async function executeManageRecurringTool(
     const currencies = requestedCurrencies.length > 0
       ? Array.from(new Set(requestedCurrencies))
       : undefined;
-    const result = await invokeRecurringFunction(
-      params,
-      action,
-      "recurring-read",
-      {
-        operation: "listSeries",
-        userId: params.userId,
-        ...(scope.householdId ? { householdId: scope.householdId } : {}),
-        ...(currencies ? { currencies } : {}),
-        limit,
-      },
-      "Failed to list recurring transactions",
+    // A recurring selection must be read as one logical list. Calling the
+    // existing single-scope RPC once per accessible space keeps its access
+    // checks intact while ensuring the saved selection memory contains every
+    // item the user was shown.
+    const allAccessibleScopes = [null, ...listBotSpaceIds(params.spaceMap)];
+    let scopes: Array<string | null>;
+    if (!hasExplicitScope || ["all", "all_spaces"].includes(normalizedScope)) {
+      scopes = allAccessibleScopes;
+    } else if (["personal", "personal_account"].includes(normalizedScope)) {
+      scopes = [null];
+    } else if (["shared", "shared_space", "private_space"].includes(normalizedScope)) {
+      const wantsPrivate = normalizedScope === "private_space";
+      scopes = listBotSpaceIds(
+        params.spaceMap,
+        wantsPrivate ? "private" : "shared",
+      );
+    } else if (requestedScope.householdId) {
+      scopes = [requestedScope.householdId];
+    } else {
+      return { error: "Unknown space" };
+    }
+    const results = await Promise.all(
+      scopes.map((householdId) =>
+        invokeRecurringFunction(
+          params,
+          action,
+          "recurring-read",
+          {
+            operation: "listSeries",
+            userId: params.userId,
+            ...(householdId ? { householdId } : {}),
+            ...(currencies ? { currencies } : {}),
+            limit,
+          },
+          "Failed to list recurring transactions",
+        )
+      ),
     );
-    const responseData = result.data;
-    const rows = responseData &&
-        typeof responseData === "object" &&
-        Array.isArray((responseData as Record<string, unknown>).items)
-      ? (responseData as { items: unknown[] }).items
-      : [];
+    const failedResult = results.find((result) => result.success !== true);
+    if (failedResult) return failedResult;
+    const allRows = results.flatMap((result) => {
+      const data = result.data;
+      return data &&
+          typeof data === "object" &&
+          Array.isArray((data as Record<string, unknown>).items)
+        ? (data as { items: unknown[] }).items
+        : [];
+    });
+    const rows = allRows
+      .sort((left: any, right: any) => {
+        const leftDate = String(left?.next_occurrence_date || "9999-12-31");
+        const rightDate = String(right?.next_occurrence_date || "9999-12-31");
+        return leftDate.localeCompare(rightDate) ||
+          String(left?.id || "").localeCompare(String(right?.id || ""));
+      })
+      .slice(0, limit);
+    const result = {
+      success: true,
+      action,
+      data: {
+        items: rows,
+        has_more: allRows.length > limit || results.some((result) =>
+          (result.data as Record<string, unknown> | undefined)?.has_more ===
+            true
+        ),
+      },
+    };
     const selectionItems = rows
       .map(normalizeLastListedTransactionFromRow)
       .filter((item): item is LastListedTransaction => item !== null);
+    console.log(`[${params.logPrefix}] [RecurringSeriesReadTrace]`, {
+      scope: hasExplicitScope && !["all", "all_spaces"].includes(normalizedScope)
+        ? requestedScope.householdId
+          ? "named-space"
+          : normalizedScope || "personal"
+        : "all-accessible-spaces",
+      queriedScopes: scopes.length,
+      currencies: currencies || "all",
+      requestedLimit: limit,
+      success: result.success === true,
+      returnedCount: rows.length,
+      series: rows.map((row: any) => ({
+        id: String(row?.id || "").slice(0, 8),
+        label: String(row?.raw_text || row?.merchant || "").slice(0, 48),
+        currency: row?.currency || null,
+        next: row?.next_occurrence_date || null,
+      })),
+    });
     if (result.success) {
       await params.rememberListedTransactions?.(selectionItems);
     }
@@ -340,6 +491,20 @@ export async function executeManageRecurringTool(
       },
       "Failed to list recurring payment history",
     );
+    const historyRows = result.data && typeof result.data === "object" &&
+        Array.isArray((result.data as Record<string, unknown>).items)
+      ? ((result.data as { items: Array<Record<string, unknown>> }).items)
+      : [];
+    console.log(`[${params.logPrefix}] [RecurringSeriesReadTrace]`, {
+      action: "list_history",
+      recurring: resolved.candidate.id.slice(0, 8),
+      before: beforeScheduledDate || "none",
+      success: result.success === true,
+      returnedCount: historyRows.length,
+      occurrences: historyRows.slice(0, 8).map((row) =>
+        `${String(row.scheduled_occurrence_date || "?")}:${String(row.status || "?")}`
+      ),
+    });
     return sanitizeHistoryResult(result);
   }
 
@@ -367,21 +532,47 @@ export async function executeManageRecurringTool(
     );
     if (!seriesResult.success) return seriesResult;
     const series = seriesResult.data as Record<string, any>;
-    const scheduledOccurrenceDate = normalizeCalendarDate(
-      params.args.scheduled_occurrence_date,
-    );
-    if (!scheduledOccurrenceDate) {
-      return { error: "scheduled_occurrence_date must use YYYY-MM-DD." };
-    }
-
     if (action === "confirm_occurrence") {
-      const paidDate = normalizeCalendarDate(params.args.paid_date);
+      const scheduledOccurrenceDate = normalizeCalendarDate(
+        params.args.scheduled_occurrence_date,
+      );
+      // Some model turns use the generic date field after the user says
+      // "today". For a confirmation that is the paid date; the scheduled
+      // occurrence must be selected from the pending schedule instead.
+      const paidDate = normalizeCalendarDate(
+        params.args.paid_date ?? params.args.date,
+      );
       const amount = Number(params.args.amount);
-      if (!paidDate || !Number.isFinite(amount) || amount <= 0) {
-        return {
-          error:
-            "paid_date and amount greater than 0 are required to confirm an occurrence.",
-        };
+      const validAmount = Number.isFinite(amount) && amount > 0
+        ? amount
+        : null;
+      const pendingResult = await loadPendingOccurrenceChoices(
+        params,
+        recurringId,
+      );
+      const pendingOccurrences = "items" in pendingResult &&
+          Array.isArray((pendingResult as { items?: unknown }).items)
+        ? (pendingResult as {
+          items: Array<{
+            scheduled_occurrence_date: string;
+            amount: number;
+            currency: string;
+          }>;
+        }).items
+        : null;
+      if (!pendingOccurrences) return pendingResult;
+      const confirmationClarification = buildOccurrenceConfirmationClarification({
+        pendingOccurrences,
+        scheduledOccurrenceDate,
+        paidDate,
+        amount: validAmount,
+      });
+      if (
+        confirmationClarification.needs_scheduled_occurrence_date ||
+        confirmationClarification.needs_paid_date ||
+        confirmationClarification.needs_amount
+      ) {
+        return confirmationClarification;
       }
       const hasWalletHint = params.args.wallet_name !== undefined ||
         params.args.wallet_id !== undefined ||
@@ -405,7 +596,7 @@ export async function executeManageRecurringTool(
           params.supabase,
           series.household_id,
           params.userId,
-          amount,
+          validAmount!,
           params.args,
         )
         : {};
@@ -417,8 +608,8 @@ export async function executeManageRecurringTool(
           userId: params.userId,
           recurringId,
           scheduledOccurrenceDate,
-          paidDate,
-          amount,
+          paidDate: paidDate!,
+          amount: validAmount!,
           accountId: wallet.accountId || null,
           ...(params.args.merchant !== undefined
             ? { merchant: params.args.merchant }
@@ -442,6 +633,12 @@ export async function executeManageRecurringTool(
     }
 
     if (action === "update_occurrence") {
+      const scheduledOccurrenceDate = normalizeCalendarDate(
+        params.args.scheduled_occurrence_date,
+      );
+      if (!scheduledOccurrenceDate) {
+        return { error: "scheduled_occurrence_date must use YYYY-MM-DD." };
+      }
       const paidDate = params.args.paid_date === undefined
         ? undefined
         : normalizeCalendarDate(params.args.paid_date);
@@ -508,6 +705,12 @@ export async function executeManageRecurringTool(
     const targetFunction = action === "unconfirm_occurrence"
       ? "unconfirm-recurring-occurrence"
       : "skip-recurring-occurrence";
+    const scheduledOccurrenceDate = normalizeCalendarDate(
+      params.args.scheduled_occurrence_date,
+    );
+    if (!scheduledOccurrenceDate) {
+      return { error: "scheduled_occurrence_date must use YYYY-MM-DD." };
+    }
     return await invokeRecurringFunction(
       params,
       action,
@@ -624,7 +827,7 @@ export async function executeManageRecurringTool(
       },
     );
     const success = !error && data?.success === true;
-    if (success) return { success: true };
+    if (success) return { success: true, action };
 
     const formatted = formatInvokeError(error ?? data?.error) ||
       "Failed to save recurring transaction";

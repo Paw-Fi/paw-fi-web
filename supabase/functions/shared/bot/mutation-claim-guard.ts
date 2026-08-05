@@ -54,7 +54,21 @@ const PROPOSAL_PATTERN =
 const GENERIC_SUCCESS_CLAIM_PATTERN =
   /\b(?:successfully\s+)?(?:created|updated|renamed|deleted|drafted|confirmed|set|saved)\b/i;
 
-export function isWriteMutationToolName(toolName: string | null): boolean {
+function isReadOnlyRecurringAction(toolResult: unknown): boolean {
+  const action = typeof (toolResult as Record<string, unknown> | null)?.action ===
+      "string"
+    ? (toolResult as Record<string, string>).action
+    : "";
+  return action === "list_series" || action === "list_history";
+}
+
+export function isWriteMutationToolName(
+  toolName: string | null,
+  toolResult?: unknown,
+): boolean {
+  if (toolName === "manage_recurring" && isReadOnlyRecurringAction(toolResult)) {
+    return false;
+  }
   return (
     typeof toolName === "string" && WRITE_MUTATION_TOOL_NAMES.has(toolName)
   );
@@ -115,7 +129,7 @@ export function shouldBlockUnsafeTransactionMutationClaim(params: {
 }
 
 export function buildUnsafeMutationClaimFallback(): string {
-  return "I couldn't save that transaction yet because the save step didn't complete. Please send it again or confirm the amount, category, and date.";
+  return "I couldn't save that transaction just yet. Please try again in a moment.";
 }
 
 export function shouldBlockUnsafeGenericMutationClaim(params: {
@@ -129,41 +143,7 @@ export function shouldBlockUnsafeGenericMutationClaim(params: {
 }
 
 export function buildUnsafeGenericMutationClaimFallback(): string {
-  return "I couldn't complete that action because the tool did not confirm success. Please try again.";
-}
-
-export function buildGenericMutationFailureText(
-  toolName: string | null,
-  toolResult: unknown,
-): string | null {
-  const error =
-    typeof (toolResult as Record<string, any> | null)?.error === "string"
-      ? (toolResult as Record<string, string>).error.trim()
-      : "";
-  if (!error) return null;
-
-  if (toolName === "create_space")
-    return `I couldn't create that space. ${error}`;
-  if (toolName === "create_space_invite")
-    return `I couldn't create that invitation link. ${error}`;
-  if (toolName === "set_default_space")
-    return `I couldn't update your default space. ${error}`;
-  if (toolName === "get_space_info")
-    return `I couldn't get that space info. ${error}`;
-  if (toolName === "update_space_settings")
-    return `I couldn't update that space. ${error}`;
-  if (toolName === "draft_budget")
-    return `I couldn't draft that budget. ${error}`;
-  if (toolName === "confirm_budget")
-    return `I couldn't confirm that budget. ${error}`;
-  if (toolName === "set_budget") return `I couldn't set that budget. ${error}`;
-  if (toolName === "set_pocket")
-    return `I couldn't update that pocket. ${error}`;
-  if (toolName === "delete_pocket")
-    return `I couldn't delete that pocket. ${error}`;
-  if (toolName === "delete_transaction")
-    return `I couldn't delete that transaction. ${error}`;
-  return null;
+  return "I couldn't complete that just yet. Please try again in a moment.";
 }
 
 // Exported for callers that want to force a tool call on the next model turn.

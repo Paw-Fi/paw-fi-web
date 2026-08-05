@@ -40,6 +40,6 @@ Deno.test("golden wallet mutation claim guard blocks fake success", () => {
   );
   assertEquals(
     buildUnsafeWalletMutationClaimFallback(),
-    "I couldn't complete that wallet action yet because the wallet tool did not confirm success. Please try again.",
+    "I couldn't complete that wallet action just yet. Please try again in a moment.",
   );
 });
