@@ -1,6 +1,35 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
 
+/**
+ * Messages that are safe to ignore and should not appear in the digest.
+ * These are operational events that have automatic recovery mechanisms
+ * or represent expected transient conditions.
+ *
+ * Each entry is matched against sample_message using exact equality.
+ */
+const EXCLUDED_MESSAGES: readonly string[] = [
+  // verify-iap-purchase: Ownership transfer where previous owner had no matching
+  // lifetime entitlement to revoke (already free, different source, or legacy row).
+  // The new owner correctly received entitlement; this is informational only.
+  "Transferred App Store Lifetime ownership did not revoke the expected previous entitlement",
+
+  // telegram-ai-bot: Image/audio/file analysis via Gemini timed out after 30s.
+  // User receives a helpful retry message via Telegram; no data loss.
+  "The image is taking longer than expected to process. Please try again with a clearer photo.",
+  "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
+  "The audio is taking longer than expected to process. Please try again by speaking clearly.",
+
+  // plaid-sync-transactions: Transient network error during Plaid sync.
+  // Automatic retry via job queue; user sees "will retry" message.
+  "Bank sync transport failed after retries",
+];
+
+function isExcludedMessage(message: string | null): boolean {
+  if (!message) return false;
+  return EXCLUDED_MESSAGES.includes(message);
+}
+
 interface ErrorAggregateRow {
   window_start: string;
   function_name: string;
@@ -367,12 +396,40 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      rowsForDigest.push(...(rows as ErrorAggregateRow[]));
+      // Filter out messages that are safe to ignore before adding to digest
+      const filteredRows = (rows as ErrorAggregateRow[]).filter(
+        (row) => !isExcludedMessage(row.sample_message),
+      );
+      const excludedCount = rows.length - filteredRows.length;
+
+      if (filteredRows.length === 0) {
+        // All rows were excluded - mark as sent without sending email
+        const { error: markEmptyAfterFilterError } = await supabase
+          .from("edge_error_digest_windows")
+          .upsert({
+            window_start: windowStart,
+            status: "sent",
+            sent_at: new Date().toISOString(),
+            last_error: null,
+            updated_at: new Date().toISOString(),
+          });
+        if (markEmptyAfterFilterError) throw markEmptyAfterFilterError;
+
+        results.push({
+          window_start: windowStart,
+          skipped: "all_excluded",
+          excluded_count: excludedCount,
+        });
+        continue;
+      }
+
+      rowsForDigest.push(...filteredRows);
       windowsForDigest.push(windowStart);
       results.push({
         window_start: windowStart,
         queued_for_batch: true,
-        unique_fingerprints: rows.length,
+        unique_fingerprints: filteredRows.length,
+        excluded_fingerprints: excludedCount,
       });
     } catch (windowError) {
       const lastError = trimText(
