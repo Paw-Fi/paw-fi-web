@@ -59,6 +59,7 @@ import {
 import { useCreatorDateRange } from "@/hooks/use-creator-date-range";
 import { dateToIso } from "@/lib/creator-date-range";
 import { supabase } from "@/lib/supabase";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/creator/source-tracker/")({
   component: SourceTrackerPage,
