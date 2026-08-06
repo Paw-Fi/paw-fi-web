@@ -43,12 +43,18 @@ export function SubscriptionMetricCard({
   const isPositive = changePercent >= 0;
   const hasProviders = providers && (providers.stripe > 0 || providers.apple > 0);
 
-  // Format trend data for chart
-  const chartData = trend.map((point) => ({
-    date: formatShortDate(point.date),
-    fullDate: point.date,
-    value: point.value,
-  }));
+  // Format trend data for chart as a cumulative series
+  const chartData = (() => {
+    let running = 0;
+    return trend.map((point) => {
+      running += point.value;
+      return {
+        date: formatShortDate(point.date),
+        fullDate: point.date,
+        value: running,
+      };
+    });
+  })();
 
   return (
     <Card className="border-white/10 bg-slate-900/50">

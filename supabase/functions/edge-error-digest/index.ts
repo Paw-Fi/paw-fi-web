@@ -20,6 +20,11 @@ const EXCLUDED_MESSAGES: readonly string[] = [
   "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
   "The audio is taking longer than expected to process. Please try again by speaking clearly.",
 
+  // telegram-ai-bot: New/unverified Telegram user sent a message. The RPC returns
+  // 0 rows when no contact exists, causing PGRST116. User is correctly prompted
+  // to verify their account; this is expected for new users.
+  '{"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"JSON object requested, multiple (or no) rows returned"}',
+
   // plaid-sync-transactions: Transient network error during Plaid sync.
   // Automatic retry via job queue; user sees "will retry" message.
   "Bank sync transport failed after retries",

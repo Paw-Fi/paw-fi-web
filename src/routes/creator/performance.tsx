@@ -39,11 +39,13 @@ import { useDailySignups } from "@/hooks/use-daily-signups";
 import { useDailySignupsByTimezone } from "@/hooks/use-daily-signups-by-timezone";
 import { useDAUByTimezone } from "@/hooks/use-dau-by-timezone";
 import { useTotalDAU } from "@/hooks/use-total-dau";
+import { useCreatorDateRange } from "@/hooks/use-creator-date-range";
 import { UserGeoMap } from "@/components/performance/user-geo-map";
 import { DAUGeoMap } from "@/components/performance/dau-geo-map";
 import { SubscriptionMetricCard } from "@/components/performance/subscription-metric-card";
 import { TrialingUsersTable } from "@/components/performance/trialing-users-table";
 import { MessageAnalyticsCard } from "@/components/performance/message-analytics-card";
+import { RangeComparisonCard } from "@/components/performance/range-comparison-card";
 import {
   Card,
   CardContent,
@@ -52,14 +54,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { dateToIso, getInclusiveDayCount } from "@/lib/creator-date-range";
 import { CreatorHeader } from "@/components/creator/creator-header";
 
 export const Route = createFileRoute("/creator/performance")({
@@ -92,12 +87,20 @@ function formatTrialExpiryDistance(expiryAt: number): string {
 
 function PerformancePage() {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [rangePreset, setRangePreset] = useState("last_28_days");
-  const [startDate, setStartDate] = useState(() =>
-    dateToIso(subDays(new Date(), 27)),
-  );
-  const [endDate, setEndDate] = useState(() => dateToIso(new Date()));
-  const [compareEnabled, setCompareEnabled] = useState(true);
+  const {
+    rangePreset,
+    startDate,
+    endDate,
+    compareEnabled,
+    normalizedRange,
+    compareRange,
+    rangeLabel,
+    compareLabel,
+    setStartDate,
+    setEndDate,
+    setCompareEnabled,
+    applyPreset,
+  } = useCreatorDateRange();
   const totalUsers = useUserCount(refreshKey);
   const usersByTimezone = useUsersByTimezone(refreshKey);
   const subscriptionAnalytics = useSubscriptionAnalytics(refreshKey);
@@ -120,31 +123,6 @@ function PerformancePage() {
       .filter((user) => Number.isFinite(user.expiryAt) && user.expiryAt >= now)
       .sort((a, b) => a.expiryAt - b.expiryAt);
   }, [trialingUsers]);
-
-  const normalizedRange = useMemo(() => {
-    const safeStart = isValidIsoDate(startDate)
-      ? startDate
-      : dateToIso(subDays(new Date(), 27));
-    const safeEnd = isValidIsoDate(endDate) ? endDate : dateToIso(new Date());
-    return safeStart <= safeEnd
-      ? { start: safeStart, end: safeEnd }
-      : { start: safeEnd, end: safeStart };
-  }, [startDate, endDate]);
-
-  const compareRange = useMemo(() => {
-    const days = getInclusiveDayCount(
-      normalizedRange.start,
-      normalizedRange.end,
-    );
-    const currentStart = parseISO(normalizedRange.start);
-    const compareEnd = subDays(currentStart, 1);
-    const compareStart = subDays(compareEnd, days - 1);
-
-    return {
-      start: dateToIso(compareStart),
-      end: dateToIso(compareEnd),
-    };
-  }, [normalizedRange.end, normalizedRange.start]);
 
   const isRangeCoveredByLocalData = useMemo(() => {
     const earliestAvailable = dateToIso(subDays(new Date(), 59));
@@ -208,26 +186,6 @@ function PerformancePage() {
       ),
       yearlyCompare: sumTrendByDateRange(
         subscriptionAnalytics.yearlyActive.trend,
-        compareRange.start,
-        compareRange.end,
-      ),
-      premiumMonthlyCurrent: sumTrendByDateRange(
-        subscriptionAnalytics.premiumMonthlyActive.trend,
-        normalizedRange.start,
-        normalizedRange.end,
-      ),
-      premiumMonthlyCompare: sumTrendByDateRange(
-        subscriptionAnalytics.premiumMonthlyActive.trend,
-        compareRange.start,
-        compareRange.end,
-      ),
-      premiumYearlyCurrent: sumTrendByDateRange(
-        subscriptionAnalytics.premiumYearlyActive.trend,
-        normalizedRange.start,
-        normalizedRange.end,
-      ),
-      premiumYearlyCompare: sumTrendByDateRange(
-        subscriptionAnalytics.premiumYearlyActive.trend,
         compareRange.start,
         compareRange.end,
       ),
@@ -351,34 +309,6 @@ function PerformancePage() {
     [subscriptionTotals],
   );
 
-  const rangeLabel = `${format(parseISO(normalizedRange.start), "MMM d, yyyy")} - ${format(parseISO(normalizedRange.end), "MMM d, yyyy")}`;
-  const compareLabel = `${format(parseISO(compareRange.start), "MMM d, yyyy")} - ${format(parseISO(compareRange.end), "MMM d, yyyy")}`;
-
-  const applyPreset = (preset: string) => {
-    setRangePreset(preset);
-
-    const today = new Date();
-    if (preset === "last_7_days") {
-      setStartDate(dateToIso(subDays(today, 6)));
-      setEndDate(dateToIso(today));
-      return;
-    }
-    if (preset === "last_14_days") {
-      setStartDate(dateToIso(subDays(today, 13)));
-      setEndDate(dateToIso(today));
-      return;
-    }
-    if (preset === "last_28_days") {
-      setStartDate(dateToIso(subDays(today, 27)));
-      setEndDate(dateToIso(today));
-      return;
-    }
-    if (preset === "last_30_days") {
-      setStartDate(dateToIso(subDays(today, 29)));
-      setEndDate(dateToIso(today));
-    }
-  };
-
   return (
     <>
       <div className="min-h-screen bg-slate-950 py-10 text-white">
@@ -401,74 +331,28 @@ function PerformancePage() {
             </Button>
           </header>
 
-          <Card className="border-white/10 bg-slate-900/50">
-            <CardHeader>
-              <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                Date Filter
-              </CardDescription>
-              <CardTitle className="mt-1 text-xl text-white">
-                Range & Comparison
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-4">
-                <Select value={rangePreset} onValueChange={applyPreset}>
-                  <SelectTrigger className="border-white/10 bg-black/20 text-white">
-                    <SelectValue placeholder="Preset" />
-                  </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-slate-900 text-white">
-                    <SelectItem value="last_7_days">Last 7 days</SelectItem>
-                    <SelectItem value="last_14_days">Last 14 days</SelectItem>
-                    <SelectItem value="last_28_days">Last 28 days</SelectItem>
-                    <SelectItem value="last_30_days">Last 30 days</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(event) => {
-                    setRangePreset("custom");
-                    setStartDate(event.target.value);
-                  }}
-                  className="border-white/10 bg-black/20 text-white"
-                />
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(event) => {
-                    setRangePreset("custom");
-                    setEndDate(event.target.value);
-                  }}
-                  className="border-white/10 bg-black/20 text-white"
-                />
-                <Button
-                  variant={compareEnabled ? "default" : "outline"}
-                  className="justify-start"
-                  onClick={() => setCompareEnabled((prev) => !prev)}
-                >
-                  Compare previous period
-                </Button>
-              </div>
-              <div className="text-xs text-white/60">
-                <span className="text-white/80">Current:</span> {rangeLabel}
-                {compareEnabled ? (
-                  <span>
-                    {" "}
-                    <span className="text-white/80">Compare:</span>{" "}
-                    {compareLabel}
-                  </span>
-                ) : null}
-              </div>
-              {!isRangeCoveredByLocalData && (
+          <RangeComparisonCard
+            rangePreset={rangePreset}
+            startDate={startDate}
+            endDate={endDate}
+            compareEnabled={compareEnabled}
+            rangeLabel={rangeLabel}
+            compareLabel={compareLabel}
+            onPresetChange={applyPreset}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            onCompareToggle={() => setCompareEnabled((prev) => !prev)}
+            hiddenPresets={["this_month"]}
+            footer={
+              !isRangeCoveredByLocalData ? (
                 <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                   Some cards are powered by 60-day trend snapshots right now.
                   Pick a range inside the last 60 days for fully comparable
                   trend metrics.
                 </p>
-              )}
-            </CardContent>
-          </Card>
+              ) : null
+            }
+          />
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-white">Trend Visuals</h2>
@@ -695,38 +579,6 @@ function PerformancePage() {
                 providers={subscriptionAnalytics.yearlyActive.providers}
                 color="#8B5CF6"
                 icon={<CalendarDays className="h-4 w-4" />}
-              />
-              <SubscriptionMetricCard
-                title="Premium Monthly Active"
-                value={subscriptionTotals.premiumMonthlyCurrent}
-                trend={filterTrendByDateRange(
-                  subscriptionAnalytics.premiumMonthlyActive.trend,
-                  normalizedRange.start,
-                  normalizedRange.end,
-                )}
-                changePercent={calculateChangePercent(
-                  subscriptionTotals.premiumMonthlyCurrent,
-                  subscriptionTotals.premiumMonthlyCompare,
-                )}
-                providers={subscriptionAnalytics.premiumMonthlyActive.providers}
-                color="#D97706"
-                icon={<BadgeCheck className="h-4 w-4" />}
-              />
-              <SubscriptionMetricCard
-                title="Premium Yearly Active"
-                value={subscriptionTotals.premiumYearlyCurrent}
-                trend={filterTrendByDateRange(
-                  subscriptionAnalytics.premiumYearlyActive.trend,
-                  normalizedRange.start,
-                  normalizedRange.end,
-                )}
-                changePercent={calculateChangePercent(
-                  subscriptionTotals.premiumYearlyCurrent,
-                  subscriptionTotals.premiumYearlyCompare,
-                )}
-                providers={subscriptionAnalytics.premiumYearlyActive.providers}
-                color="#A855F7"
-                icon={<BadgeCheck className="h-4 w-4" />}
               />
               <SubscriptionMetricCard
                 title="Lifetime Active"
@@ -958,24 +810,6 @@ function PerformancePage() {
       </div>
     </>
   );
-}
-
-function dateToIso(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
-
-function isValidIsoDate(value: string): boolean {
-  if (!value) return false;
-  const parsed = parseISO(value);
-  return !Number.isNaN(parsed.getTime());
-}
-
-function getInclusiveDayCount(startIso: string, endIso: string): number {
-  const days = eachDayOfInterval({
-    start: parseISO(startIso),
-    end: parseISO(endIso),
-  });
-  return days.length;
 }
 
 function filterTrendByDateRange(

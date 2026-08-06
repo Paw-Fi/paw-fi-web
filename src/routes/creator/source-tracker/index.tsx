@@ -13,7 +13,7 @@ import {
   TableProperties,
   TrendingUp,
 } from "lucide-react";
-import { eachDayOfInterval, format, parseISO, subDays } from "date-fns";
+import { eachDayOfInterval, format, parseISO } from "date-fns";
 import {
   Area,
   AreaChart,
@@ -30,6 +30,7 @@ import {
 } from "recharts";
 
 import { CreatorHeader } from "@/components/creator/creator-header";
+import { RangeComparisonCard } from "@/components/performance/range-comparison-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,14 +40,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -63,19 +56,13 @@ import {
   type DownloadAttributionSession,
   type DownloadAttributionSourceSummary,
 } from "@/hooks/use-download-attribution-sessions";
+import { useCreatorDateRange } from "@/hooks/use-creator-date-range";
+import { dateToIso } from "@/lib/creator-date-range";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/creator/source-tracker/")({
   component: SourceTrackerPage,
 });
-
-type RangePreset =
-  | "last_7_days"
-  | "last_14_days"
-  | "last_28_days"
-  | "last_30_days"
-  | "this_month"
-  | "custom";
 
 interface OnboardingSourceCount {
   source: string;
@@ -85,40 +72,22 @@ interface OnboardingSourceCount {
 function SourceTrackerPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
-  const [rangePreset, setRangePreset] = useState<RangePreset>("last_28_days");
-  const [startDate, setStartDate] = useState(() =>
-    dateToIso(subDays(new Date(), 27)),
-  );
-  const [endDate, setEndDate] = useState(() => dateToIso(new Date()));
-  const [compareEnabled, setCompareEnabled] = useState(true);
+  const {
+    rangePreset,
+    startDate,
+    endDate,
+    compareEnabled,
+    normalizedRange,
+    compareRange,
+    rangeLabel,
+    compareLabel,
+    setStartDate,
+    setEndDate,
+    setCompareEnabled,
+    applyPreset,
+  } = useCreatorDateRange();
 
   const { rows, isLoading, error } = useDownloadAttributionSessions(refreshKey);
-
-  const normalizedRange = useMemo(() => {
-    const safeStart = isValidIsoDate(startDate)
-      ? startDate
-      : dateToIso(subDays(new Date(), 27));
-    const safeEnd = isValidIsoDate(endDate) ? endDate : dateToIso(new Date());
-
-    return safeStart <= safeEnd
-      ? { start: safeStart, end: safeEnd }
-      : { start: safeEnd, end: safeStart };
-  }, [startDate, endDate]);
-
-  const compareRange = useMemo(() => {
-    const days = getInclusiveDayCount(
-      normalizedRange.start,
-      normalizedRange.end,
-    );
-    const currentStart = parseISO(normalizedRange.start);
-    const priorEnd = subDays(currentStart, 1);
-    const priorStart = subDays(priorEnd, days - 1);
-
-    return {
-      start: dateToIso(priorStart),
-      end: dateToIso(priorEnd),
-    };
-  }, [normalizedRange.end, normalizedRange.start]);
 
   const onboardingSourcesQuery = useQuery({
     queryKey: [
@@ -311,39 +280,6 @@ function SourceTrackerPage() {
     },
   ];
 
-  const rangeLabel = `${format(parseISO(normalizedRange.start), "MMM d, yyyy")} - ${format(parseISO(normalizedRange.end), "MMM d, yyyy")}`;
-  const compareLabel = `${format(parseISO(compareRange.start), "MMM d, yyyy")} - ${format(parseISO(compareRange.end), "MMM d, yyyy")}`;
-
-  const applyPreset = (preset: RangePreset) => {
-    setRangePreset(preset);
-
-    const today = new Date();
-    if (preset === "last_7_days") {
-      setStartDate(dateToIso(subDays(today, 6)));
-      setEndDate(dateToIso(today));
-      return;
-    }
-    if (preset === "last_14_days") {
-      setStartDate(dateToIso(subDays(today, 13)));
-      setEndDate(dateToIso(today));
-      return;
-    }
-    if (preset === "last_28_days") {
-      setStartDate(dateToIso(subDays(today, 27)));
-      setEndDate(dateToIso(today));
-      return;
-    }
-    if (preset === "last_30_days") {
-      setStartDate(dateToIso(subDays(today, 29)));
-      setEndDate(dateToIso(today));
-      return;
-    }
-    if (preset === "this_month") {
-      setStartDate(format(today, "yyyy-MM-01"));
-      setEndDate(dateToIso(today));
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 py-10 text-white">
       <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
@@ -369,70 +305,18 @@ function SourceTrackerPage() {
           </Button>
         </header>
 
-        <Card className="border-white/10 bg-slate-900/50">
-          <CardHeader>
-            <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-              Date Filter
-            </CardDescription>
-            <CardTitle className="mt-1 text-xl text-white">
-              Range & Comparison
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-4">
-              <Select
-                value={rangePreset}
-                onValueChange={(value) => applyPreset(value as RangePreset)}
-              >
-                <SelectTrigger className="border-white/10 bg-black/20 text-white">
-                  <SelectValue placeholder="Preset" />
-                </SelectTrigger>
-                <SelectContent className="border-white/10 bg-slate-900 text-white">
-                  <SelectItem value="last_7_days">Last 7 days</SelectItem>
-                  <SelectItem value="last_14_days">Last 14 days</SelectItem>
-                  <SelectItem value="last_28_days">Last 28 days</SelectItem>
-                  <SelectItem value="last_30_days">Last 30 days</SelectItem>
-                  <SelectItem value="this_month">This month</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(event) => {
-                  setRangePreset("custom");
-                  setStartDate(event.target.value);
-                }}
-                className="border-white/10 bg-black/20 text-white"
-              />
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(event) => {
-                  setRangePreset("custom");
-                  setEndDate(event.target.value);
-                }}
-                className="border-white/10 bg-black/20 text-white"
-              />
-              <Button
-                variant={compareEnabled ? "default" : "outline"}
-                className="justify-start"
-                onClick={() => setCompareEnabled((prev) => !prev)}
-              >
-                Compare previous period
-              </Button>
-            </div>
-            <div className="text-xs text-white/60">
-              <span className="text-white/80">Current:</span> {rangeLabel}
-              {compareEnabled ? (
-                <span>
-                  {" "}
-                  <span className="text-white/80">Compare:</span> {compareLabel}
-                </span>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
+        <RangeComparisonCard
+          rangePreset={rangePreset}
+          startDate={startDate}
+          endDate={endDate}
+          compareEnabled={compareEnabled}
+          rangeLabel={rangeLabel}
+          compareLabel={compareLabel}
+          onPresetChange={applyPreset}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onCompareToggle={() => setCompareEnabled((prev) => !prev)}
+        />
 
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -1030,24 +914,6 @@ function formatDate(value: string | null): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
-}
-
-function dateToIso(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
-
-function isValidIsoDate(value: string): boolean {
-  if (!value) return false;
-  const parsed = parseISO(value);
-  return !Number.isNaN(parsed.getTime());
-}
-
-function getInclusiveDayCount(startIso: string, endIso: string): number {
-  const days = eachDayOfInterval({
-    start: parseISO(startIso),
-    end: parseISO(endIso),
-  });
-  return days.length;
 }
 
 function safeDateKey(value: string | null): string | null {
