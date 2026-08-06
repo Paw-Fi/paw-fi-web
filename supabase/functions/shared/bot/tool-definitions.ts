@@ -1195,6 +1195,7 @@ export function buildManageRecurringTool(
             "delete",
             "list_series",
             "list_history",
+            "analyze_history",
             "confirm_occurrence",
             "update_occurrence",
             "unconfirm_occurrence",
@@ -1203,10 +1204,23 @@ export function buildManageRecurringTool(
           ...(mode === "rich"
             ? {
                 description:
-                  "Use update for the recurring series and update_occurrence for one confirmed payment.",
+                  "Use update for the recurring series and update_occurrence for one confirmed payment. Use analyze_history to find highest/lowest bills or trends for a recurring transaction.",
               }
             : {}),
         },
+        analytics_type:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                enum: ["max", "min", "trend", "summary"],
+                description:
+                  "For analyze_history: what analytics to focus on. 'max' finds highest payment, 'min' finds lowest, 'trend' shows if amounts are increasing/decreasing, 'summary' returns all stats.",
+              }
+            : {
+                type: "STRING",
+                enum: ["max", "min", "trend", "summary"],
+              },
+        include_chart: booleanSchema,
         recurring_id:
           mode === "rich"
             ? {

@@ -34,6 +34,7 @@ Deno.test(
       "delete",
       "list_series",
       "list_history",
+      "analyze_history",
       "confirm_occurrence",
       "update_occurrence",
       "unconfirm_occurrence",
@@ -48,6 +49,8 @@ Deno.test(
         "limit",
         "update_future_amount",
         "account_id",
+        "analytics_type",
+        "include_chart",
       ]
     ) {
       assert(field in properties, `manage_recurring exposes ${field}`);
@@ -122,20 +125,45 @@ Deno.test(
       functions: {
         invoke: (name: string, options: any) => {
           invokes.push({ name, body: options.body });
-          return Promise.resolve({
-            data: {
-              success: true,
-              data: name === "recurring-read"
-                ? {
+          if (name === "recurring-read") {
+            return Promise.resolve({
+              data: {
+                success: true,
+                data: {
                   id: "22222222-2222-4222-8222-222222222222",
                   household_id: null,
                   account_id: "33333333-3333-4333-8333-333333333333",
                   amount_cents: 120000,
                   currency: "EUR",
                   recurrence_rule: { frequency: "monthly" },
-                }
-                : {},
-            },
+                },
+              },
+              error: null,
+            });
+          }
+          if (name === "list-recurring-occurrences") {
+            // Return pending occurrences for confirm_occurrence to succeed
+            return Promise.resolve({
+              data: {
+                success: true,
+                data: {
+                  items: [
+                    {
+                      id: "pending:22222222:2026-08-01",
+                      recurring_id: "22222222-2222-4222-8222-222222222222",
+                      scheduled_occurrence_date: "2026-08-01",
+                      status: "pending",
+                      amount_cents: 120000,
+                      currency: "EUR",
+                    },
+                  ],
+                },
+              },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { success: true, data: {} },
             error: null,
           });
         },
@@ -183,6 +211,7 @@ Deno.test(
         .map((entry) => entry.name)
         .filter((name) => name !== "recurring-read"),
       [
+        "list-recurring-occurrences",
         "list-recurring-occurrences",
         "confirm-recurring-occurrence",
         "update-recurring-occurrence",
@@ -399,5 +428,296 @@ Deno.test(
         },
       },
     });
+  },
+);
+
+Deno.test(
+  "confirm_occurrence falls back to active recurring context when recurring_id missing",
+  async () => {
+    const invokes: Array<{ name: string; body: Record<string, unknown> }> = [];
+    let savedActiveRecurring: any = null;
+
+    const supabase = {
+      functions: {
+        invoke: (name: string, options: any) => {
+          invokes.push({ name, body: options.body });
+          if (name === "recurring-read") {
+            return Promise.resolve({
+              data: {
+                success: true,
+                data: {
+                  id: "33333333-3333-4333-8333-333333333333",
+                  household_id: null,
+                  account_id: null,
+                  amount_cents: 5000,
+                  currency: "EUR",
+                  category: "subscriptions",
+                  raw_text: "test subscription",
+                  recurrence_rule: { frequency: "monthly" },
+                },
+              },
+              error: null,
+            });
+          }
+          if (name === "list-recurring-occurrences") {
+            return Promise.resolve({
+              data: {
+                success: true,
+                data: {
+                  items: [
+                    {
+                      id: "pending:33333333:2026-07-30",
+                      recurring_id: "33333333-3333-4333-8333-333333333333",
+                      scheduled_occurrence_date: "2026-07-30",
+                      status: "pending",
+                      amount_cents: 5000,
+                      currency: "EUR",
+                    },
+                  ],
+                },
+              },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { success: true, data: {} },
+            error: null,
+          });
+        },
+      },
+    };
+
+    // Simulate having an active recurring context in session state
+    const sessionState = {
+      moneko_state: {
+        active_recurring: {
+          recurring_id: "33333333-3333-4333-8333-333333333333",
+          description: "test subscription",
+          category: "subscriptions",
+          amount: 50,
+          currency: "EUR",
+          saved_at: new Date().toISOString(),
+        },
+      },
+    };
+
+    // Call without recurring_id - should fall back to active context
+    const result = await executeManageRecurringTool({
+      supabase,
+      internalFunctionKey: "internal-key",
+      userId: "user-1",
+      userCurrency: "EUR",
+      userTimezone: "UTC",
+      userMessageContent: "confirm them all",
+      args: {
+        action: "confirm_occurrence",
+        scheduled_occurrence_date: "2026-07-30",
+        paid_date: "2026-07-30",
+        amount: 50,
+      },
+      spaceMap: new Map(),
+      lastListedTransactions: [],
+      sessionState,
+      logPrefix: "test-bot",
+      setActiveRecurring: async (context) => {
+        savedActiveRecurring = context;
+      },
+    });
+
+    assertEquals(result.success, true);
+    // Verify it used the recurring_id from the active context
+    const confirmInvoke = invokes.find(
+      (i) => i.name === "confirm-recurring-occurrence",
+    );
+    assertEquals(
+      confirmInvoke?.body?.recurringId,
+      "33333333-3333-4333-8333-333333333333",
+    );
+  },
+);
+
+
+Deno.test(
+  "list_series auto-sets active recurring context when single recurring has pending occurrences",
+  async () => {
+    let savedActiveRecurring: any = null;
+    let remembered: any[] = [];
+
+    const supabase = {
+      functions: {
+        invoke: (name: string, options: any) => {
+          if (name === "recurring-read") {
+            return Promise.resolve({
+              data: {
+                success: true,
+                data: {
+                  items: [
+                    {
+                      id: "11111111-1111-4111-8111-111111111111",
+                      amount_cents: 10000,
+                      currency: "EUR",
+                      date: "2026-07-01",
+                      category: "subscriptions",
+                      raw_text: "Netflix",
+                      type: "expense",
+                      household_id: null,
+                      actionable_count: 0, // No pending
+                      next_occurrence_date: "2026-08-01",
+                    },
+                    {
+                      id: "22222222-2222-4222-8222-222222222222",
+                      amount_cents: 50000,
+                      currency: "EUR",
+                      date: "2026-06-15",
+                      category: "utilities",
+                      raw_text: "Test subscription with pending",
+                      merchant: "Test Co",
+                      type: "expense",
+                      household_id: null,
+                      actionable_count: 3, // Has 3 pending occurrences
+                      next_occurrence_date: "2026-07-15",
+                    },
+                    {
+                      id: "33333333-3333-4333-8333-333333333333",
+                      amount_cents: 80000,
+                      currency: "EUR",
+                      date: "2026-07-05",
+                      category: "rent",
+                      raw_text: "Apartment rent",
+                      type: "expense",
+                      household_id: null,
+                      actionable_count: 0, // No pending
+                      next_occurrence_date: "2026-08-05",
+                    },
+                  ],
+                },
+              },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { success: true, data: {} },
+            error: null,
+          });
+        },
+      },
+    };
+
+    const result = await executeManageRecurringTool({
+      supabase,
+      internalFunctionKey: "internal-key",
+      userId: "user-1",
+      userCurrency: "EUR",
+      userTimezone: "UTC",
+      userMessageContent: "show my recurring",
+      args: {
+        action: "list_series",
+        space_scope: "personal",
+      },
+      spaceMap: new Map(),
+      lastListedTransactions: [],
+      logPrefix: "test-bot",
+      rememberListedTransactions: async (items) => {
+        remembered = items;
+      },
+      setActiveRecurring: async (context) => {
+        savedActiveRecurring = context;
+      },
+    });
+
+    assertEquals(result.success, true);
+    // Should remember all 3 items
+    assertEquals(remembered.length, 3);
+
+    // Should auto-set active context to the one with pending occurrences
+    assertEquals(savedActiveRecurring !== null, true);
+    assertEquals(
+      savedActiveRecurring?.recurring_id,
+      "22222222-2222-4222-8222-222222222222",
+    );
+    assertEquals(
+      savedActiveRecurring?.description,
+      "Test subscription with pending",
+    );
+    assertEquals(savedActiveRecurring?.amount, 500);
+    assertEquals(savedActiveRecurring?.currency, "EUR");
+  },
+);
+
+Deno.test(
+  "list_series does NOT auto-set active context when multiple recurring have pending",
+  async () => {
+    let savedActiveRecurring: any = null;
+
+    const supabase = {
+      functions: {
+        invoke: (name: string, options: any) => {
+          if (name === "recurring-read") {
+            return Promise.resolve({
+              data: {
+                success: true,
+                data: {
+                  items: [
+                    {
+                      id: "11111111-1111-4111-8111-111111111111",
+                      amount_cents: 10000,
+                      currency: "EUR",
+                      date: "2026-07-01",
+                      category: "subscriptions",
+                      raw_text: "Netflix",
+                      type: "expense",
+                      household_id: null,
+                      actionable_count: 2, // Has pending
+                      next_occurrence_date: "2026-08-01",
+                    },
+                    {
+                      id: "22222222-2222-4222-8222-222222222222",
+                      amount_cents: 50000,
+                      currency: "EUR",
+                      date: "2026-06-15",
+                      category: "utilities",
+                      raw_text: "Electricity",
+                      type: "expense",
+                      household_id: null,
+                      actionable_count: 3, // Also has pending
+                      next_occurrence_date: "2026-07-15",
+                    },
+                  ],
+                },
+              },
+              error: null,
+            });
+          }
+          return Promise.resolve({
+            data: { success: true, data: {} },
+            error: null,
+          });
+        },
+      },
+    };
+
+    const result = await executeManageRecurringTool({
+      supabase,
+      internalFunctionKey: "internal-key",
+      userId: "user-1",
+      userCurrency: "EUR",
+      userTimezone: "UTC",
+      userMessageContent: "show my recurring",
+      args: {
+        action: "list_series",
+        space_scope: "personal",
+      },
+      spaceMap: new Map(),
+      lastListedTransactions: [],
+      logPrefix: "test-bot",
+      rememberListedTransactions: async () => {},
+      setActiveRecurring: async (context) => {
+        savedActiveRecurring = context;
+      },
+    });
+
+    assertEquals(result.success, true);
+    // Should NOT auto-set because multiple have pending
+    assertEquals(savedActiveRecurring, null);
   },
 );

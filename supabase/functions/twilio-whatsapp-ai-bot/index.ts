@@ -178,6 +178,8 @@ import {
 } from "../shared/bot/financial-insight-intent.ts";
 import { executeBotFinancialInsight } from "../shared/bot/financial-insight-tool.ts";
 import {
+  clearActiveRecurringContext,
+  clearActiveTransactionContext,
   clearLastListedTransactions,
   type LastListedTransaction,
   loadSessionState,
@@ -185,7 +187,10 @@ import {
   normalizeSessionState,
   type PendingBudgetDraft,
   readLastListedTransactions,
+  readActiveTransactionContext,
   saveSessionState,
+  setActiveRecurringContext,
+  setActiveTransactionContext,
   type SessionState,
   setLastListedTransactions,
 } from "../shared/bot/session-state.ts";
@@ -1313,6 +1318,27 @@ Deno.serve(async (req: Request) => {
                 WHATSAPP_DEBUG,
               );
               state = setLastListedTransactions(state, memoryItems);
+              
+              // If there's exactly one transaction, set it as the active context
+              // This helps with follow-up questions like "delete it" or "change the amount"
+              if (memoryItems.length === 1) {
+                const single = memoryItems[0];
+                console.log("[twilio-whatsapp-ai-bot] auto-setting active transaction context (single result)", {
+                  transaction_id: single.id.slice(0, 8),
+                  description: single.description,
+                });
+                state = setActiveTransactionContext(state, {
+                  transaction_id: single.id,
+                  description: single.description,
+                  category: single.category,
+                  amount: single.amountMajor,
+                  currency: single.currency,
+                  date: single.date,
+                  type: single.type,
+                  household_id: single.household_id,
+                });
+              }
+              
               await saveSessionState(
                 supabase,
                 String(session.id),
@@ -1419,6 +1445,8 @@ Deno.serve(async (req: Request) => {
                 userId,
                 args: call.args,
                 items,
+                sessionState: state,
+                logPrefix: "twilio-whatsapp-ai-bot",
               });
               if ("needs_disambiguation" in resolved) {
                 toolResult = resolved;
@@ -1680,6 +1708,8 @@ Deno.serve(async (req: Request) => {
               userId,
               args: call.args,
               items,
+              sessionState: state,
+              logPrefix: "twilio-whatsapp-ai-bot",
             });
             if ("needs_disambiguation" in resolved) {
               toolResult = resolved;
@@ -3726,6 +3756,29 @@ Deno.serve(async (req: Request) => {
             toolResult = success
               ? { success: true, data: data?.data ?? data }
               : { error: formatted };
+            
+            // If this was a recurring transaction, set active recurring context
+            // so follow-up operations like "remind me 4 days before" work
+            if (success && call.args.is_recurring) {
+              const newRecurringId = data?.data?.id || data?.id;
+              if (newRecurringId) {
+                sessionState = setActiveRecurringContext(sessionState, {
+                  recurring_id: String(newRecurringId),
+                  description: transaction.description,
+                  category: transaction.category,
+                  amount: transaction.amount,
+                  currency: currencyResult.currency,
+                });
+                await saveSessionState(
+                  supabase,
+                  sessionId,
+                  sessionState,
+                  debugNotes,
+                  WHATSAPP_DEBUG,
+                );
+              }
+            }
+            
             if (!success) {
               if (WHATSAPP_DEBUG) {
                 debugNotes.push(`add-transaction error: ${formatted}`);
@@ -4880,10 +4933,31 @@ Deno.serve(async (req: Request) => {
               spaceMap,
               lastListedTransactions:
                 readLastListedTransactions(sessionState).items || [],
+              sessionState,
               logPrefix: "twilio-whatsapp-ai-bot",
               reportFailure: reportTwilioToolInvokeFailure,
               rememberListedTransactions: async (items) => {
                 sessionState = setLastListedTransactions(sessionState, items);
+                await saveSessionState(
+                  supabase,
+                  sessionId,
+                  sessionState,
+                  debugNotes,
+                  WHATSAPP_DEBUG,
+                );
+              },
+              setActiveRecurring: async (context) => {
+                sessionState = setActiveRecurringContext(sessionState, context);
+                await saveSessionState(
+                  supabase,
+                  sessionId,
+                  sessionState,
+                  debugNotes,
+                  WHATSAPP_DEBUG,
+                );
+              },
+              clearActiveRecurring: async () => {
+                sessionState = clearActiveRecurringContext(sessionState);
                 await saveSessionState(
                   supabase,
                   sessionId,

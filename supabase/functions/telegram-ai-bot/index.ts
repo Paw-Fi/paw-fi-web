@@ -191,7 +191,9 @@ import {
   normalizeMatchString,
   normalizeSessionState,
   readLastListedTransactions,
+  readActiveRecurringContext,
   saveSessionState,
+  setActiveRecurringContext,
   type SessionState,
   setLastListedTransactions,
 } from "../shared/bot/session-state.ts";
@@ -1991,6 +1993,24 @@ Deno.serve(async (req: Request) => {
                 toolResult = success
                   ? { success: true, data: data?.data ?? data }
                   : { error: formatted };
+                if (success && call.args.is_recurring === true) {
+                  const newRecurringId = data?.data?.id || data?.id;
+                  if (newRecurringId) {
+                    sessionState = setActiveRecurringContext(sessionState, {
+                      recurring_id: String(newRecurringId),
+                      description: transaction.description,
+                      category: transaction.category,
+                      amount: transaction.amount,
+                      currency: currencyResult.currency,
+                    });
+                    await saveSessionState(
+                      supabase,
+                      sessionId,
+                      sessionState,
+                      debugNotes,
+                    );
+                  }
+                }
                 if (!success) {
                   await reportTelegramToolInvokeFailure({
                     traceId,

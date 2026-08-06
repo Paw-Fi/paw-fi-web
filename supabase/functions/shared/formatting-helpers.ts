@@ -216,6 +216,202 @@ export function buildCategoryChart(expenses: NormalizedExpense[]) {
   return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 }
 
+/**
+ * Occurrence data point for building time-series bar charts of recurring payment history.
+ */
+export interface OccurrenceDataPoint {
+  /** Scheduled date in YYYY-MM-DD format */
+  date: string;
+  /** Amount in major units (e.g., 100.50 for $100.50) */
+  amount: number;
+  /** Currency code */
+  currency: string;
+  /** Status: 'confirmed', 'pending', 'skipped' */
+  status: string;
+}
+
+/**
+ * Analytics computed from occurrence history.
+ */
+export interface OccurrenceAnalytics {
+  /** Highest confirmed payment */
+  max: { amount: number; date: string } | null;
+  /** Lowest confirmed payment */
+  min: { amount: number; date: string } | null;
+  /** Average confirmed payment */
+  average: number | null;
+  /** Total of all confirmed payments */
+  total: number;
+  /** Count of confirmed payments */
+  confirmedCount: number;
+  /** Count of skipped occurrences */
+  skippedCount: number;
+  /** Count of pending occurrences */
+  pendingCount: number;
+  /** Trend direction: 'increasing', 'decreasing', 'stable', or null if insufficient data */
+  trend: "increasing" | "decreasing" | "stable" | null;
+  /** Currency used */
+  currency: string;
+}
+
+/**
+ * Computes analytics from occurrence history data points.
+ */
+export function computeOccurrenceAnalytics(
+  occurrences: OccurrenceDataPoint[],
+): OccurrenceAnalytics {
+  const confirmed = occurrences.filter((o) => o.status === "confirmed");
+  const skipped = occurrences.filter((o) => o.status === "skipped");
+  const pending = occurrences.filter((o) => o.status === "pending");
+
+  // Sort confirmed by date ascending for trend analysis
+  const sortedConfirmed = [...confirmed].sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+
+  let max: { amount: number; date: string } | null = null;
+  let min: { amount: number; date: string } | null = null;
+  let total = 0;
+
+  for (const occ of confirmed) {
+    total += occ.amount;
+    if (max === null || occ.amount > max.amount) {
+      max = { amount: occ.amount, date: occ.date };
+    }
+    if (min === null || occ.amount < min.amount) {
+      min = { amount: occ.amount, date: occ.date };
+    }
+  }
+
+  const average = confirmed.length > 0 ? total / confirmed.length : null;
+
+  // Compute trend: compare first half average to second half average
+  let trend: "increasing" | "decreasing" | "stable" | null = null;
+  if (sortedConfirmed.length >= 4) {
+    const midpoint = Math.floor(sortedConfirmed.length / 2);
+    const firstHalf = sortedConfirmed.slice(0, midpoint);
+    const secondHalf = sortedConfirmed.slice(midpoint);
+    const firstAvg =
+      firstHalf.reduce((sum, o) => sum + o.amount, 0) / firstHalf.length;
+    const secondAvg =
+      secondHalf.reduce((sum, o) => sum + o.amount, 0) / secondHalf.length;
+
+    const changePercent = ((secondAvg - firstAvg) / firstAvg) * 100;
+    if (changePercent > 5) {
+      trend = "increasing";
+    } else if (changePercent < -5) {
+      trend = "decreasing";
+    } else {
+      trend = "stable";
+    }
+  }
+
+  return {
+    max,
+    min,
+    average,
+    total,
+    confirmedCount: confirmed.length,
+    skippedCount: skipped.length,
+    pendingCount: pending.length,
+    trend,
+    currency: occurrences[0]?.currency || "",
+  };
+}
+
+/**
+ * Builds a bar chart URL showing occurrence amounts over time.
+ * Uses QuickChart.io for rendering.
+ */
+export function buildOccurrenceHistoryBarChart(
+  occurrences: OccurrenceDataPoint[],
+  options?: {
+    title?: string;
+    highlightMax?: boolean;
+    highlightMin?: boolean;
+    showPending?: boolean;
+    currency?: string;
+  },
+): string | undefined {
+  // Filter to confirmed + optionally pending, sorted by date ascending
+  const showPending = options?.showPending ?? false;
+  const dataPoints = occurrences
+    .filter((o) => o.status === "confirmed" || (showPending && o.status === "pending"))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (dataPoints.length === 0) return undefined;
+
+  const analytics = computeOccurrenceAnalytics(occurrences);
+  const currency = options?.currency || analytics.currency || "";
+
+  // Format labels as month abbreviations (Jan, Feb, etc.)
+  const labels = dataPoints.map((o) => {
+    const [year, month] = o.date.split("-");
+    const monthNames = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    const monthIndex = parseInt(month, 10) - 1;
+    return `${monthNames[monthIndex] || month} ${year.slice(2)}`;
+  });
+
+  const data = dataPoints.map((o) => o.amount);
+
+  // Generate colors: highlight max/min if requested
+  const defaultColor = "#36A2EB";
+  const maxColor = "#FF6384";
+  const minColor = "#4BC0C0";
+  const pendingColor = "#CCCCCC";
+
+  const backgroundColors = dataPoints.map((o) => {
+    if (o.status === "pending") return pendingColor;
+    if (options?.highlightMax && analytics.max && o.date === analytics.max.date) {
+      return maxColor;
+    }
+    if (options?.highlightMin && analytics.min && o.date === analytics.min.date) {
+      return minColor;
+    }
+    return defaultColor;
+  });
+
+  const title = options?.title || `Payment History${currency ? ` (${currency})` : ""}`;
+
+  const chartConfig = {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: currency ? `Amount (${currency})` : "Amount",
+          data,
+          backgroundColor: backgroundColors,
+          borderColor: backgroundColors.map((c) =>
+            c === pendingColor ? "#999999" : c
+          ),
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      plugins: {
+        title: { display: true, text: title },
+        legend: { display: false },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: currency || "Amount" },
+        },
+        x: {
+          title: { display: true, text: "Month" },
+        },
+      },
+    },
+  };
+
+  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
+}
+
 export function formatExpensesSummary(
   expenses: NormalizedExpense[],
   includeChartNote: boolean,

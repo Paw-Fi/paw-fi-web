@@ -1,6 +1,11 @@
 import { buildInternalInvokeHeaders } from "../auth.ts";
 import { VALID_CURRENCIES } from "../currency-validator.ts";
-import { formatInvokeError } from "../formatting-helpers.ts";
+import {
+  buildOccurrenceHistoryBarChart,
+  computeOccurrenceAnalytics,
+  formatInvokeError,
+  type OccurrenceDataPoint,
+} from "../formatting-helpers.ts";
 import {
   buildRecurrenceRule,
   buildRecurrenceRuleForUpdate,
@@ -17,7 +22,9 @@ import {
 import {
   type LastListedTransaction,
   normalizeLastListedTransactionFromRow,
+  readActiveRecurringContext,
   resolveLastListedSelection,
+  type SessionState,
 } from "./session-state.ts";
 import {
   invokeTransactionSave,
@@ -47,11 +54,20 @@ type ExecuteManageRecurringParams = {
   args: Record<string, any>;
   spaceMap: Map<string, BotSpaceMeta>;
   lastListedTransactions: LastListedTransaction[];
+  sessionState?: SessionState | null;
   logPrefix: string;
   reportFailure?: (failure: BotToolInvokeFailure) => Promise<boolean>;
   rememberListedTransactions?: (
     items: LastListedTransaction[],
   ) => Promise<void>;
+  setActiveRecurring?: (context: {
+    recurring_id: string;
+    description?: string;
+    category?: string;
+    amount?: number;
+    currency?: string;
+  }) => Promise<void>;
+  clearActiveRecurring?: () => Promise<void>;
 };
 
 const recurringActions = [
@@ -60,6 +76,7 @@ const recurringActions = [
   "delete",
   "list_series",
   "list_history",
+  "analyze_history",
   "confirm_occurrence",
   "update_occurrence",
   "unconfirm_occurrence",
@@ -116,11 +133,37 @@ async function resolveRecurringSelection(params: ExecuteManageRecurringParams) {
     };
   }
 
+  // Try to resolve from last listed transactions first
   const selected = resolveLastListedSelection(
     params.lastListedTransactions,
     params.args,
     spaceNameByHouseholdId,
   );
+
+  // If selection failed and there's an active recurring context, use it as fallback
+  // This handles cases where user is confirming pending occurrences shown in a previous turn
+  if ("error" in selected && params.sessionState) {
+    const activeRecurring = readActiveRecurringContext(params.sessionState);
+    if (activeRecurring?.recurring_id) {
+      return {
+        candidate: {
+          id: activeRecurring.recurring_id,
+          amountMajor: activeRecurring.amount || 0,
+          currency: activeRecurring.currency || "",
+          date: "",
+          category: activeRecurring.category || "",
+          description: activeRecurring.description || "",
+        } satisfies LastListedTransaction,
+      };
+    }
+
+    // Final fallback: if there's exactly one item in lastListedTransactions, use it
+    // This handles "confirm them" after AI showed a single recurring with pending occurrences
+    if (params.lastListedTransactions.length === 1) {
+      return { candidate: params.lastListedTransactions[0] };
+    }
+  }
+
   return selected;
 }
 
@@ -451,10 +494,28 @@ export async function executeManageRecurringTool(
         label: String(row?.raw_text || row?.merchant || "").slice(0, 48),
         currency: row?.currency || null,
         next: row?.next_occurrence_date || null,
+        pending: row?.actionable_count || 0,
       })),
     });
     if (result.success) {
       await params.rememberListedTransactions?.(selectionItems);
+
+      // If there's exactly one recurring transaction with pending occurrences,
+      // set it as the active recurring context to help with follow-up confirmations.
+      // Check for actionable_count > 0 which indicates pending occurrences.
+      const rowsWithPending = rows.filter(
+        (row: any) => Number(row?.actionable_count || 0) > 0,
+      );
+      if (rowsWithPending.length === 1 && params.setActiveRecurring) {
+        const row = rowsWithPending[0] as Record<string, any>;
+        await params.setActiveRecurring({
+          recurring_id: String(row.id || ""),
+          description: row.raw_text || row.description || row.merchant,
+          category: row.category,
+          amount: row.amount_cents ? Number(row.amount_cents) / 100 : undefined,
+          currency: row.currency,
+        });
+      }
     }
     return sanitizeSeriesListResult(result, params);
   }
@@ -506,6 +567,163 @@ export async function executeManageRecurringTool(
       ),
     });
     return sanitizeHistoryResult(result);
+  }
+
+  if (action === "analyze_history") {
+    const resolved = await resolveRecurringSelection(params);
+    if ("needs_disambiguation" in resolved) return resolved;
+    if ("error" in resolved) {
+      return buildRecurringSelectionClarification(
+        resolved.error,
+        params.logPrefix,
+      );
+    }
+
+    // Fetch all available occurrence history (up to 100 records)
+    const result = await invokeRecurringFunction(
+      params,
+      action,
+      "list-recurring-occurrences",
+      {
+        userId: params.userId,
+        recurringId: resolved.candidate.id,
+        limit: 100,
+      },
+      "Failed to load recurring payment history for analysis",
+    );
+
+    if (!result.success) return result;
+
+    const historyRows = result.data && typeof result.data === "object" &&
+        Array.isArray((result.data as Record<string, unknown>).items)
+      ? ((result.data as { items: Array<Record<string, unknown>> }).items)
+      : [];
+
+    if (historyRows.length === 0) {
+      return {
+        success: true,
+        action,
+        analytics: null,
+        message: "No payment history found for this recurring transaction.",
+      };
+    }
+
+    // Convert to OccurrenceDataPoint format
+    const occurrenceDataPoints: OccurrenceDataPoint[] = historyRows.map(
+      (row) => ({
+        date: String(row.scheduled_occurrence_date || ""),
+        amount: row.amount_cents != null
+          ? Number(row.amount_cents) / 100
+          : 0,
+        currency: String(row.currency || "").toUpperCase(),
+        status: String(row.status || "pending"),
+      }),
+    );
+
+    // Compute analytics
+    const analytics = computeOccurrenceAnalytics(occurrenceDataPoints);
+
+    // Determine what analytics to focus on based on analytics_type
+    const analyticsType = String(
+      params.args.analytics_type || "summary",
+    ).toLowerCase();
+
+    // Build chart if requested or if asking about max/min/trend
+    const includeChart = params.args.include_chart === true ||
+      ["max", "min", "trend"].includes(analyticsType);
+
+    let chartUrl: string | undefined;
+    if (includeChart) {
+      chartUrl = buildOccurrenceHistoryBarChart(occurrenceDataPoints, {
+        title: resolved.candidate.description
+          ? `${resolved.candidate.description} - Payment History`
+          : "Payment History",
+        highlightMax: analyticsType === "max" || analyticsType === "summary",
+        highlightMin: analyticsType === "min",
+        showPending: false,
+        currency: analytics.currency,
+      });
+    }
+
+    // Build focused response based on analytics_type
+    let focusedResult: Record<string, unknown>;
+    switch (analyticsType) {
+      case "max":
+        focusedResult = {
+          highest_payment: analytics.max
+            ? {
+                amount: analytics.max.amount,
+                date: analytics.max.date,
+                currency: analytics.currency,
+              }
+            : null,
+          total_confirmed_payments: analytics.confirmedCount,
+        };
+        break;
+      case "min":
+        focusedResult = {
+          lowest_payment: analytics.min
+            ? {
+                amount: analytics.min.amount,
+                date: analytics.min.date,
+                currency: analytics.currency,
+              }
+            : null,
+          total_confirmed_payments: analytics.confirmedCount,
+        };
+        break;
+      case "trend":
+        focusedResult = {
+          trend: analytics.trend,
+          average_payment: analytics.average,
+          currency: analytics.currency,
+          total_confirmed_payments: analytics.confirmedCount,
+        };
+        break;
+      default:
+        // summary - return all analytics
+        focusedResult = {
+          highest_payment: analytics.max
+            ? {
+                amount: analytics.max.amount,
+                date: analytics.max.date,
+                currency: analytics.currency,
+              }
+            : null,
+          lowest_payment: analytics.min
+            ? {
+                amount: analytics.min.amount,
+                date: analytics.min.date,
+                currency: analytics.currency,
+              }
+            : null,
+          average_payment: analytics.average,
+          total_spent: analytics.total,
+          trend: analytics.trend,
+          confirmed_payments: analytics.confirmedCount,
+          skipped_occurrences: analytics.skippedCount,
+          pending_occurrences: analytics.pendingCount,
+          currency: analytics.currency,
+        };
+    }
+
+    console.log(`[${params.logPrefix}] [RecurringSeriesReadTrace]`, {
+      action: "analyze_history",
+      recurring: resolved.candidate.id.slice(0, 8),
+      analyticsType,
+      confirmedCount: analytics.confirmedCount,
+      max: analytics.max?.amount,
+      min: analytics.min?.amount,
+      trend: analytics.trend,
+      hasChart: !!chartUrl,
+    });
+
+    return {
+      success: true,
+      action,
+      analytics: focusedResult,
+      ...(chartUrl ? { chart_url: chartUrl } : {}),
+    };
   }
 
   if (
@@ -572,6 +790,17 @@ export async function executeManageRecurringTool(
         confirmationClarification.needs_paid_date ||
         confirmationClarification.needs_amount
       ) {
+        // Store the active recurring context so subsequent confirmations can find it
+        // This handles the multi-turn flow where user says "confirm them" without specifying which recurring
+        if (params.setActiveRecurring) {
+          await params.setActiveRecurring({
+            recurring_id: recurringId,
+            description: series.raw_text || series.description,
+            category: series.category,
+            amount: series.amount_cents ? Number(series.amount_cents) / 100 : undefined,
+            currency: series.currency,
+          });
+        }
         return confirmationClarification;
       }
       const hasWalletHint = params.args.wallet_name !== undefined ||
@@ -827,7 +1056,21 @@ export async function executeManageRecurringTool(
       },
     );
     const success = !error && data?.success === true;
-    if (success) return { success: true, action };
+    if (success) {
+      // Set the newly created recurring as active context for follow-up operations
+      // (e.g., "remind me 4 days before" right after adding)
+      const newRecurringId = data?.data?.id || data?.id;
+      if (newRecurringId && params.setActiveRecurring) {
+        await params.setActiveRecurring({
+          recurring_id: String(newRecurringId),
+          description: transaction.description,
+          category: transaction.category,
+          amount: transaction.amount,
+          currency: currency.currency,
+        });
+      }
+      return { success: true, action };
+    }
 
     const formatted = formatInvokeError(error ?? data?.error) ||
       "Failed to save recurring transaction";

@@ -1,6 +1,8 @@
 import {
   type LastListedTransaction,
   resolveLastListedSelection,
+  type SessionState,
+  readActiveTransactionContext,
 } from "./session-state.ts";
 
 type SupabaseLike = {
@@ -10,6 +12,8 @@ type SupabaseLike = {
 type SelectionArgs = {
   selection_index?: unknown;
   match?: unknown;
+  transaction_id?: unknown;
+  expense_id?: unknown;
 };
 
 function normalizeMatchString(value: unknown): string {
@@ -70,6 +74,8 @@ export async function resolveBotTransactionSelection(params: {
   userId: string;
   args: SelectionArgs;
   items: LastListedTransaction[];
+  sessionState?: SessionState | null;
+  logPrefix?: string;
   spaceNameByHouseholdId?: (
     householdId: string | null | undefined,
   ) => string | null;
@@ -81,6 +87,16 @@ export async function resolveBotTransactionSelection(params: {
     }
   | { error: string }
 > {
+  // Check for direct transaction ID first
+  const directId = [params.args.transaction_id, params.args.expense_id]
+    .find((value) => typeof value === "string" && value.trim())
+    ?.toString()
+    .trim();
+  
+  if (directId) {
+    return await validateActiveBotTransactionId(params.supabase, directId);
+  }
+
   const listedSelection = resolveLastListedSelection(
     params.items,
     params.args,
@@ -94,6 +110,23 @@ export async function resolveBotTransactionSelection(params: {
     );
   }
 
+  // Fallback 1: Check active transaction context from session state
+  if (params.sessionState) {
+    const activeTransaction = readActiveTransactionContext(params.sessionState);
+    if (activeTransaction?.transaction_id) {
+      return await validateActiveBotTransactionId(
+        params.supabase,
+        activeTransaction.transaction_id,
+      );
+    }
+
+    // Fallback 2: If there's exactly one item in lastListedTransactions, use it
+    if (params.items.length === 1) {
+      return await validateActiveBotTransactionId(params.supabase, params.items[0].id);
+    }
+  }
+
+  // Fallback 3: Database search by description_contains
   const match =
     params.args.match &&
     typeof params.args.match === "object" &&

@@ -39,10 +39,41 @@ export type LastListedTransactionsMemory = {
   saved_at: string;
 };
 
+/**
+ * Stores the currently active recurring transaction context.
+ * Used when the user is working with pending occurrences for a specific recurring.
+ */
+export type ActiveRecurringContext = {
+  recurring_id: string;
+  description?: string;
+  category?: string;
+  amount?: number;
+  currency?: string;
+  saved_at: string;
+};
+
+/**
+ * Stores the currently active transaction context for multi-turn conversations.
+ * Used when the AI is discussing a specific transaction (e.g., asking user to confirm deletion).
+ */
+export type ActiveTransactionContext = {
+  transaction_id: string;
+  description?: string;
+  category?: string;
+  amount?: number;
+  currency?: string;
+  date?: string;
+  type?: "expense" | "income";
+  household_id?: string | null;
+  saved_at: string;
+};
+
 export type SessionState = {
   moneko_state?: {
     pending_budget?: PendingBudgetDraft;
     last_listed_transactions?: LastListedTransactionsMemory;
+    active_recurring?: ActiveRecurringContext;
+    active_transaction?: ActiveTransactionContext;
   };
 };
 
@@ -239,6 +270,164 @@ export function clearLastListedTransactions(
   const base = normalizeSessionState(state);
   if (!base.moneko_state?.last_listed_transactions) return base;
   const { last_listed_transactions: _last, ...rest } = base.moneko_state;
+  if (Object.keys(rest).length === 0) {
+    const { moneko_state: _state, ...withoutState } = base;
+    return withoutState;
+  }
+  return { ...base, moneko_state: rest };
+}
+
+const ACTIVE_RECURRING_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Reads the active recurring context from session state.
+ * Returns null if not set or expired.
+ */
+export function readActiveRecurringContext(
+  state: SessionState | null,
+): ActiveRecurringContext | null {
+  const context = state?.moneko_state?.active_recurring;
+  if (!context || typeof context !== "object") return null;
+
+  const savedAt = (context as any).saved_at;
+  const savedAtMs = typeof savedAt === "string" ? Date.parse(savedAt) : NaN;
+  if (!Number.isFinite(savedAtMs)) return null;
+  if (Date.now() - savedAtMs > ACTIVE_RECURRING_TTL_MS) return null;
+
+  const recurringId = (context as any).recurring_id;
+  if (typeof recurringId !== "string" || !recurringId.trim()) return null;
+
+  return {
+    recurring_id: recurringId.trim(),
+    description: typeof (context as any).description === "string"
+      ? (context as any).description
+      : undefined,
+    category: typeof (context as any).category === "string"
+      ? (context as any).category
+      : undefined,
+    amount: typeof (context as any).amount === "number"
+      ? (context as any).amount
+      : undefined,
+    currency: typeof (context as any).currency === "string"
+      ? (context as any).currency
+      : undefined,
+    saved_at: savedAt,
+  };
+}
+
+/**
+ * Sets the active recurring context in session state.
+ * Call this when showing pending occurrences for a recurring transaction.
+ */
+export function setActiveRecurringContext(
+  state: SessionState | null,
+  context: Omit<ActiveRecurringContext, "saved_at">,
+): SessionState {
+  const base = normalizeSessionState(state);
+  return {
+    ...base,
+    moneko_state: {
+      ...(base.moneko_state || {}),
+      active_recurring: {
+        ...context,
+        saved_at: new Date().toISOString(),
+      },
+    },
+  };
+}
+
+/**
+ * Clears the active recurring context from session state.
+ */
+export function clearActiveRecurringContext(
+  state: SessionState | null,
+): SessionState {
+  const base = normalizeSessionState(state);
+  if (!base.moneko_state?.active_recurring) return base;
+  const { active_recurring: _active, ...rest } = base.moneko_state;
+  if (Object.keys(rest).length === 0) {
+    const { moneko_state: _state, ...withoutState } = base;
+    return withoutState;
+  }
+  return { ...base, moneko_state: rest };
+}
+
+const ACTIVE_TRANSACTION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Reads the active transaction context from session state.
+ * Returns null if not set or expired.
+ */
+export function readActiveTransactionContext(
+  state: SessionState | null,
+): ActiveTransactionContext | null {
+  const context = state?.moneko_state?.active_transaction;
+  if (!context || typeof context !== "object") return null;
+
+  const savedAt = (context as any).saved_at;
+  const savedAtMs = typeof savedAt === "string" ? Date.parse(savedAt) : NaN;
+  if (!Number.isFinite(savedAtMs)) return null;
+  if (Date.now() - savedAtMs > ACTIVE_TRANSACTION_TTL_MS) return null;
+
+  const transactionId = (context as any).transaction_id;
+  if (typeof transactionId !== "string" || !transactionId.trim()) return null;
+
+  return {
+    transaction_id: transactionId.trim(),
+    description: typeof (context as any).description === "string"
+      ? (context as any).description
+      : undefined,
+    category: typeof (context as any).category === "string"
+      ? (context as any).category
+      : undefined,
+    amount: typeof (context as any).amount === "number"
+      ? (context as any).amount
+      : undefined,
+    currency: typeof (context as any).currency === "string"
+      ? (context as any).currency
+      : undefined,
+    date: typeof (context as any).date === "string"
+      ? (context as any).date
+      : undefined,
+    type: (context as any).type === "income" ? "income" : 
+          (context as any).type === "expense" ? "expense" : undefined,
+    household_id: typeof (context as any).household_id === "string"
+      ? (context as any).household_id
+      : (context as any).household_id === null ? null : undefined,
+    saved_at: savedAt,
+  };
+}
+
+/**
+ * Sets the active transaction context in session state.
+ * Call this when discussing a specific transaction for potential update/delete.
+ */
+export function setActiveTransactionContext(
+  state: SessionState | null,
+  context: Omit<ActiveTransactionContext, "saved_at">,
+): SessionState {
+  const base = normalizeSessionState(state);
+  return {
+    ...base,
+    moneko_state: {
+      ...(base.moneko_state || {}),
+      active_transaction: {
+        ...context,
+        saved_at: new Date().toISOString(),
+      },
+    },
+  };
+}
+
+/**
+ * Clears the active transaction context from session state.
+ */
+export function clearActiveTransactionContext(
+  state: SessionState | null,
+): SessionState {
+  const base = normalizeSessionState(state);
+  if (!base.moneko_state?.active_transaction) return base;
+  const { active_transaction: _active, ...rest } = base.moneko_state;
   if (Object.keys(rest).length === 0) {
     const { moneko_state: _state, ...withoutState } = base;
     return withoutState;
