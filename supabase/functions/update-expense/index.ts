@@ -2105,17 +2105,6 @@ Deno.serve(async (req: Request) => {
     const targetAccountIdForAtomicWrite = hasTargetAccountUpdate
       ? ((updates as any).account_id as string | null | undefined)
       : ((expense as any).account_id as string | null | undefined);
-    if (
-      splitRpcOwnsStructuralFields &&
-      hasTargetAccountUpdate &&
-      typeof targetAccountIdForAtomicWrite !== "string"
-    ) {
-      return errorResponse(
-        "Failed to resolve target account for split expense",
-        "SERVER_ERROR",
-        500,
-      );
-    }
     const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };

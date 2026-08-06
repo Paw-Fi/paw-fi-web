@@ -371,13 +371,21 @@ export async function saveTransactionsBatchInternal(
         "[save-transactions-batch] Failed to verify household membership:",
         membershipError,
       );
+      await reportEdgeFunctionError({
+        functionName: "save-transactions-batch",
+        error: membershipError,
+        context: {
+          step: "verify_household_membership",
+          householdId: requestedHouseholdId,
+        },
+      });
       throw new SaveTransactionsBatchError(
         "Failed to verify household membership",
         500,
       );
     }
 
-    if (!membership && isPortfolio) {
+    if (!membership) {
       throw new SaveTransactionsBatchError(
         "Forbidden household scope",
         403,
@@ -385,21 +393,49 @@ export async function saveTransactionsBatchInternal(
       );
     }
 
-    if (membership && !isPortfolio) {
+    if (!isPortfolio) {
       resolvedHouseholdId = requestedHouseholdId;
 
-      const { data: members } = await supabase
+      const { data: members, error: membersError } = await supabase
         .from("household_members")
         .select("user_id")
         .eq("household_id", requestedHouseholdId);
 
-      if (members && members.length > 0) {
-        householdMembers = members;
-        householdAutoSplitSettings = await fetchHouseholdAutoSplitSettings(
-          supabase,
-          requestedHouseholdId,
+      if (membersError || !members || members.length === 0) {
+        const error = membersError ?? new Error("NO_ACTIVE_HOUSEHOLD_MEMBERS");
+        console.error(
+          "[save-transactions-batch] Failed to load household members for split:",
+          error,
+        );
+        await reportEdgeFunctionError({
+          functionName: "save-transactions-batch",
+          error,
+          context: {
+            step: "load_household_members_for_split",
+            householdId: requestedHouseholdId,
+          },
+        });
+        throw new SaveTransactionsBatchError(
+          "Unable to load household members for split",
+          503,
+          "SERVER_ERROR",
         );
       }
+
+      householdMembers = members;
+      householdAutoSplitSettings = await fetchHouseholdAutoSplitSettings(
+        supabase,
+        requestedHouseholdId,
+      );
+      console.log("[HouseholdAutoSplitTrace]", {
+        debugTraceId: body.debugTraceId ?? null,
+        householdId: requestedHouseholdId,
+        memberCount: householdMembers.length,
+        autoSplitEnabled: householdAutoSplitSettings.autoSplitEnabled,
+        defaultSplitType:
+          householdAutoSplitSettings.defaultConfig?.splitType ?? "equal",
+        transactionCount: body.transactions.length,
+      });
     }
   }
 
@@ -942,6 +978,34 @@ export async function saveTransactionsBatchInternal(
               members: householdMembers,
               customSplits: effective.customSplits,
               reconcileMemberChanges: effective.source === "default",
+            });
+            console.log("[HouseholdDefaultSplitDecisionTrace]", {
+              stage: "server-decision",
+              trace: body.debugTraceId ?? null,
+              household: resolvedHouseholdId.slice(0, 8),
+              index: meta.index,
+              amountCents: record.amount_cents,
+              requestCustomSplits: summarizeCustomSplits(meta.customSplits),
+              settings: {
+                enabled: householdAutoSplitSettings.autoSplitEnabled,
+                defaultCustomSplits: summarizeCustomSplits(
+                  householdAutoSplitSettings.defaultConfig,
+                ),
+              },
+              effective: {
+                source: effective.source,
+                customSplits: summarizeCustomSplits(effective.customSplits),
+              },
+              result: buildResult.ok
+                ? {
+                  splitType: buildResult.group.split_type,
+                  payer: buildResult.group.payer_user_id.slice(-8),
+                  lines: buildResult.lines.map((line) => ({
+                    member: line.user_id.slice(-8),
+                    cents: line.amount_cents,
+                  })),
+                }
+                : { error: buildResult.error },
             });
             if (!buildResult.ok) {
               results.push({

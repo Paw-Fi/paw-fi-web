@@ -3,6 +3,7 @@
 import {
   assertEquals,
   assertExists,
+  assertRejects,
 } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
@@ -14,7 +15,9 @@ import {
   createHouseholdTransactionWithSplit,
   type CustomSplits,
   expectedSplitParentFromTransaction,
+  fetchHouseholdAutoSplitSettings,
   type HouseholdAutoSplitSettings,
+  HouseholdAutoSplitSettingsError,
   isMissingSettlementRpcError,
   parseExplicitReSplitRequested,
   removeHouseholdSplitWithPatch,
@@ -414,6 +417,123 @@ Deno.test(
       customSplits: settings.defaultConfig,
       source: "default",
     });
+  },
+);
+
+Deno.test(
+  "resolveEffectiveSplit uses the equal household default when no split is requested",
+  () => {
+    const settings: HouseholdAutoSplitSettings = {
+      autoSplitEnabled: true,
+      defaultConfig: null,
+    };
+
+    assertEquals(resolveEffectiveSplit(undefined, settings), {
+      kind: "customSplits",
+      customSplits: null,
+      source: "default",
+    });
+
+    const result = buildHouseholdSplitRecords({
+      householdId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      transactionId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      payerUserId: twoMembers[0].user_id,
+      amountCents: 4000,
+      currency: "USD",
+      description: "Lunch",
+      members: twoMembers,
+      customSplits: null,
+    });
+    assertEquals(result.ok, true);
+    if (!result.ok) throw new Error(result.error);
+    assertEquals(result.lines.map((line) => line.amount_cents), [2000, 2000]);
+  },
+);
+
+Deno.test(
+  "resolveEffectiveSplit honors an explicit equal request over a stored custom default",
+  () => {
+    const settings: HouseholdAutoSplitSettings = {
+      autoSplitEnabled: true,
+      defaultConfig: {
+        splitType: "percentage",
+        memberSplits: [
+          { userId: twoMembers[0].user_id, percentage: 20 },
+          { userId: twoMembers[1].user_id, percentage: 80 },
+        ],
+      },
+    };
+
+    assertEquals(resolveEffectiveSplit({ splitType: "equal" }, settings), {
+      kind: "customSplits",
+      customSplits: null,
+      source: "explicit",
+    });
+  },
+);
+
+Deno.test(
+  "fetchHouseholdAutoSplitSettings rejects a failed settings read instead of disabling splitting",
+  async () => {
+    const query = {
+      select() {
+        return this;
+      },
+      eq() {
+        return this;
+      },
+      maybeSingle() {
+        return Promise.resolve({
+          data: null,
+          error: { message: "temporary database failure" },
+        });
+      },
+    };
+    const supabase = {
+      from() {
+        return query;
+      },
+    };
+
+    await assertRejects(
+      () => fetchHouseholdAutoSplitSettings(supabase, "household-1"),
+      HouseholdAutoSplitSettingsError,
+      "Unable to load household split settings",
+    );
+  },
+);
+
+Deno.test(
+  "fetchHouseholdAutoSplitSettings rejects malformed stored custom defaults",
+  async () => {
+    const query = {
+      select() {
+        return this;
+      },
+      eq() {
+        return this;
+      },
+      maybeSingle() {
+        return Promise.resolve({
+          data: {
+            ai_use_default_split: true,
+            ai_default_split_config: { splitType: "percentage" },
+          },
+          error: null,
+        });
+      },
+    };
+    const supabase = {
+      from() {
+        return query;
+      },
+    };
+
+    await assertRejects(
+      () => fetchHouseholdAutoSplitSettings(supabase, "household-1"),
+      HouseholdAutoSplitSettingsError,
+      "Household split settings are invalid",
+    );
   },
 );
 

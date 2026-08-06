@@ -30,6 +30,23 @@ export interface HouseholdAutoSplitSettings {
   defaultConfig: CustomSplits | null;
 }
 
+// Raised when the authoritative household split setting cannot be read or
+// interpreted. Callers must abort the write rather than silently creating an
+// unsplit household transaction.
+export class HouseholdAutoSplitSettingsError extends Error {
+  constructor(
+    readonly householdId: string,
+    reason: "read_failed" | "invalid_default_config",
+  ) {
+    super(
+      reason === "read_failed"
+        ? "Unable to load household split settings"
+        : "Household split settings are invalid",
+    );
+    this.name = "HouseholdAutoSplitSettingsError";
+  }
+}
+
 export interface HouseholdMemberRow {
   user_id: string;
 }
@@ -506,6 +523,14 @@ function coerceCustomSplits(raw: unknown): CustomSplits | null {
   };
 }
 
+function isEqualSplitPayload(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const rawType = typeof (raw as Record<string, unknown>).splitType === "string"
+    ? (raw as Record<string, unknown>).splitType as string
+    : "";
+  return rawType.trim().toLowerCase() === "equal";
+}
+
 export function hasExplicitCustomSplits(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const obj = raw as Record<string, unknown>;
@@ -533,17 +558,31 @@ export async function fetchHouseholdAutoSplitSettings(
     .maybeSingle();
 
   if (error) {
-    console.warn(
+    console.error(
       "[household-auto-split] Failed to fetch household settings:",
       error,
     );
-    return { autoSplitEnabled: false, defaultConfig: null };
+    throw new HouseholdAutoSplitSettingsError(householdId, "read_failed");
   }
 
   const autoSplitEnabled = typeof data?.ai_use_default_split === "boolean"
     ? data.ai_use_default_split
     : true;
-  const defaultConfig = coerceCustomSplits(data?.ai_default_split_config);
+  const rawDefaultConfig = data?.ai_default_split_config;
+  const defaultConfig = coerceCustomSplits(rawDefaultConfig);
+  if (
+    rawDefaultConfig != null &&
+    defaultConfig == null &&
+    !isEqualSplitPayload(rawDefaultConfig)
+  ) {
+    console.error("[household-auto-split] Invalid stored split settings:", {
+      householdId,
+    });
+    throw new HouseholdAutoSplitSettingsError(
+      householdId,
+      "invalid_default_config",
+    );
+  }
   console.log("[household-auto-split] Resolved settings:", {
     householdId,
     autoSplitEnabled,
@@ -556,6 +595,7 @@ export async function fetchHouseholdAutoSplitSettings(
  * Given the request's explicit customSplits (if any) and the household auto-
  * split settings, resolve the effective split behaviour.
  *
+ * - If caller explicitly requested an equal split → honour it.
  * - If caller provided non-equal customSplits → honour them verbatim.
  * - If autoSplitEnabled is false → skip automatic/default splitting.
  * - If autoSplitEnabled is true and a stored default template exists → use it.
@@ -565,6 +605,17 @@ export function resolveEffectiveSplit(
   explicit: unknown,
   settings: HouseholdAutoSplitSettings,
 ): EffectiveSplit {
+  // Equal is represented as null downstream because buildHouseholdSplitRecords
+  // derives equal lines from the current member list. It is still an explicit
+  // user instruction and must therefore override a saved non-equal template.
+  if (isEqualSplitPayload(explicit)) {
+    return {
+      kind: "customSplits",
+      customSplits: null,
+      source: "explicit",
+    };
+  }
+
   if (hasExplicitCustomSplits(explicit)) {
     const coerced = coerceCustomSplits(explicit);
     if (!coerced) {
