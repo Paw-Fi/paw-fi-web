@@ -27,7 +27,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-const DEFAULT_EMAIL_SUBJECT='Moneko just got faster and works offline'
+const DEFAULT_EMAIL_SUBJECT='Moneko 3.0: recurring payments & periods'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,9 +44,9 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://qbuynyxyemigtnvdujts.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'yifan.lim@moneko.io'; // Update with your verified sender email
-const FROM_NAME = process.env.FROM_NAME || 'Moneko Team';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'yifan.lim@moneko.io'; // Admin email for summary reports
+const FROM_EMAIL = 'hello@moneko.io'; // Update with your verified sender email
+const FROM_NAME =  'Moneko Team';
+const ADMIN_EMAIL = 'yifan.lim@moneko.io'; // Admin email for summary reports
 
 // Rate limiting: delay between emails (in milliseconds)
 const RATE_LIMIT_DELAY = 510; // 510ms = 2 emails per second (Resend's limit)
