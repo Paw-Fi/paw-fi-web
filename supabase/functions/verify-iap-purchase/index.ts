@@ -6,6 +6,7 @@ import { authenticateUser } from "../shared/auth.ts";
 import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { hasActiveHouseholdSubscriptionAccess } from "../shared/household-subscription-sharing.ts";
+import { isSystemGrantedTrial } from "../shared/system-granted-trial.ts";
 import {
   Environment,
   type JWSTransactionDecodedPayload,
@@ -13,6 +14,7 @@ import {
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getGoogleAccessToken } from "../shared/google-auth.ts";
 import {
+  AppStoreApiError,
   type AppStoreSubscriptionStatusLookup,
   decodeJwsPayload,
   fetchLatestAppStoreTransactionByOriginalId,
@@ -25,6 +27,7 @@ import {
 import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
 import { resolveAnnualCommitmentSnapshot } from "../shared/subscription-commitment.ts";
 import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
+import { decideAppStorePurchaseTransition } from "../shared/app-store-purchase-transition-policy.ts";
 import {
   ensureAppStoreOwnership,
   getAppStoreOwnershipBinding,
@@ -508,21 +511,25 @@ serve(async (req: Request) => {
     }
 
     // Households: bound users cannot buy their own subscription
-    const { data: existingSub } = await supabase
+    const { data: existingSub, error: existingSubError } = await supabase
       .from("subscriptions")
       .select(
-        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, trial_start, trial_end, current_period_end, billing_interval, payment_interval, commitment_months, commitment_end, cancel_at_period_end, store_product_id, app_store_original_transaction_id, lifetime_source, lifetime_source_id",
+        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, stripe_customer_id, trial_start, trial_end, current_period_end, billing_interval, payment_interval, commitment_months, commitment_end, cancel_at_period_end, store_product_id, app_store_original_transaction_id, lifetime_source, lifetime_source_id",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
+    const systemGrantedTrial = !existingSubError &&
+      isSystemGrantedTrial(existingSub);
+
     if (
       (existingSub as any)?.provider === "stripe" &&
       ["active", "trialing", "past_due", "paused"].includes(
         String((existingSub as any)?.status || ""),
-      )
+      ) &&
+      !systemGrantedTrial
     ) {
       return new Response(
         JSON.stringify({
@@ -592,6 +599,44 @@ serve(async (req: Request) => {
     const plan = catalogProduct.plan as SubscriptionPlan;
     const billingInterval =
       (catalogProduct.billing_interval as BillingInterval | null) ?? null;
+
+    if (body.platform === "ios") {
+      const transitionDecision = decideAppStorePurchaseTransition(
+        existingSub
+          ? {
+            provider: (existingSub as any).provider,
+            plan: (existingSub as any).plan,
+            status: (existingSub as any).status,
+            currentPeriodEnd: (existingSub as any).current_period_end,
+          }
+          : null,
+        plan,
+      );
+      if (transitionDecision.kind === "preserve") {
+        console.log(
+          "Preserving existing entitlement before App Store verification",
+          {
+            userId,
+            reason: transitionDecision.reason,
+            existingPlan: (existingSub as any)?.plan ?? null,
+            existingProvider: (existingSub as any)?.provider ?? null,
+            incomingPlan: plan,
+          },
+        );
+        return new Response(
+          JSON.stringify({
+            verified: true,
+            subscription: existingSub,
+            entitlementPreserved: true,
+            reason: transitionDecision.reason,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
 
     if (body.platform === "ios") {
       const serverReceipt = asString(
@@ -864,6 +909,21 @@ serve(async (req: Request) => {
               serverRevocationDate = serverTransaction.revocationDate;
             } else {
               // Server API didn't return a transaction
+              console.error("[AppStoreValidationTrace]", {
+                functionName: "verify-iap-purchase",
+                phase: "transaction_not_found",
+                userId,
+                storeProductId,
+                environmentHint: envHint === Environment.SANDBOX
+                  ? "sandbox"
+                  : "production",
+                fallbackEnvironment: envHint === Environment.SANDBOX
+                  ? "production"
+                  : "sandbox",
+                transactionId: decodedHint.transactionId ?? null,
+                originalTransactionId: decodedHint.originalTransactionId ??
+                  null,
+              });
               if (!allowUnverifiedIapDevFallback) {
                 await reportEdgeFunctionError({
                   functionName: "verify-iap-purchase",
@@ -903,6 +963,30 @@ serve(async (req: Request) => {
               environment = envHint;
             }
           } catch (apiError) {
+            console.error("[AppStoreValidationTrace]", {
+              functionName: "verify-iap-purchase",
+              phase: "transaction_lookup_failed",
+              userId,
+              storeProductId,
+              environmentHint: envHint === Environment.SANDBOX
+                ? "sandbox"
+                : "production",
+              transactionId: decodedHint.transactionId ?? null,
+              originalTransactionId: decodedHint.originalTransactionId ?? null,
+              errorName: apiError instanceof Error
+                ? apiError.name
+                : typeof apiError,
+              errorMessage: apiError instanceof Error
+                ? apiError.message
+                : String(apiError),
+              status: apiError instanceof AppStoreApiError
+                ? apiError.status
+                : null,
+              path: apiError instanceof AppStoreApiError ? apiError.path : null,
+              responseBody: apiError instanceof AppStoreApiError
+                ? apiError.responseBody.slice(0, 1000)
+                : null,
+            });
             if (!allowUnverifiedIapDevFallback) {
               await reportEdgeFunctionError({
                 functionName: "verify-iap-purchase",
@@ -1461,12 +1545,20 @@ serve(async (req: Request) => {
               : "Production",
           });
 
+          const isSameAppStoreLineage =
+            (existingSub as any)?.provider === "app_store" &&
+            (existingSub as any)?.app_store_original_transaction_id ===
+              originalTransactionId;
           appStoreTrialStart = status === "trialing"
             ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
-            : asString((existingSub as any)?.trial_start);
+            : isSameAppStoreLineage
+            ? asString((existingSub as any)?.trial_start)
+            : null;
           appStoreTrialEnd = status === "trialing"
             ? currentPeriodEnd
-            : asString((existingSub as any)?.trial_end);
+            : isSameAppStoreLineage
+            ? asString((existingSub as any)?.trial_end)
+            : null;
           appStoreOfferType = decodedTransaction.offerType ?? null;
           appStoreOfferDiscountType =
             typeof decodedTransaction.offerDiscountType === "string"

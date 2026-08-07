@@ -40,10 +40,21 @@ interface AppStoreApiRequestParams {
   query?: Record<string, string | string[] | undefined | null>;
   userAgent?: string;
   fetchImpl?: typeof fetch;
+  maxRetries?: number;
+  retryBaseDelayMs?: number;
 }
 
 const APP_STORE_API_TIMEOUT_MS = 8000;
 const APP_STORE_HISTORY_MAX_PAGES = 3;
+const APP_STORE_API_MAX_RETRIES = 2;
+const APP_STORE_API_RETRY_BASE_DELAY_MS = 250;
+const APP_STORE_RETRYABLE_ERROR_CODES = new Set([
+  4040002, // AccountNotFoundRetryableError
+  4040004, // AppNotFoundRetryableError
+  4040006, // OriginalTransactionIdNotFoundRetryableError
+  4290000, // RateLimitExceededError
+  5000001, // GeneralInternalRetryableError
+]);
 
 let cachedImportedPrivateKeyPem: string | null = null;
 let cachedImportedPrivateKey: CryptoKey | null = null;
@@ -231,26 +242,142 @@ export async function makeAppStoreApiRequest<T>(
     url.searchParams.set(key, rawValue);
   }
 
-  const response = await (params.fetchImpl ?? fetch)(url.toString(), {
-    method: "GET",
-    signal: AbortSignal.timeout(APP_STORE_API_TIMEOUT_MS),
-    headers: {
-      Authorization: `Bearer ${bearerToken}`,
-      Accept: "application/json",
-      "User-Agent": params.userAgent ?? "moneko-app-store-api",
-    },
-  });
+  const maxRetries = Math.max(
+    0,
+    Math.min(params.maxRetries ?? APP_STORE_API_MAX_RETRIES, 4),
+  );
+  const retryBaseDelayMs = Math.max(
+    0,
+    params.retryBaseDelayMs ?? APP_STORE_API_RETRY_BASE_DELAY_MS,
+  );
 
-  if (!response.ok) {
+  for (let attempt = 0;; attempt += 1) {
+    let response: Response;
+    try {
+      response = await (params.fetchImpl ?? fetch)(url.toString(), {
+        method: "GET",
+        signal: AbortSignal.timeout(APP_STORE_API_TIMEOUT_MS),
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+          Accept: "application/json",
+          "User-Agent": params.userAgent ?? "moneko-app-store-api",
+        },
+      });
+    } catch (error) {
+      if (attempt >= maxRetries) throw error;
+
+      const delayMs = calculateAppStoreRetryDelay(
+        attempt,
+        retryBaseDelayMs,
+      );
+      console.warn("[AppStoreApiRetry]", {
+        path: params.path,
+        environment: params.environment === Environment.SANDBOX
+          ? "sandbox"
+          : "production",
+        attempt: attempt + 1,
+        maxAttempts: maxRetries + 1,
+        delayMs,
+        reason: "network_error",
+        errorName: error instanceof Error ? error.name : typeof error,
+      });
+      await waitForAppStoreRetry(delayMs);
+      continue;
+    }
+
+    if (response.ok) {
+      return (await response.json()) as T;
+    }
+
     const responseText = await response.text().catch(() => "");
+    const errorCode = parseAppStoreErrorCode(responseText);
+    const retryable = isRetryableAppStoreApiResponse({
+      status: response.status,
+      errorCode,
+    });
+
+    if (retryable && attempt < maxRetries) {
+      const retryAfterMs = parseRetryAfterMs(
+        response.headers.get("retry-after"),
+      );
+      const delayMs = Math.max(
+        retryAfterMs,
+        calculateAppStoreRetryDelay(attempt, retryBaseDelayMs),
+      );
+      console.warn("[AppStoreApiRetry]", {
+        path: params.path,
+        environment: params.environment === Environment.SANDBOX
+          ? "sandbox"
+          : "production",
+        attempt: attempt + 1,
+        maxAttempts: maxRetries + 1,
+        delayMs,
+        reason: "retryable_response",
+        status: response.status,
+        errorCode,
+      });
+      await waitForAppStoreRetry(delayMs);
+      continue;
+    }
+
     throw new AppStoreApiError({
       status: response.status,
       responseBody: responseText,
       path: params.path,
     });
   }
+}
 
-  return (await response.json()) as T;
+function parseAppStoreErrorCode(responseBody: string): number | null {
+  try {
+    const decoded = JSON.parse(responseBody) as { errorCode?: unknown };
+    const parsed = Number(decoded.errorCode);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function isRetryableAppStoreApiResponse(params: {
+  status: number;
+  errorCode: number | null;
+}): boolean {
+  if (
+    params.errorCode !== null &&
+    APP_STORE_RETRYABLE_ERROR_CODES.has(params.errorCode)
+  ) {
+    return true;
+  }
+
+  return params.status === 429 ||
+    params.status === 502 ||
+    params.status === 503 ||
+    params.status === 504;
+}
+
+function calculateAppStoreRetryDelay(
+  attempt: number,
+  baseDelayMs: number,
+): number {
+  if (baseDelayMs === 0) return 0;
+  const exponentialDelay = baseDelayMs * Math.pow(2, attempt);
+  const jitter = Math.random() * baseDelayMs;
+  return Math.round(exponentialDelay + jitter);
+}
+
+function parseRetryAfterMs(value: string | null): number {
+  if (!value) return 0;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : Math.max(timestamp - Date.now(), 0);
+}
+
+function waitForAppStoreRetry(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 export async function fetchAppStoreTransactionByTransactionId(params: {
@@ -258,6 +385,8 @@ export async function fetchAppStoreTransactionByTransactionId(params: {
   transactionId: string;
   environment: Environment;
   fetchImpl?: typeof fetch;
+  maxRetries?: number;
+  retryBaseDelayMs?: number;
 }): Promise<JWSTransactionDecodedPayload | null> {
   const response = await makeAppStoreApiRequest<{
     signedTransactionInfo?: string;
@@ -267,6 +396,8 @@ export async function fetchAppStoreTransactionByTransactionId(params: {
     environment: params.environment,
     userAgent: "moneko-verify-iap-purchase",
     fetchImpl: params.fetchImpl,
+    maxRetries: params.maxRetries,
+    retryBaseDelayMs: params.retryBaseDelayMs,
   });
   const signedTransaction = asString(response?.signedTransactionInfo);
   if (!signedTransaction) return null;
@@ -281,6 +412,8 @@ export async function fetchLatestAppStoreTransactionByOriginalId(params: {
   revoked?: boolean;
   transactionId?: string | null;
   fetchImpl?: typeof fetch;
+  maxRetries?: number;
+  retryBaseDelayMs?: number;
 }): Promise<JWSTransactionDecodedPayload | null> {
   const historyRequest = {
     sort: Order.DESCENDING,
@@ -318,6 +451,8 @@ export async function fetchLatestAppStoreTransactionByOriginalId(params: {
       },
       userAgent: "moneko-verify-iap-purchase",
       fetchImpl: params.fetchImpl,
+      maxRetries: params.maxRetries,
+      retryBaseDelayMs: params.retryBaseDelayMs,
     });
 
     const signedTransactions = historyResponse.signedTransactions ?? [];
@@ -489,12 +624,25 @@ export function isAppStoreLookupNotFoundError(error: unknown): boolean {
   return error instanceof AppStoreApiError && error.status === 404;
 }
 
+export function isAppStoreRetryableApiError(
+  error: unknown,
+): error is AppStoreApiError {
+  if (!(error instanceof AppStoreApiError)) return false;
+
+  return isRetryableAppStoreApiResponse({
+    status: error.status,
+    errorCode: parseAppStoreErrorCode(error.responseBody),
+  });
+}
+
 export async function findAppStoreTransactionWithEnvironmentFallback(params: {
   config: AppStoreApiConfig;
   environmentHint: Environment;
   transactionId?: string | null;
   originalTransactionId?: string | null;
   fetchImpl?: typeof fetch;
+  maxRetries?: number;
+  retryBaseDelayMs?: number;
 }): Promise<{
   transaction: JWSTransactionDecodedPayload | null;
   environment: Environment;
@@ -511,10 +659,27 @@ export async function findAppStoreTransactionWithEnvironmentFallback(params: {
           transactionId: params.transactionId,
           environment,
           fetchImpl: params.fetchImpl,
+          maxRetries: params.maxRetries,
+          retryBaseDelayMs: params.retryBaseDelayMs,
         });
       } catch (error) {
-        if (!isAppStoreLookupNotFoundError(error)) {
+        if (
+          !isAppStoreLookupNotFoundError(error) &&
+          !isAppStoreRetryableApiError(error)
+        ) {
           throw error;
+        }
+        if (isAppStoreRetryableApiError(error)) {
+          console.warn("[AppStoreApiFallback]", {
+            phase: "transaction_lookup_exhausted_trying_history",
+            environment: environment === Environment.SANDBOX
+              ? "sandbox"
+              : "production",
+            transactionId: params.transactionId,
+            originalTransactionId: params.originalTransactionId ?? null,
+            status: error.status,
+            errorCode: parseAppStoreErrorCode(error.responseBody),
+          });
         }
       }
     }
@@ -532,6 +697,8 @@ export async function findAppStoreTransactionWithEnvironmentFallback(params: {
           revoked: false,
           transactionId: params.transactionId,
           fetchImpl: params.fetchImpl,
+          maxRetries: params.maxRetries,
+          retryBaseDelayMs: params.retryBaseDelayMs,
         });
       } catch (error) {
         if (isAppStoreLookupNotFoundError(error)) {

@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(25);
+select plan(26);
 
 select has_function(
   'public',
@@ -136,6 +136,21 @@ select ok(
     limit 1
   ), true),
   'summary rows include a non-negative actionable occurrence count'
+);
+
+select ok(
+  coalesce((
+    select jsonb_typeof(item -> 'current_month_confirmed_amount_delta_cents') = 'number'
+    from jsonb_array_elements(
+      public.list_recurring_series_summary_v1(
+        (select (payload ->> 'member_id')::uuid from test_recurring_occurrence_migration.snapshots where snapshot_key = 'fixture'),
+        (select (payload ->> 'household_id')::uuid from test_recurring_occurrence_migration.snapshots where snapshot_key = 'fixture'),
+        array['USD'], null, null, 20
+      ) -> 'items'
+    ) item
+    limit 1
+  ), true),
+  'summary rows include the current-month confirmed amount delta'
 );
 
 select ok(

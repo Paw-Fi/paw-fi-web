@@ -17,6 +17,7 @@ import {
 } from "../shared/iap-ownership.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
+  AppStoreApiError,
   findAppStoreSubscriptionStatusWithEnvironmentFallback,
   findAppStoreTransactionWithEnvironmentFallback,
   getValidatedAppStorePrivateKey as getValidatedSharedAppStorePrivateKey,
@@ -29,6 +30,7 @@ import {
   resolveAnnualCommitmentSnapshot,
 } from "../shared/subscription-commitment.ts";
 import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
+import { isSystemGrantedTrial } from "../shared/system-granted-trial.ts";
 import {
   type AppStoreCandidateUserSource,
   shouldReportMissingCandidateUser,
@@ -789,6 +791,22 @@ async function decodeNotification(signedPayload: string): Promise<
       });
     verifiedTransaction = transactionLookup.transaction;
   } catch (error) {
+    console.error("[AppStoreValidationTrace]", {
+      functionName: "app-store-notifications",
+      phase: "transaction_lookup_failed",
+      environmentHint: envHint === Environment.SANDBOX
+        ? "sandbox"
+        : "production",
+      transactionId,
+      originalTransactionId,
+      errorName: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      status: error instanceof AppStoreApiError ? error.status : null,
+      path: error instanceof AppStoreApiError ? error.path : null,
+      responseBody: error instanceof AppStoreApiError
+        ? error.responseBody.slice(0, 1000)
+        : null,
+    });
     void reportEdgeFunctionError({
       functionName: "app-store-notifications",
       error,
@@ -807,6 +825,18 @@ async function decodeNotification(signedPayload: string): Promise<
   }
 
   if (!verifiedTransaction) {
+    console.error("[AppStoreValidationTrace]", {
+      functionName: "app-store-notifications",
+      phase: "transaction_not_found",
+      environmentHint: envHint === Environment.SANDBOX
+        ? "sandbox"
+        : "production",
+      fallbackEnvironment: envHint === Environment.SANDBOX
+        ? "production"
+        : "sandbox",
+      transactionId,
+      originalTransactionId,
+    });
     throw new Error("Unable to validate App Store transaction via server API");
   }
 
@@ -971,6 +1001,8 @@ serve(async (req: Request): Promise<Response> => {
     });
 
     console.log("[app-store-notifications] decoded notification", {
+      notificationType,
+      subtype,
       storeProductId,
       originalTransactionId,
       transactionId,
@@ -1164,7 +1196,7 @@ serve(async (req: Request): Promise<Response> => {
       await supabase
         .from("subscriptions")
         .select(
-          "provider, plan, current_period_end, status, billing_interval, payment_interval, commitment_months, commitment_end, cancel_at_period_end, store_product_id, stripe_subscription_id, app_store_original_transaction_id, trial_start, trial_end, lifetime_source, lifetime_source_id",
+          "provider, plan, current_period_end, status, billing_interval, payment_interval, commitment_months, commitment_end, cancel_at_period_end, store_product_id, stripe_subscription_id, stripe_customer_id, app_store_original_transaction_id, bound_to_user_id, bound_to_household_id, trial_start, trial_end, lifetime_source, lifetime_source_id",
         )
         .eq("user_id", resolvedUserId)
         .maybeSingle();
@@ -1190,6 +1222,8 @@ serve(async (req: Request): Promise<Response> => {
         },
       );
     }
+
+    const systemGrantedTrial = isSystemGrantedTrial(existingSubscription);
 
     let effectiveTransaction = transaction;
     let periodEndSource = "notification_transaction";
@@ -1222,6 +1256,31 @@ serve(async (req: Request): Promise<Response> => {
           });
 
         const subscriptionStatus = subscriptionStatusLookup.subscription;
+        console.log("[AppStoreValidationTrace]", {
+          functionName: "app-store-notifications",
+          phase: "subscription_status_lookup_resolved",
+          notificationType,
+          subtype,
+          storeProductId,
+          originalTransactionId,
+          transactionId,
+          lookupEnvironment:
+            subscriptionStatusLookup.environment === Environment.SANDBOX
+              ? "sandbox"
+              : "production",
+          hasSubscriptionStatus: Boolean(subscriptionStatus),
+          subscriptionStatus: subscriptionStatus?.status ?? null,
+          statusTransactionId: subscriptionStatus?.transaction?.transactionId ??
+            null,
+          statusTransactionProductId:
+            subscriptionStatus?.transaction?.productId ?? null,
+          statusTransactionExpiresDate:
+            subscriptionStatus?.transaction?.expiresDate ?? null,
+          renewalProductId: subscriptionStatus?.renewalInfo?.productId ?? null,
+          renewalDate: subscriptionStatus?.renewalInfo?.renewalDate ?? null,
+          autoRenewStatus: subscriptionStatus?.renewalInfo?.autoRenewStatus ??
+            null,
+        });
         if (
           subscriptionStatus &&
           appStoreSubscriptionStatusMatchesProduct(
@@ -1267,6 +1326,23 @@ serve(async (req: Request): Promise<Response> => {
           );
         }
       } catch (error) {
+        console.error("[AppStoreValidationTrace]", {
+          functionName: "app-store-notifications",
+          phase: "subscription_status_lookup_failed",
+          notificationType,
+          subtype,
+          storeProductId,
+          originalTransactionId,
+          transactionId,
+          environmentHint: environment,
+          errorName: error instanceof Error ? error.name : typeof error,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          status: error instanceof AppStoreApiError ? error.status : null,
+          path: error instanceof AppStoreApiError ? error.path : null,
+          responseBody: error instanceof AppStoreApiError
+            ? error.responseBody.slice(0, 1000)
+            : null,
+        });
         await reportEdgeFunctionError({
           functionName: "app-store-notifications",
           error,
@@ -1299,6 +1375,16 @@ serve(async (req: Request): Promise<Response> => {
       statusSensitiveNotificationTypes.has(notificationType) &&
       !resolvedAuthoritativeLifecycle
     ) {
+      console.error("[AppStoreValidationTrace]", {
+        functionName: "app-store-notifications",
+        phase: "authoritative_lifecycle_unresolved",
+        notificationType,
+        subtype,
+        storeProductId,
+        originalTransactionId,
+        transactionId,
+        environmentHint: environment,
+      });
       throw new Error(
         `Unable to resolve authoritative App Store lifecycle for ${notificationType}`,
       );
@@ -1444,8 +1530,16 @@ serve(async (req: Request): Promise<Response> => {
         (isSameAppStoreSubscription
           ? Boolean(existingSubscription?.cancel_at_period_end)
           : false);
-    const existingTrialStart = asString(existingSubscription?.trial_start);
-    const existingTrialEnd = asString(existingSubscription?.trial_end);
+    const isSameAppStoreLineage =
+      existingSubscription?.provider === "app_store" &&
+      existingSubscription?.app_store_original_transaction_id ===
+        originalTransactionId;
+    const existingTrialStart = isSameAppStoreLineage
+      ? asString(existingSubscription?.trial_start)
+      : null;
+    const existingTrialEnd = isSameAppStoreLineage
+      ? asString(existingSubscription?.trial_end)
+      : null;
     let trialStartIso = status === "trialing"
       ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
       : existingTrialStart;
@@ -1515,8 +1609,14 @@ serve(async (req: Request): Promise<Response> => {
       offerType: effectiveTransaction.offerType ?? null,
       offerDiscountType: effectiveTransaction.offerDiscountType ?? null,
       offerIdentifier: effectiveTransaction.offerIdentifier ?? null,
+      billingPlanType:
+        (effectiveTransaction as Record<string, unknown>).billingPlanType ??
+          null,
+      commitmentMonths,
+      commitmentEnd,
       trialStartIso,
       trialEndIso,
+      replacingSystemGrantedTrial: systemGrantedTrial,
     });
 
     const existingIsActiveLifetime =
@@ -1593,8 +1693,63 @@ serve(async (req: Request): Promise<Response> => {
         plan: catalogProduct.plan,
         status,
         appStoreOriginalTransactionId: originalTransactionId,
+        allowProviderSwitch: systemGrantedTrial,
       },
     );
+    const verifiedTransactionRecord = transaction as Record<string, unknown>;
+    const verifiedCommitmentInfo = verifiedTransactionRecord.commitmentInfo as
+      | Record<string, unknown>
+      | null
+      | undefined;
+    const effectiveTransactionRecord = effectiveTransaction as Record<
+      string,
+      unknown
+    >;
+    const effectiveCommitmentInfo = effectiveTransactionRecord.commitmentInfo as
+      | Record<string, unknown>
+      | null
+      | undefined;
+
+    console.log("[AppStoreCommitmentTrace]", {
+      phase: "decision",
+      notificationType,
+      subtype,
+      userId: resolvedUserId,
+      storeProductId,
+      originalTransactionId,
+      transactionId,
+      environment: resolvedEnvironment,
+      incomingStatus: status,
+      currentPeriodEnd: resolvedExpiresIso,
+      verifiedBillingPlanType: verifiedTransactionRecord.billingPlanType ??
+        null,
+      verifiedTotalBillingPeriods:
+        verifiedCommitmentInfo?.totalBillingPeriods ?? null,
+      verifiedBillingPeriodNumber:
+        verifiedCommitmentInfo?.billingPeriodNumber ?? null,
+      verifiedCommitmentExpiresDate:
+        verifiedCommitmentInfo?.commitmentExpiresDate ?? null,
+      effectiveBillingPlanType: effectiveTransactionRecord.billingPlanType ??
+        null,
+      effectiveTotalBillingPeriods:
+        effectiveCommitmentInfo?.totalBillingPeriods ?? null,
+      effectiveBillingPeriodNumber:
+        effectiveCommitmentInfo?.billingPeriodNumber ?? null,
+      effectiveCommitmentExpiresDate:
+        effectiveCommitmentInfo?.commitmentExpiresDate ?? null,
+      resolvedCommitmentMonths: commitmentMonths,
+      resolvedCommitmentEnd: commitmentEnd,
+      existingProvider: existingSubscription?.provider ?? null,
+      existingStatus: existingSubscription?.status ?? null,
+      existingHasStripeSubscriptionId: Boolean(
+        existingSubscription?.stripe_subscription_id,
+      ),
+      systemGrantedTrial,
+      entitlementDecision: entitlementDecision.kind,
+      entitlementDecisionReason: entitlementDecision.kind === "preserve"
+        ? entitlementDecision.reason
+        : null,
+    });
 
     if (entitlementDecision.kind === "preserve") {
       const isUnrepresentedLifetimeGrant = catalogProduct.plan === "lifetime" &&
@@ -1721,6 +1876,21 @@ serve(async (req: Request): Promise<Response> => {
         },
       );
     }
+
+    console.log("[AppStoreCommitmentTrace]", {
+      phase: "persisted",
+      userId: resolvedUserId,
+      storeProductId,
+      originalTransactionId,
+      transactionId,
+      provider: subscriptionUpdate.provider,
+      status: subscriptionUpdate.status,
+      billingInterval: subscriptionUpdate.billing_interval,
+      paymentInterval: subscriptionUpdate.payment_interval,
+      commitmentMonths: subscriptionUpdate.commitment_months,
+      commitmentEnd: subscriptionUpdate.commitment_end,
+      currentPeriodEnd: subscriptionUpdate.current_period_end,
+    });
 
     try {
       const rpcName = status === "canceled"

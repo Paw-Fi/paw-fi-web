@@ -9,8 +9,8 @@ import { Environment } from "https://esm.sh/@apple/app-store-server-library@2.0.
 import {
   AppStoreApiError,
   createAppStoreBearerToken,
-  findAppStoreTransactionWithEnvironmentFallback,
   fetchAppStoreTransactionByTransactionId,
+  findAppStoreTransactionWithEnvironmentFallback,
   getValidatedAppStorePrivateKey,
   isAppStoreLookupNotFoundError,
   makeAppStoreApiRequest,
@@ -188,6 +188,141 @@ Deno.test(
     assertStringIncludes(capturedUrl, "productType=AUTO_RENEWABLE");
     assertStringIncludes(capturedUrl, "productType=NON_CONSUMABLE");
     assertStringIncludes(capturedAuthHeader, "Bearer ");
+  },
+);
+
+Deno.test(
+  "app store api: retries Apple's retryable internal error",
+  async () => {
+    const config = await createTestConfig();
+    let attempts = 0;
+
+    const response = await makeAppStoreApiRequest<{ ok: boolean }>({
+      config,
+      path: "/inApps/v1/transactions/tx-retry",
+      environment: Environment.SANDBOX,
+      maxRetries: 2,
+      retryBaseDelayMs: 0,
+      fetchImpl: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          return new Response(
+            JSON.stringify({
+              errorCode: 5000001,
+              errorMessage: "An unknown error occurred. Please try again.",
+            }),
+            { status: 500 },
+          );
+        }
+
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      },
+    });
+
+    assertEquals(response.ok, true);
+    assertEquals(attempts, 2);
+  },
+);
+
+Deno.test(
+  "app store api: honors retry-after for rate limiting without bypassing retry bounds",
+  async () => {
+    const config = await createTestConfig();
+    let attempts = 0;
+
+    const response = await makeAppStoreApiRequest<{ ok: boolean }>({
+      config,
+      path: "/inApps/v1/transactions/tx-rate-limited",
+      environment: Environment.SANDBOX,
+      maxRetries: 1,
+      retryBaseDelayMs: 0,
+      fetchImpl: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          return new Response(
+            JSON.stringify({
+              errorCode: 4290000,
+              errorMessage: "Rate limit exceeded.",
+            }),
+            {
+              status: 429,
+              headers: { "Retry-After": "0" },
+            },
+          );
+        }
+
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      },
+    });
+
+    assertEquals(response.ok, true);
+    assertEquals(attempts, 2);
+  },
+);
+
+Deno.test(
+  "app store api: does not retry non-retryable Apple errors",
+  async () => {
+    const config = await createTestConfig();
+    let attempts = 0;
+
+    await assertRejects(
+      async () =>
+        await makeAppStoreApiRequest({
+          config,
+          path: "/inApps/v1/transactions/tx-invalid",
+          environment: Environment.SANDBOX,
+          maxRetries: 2,
+          retryBaseDelayMs: 0,
+          fetchImpl: async () => {
+            attempts += 1;
+            return new Response(
+              JSON.stringify({
+                errorCode: 4000000,
+                errorMessage: "Bad request.",
+              }),
+              { status: 400 },
+            );
+          },
+        }),
+      AppStoreApiError,
+      "App Store API request failed (400)",
+    );
+
+    assertEquals(attempts, 1);
+  },
+);
+
+Deno.test(
+  "app store api: stops after the configured retry budget",
+  async () => {
+    const config = await createTestConfig();
+    let attempts = 0;
+
+    await assertRejects(
+      async () =>
+        await makeAppStoreApiRequest({
+          config,
+          path: "/inApps/v1/transactions/tx-still-unavailable",
+          environment: Environment.SANDBOX,
+          maxRetries: 2,
+          retryBaseDelayMs: 0,
+          fetchImpl: async () => {
+            attempts += 1;
+            return new Response(
+              JSON.stringify({
+                errorCode: 5000001,
+                errorMessage: "An unknown error occurred. Please try again.",
+              }),
+              { status: 500 },
+            );
+          },
+        }),
+      AppStoreApiError,
+      "App Store API request failed (500)",
+    );
+
+    assertEquals(attempts, 3);
   },
 );
 
@@ -376,6 +511,69 @@ Deno.test(
     assertEquals(seenUrls.length, 2);
     assertStringIncludes(seenUrls[0], "/inApps/v1/transactions/tx-123");
     assertStringIncludes(seenUrls[1], "/inApps/v2/history/orig-123");
+  },
+);
+
+Deno.test(
+  "app store api: falls back to exact transaction history after retryable transaction endpoint failure",
+  async () => {
+    const config = await createTestConfig();
+    const seenUrls: string[] = [];
+
+    const result = await findAppStoreTransactionWithEnvironmentFallback({
+      config,
+      environmentHint: Environment.SANDBOX,
+      transactionId: "tx-retryable",
+      originalTransactionId: "orig-retryable",
+      maxRetries: 0,
+      retryBaseDelayMs: 0,
+      fetchImpl: async (input: string | URL | Request) => {
+        const url = input.toString();
+        seenUrls.push(url);
+
+        if (url.includes("/inApps/v1/transactions/tx-retryable")) {
+          return new Response(
+            JSON.stringify({
+              errorCode: 5000001,
+              errorMessage: "An unknown error occurred. Please try again.",
+            }),
+            { status: 500 },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            signedTransactions: [
+              createSignedTransactionJws({
+                transactionId: "tx-retryable",
+                originalTransactionId: "orig-retryable",
+                bundleId: "com.moneko.mobile",
+                productId: "yearly",
+              }),
+            ],
+            hasMore: false,
+            revision: null,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      },
+    });
+
+    assertEquals(result.environment, Environment.SANDBOX);
+    assertEquals(result.transaction?.transactionId, "tx-retryable");
+    assertEquals(result.transaction?.originalTransactionId, "orig-retryable");
+    assertEquals(seenUrls.length, 2);
+    assertStringIncludes(
+      seenUrls[0],
+      "/inApps/v1/transactions/tx-retryable",
+    );
+    assertStringIncludes(
+      seenUrls[1],
+      "/inApps/v2/history/orig-retryable",
+    );
   },
 );
 

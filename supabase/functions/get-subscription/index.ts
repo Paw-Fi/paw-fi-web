@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { isSystemGrantedTrial } from "../shared/system-granted-trial.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -67,6 +68,10 @@ serve(async (req: Request) => {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    if (directError) {
+      console.error("Error loading direct subscription:", directError);
+    }
 
     // Then try the RPC function
     const { data: subscription, error: subscriptionError } = await supabase.rpc(
@@ -190,13 +195,19 @@ serve(async (req: Request) => {
     const isBorrowedHouseholdSubscription = Boolean(
       (finalSubscription as any).bound_to_user_id,
     );
+    const systemGrantedTrial = !directError &&
+      isSystemGrantedTrial(directSubscription);
     const responseSubscription = isBorrowedHouseholdSubscription
       ? {
         ...finalSubscription,
         stripe_subscription_id: null,
         stripe_customer_id: null,
+        is_system_granted_trial: false,
       }
-      : finalSubscription;
+      : {
+        ...finalSubscription,
+        is_system_granted_trial: systemGrantedTrial,
+      };
 
     // Only direct Stripe subscriptions expose Stripe invoices/payment method.
     // Bound household members may have legacy rows with the owner's copied
