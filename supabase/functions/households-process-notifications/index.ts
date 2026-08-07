@@ -847,8 +847,8 @@ serve(async (req) => {
                 : "🔔 Upcoming Expense";
             body =
               transactionType === "income"
-                ? `${category || "Income"} of ${amount} arrives ${timeframe}`
-                : `${category || "Expense"} of ${amount} is due ${timeframe}`;
+                ? `${category || "Income"} of ${amount} arrives ${timeframe}. Confirm in the app now`
+                : `${category || "Expense"} of ${amount} is due ${timeframe}. Confirm in the app now`;
             break;
           }
 

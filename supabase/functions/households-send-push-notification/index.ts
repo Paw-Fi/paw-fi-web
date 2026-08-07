@@ -1627,8 +1627,8 @@ function buildNotificationMessage(
         : undefined;
       const title = isIncome ? "💰 Incoming Payment" : "🔔 Upcoming Expense";
       const body = isIncome
-        ? `${capCategory || "Income"} of ${amount} arrives ${timeframe}`
-        : `${capCategory || "Expense"} of ${amount} is due ${timeframe}`;
+        ? `${capCategory || "Income"} of ${amount} arrives ${timeframe}. Confirm in the app now`
+        : `${capCategory || "Expense"} of ${amount} is due ${timeframe}. Confirm in the app now`;
 
       return {
         title,
