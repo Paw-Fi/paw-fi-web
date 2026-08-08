@@ -21,9 +21,12 @@ import {
   type AnalyzeRequestBody,
   extractLabeledTransactionFallback,
   runAnalyzeExpense,
-  sanitizeTransactionSourceGrounding,
 } from "../shared/analyze-core.ts";
-import { validateCurrency } from "../shared/currency-validator.ts";
+import { decideEmailImportGrounding } from "../shared/email-import-grounding-decision.ts";
+import {
+  createEmailImportReviewToken,
+  hashEmailImportReviewToken,
+} from "../shared/email-import-review.ts";
 import { localDateTimeToUtcIso } from "../shared/timezone.ts";
 import {
   fetchUserCategoryPreferences,
@@ -40,6 +43,7 @@ import {
 import { saveTransactionsBatchInternal } from "../save-transactions-batch/index.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { createFollowupEmailBuilder } from "./email-templates/import-followup-email.ts";
+import { buildImportReviewRequiredEmail } from "./email-templates/import-review-required-email.ts";
 import {
   createImportUnavailableEmailBuilder,
   importUnavailableReasons,
@@ -119,6 +123,7 @@ interface AttachmentProcessingResult {
 type InboundEventStatus =
   | "received"
   | "processing"
+  | "awaiting_review"
   | "ignored"
   | "processed"
   | "failed";
@@ -617,7 +622,7 @@ async function finalizeInboundEvent(params: {
   supabase: any;
   owner: InboundEventLeaseOwner;
   userId?: string | null;
-  status: "ignored" | "processed" | "failed";
+  status: "ignored" | "processed" | "failed" | "awaiting_review";
   errorText?: string;
   result?: Record<string, unknown>;
 }) {
@@ -639,7 +644,7 @@ async function finalizeInboundEventById(params: {
   supabase: any;
   rowId: string;
   userId?: string | null;
-  status: "ignored" | "processed" | "failed";
+  status: "ignored" | "processed" | "failed" | "awaiting_review";
   errorText?: string;
   result?: Record<string, unknown>;
 }) {
@@ -688,7 +693,7 @@ async function updateInboundEvent(params: {
   supabase: any;
   owner: InboundEventLeaseOwner | null;
   userId?: string | null;
-  status: "ignored" | "processed" | "failed";
+  status: "ignored" | "processed" | "failed" | "awaiting_review";
   errorText?: string;
   result?: Record<string, unknown>;
 }) {
@@ -854,114 +859,6 @@ async function loadCategoryContext(params: { supabase: any; userId: string }) {
   };
 }
 
-function normalizeCurrencyCode(value?: string | null): string | null {
-  const normalized = (value ?? "").trim().toUpperCase();
-  if (!/^[A-Z]{3}$/.test(normalized)) return null;
-  const validated = validateCurrency(normalized);
-  return validated === normalized ? validated : null;
-}
-
-async function loadCurrencyRates(params: {
-  supabase: any;
-}): Promise<Record<string, number> | null> {
-  const { data, error } = await params.supabase
-    .from("currency_rate_snapshots")
-    .select("rates")
-    .eq("base_currency", "USD")
-    .maybeSingle();
-
-  if (error || !data?.rates || typeof data.rates !== "object") {
-    return null;
-  }
-
-  const rates: Record<string, number> = {};
-  for (const [code, value] of Object.entries(data.rates)) {
-    const currency = normalizeCurrencyCode(code);
-    const rate = typeof value === "number" ? value : Number(value);
-    if (currency && Number.isFinite(rate) && rate > 0) {
-      rates[currency] = rate;
-    }
-  }
-
-  return rates;
-}
-
-function convertCurrencyAmount(params: {
-  amount: number;
-  fromCurrency: string;
-  toCurrency: string;
-  rates: Record<string, number>;
-}): number | null {
-  const fromRate = params.rates[params.fromCurrency];
-  const toRate = params.rates[params.toCurrency];
-  if (!Number.isFinite(fromRate) || !Number.isFinite(toRate)) return null;
-  if (fromRate <= 0 || toRate <= 0) return null;
-
-  const converted = (params.amount / fromRate) * toRate;
-  return Math.round(converted * 100) / 100;
-}
-
-async function maybeConvertItemsToImportAccountCurrency(params: {
-  supabase: any;
-  items: Array<Record<string, unknown>>;
-  owner: ResolvedOwner;
-  emailId: string;
-}): Promise<Array<Record<string, unknown>>> {
-  const targetCurrency = normalizeCurrencyCode(params.owner.accountCurrency);
-  if (!params.owner.accountId || !targetCurrency) return params.items;
-
-  const needsConversion = params.items.some((item) => {
-    const itemCurrency = normalizeCurrencyCode(
-      typeof item.currency === "string" ? item.currency : null,
-    );
-    return itemCurrency != null && itemCurrency !== targetCurrency;
-  });
-  if (!needsConversion) return params.items;
-
-  const rates = await loadCurrencyRates({ supabase: params.supabase });
-  if (!rates) return params.items;
-
-  return params.items.map((item) => {
-    const sourceCurrency = normalizeCurrencyCode(
-      typeof item.currency === "string" ? item.currency : null,
-    );
-    const amount = Number(item.amount ?? 0);
-    if (
-      !sourceCurrency ||
-      sourceCurrency === targetCurrency ||
-      !Number.isFinite(amount)
-    ) {
-      return item;
-    }
-
-    const convertedAmount = convertCurrencyAmount({
-      amount,
-      fromCurrency: sourceCurrency,
-      toCurrency: targetCurrency,
-      rates,
-    });
-    if (convertedAmount == null) return item;
-
-    console.log(
-      "[resend-inbound-webhook] converted import transaction currency",
-      {
-        emailId: params.emailId,
-        accountId: params.owner.accountId,
-        fromCurrency: sourceCurrency,
-        toCurrency: targetCurrency,
-        originalAmount: amount,
-        convertedAmount,
-      },
-    );
-
-    return {
-      ...item,
-      amount: convertedAmount,
-      currency: targetCurrency,
-    };
-  });
-}
-
 function deduplicateImportedTransactions(params: {
   items: Array<Record<string, unknown>>;
   userId: string;
@@ -996,6 +893,62 @@ function deduplicateImportedTransactions(params: {
   }
 
   return unique;
+}
+
+async function createInboundReview(params: {
+  supabase: any;
+  eventId: string;
+  userId: string;
+  candidates: Array<{
+    candidate: Record<string, unknown>;
+    issues: unknown;
+    evidenceText: string;
+  }>;
+}): Promise<{ reviewId: string; token: string } | null> {
+  if (params.candidates.length === 0) return null;
+  const token = createEmailImportReviewToken();
+  const tokenHash = await hashEmailImportReviewToken(token);
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+  const { data: reviewId, error } = await params.supabase.rpc(
+    "create_email_import_review",
+    {
+      p_event_id: params.eventId,
+      p_user_id: params.userId,
+      p_token_hash: tokenHash,
+      p_expires_at: expiresAt,
+      p_items: params.candidates,
+    },
+  );
+  if (error || !reviewId) throw new Error("EMAIL_IMPORT_REVIEW_CREATE_FAILED");
+  return { reviewId, token };
+}
+
+function boundedReviewEvidence(
+  sourceText: string,
+  candidate: Record<string, unknown>,
+): string {
+  const terms = [
+    candidate.amount,
+    candidate.currency,
+    candidate.merchant,
+    candidate.description,
+  ]
+    .filter(
+      (value): value is string | number =>
+        typeof value === "string" || typeof value === "number",
+    )
+    .map((value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return Array.from(
+    new Set(
+      terms.flatMap(
+        (term) =>
+          sourceText.match(new RegExp(`.{0,180}${term}.{0,180}`, "i"))?.[0] ??
+          [],
+      ),
+    ),
+  )
+    .join("\n")
+    .slice(0, 1200);
 }
 
 function sortImportedTransactions(
@@ -1752,6 +1705,11 @@ export async function handleResendInboundWebhook(
 
       const attachmentResults: AttachmentProcessingResult[] = [];
       const analyzedItems: Array<Record<string, unknown>> = [];
+      const reviewCandidates: Array<{
+        candidate: Record<string, unknown>;
+        issues: unknown;
+        evidenceText: string;
+      }> = [];
 
       for (
         let attachmentIndex = 0;
@@ -2058,11 +2016,7 @@ export async function handleResendInboundWebhook(
               context: {
                 operation: "email_body_analysis_retryable_failure",
                 providerEmailId: emailData.email_id,
-                senderEmail,
-                subjectLine: emailData.subject || "",
                 emailBodySource: resolvedEmailBody.source,
-                sanitizedEmailContent: emailBodyText,
-                sanitizedEmailContentChunks: chunkDiagnosticText(emailBodyText),
                 resultCode: result.code || null,
                 resultStatus: result.status || null,
               },
@@ -2077,27 +2031,31 @@ export async function handleResendInboundWebhook(
             }> = [];
             const sanitizedItems: typeof bodyItems = [];
             for (const item of bodyItems) {
-              const grounding = sanitizeTransactionSourceGrounding({
+              const grounding = decideEmailImportGrounding({
                 sourceText: emailBodyText,
                 item: item as unknown as Record<string, unknown>,
               });
-              if (!grounding.grounded) {
+              if (grounding.kind === "review") {
+                reviewCandidates.push({
+                  candidate: grounding.candidate,
+                  issues: grounding.issues,
+                  evidenceText: boundedReviewEvidence(
+                    emailBodyText,
+                    grounding.candidate,
+                  ),
+                });
+                continue;
+              }
+              if (grounding.kind === "reject") {
                 rejectedItems.push({
                   item: item as unknown as Record<string, unknown>,
                   reasons: grounding.reasons,
                 });
                 continue;
               }
-              if (grounding.removedFields.length > 0) {
-                console.warn(
-                  "[resend-inbound-webhook] removed ungrounded optional AI fields",
-                  {
-                    emailId: emailData.email_id,
-                    removedFields: grounding.removedFields,
-                  },
-                );
-              }
-              sanitizedItems.push(grounding.item as unknown as typeof item);
+              sanitizedItems.push(
+                grounding.transaction as unknown as typeof item,
+              );
             }
             bodyItems = sanitizedItems;
             if (rejectedItems.length > 0) {
@@ -2109,13 +2067,10 @@ export async function handleResendInboundWebhook(
                 context: {
                   operation: "email_body_ai_output_rejected",
                   providerEmailId: emailData.email_id,
-                  senderEmail,
-                  subjectLine: emailData.subject || "",
-                  emailBodySource: resolvedEmailBody.source,
-                  sanitizedEmailContent: emailBodyText,
-                  sanitizedEmailContentChunks:
-                    chunkDiagnosticText(emailBodyText),
-                  rejectedItems,
+                  rejectedReasonCodes: rejectedItems.flatMap(
+                    (item) => item.reasons,
+                  ),
+                  rejectedItemCount: rejectedItems.length,
                 },
               });
             }
@@ -2146,13 +2101,8 @@ export async function handleResendInboundWebhook(
                 context: {
                   operation: "email_body_ai_empty_fallback_recovered",
                   providerEmailId: emailData.email_id,
-                  senderEmail,
-                  subjectLine: emailData.subject || "",
                   emailBodySource: resolvedEmailBody.source,
-                  sanitizedEmailContent: emailBodyText,
-                  sanitizedEmailContentChunks:
-                    chunkDiagnosticText(emailBodyText),
-                  recoveredItem: fallback,
+                  recoveredItemCount: 1,
                 },
               });
             }
@@ -2170,12 +2120,7 @@ export async function handleResendInboundWebhook(
                 context: {
                   operation: "email_body_extraction_failed",
                   providerEmailId: emailData.email_id,
-                  senderEmail,
-                  subjectLine: emailData.subject || "",
                   emailBodySource: resolvedEmailBody.source,
-                  sanitizedEmailContent: emailBodyText,
-                  sanitizedEmailContentChunks:
-                    chunkDiagnosticText(emailBodyText),
                   resultCode: result.code || null,
                   resultStatus: result.status || null,
                 },
@@ -2253,11 +2198,7 @@ export async function handleResendInboundWebhook(
               context: {
                 operation: "email_body_processing_exception",
                 providerEmailId: emailData.email_id,
-                senderEmail,
-                subjectLine: emailData.subject || "",
                 emailBodySource: resolvedEmailBody.source,
-                sanitizedEmailContent: emailBodyText,
-                sanitizedEmailContentChunks: chunkDiagnosticText(emailBodyText),
               },
             });
           }
@@ -2296,7 +2237,7 @@ export async function handleResendInboundWebhook(
         })),
       });
 
-      if (analyzedItems.length === 0) {
+      if (analyzedItems.length === 0 && reviewCandidates.length === 0) {
         const followup = buildFollowupEmail({
           senderEmail,
           subjectLine: emailData.subject || "",
@@ -2340,35 +2281,61 @@ export async function handleResendInboundWebhook(
         return jsonResponse({ success: true, failed: true });
       }
 
-      setStage("currency_conversion_start", {
-        analyzedItemCount: analyzedItems.length,
-        accountId: owner.accountId,
-        accountCurrency: owner.accountCurrency,
-      });
-      const convertedAnalyzedItems =
-        await maybeConvertItemsToImportAccountCurrency({
-          supabase,
-          items: analyzedItems,
-          owner,
-          emailId: emailData.email_id,
-        });
-      setStage("currency_conversion_complete", {
-        analyzedItemCount: convertedAnalyzedItems.length,
-      });
-
       const uniqueAnalyzedItems = deduplicateImportedTransactions({
-        items: convertedAnalyzedItems,
+        items: analyzedItems,
         userId: owner.userId,
         householdId: owner.householdId,
         accountId: owner.accountId,
       });
       const sortedAnalyzedItems = sortImportedTransactions(uniqueAnalyzedItems);
-      if (sortedAnalyzedItems.length !== convertedAnalyzedItems.length) {
+      if (sortedAnalyzedItems.length !== analyzedItems.length) {
         console.log("[resend-inbound-webhook] removed duplicate import items", {
           emailId: emailData.email_id,
-          duplicateCount:
-            convertedAnalyzedItems.length - sortedAnalyzedItems.length,
+          duplicateCount: analyzedItems.length - sortedAnalyzedItems.length,
         });
+      }
+
+      if (sortedAnalyzedItems.length === 0) {
+        const review = await createInboundReview({
+          supabase,
+          eventId: leaseOwner.rowId,
+          userId: owner.userId,
+          candidates: reviewCandidates,
+        });
+        if (!review) throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
+        await updateInboundEvent({
+          supabase,
+          owner: leaseOwner,
+          userId: owner.userId,
+          status: "awaiting_review",
+          result: {
+            savedCount: 0,
+            duplicateCount: 0,
+            needsReviewCount: reviewCandidates.length,
+            rejectedCount: 0,
+            failedCount: 0,
+          },
+        });
+        const email = buildImportReviewRequiredEmail({
+          reviewUrl: `${APP_URL}/import-review/${review.reviewId}#${review.token}`,
+          savedCount: 0,
+          reviewCount: reviewCandidates.length,
+        });
+        try {
+          await sendEmail({
+            to: owner.defaultEmail,
+            from: EMAIL_FROM,
+            subject: email.subject,
+            html: email.html,
+            text: email.text,
+          });
+        } catch (error) {
+          console.error("[resend-inbound-webhook] review delivery failed", {
+            emailId: emailData.email_id,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+        return jsonResponse({ success: true, awaitingReview: true });
       }
 
       ensureSoftDeadline(processingStartedAtMs, "save_transactions");
@@ -2459,7 +2426,7 @@ export async function handleResendInboundWebhook(
         supabase,
         owner: leaseOwner,
         userId: owner.userId,
-        status: "processed",
+        status: reviewCandidates.length > 0 ? "awaiting_review" : "processed",
         result: {
           emailSummary: {
             providerEmailId: emailData.email_id,
@@ -2470,6 +2437,7 @@ export async function handleResendInboundWebhook(
           },
           savedCount,
           duplicateCount,
+          needsReviewCount: reviewCandidates.length,
           failedCount,
           failureReasons,
           attachmentResults,
@@ -2481,11 +2449,40 @@ export async function handleResendInboundWebhook(
         failedCount,
       });
 
+      if (reviewCandidates.length > 0) {
+        const review = await createInboundReview({
+          supabase,
+          eventId: leaseOwner.rowId,
+          userId: owner.userId,
+          candidates: reviewCandidates,
+        });
+        if (!review) throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
+        const email = buildImportReviewRequiredEmail({
+          reviewUrl: `${APP_URL}/import-review/${review.reviewId}#${review.token}`,
+          savedCount,
+          reviewCount: reviewCandidates.length,
+        });
+        try {
+          await sendEmail({
+            to: owner.defaultEmail,
+            from: EMAIL_FROM,
+            subject: email.subject,
+            html: email.html,
+            text: email.text,
+          });
+        } catch (error) {
+          console.error("[resend-inbound-webhook] review delivery failed", {
+            emailId: emailData.email_id,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
       try {
         ensureSoftDeadline(processingStartedAtMs, "send_followup_email");
         setStage("send_followup_email_start");
         await sendEmail({
-          to: senderEmail,
+          to: owner.defaultEmail,
           from: EMAIL_FROM,
           subject: followup.subject,
           html: followup.html,

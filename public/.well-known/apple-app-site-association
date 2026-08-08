@@ -5,7 +5,8 @@
       {
         "appID": "GW28HYRJ9H.com.moneko.mobile",
         "paths": [
-          "/invites/*"
+          "/invites/*",
+          "/import-review/*"
         ]
       }
     ]
