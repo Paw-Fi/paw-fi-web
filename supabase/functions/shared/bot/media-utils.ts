@@ -1,5 +1,8 @@
 /// <reference lib="deno.ns" />
 
+import { runAnalyzeExpense } from "../analyze-core.ts";
+import { reportEdgeFunctionError } from "../edge-error-alert.ts";
+
 export function buildGeminiHighDemandMessage(language?: string | null): string {
   const normalized = String(language || "en")
     .trim()
@@ -170,10 +173,6 @@ export async function runAnalyzeExpenseWithTimeout(
   logPrefix = "ai-bot",
 ): Promise<any> {
   try {
-    // Loading document parsers eagerly pulls Node-compatibility shims into
-    // every text-only bot request. Supabase Edge isolates can reject those
-    // shims while settling microtasks, so load them only for media analysis.
-    const { runAnalyzeExpense } = await import("../analyze-core.ts");
     const analysisPromise = runAnalyzeExpense(payload, apiKey || "");
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error("timeout")), timeoutMs);
@@ -182,10 +181,26 @@ export async function runAnalyzeExpenseWithTimeout(
     return await Promise.race([analysisPromise, timeoutPromise]);
   } catch (error) {
     console.error(`[${logPrefix}] analyze-expense timeout/error:`, error);
+    const isTimeout = error instanceof Error && error.message === "timeout";
+    const backendFailureReported = isTimeout
+      ? false
+      : await reportEdgeFunctionError({
+        functionName: logPrefix,
+        error,
+        context: {
+          phase: "analyze_expense",
+          hasText: typeof payload?.text === "string" && payload.text.length > 0,
+          hasImage: payload?.image != null,
+          hasAudio: payload?.audio != null,
+          hasAttachments: Array.isArray(payload?.attachments) &&
+            payload.attachments.length > 0,
+        },
+      });
     return {
       success: false,
       error: timeoutError,
       language: "en",
+      ...(backendFailureReported ? { _backend_failure_reported: true } : {}),
     };
   }
 }
