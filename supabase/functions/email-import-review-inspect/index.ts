@@ -8,6 +8,7 @@ import {
 
 const url = Deno.env.get("SUPABASE_URL") || "";
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const MAX_REQUEST_BYTES = 4 * 1024;
 
 serve(async (request) => {
   const headers = {
@@ -23,14 +24,19 @@ serve(async (request) => {
     return invalidResponse(headers, 405);
   }
   try {
-    const body = await request.json();
-    if (!isUuid(body?.reviewId) || !isValidReviewToken(body?.token))
+    const body = await readBoundedJson(request, MAX_REQUEST_BYTES);
+    if (!body || !isUuid(body?.reviewId) || !isValidReviewToken(body?.token)) {
       return invalidResponse(headers);
+    }
     const supabase = createClient(url, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const tokenHash = await hashEmailImportReviewToken(body.token);
-    const { data: review } = await supabase
+    const { error: cleanupError } = await supabase.rpc(
+      "expire_email_import_review_evidence",
+    );
+    if (cleanupError) throw cleanupError;
+    const { data: review, error: reviewError } = await supabase
       .from("email_import_reviews")
       .select(
         "id, status, version, expires_at, completed_at, declined_at, last_error",
@@ -38,23 +44,29 @@ serve(async (request) => {
       .eq("id", body.reviewId)
       .eq("token_hash", tokenHash)
       .maybeSingle();
-    if (!review) return invalidResponse(headers);
+    if (reviewError || !review) return invalidResponse(headers);
     if (
       new Date(review.expires_at).getTime() <= Date.now() &&
       review.status === "pending"
     ) {
+      await supabase
+        .from("email_import_reviews")
+        .update({ status: "expired", updated_at: new Date().toISOString() })
+        .eq("id", review.id)
+        .eq("status", "pending");
       return new Response(
         JSON.stringify({ status: "expired", expiresAt: review.expires_at }),
-        { status: 410, headers },
+        { headers },
       );
     }
-    const { data: items } = await supabase
+    const { data: items, error: itemsError } = await supabase
       .from("email_import_review_items")
       .select(
         "id, candidate, issues, options, selected_option_ids, resolved_transaction, save_status, save_result",
       )
       .eq("review_id", review.id)
       .order("source_index");
+    if (itemsError) throw itemsError;
     return new Response(
       JSON.stringify({
         status: review.status,
@@ -88,9 +100,10 @@ function invalidResponse(headers: Record<string, string>, status = 404) {
 function isUuid(value: unknown): value is string {
   return (
     typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(
+        value,
+      )
   );
 }
 
@@ -98,4 +111,22 @@ function summary(candidate: Record<string, unknown>): string {
   return typeof candidate.description === "string"
     ? candidate.description.slice(0, 160)
     : "Transaction awaiting review";
+}
+
+async function readBoundedJson(
+  request: Request,
+  maxBytes: number,
+): Promise<Record<string, any> | null> {
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > maxBytes) return null;
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.byteLength > maxBytes) return null;
+  try {
+    const parsed = JSON.parse(new TextDecoder().decode(bytes));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch (_) {
+    return null;
+  }
 }

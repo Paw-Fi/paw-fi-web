@@ -28,6 +28,83 @@ export function createReviewOptionId(
   return `issue:${issueIndex}:${value}`;
 }
 
+interface StoredReviewIssue {
+  field: string;
+  choices: Array<{ id: string; value: unknown }>;
+}
+
+interface StoredReviewItem {
+  id: string;
+  issues: StoredReviewIssue[];
+}
+
+interface ReviewDecisionInput {
+  itemId?: unknown;
+  optionIds?: unknown;
+  decline?: unknown;
+}
+
+export interface ValidatedReviewDecision {
+  itemId: string;
+  decline: boolean;
+  optionIds: string[];
+}
+
+export function validateStoredReviewDecisions(
+  items: StoredReviewItem[],
+  decisions: ReviewDecisionInput[],
+): ValidatedReviewDecision[] | null {
+  if (decisions.length !== items.length) return null;
+  const decisionsByItem = new Map<string, ReviewDecisionInput>();
+  for (const decision of decisions) {
+    if (
+      typeof decision.itemId !== "string" ||
+      decisionsByItem.has(decision.itemId)
+    ) {
+      return null;
+    }
+    decisionsByItem.set(decision.itemId, decision);
+  }
+
+  const validated: ValidatedReviewDecision[] = [];
+  for (const item of items) {
+    const decision = decisionsByItem.get(item.id);
+    if (!decision) return null;
+    if (decision.decline === true) {
+      if (
+        decision.optionIds !== undefined &&
+        (!Array.isArray(decision.optionIds) || decision.optionIds.length > 0)
+      ) {
+        return null;
+      }
+      validated.push({ itemId: item.id, decline: true, optionIds: [] });
+      continue;
+    }
+    if (
+      !Array.isArray(decision.optionIds) ||
+      decision.optionIds.some((value) => typeof value !== "string")
+    ) {
+      return null;
+    }
+    const selectedIds = new Set(decision.optionIds as string[]);
+    if (selectedIds.size !== item.issues.length) return null;
+    const normalizedIds: string[] = [];
+    for (const issue of item.issues) {
+      const selected = issue.choices.filter((choice) =>
+        selectedIds.has(choice.id)
+      );
+      if (selected.length !== 1) return null;
+      normalizedIds.push(selected[0].id);
+    }
+    validated.push({
+      itemId: item.id,
+      decline: false,
+      optionIds: normalizedIds,
+    });
+  }
+  return validated;
+}
+
 export function resolveStoredReviewDecision(params: {
   candidate: Record<string, unknown>;
   issues: Array<{
@@ -36,17 +113,14 @@ export function resolveStoredReviewDecision(params: {
   }>;
   optionIds: string[];
 }): Record<string, unknown> | null {
-  const expectedIds = params.issues.map((issue) =>
-    issue.choices.map((choice) => choice.id),
-  );
-  if (params.optionIds.length !== expectedIds.length) return null;
+  if (new Set(params.optionIds).size !== params.issues.length) return null;
   const transaction = { ...params.candidate };
-  for (let index = 0; index < params.issues.length; index++) {
-    const choice = params.issues[index].choices.find(
-      (item) => item.id === params.optionIds[index],
+  for (const issue of params.issues) {
+    const choices = issue.choices.filter((item) =>
+      params.optionIds.includes(item.id)
     );
-    if (!choice) return null;
-    transaction[params.issues[index].field] = choice.value;
+    if (choices.length !== 1) return null;
+    transaction[issue.field] = choices[0].value;
   }
   return transaction;
 }

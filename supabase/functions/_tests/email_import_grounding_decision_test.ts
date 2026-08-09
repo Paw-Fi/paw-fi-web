@@ -50,6 +50,26 @@ Deno.test(
 );
 
 Deno.test(
+  "email import decision: invoice labels are never offered as currencies",
+  () => {
+    const decision = decideEmailImportGrounding({
+      sourceText: "Invoice\nVAT 405.00\nTotal 405.00 USD",
+      item: {
+        type: "expense",
+        amount: 405,
+        currency: "HKD",
+        date: "2026-08-04",
+        description: "invoice",
+      },
+    });
+
+    assertEquals(decision.kind, "auto_repair");
+    if (decision.kind !== "auto_repair") return;
+    assertEquals(decision.transaction.currency, "USD");
+  },
+);
+
+Deno.test(
   "email import decision: signature-only and ungrounded values reject",
   () => {
     const decision = decideEmailImportGrounding({

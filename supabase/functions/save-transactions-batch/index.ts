@@ -432,8 +432,8 @@ export async function saveTransactionsBatchInternal(
         householdId: requestedHouseholdId,
         memberCount: householdMembers.length,
         autoSplitEnabled: householdAutoSplitSettings.autoSplitEnabled,
-        defaultSplitType:
-          householdAutoSplitSettings.defaultConfig?.splitType ?? "equal",
+        defaultSplitType: householdAutoSplitSettings.defaultConfig?.splitType ??
+          "equal",
         transactionCount: body.transactions.length,
       });
     }
@@ -679,7 +679,8 @@ export async function saveTransactionsBatchInternal(
       : typeof tx.clientMutationId === "string"
       ? tx.clientMutationId.trim() || null
       : null;
-    const importRequestKey = buildImportRequestKey(body.debugTraceId, i);
+    const importRequestKey = idempotencyKey ??
+      buildImportRequestKey(body.debugTraceId, i);
     const importSemanticKey = buildImportSemanticKey({
       userId,
       householdId: householdIdForRecord,

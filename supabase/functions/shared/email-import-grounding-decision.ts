@@ -1,4 +1,5 @@
 import { sanitizeTransactionSourceGrounding } from "./analyze-core.ts";
+import { VALID_CURRENCIES } from "./currency-validator.ts";
 
 export interface GroundedTransaction extends Record<string, unknown> {
   amount: number;
@@ -14,29 +15,29 @@ export interface ImportFieldRepair {
 
 export interface ImportReviewChoice {
   id: string;
-  value: string;
+  value: string | number;
   label: string;
   evidence: string;
 }
 
 export interface ImportReviewIssue {
-  field: "currency";
-  code: "MULTIPLE_GROUNDED_CURRENCIES";
+  field: "amount" | "currency" | "type" | "date";
+  code: string;
   choices: ImportReviewChoice[];
 }
 
 export type ImportGroundingDecision =
   | { kind: "accept"; transaction: GroundedTransaction }
   | {
-      kind: "auto_repair";
-      transaction: GroundedTransaction;
-      repairs: ImportFieldRepair[];
-    }
+    kind: "auto_repair";
+    transaction: GroundedTransaction;
+    repairs: ImportFieldRepair[];
+  }
   | {
-      kind: "review";
-      candidate: GroundedTransaction;
-      issues: ImportReviewIssue[];
-    }
+    kind: "review";
+    candidate: GroundedTransaction;
+    issues: ImportReviewIssue[];
+  }
   | { kind: "reject"; reasons: string[] };
 
 export function decideEmailImportGrounding(params: {
@@ -47,9 +48,13 @@ export function decideEmailImportGrounding(params: {
     sourceText: params.sourceText,
     item: params.item,
   });
-  const sanitized = firstPass.reasons.includes("MERCHANT_NOT_FOUND_IN_SOURCE")
-    ? withoutField(firstPass.item, "merchant")
-    : firstPass.item;
+  let sanitized = firstPass.item;
+  if (firstPass.reasons.includes("MERCHANT_NOT_FOUND_IN_SOURCE")) {
+    sanitized = withoutField(sanitized, "merchant");
+  }
+  if (firstPass.reasons.includes("DESCRIPTION_NOT_GROUNDED_IN_SOURCE")) {
+    sanitized = withoutField(sanitized, "description");
+  }
   const initial = sanitizeTransactionSourceGrounding({
     sourceText: params.sourceText,
     item: sanitized,
@@ -78,11 +83,10 @@ export function decideEmailImportGrounding(params: {
         repairs: [
           {
             field: "currency",
-            from:
-              typeof initial.item.currency === "string"
-                ? initial.item.currency
-                : null,
-            to: choices[0].value,
+            from: typeof initial.item.currency === "string"
+              ? initial.item.currency
+              : null,
+            to: String(choices[0].value),
             evidence: choices[0].evidence,
           },
         ],
@@ -132,7 +136,7 @@ function currencyChoicesForAmount(
   const byCurrency = new Map<string, string>();
   for (const match of matches) {
     const currency = match[1] ?? match[2];
-    if (!currency) continue;
+    if (!currency || !VALID_CURRENCIES.includes(currency)) continue;
     byCurrency.set(currency, match[0].slice(0, 80));
   }
   return [...byCurrency.entries()]
