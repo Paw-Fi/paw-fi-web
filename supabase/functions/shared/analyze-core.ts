@@ -3510,12 +3510,6 @@ async function analyzeFromText(
     );
   }
 
-  if (deterministicCandidates.length > 0) {
-    console.log(
-      `[analyze-expense] Text: Deterministic parser found ${deterministicCandidates.length} candidates`,
-    );
-  }
-
   // Check if text is large enough to require chunking
   // ~12000 chars is roughly 3000-4000 tokens input, leaving room for output
   const CHUNK_THRESHOLD = 12000;
@@ -3607,9 +3601,6 @@ async function analyzeFromText(
 
     const cleaned = deduplicateAndCleanItems(deterministicItems);
     reconcileStatementTotals(normalizedText, cleaned);
-    console.log(
-      `[analyze-expense] Text: Deterministic final count ${cleaned.length} (from ${deterministicCandidates.length} raw)`,
-    );
     return cleaned;
   }
 
@@ -3739,10 +3730,6 @@ async function analyzeFromText(
     cleanedItems = deduplicateAndCleanItems(fallbackItems);
     reconcileStatementTotals(normalizedText, cleanedItems);
   }
-  console.log(
-    `[analyze-expense] Text: Final count after dedup: ${cleanedItems.length} items (from ${allItems.length} raw)`,
-  );
-
   return cleanedItems;
 }
 
@@ -4051,12 +4038,6 @@ function processRawItems(
           it.description,
           callerDate,
         );
-
-      if (DEBUG_LOGS) {
-        console.log(
-          `[analyze-expense] ${logPrefix} raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`,
-        );
-      }
 
       const txType = String(it.type || "").toLowerCase();
       const resolvedType = txType === "income" || txType === "expense"
@@ -5378,30 +5359,6 @@ export async function runAnalyzeExpense(
       ? body.categoryRemaps
       : [];
 
-    // Debug: Log categories being passed to AI
-    if (DEBUG_LOGS) {
-      console.log(
-        `[analyze-expense] Expense categories count: ${expenseCategories.length}`,
-      );
-      console.log(
-        `[analyze-expense] Income categories count: ${incomeCategories.length}`,
-      );
-      console.log(
-        `[analyze-expense] Expense categories include 'food': ${
-          expenseCategories.includes(
-            "food",
-          )
-        }`,
-      );
-      console.log(
-        `[analyze-expense] Expense categories include 'food & drinks': ${
-          expenseCategories.includes(
-            "food & drinks",
-          )
-        }`,
-      );
-    }
-
     let lastError = "";
 
     const tools = [
@@ -6347,20 +6304,6 @@ export async function runAnalyzeExpense(
         ...baseItems[idx],
         category: it.remapMatched ? it.category : preferredItems[idx].category,
       }));
-
-      console.log(
-        "[analyze-expense] Category resolution before final coercion:",
-        itemsWithRemapLock.slice(0, 8).map((it, idx) => ({
-          description: baseItems[idx]?.description ?? null,
-          original: normalizeStoredUserCategory(
-            baseItems[idx]?.category ?? null,
-          ),
-          remapMatched: it.remapMatched,
-          afterRemap: it.category,
-          afterPreference: preferredItems[idx]?.category ?? null,
-          chosen: items[idx]?.category ?? null,
-        })),
-      );
 
       // Apply remaps once more after preferences for non-locked rows.
       items = items.map((it) => ({

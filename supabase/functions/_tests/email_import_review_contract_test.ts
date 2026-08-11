@@ -54,6 +54,60 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "inbound email body decisions are AI-only and progress logs stay concise",
+  async () => {
+    const webhook = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(webhook, "classifyEmailImportWithAi");
+    assertStringIncludes(webhook, "allowDeterministicTextFallback: false");
+    assertStringIncludes(webhook, "EMAIL_IMPORT_AI_DECISION_MALFORMED_RESULT");
+    assertEquals(webhook.includes("extractLabeledTransactionFallback"), false);
+    assertEquals(webhook.includes("decideEmailImportGrounding"), false);
+    assertEquals(
+      webhook.includes("[resend-inbound-webhook] email body analyze progress"),
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "review-required imports send one email that includes saved transactions",
+  async () => {
+    const webhook = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(webhook, "buildImportReviewRequiredEmail({");
+    assertStringIncludes(webhook, "if (reviewCandidates.length === 0) {");
+    assertStringIncludes(webhook, 'setStage("send_followup_email_start")');
+  },
+);
+
+Deno.test(
+  "review-required imports send one actionable device notification",
+  async () => {
+    const webhook = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(webhook, "sendImportReviewRequiredNotification");
+    assertStringIncludes(webhook, 'event_type: "email_import_review_required"');
+    assertStringIncludes(webhook, 'deep_link: "moneko://home"');
+    assertEquals(webhook.includes("#${token}"), false);
+    assertStringIncludes(
+      webhook,
+      'if (reviewCandidates.length === 0) {\n        try {\n          ensureSoftDeadline(processingStartedAtMs, "send_followup_email")',
+    );
+    assertStringIncludes(
+      webhook,
+      'if (reviewCandidates.length === 0) {\n        try {\n          ensureSoftDeadline(processingStartedAtMs, "push_notification")',
+    );
+  },
+);
+
 Deno.test("web review polls processing submissions", async () => {
   const route = await Deno.readTextFile(
     new URL("../../../src/routes/import-review/$reviewId.tsx", import.meta.url),

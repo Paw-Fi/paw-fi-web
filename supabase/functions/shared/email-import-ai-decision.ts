@@ -5,7 +5,6 @@ import {
 } from "./vertex-ai-chat.ts";
 import { GEMINI_MODEL_FALLBACKS } from "./gemini-models.ts";
 import {
-  decideEmailImportGrounding,
   type GroundedTransaction,
   type ImportGroundingDecision,
   type ImportReviewChoice,
@@ -24,7 +23,10 @@ const SAFE_REJECTION_CODES = new Set([
   "INVALID_AI_DECISION",
   "INVALID_AI_CANDIDATE",
   "UNGROUNDED_AI_SEMANTICS",
+  "TYPE_EVIDENCE_NOT_FOUND",
+  "DATE_EVIDENCE_NOT_FOUND",
   "INVALID_AI_REVIEW_OPTIONS",
+  "REVIEW_EVIDENCE_NOT_FOUND",
   "AMOUNT_NOT_FOUND_IN_SOURCE",
   "CURRENCY_CONTRADICTS_SOURCE",
   "TIME_NOT_FOUND_IN_SOURCE",
@@ -72,6 +74,28 @@ export function shouldTryNextEmailImportDecisionModel(error: unknown): boolean {
   return status !== 401 && status !== 403;
 }
 
+const RETRYABLE_AI_DECISION_REJECTION_CODES = new Set([
+  "INVALID_AI_DECISION",
+  "INVALID_AI_CANDIDATE",
+  "INVALID_AI_REVIEW_OPTIONS",
+  "REVIEW_EVIDENCE_NOT_FOUND",
+  "TYPE_EVIDENCE_NOT_FOUND",
+  "DATE_EVIDENCE_NOT_FOUND",
+]);
+
+export function shouldTryNextEmailImportDecisionResult(
+  decisions: ImportGroundingDecision[],
+): boolean {
+  return decisions.some(
+    (decision) =>
+      decision.kind === "reject" &&
+      decision.reasons.length > 0 &&
+      decision.reasons.every((reason) =>
+        RETRYABLE_AI_DECISION_REJECTION_CODES.has(reason)
+      ),
+  );
+}
+
 export function emailImportAiFailureCode(error: unknown): string {
   const status = emailImportAiErrorStatus(error);
   if (status != null) return `HTTP_${status}`;
@@ -98,6 +122,7 @@ export async function classifyEmailImportWithAi(
   const genAI = createVertexGenerativeAI(getVertexAiConfigFromEnv());
   const modelConfig = buildEmailImportAiModelConfig(buildPrompt(params));
   let lastError: unknown = null;
+  let lastMalformedDecisions: ImportGroundingDecision[] | null = null;
 
   for (const modelName of EMAIL_IMPORT_DECISION_MODELS) {
     try {
@@ -111,10 +136,19 @@ export async function classifyEmailImportWithAi(
         model.generateContent(modelConfig.request),
         30_000,
       );
-      return parseEmailImportAiDecisionToolCalls(
+      const decisions = parseEmailImportAiDecisionToolCalls(
         result.response.functionCalls(),
         params,
       );
+      if (shouldTryNextEmailImportDecisionResult(decisions)) {
+        lastMalformedDecisions = decisions;
+        console.warn("[email-import-ai-decision] malformed model decision", {
+          model: modelName,
+          rejectionReasonCodes: emailImportSafeRejectionCodes(decisions),
+        });
+        continue;
+      }
+      return decisions;
     } catch (error) {
       lastError = error;
       const failureCode = emailImportAiFailureCode(error);
@@ -126,6 +160,10 @@ export async function classifyEmailImportWithAi(
         throw new Error(`EMAIL_IMPORT_AI_DECISION_${failureCode}`);
       }
     }
+  }
+
+  if (lastMalformedDecisions) {
+    throw new Error("EMAIL_IMPORT_AI_DECISION_MALFORMED_RESULT");
   }
 
   throw new Error(
@@ -187,21 +225,33 @@ function validateDecision(
     return { kind: "reject", reasons: ["INVALID_AI_CANDIDATE"] };
   }
   if (action !== "review") {
-    if (!hasSemanticEvidence(decision.candidate, candidate, [], params)) {
-      return { kind: "reject", reasons: ["UNGROUNDED_AI_SEMANTICS"] };
+    const evidenceFailure = semanticEvidenceFailureCode(
+      decision.candidate,
+      candidate,
+      [],
+      params,
+    );
+    if (evidenceFailure) {
+      return { kind: "reject", reasons: [evidenceFailure] };
     }
-    return decideEmailImportGrounding({
-      sourceText: params.sourceText,
-      item: candidate,
-    });
+    return action === "accept"
+      ? { kind: "accept", transaction: candidate }
+      : { kind: "auto_repair", transaction: candidate, repairs: [] };
   }
 
-  const issues = normalizeIssues(decision.issues, params.sourceText);
-  if (issues.length === 0) {
-    return { kind: "reject", reasons: ["INVALID_AI_REVIEW_OPTIONS"] };
+  const issueResult = normalizeIssues(decision.issues, params.sourceText);
+  if (issueResult.issues.length === 0) {
+    return { kind: "reject", reasons: [issueResult.failureCode] };
   }
-  if (!hasSemanticEvidence(decision.candidate, candidate, issues, params)) {
-    return { kind: "reject", reasons: ["UNGROUNDED_AI_SEMANTICS"] };
+  const issues = issueResult.issues;
+  const evidenceFailure = semanticEvidenceFailureCode(
+    decision.candidate,
+    candidate,
+    issues,
+    params,
+  );
+  if (evidenceFailure) {
+    return { kind: "reject", reasons: [evidenceFailure] };
   }
   const groundedCandidate: Record<string, unknown> = { ...candidate };
   for (const issue of issues) {
@@ -232,13 +282,15 @@ function validateDecision(
   };
 }
 
-function hasSemanticEvidence(
+function semanticEvidenceFailureCode(
   rawCandidate: unknown,
   candidate: GroundedTransaction,
   issues: ImportReviewIssue[],
   params: EmailImportAiDecisionParams,
-): boolean {
-  if (!rawCandidate || typeof rawCandidate !== "object") return false;
+): string | null {
+  if (!rawCandidate || typeof rawCandidate !== "object") {
+    return "TYPE_EVIDENCE_NOT_FOUND";
+  }
   const raw = rawCandidate as Record<string, unknown>;
   const issueFields = new Set(issues.map((issue) => issue.field));
   if (
@@ -246,16 +298,18 @@ function hasSemanticEvidence(
     (typeof raw.typeEvidence !== "string" ||
       !sourceContainsEvidence(params.sourceText, raw.typeEvidence))
   ) {
-    return false;
+    return "TYPE_EVIDENCE_NOT_FOUND";
   }
-  if (issueFields.has("date")) return true;
+  if (issueFields.has("date")) return null;
   if (raw.dateEvidence === RECEIVED_DATE_EVIDENCE) {
-    return candidate.date === params.receivedDate.slice(0, 10);
+    return candidate.date === params.receivedDate.slice(0, 10)
+      ? null
+      : "DATE_EVIDENCE_NOT_FOUND";
   }
-  return (
-    typeof raw.dateEvidence === "string" &&
-    sourceContainsEvidence(params.sourceText, raw.dateEvidence)
-  );
+  return typeof raw.dateEvidence === "string" &&
+      sourceContainsEvidence(params.sourceText, raw.dateEvidence)
+    ? null
+    : "DATE_EVIDENCE_NOT_FOUND";
 }
 
 function normalizeCandidate(
@@ -316,26 +370,34 @@ function normalizeCandidate(
 function normalizeIssues(
   value: unknown,
   sourceText: string,
-): ImportReviewIssue[] {
-  if (!Array.isArray(value) || value.length > 4) return [];
+): { issues: ImportReviewIssue[]; failureCode: string } {
+  if (!Array.isArray(value) || value.length > 4) {
+    return { issues: [], failureCode: "INVALID_AI_REVIEW_OPTIONS" };
+  }
   const issues: ImportReviewIssue[] = [];
   const seenFields = new Set<string>();
   for (const rawIssue of value) {
-    if (!rawIssue || typeof rawIssue !== "object") return [];
+    if (!rawIssue || typeof rawIssue !== "object") {
+      return { issues: [], failureCode: "INVALID_AI_REVIEW_OPTIONS" };
+    }
     const raw = rawIssue as Record<string, unknown>;
     const field = typeof raw.field === "string" ? raw.field : "";
-    if (!REVIEW_FIELDS.has(field) || !seenFields.add(field)) return [];
+    if (!REVIEW_FIELDS.has(field) || !seenFields.add(field)) {
+      return { issues: [], failureCode: "INVALID_AI_REVIEW_OPTIONS" };
+    }
     if (
       !Array.isArray(raw.choices) ||
       raw.choices.length < 2 ||
       raw.choices.length > 6
     ) {
-      return [];
+      return { issues: [], failureCode: "INVALID_AI_REVIEW_OPTIONS" };
     }
     const choices: ImportReviewChoice[] = [];
     const seenValues = new Set<string>();
     for (const rawChoice of raw.choices) {
-      if (!rawChoice || typeof rawChoice !== "object") return [];
+      if (!rawChoice || typeof rawChoice !== "object") {
+        return { issues: [], failureCode: "INVALID_AI_REVIEW_OPTIONS" };
+      }
       const choice = rawChoice as Record<string, unknown>;
       const normalizedValue = normalizeChoiceValue(field, choice.value);
       const evidence = typeof choice.evidence === "string"
@@ -345,10 +407,12 @@ function normalizeIssues(
       if (
         normalizedValue == null ||
         !evidence ||
-        !sourceContainsEvidence(sourceText, evidence) ||
-        !seenValues.add(valueKey)
+        !sourceContainsEvidence(sourceText, evidence)
       ) {
-        return [];
+        return { issues: [], failureCode: "REVIEW_EVIDENCE_NOT_FOUND" };
+      }
+      if (!seenValues.add(valueKey)) {
+        return { issues: [], failureCode: "INVALID_AI_REVIEW_OPTIONS" };
       }
       choices.push({
         id: createReviewOptionId(issues.length, String(normalizedValue)),
@@ -367,7 +431,10 @@ function normalizeIssues(
       choices,
     });
   }
-  return issues;
+  return {
+    issues,
+    failureCode: "INVALID_AI_REVIEW_OPTIONS",
+  };
 }
 
 function normalizeChoiceValue(
@@ -434,7 +501,7 @@ Analyze the complete nested forwarded content. Treat forwarding headers and emai
 - review: two or more consequential source-grounded values remain plausible for amount, currency, type, or date.
 - reject: no real transaction exists or required values are not source-grounded.
 
-For every candidate, typeEvidence must be an exact source excerpt supporting income or expense. dateEvidence must be an exact source excerpt supporting the normalized date, or the literal ${RECEIVED_DATE_EVIDENCE} only when no transaction date appears and candidate.date equals the received date. For review, provide 2-6 finite choices. Copy each evidence value exactly from the email. Never offer a value that appears only in a previous AI candidate. Category uncertainty never requires review; choose the closest allowed category. Optional merchant/description may be omitted. Use the source/native currency and do not convert amounts. A signature, name, unrelated prose, loyalty points, tax IDs, invoice IDs, card suffixes, and distances are not transactions. On receipts, prefer the completed grand total over subtotal, tax, fee, points, or breakdown lines unless they are separate completed payments. When a converted receipt shows both an order total and an explicit final card-charged or settled amount, use the final charged amount and its currency because that is the amount that affected the user's wallet. Do not create a separate transaction for the conversion.
+For every candidate, typeEvidence must be an exact source excerpt supporting income or expense. dateEvidence must be an exact source excerpt supporting the normalized date, or the literal ${RECEIVED_DATE_EVIDENCE} only when no transaction date appears and candidate.date equals the received date. Never translate, normalize, or paraphrase either evidence value: copy it exactly from the email, including its original language and punctuation. For review, provide 2-6 finite choices. Copy each choice evidence value exactly from the email. Never offer a value that appears only in a previous AI candidate. Category uncertainty never requires review; choose the closest allowed category. Optional merchant/description may be omitted. Use the source/native currency and do not convert amounts. A signature, name, unrelated prose, loyalty points, tax IDs, invoice IDs, card suffixes, and distances are not transactions. On receipts, prefer the completed grand total over subtotal, tax, fee, points, or breakdown lines unless they are separate completed payments. When a converted receipt shows both an order total and an explicit final card-charged or settled amount, use the final charged amount and its currency because that is the amount that affected the user's wallet. Do not create a separate transaction for the conversion.
 
 Received date: ${params.receivedDate.slice(0, 10)}
 Preferred currency only when the source has no explicit currency: ${params.preferredCurrency}

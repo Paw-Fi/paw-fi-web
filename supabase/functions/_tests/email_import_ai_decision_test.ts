@@ -12,6 +12,7 @@ import {
   parseEmailImportAiDecisionToolCalls,
   shouldEscalateEmailImportAiFailure,
   shouldTryNextEmailImportDecisionModel,
+  shouldTryNextEmailImportDecisionResult,
   validateEmailImportAiDecisions,
 } from "../shared/email-import-ai-decision.ts";
 
@@ -127,6 +128,58 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "email import AI decision creates a Mandarin currency review from AI choices",
+  () => {
+    const sourceText = `订单已完成
+餐厅：Nori House
+订单总额：USD 72.65
+本次银行卡已扣款：CAD 72.65
+本次账单币种已扣款：USD 72.65`;
+    const decisions = validateEmailImportAiDecisions(
+      {
+        decisions: [
+          {
+            action: "review",
+            candidate: {
+              type: "expense",
+              amount: 72.65,
+              currency: "CAD",
+              date: "2026-08-09",
+              category: "other",
+              typeEvidence: "订单已完成",
+              dateEvidence: "RECEIVED_DATE",
+            },
+            issues: [
+              {
+                field: "currency",
+                code: "AMBIGUOUS_SETTLEMENT_CURRENCY",
+                choices: [
+                  { value: "CAD", label: "CAD", evidence: "CAD 72.65" },
+                  { value: "USD", label: "USD", evidence: "USD 72.65" },
+                ],
+              },
+            ],
+            reasonCodes: ["AMBIGUOUS_CURRENCY"],
+          },
+        ],
+      },
+      { ...baseParams, sourceText },
+    );
+
+    assertEquals(decisions.length, 1);
+    assertEquals(decisions[0].kind, "review");
+    if (decisions[0].kind === "review") {
+      assertEquals(decisions[0].candidate.amount, 72.65);
+      assertEquals(decisions[0].issues[0].field, "currency");
+      assertEquals(
+        decisions[0].issues[0].choices.map((choice) => choice.value),
+        ["CAD", "USD"],
+      );
+    }
+  },
+);
+
 Deno.test("email import AI decision rejects fabricated review evidence", () => {
   const decisions = validateEmailImportAiDecisions(
     {
@@ -160,6 +213,9 @@ Deno.test("email import AI decision rejects fabricated review evidence", () => {
   );
 
   assertEquals(decisions[0].kind, "reject");
+  assertEquals(emailImportSafeRejectionCodes(decisions), [
+    "REVIEW_EVIDENCE_NOT_FOUND",
+  ]);
 });
 
 Deno.test("email import AI decision rejects ungrounded type and date", () => {
@@ -188,6 +244,56 @@ Deno.test("only candidate-backed classifier failures are operational", () => {
   assertEquals(shouldEscalateEmailImportAiFailure(0), false);
   assertEquals(shouldEscalateEmailImportAiFailure(1), true);
 });
+
+Deno.test(
+  "email import retries model fallback for malformed AI decisions",
+  () => {
+    assertEquals(
+      shouldTryNextEmailImportDecisionResult([
+        { kind: "reject", reasons: ["TYPE_EVIDENCE_NOT_FOUND"] },
+        { kind: "reject", reasons: ["INVALID_AI_CANDIDATE"] },
+      ]),
+      true,
+    );
+    assertEquals(
+      shouldTryNextEmailImportDecisionResult([
+        {
+          kind: "accept",
+          transaction: {
+            type: "expense",
+            amount: 1,
+            currency: "USD",
+            date: "2026-08-09",
+            category: "other",
+          },
+        },
+        { kind: "reject", reasons: ["TYPE_EVIDENCE_NOT_FOUND"] },
+      ]),
+      true,
+    );
+    assertEquals(
+      shouldTryNextEmailImportDecisionResult([
+        { kind: "reject", reasons: ["NO_TRANSACTION_IN_SOURCE"] },
+      ]),
+      false,
+    );
+    assertEquals(
+      shouldTryNextEmailImportDecisionResult([
+        {
+          kind: "accept",
+          transaction: {
+            type: "expense",
+            amount: 1,
+            currency: "USD",
+            date: "2026-08-09",
+            category: "other",
+          },
+        },
+      ]),
+      false,
+    );
+  },
+);
 
 Deno.test("email import AI decision has a stable fallback model", () => {
   assertEquals(EMAIL_IMPORT_DECISION_MODELS, [

@@ -19,13 +19,9 @@ import {
 } from "../shared/email-import.ts";
 import {
   type AnalyzeRequestBody,
-  extractLabeledTransactionFallback,
   runAnalyzeExpense,
 } from "../shared/analyze-core.ts";
-import {
-  decideEmailImportGrounding,
-  type ImportGroundingDecision,
-} from "../shared/email-import-grounding-decision.ts";
+import { type ImportGroundingDecision } from "../shared/email-import-grounding-decision.ts";
 import {
   classifyEmailImportWithAi,
   emailImportSafeRejectionCodes,
@@ -236,7 +232,7 @@ function ensureSoftDeadline(startedAtMs: number, stage: string): void {
 }
 
 function matchesRetryableFailurePattern(message: string): boolean {
-  return /(SOFT_DEADLINE_EXCEEDED|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i
+  return /(SOFT_DEADLINE_EXCEEDED|EMAIL_IMPORT_AI_DECISION_MALFORMED_RESULT|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i
     .test(
       message,
     );
@@ -1275,6 +1271,64 @@ async function sendImportProcessedNotification(params: {
   );
 }
 
+async function sendImportReviewRequiredNotification(params: {
+  supabase: any;
+  owner: ResolvedOwner;
+  reviewId: string;
+  savedCount: number;
+  reviewCount: number;
+}): Promise<void> {
+  const { supabase, owner, reviewId, savedCount, reviewCount } = params;
+  const devices = await fetchActiveDevices(supabase, owner.userId);
+  if (!devices.length) return;
+
+  const accessToken = await getFcmAccessToken();
+  if (!accessToken) return;
+
+  const title = "Action needed: review your import";
+  const body = savedCount > 0
+    ? `${savedCount} ${
+      pluralize(
+        savedCount,
+        "transaction",
+      )
+    } added. ${reviewCount} ${
+      pluralize(
+        reviewCount,
+        "transaction",
+      )
+    } need your review. Tap to review.`
+    : `${reviewCount} ${
+      pluralize(
+        reviewCount,
+        "transaction",
+      )
+    } need your review. Tap to review.`;
+  const data = {
+    event_type: "email_import_review_required",
+    notification_type: "email_import_review_required",
+    notification_id: `email_import_review:${reviewId}`,
+    review_id: reviewId,
+    review_count: String(reviewCount),
+    saved_count: String(savedCount),
+    deep_link: "moneko://home",
+  };
+
+  await Promise.allSettled(
+    devices.map((device) =>
+      sendFcmV1Notification({
+        supabase,
+        deviceToken: device.token,
+        title,
+        body,
+        data,
+        accessToken,
+        platform: device.platform ?? undefined,
+      })
+    ),
+  );
+}
+
 async function fetchResendJson(path: string): Promise<any> {
   const response = await fetchWithTimeout(
     `https://api.resend.com${path}`,
@@ -2025,19 +2079,6 @@ export async function handleResendInboundWebhook(
               categoryPreferences: categoryContext.categoryPreferences,
             },
             requiredGeminiApiKey,
-            (progress) => {
-              console.log(
-                "[resend-inbound-webhook] email body analyze progress",
-                {
-                  emailId: emailData.email_id,
-                  elapsedMs: Date.now() - backgroundStartedAtMs,
-                  type: progress.type,
-                  current: progress.current ?? null,
-                  total: progress.total ?? null,
-                  message: progress.message ?? null,
-                },
-              );
-            },
           );
           if (!result.success && isRetryableAnalyzeFailure(result)) {
             const retryableError = new Error(
@@ -2060,29 +2101,13 @@ export async function handleResendInboundWebhook(
           }
           let bodyItems = Array.isArray(result.items) ? result.items : [];
           if (bodyItems.length > 0) {
-            const firstPassItems = bodyItems;
+            // The extractor only proposes candidates. The multilingual AI
+            // reviewer is the sole authority for accept, repair, or review.
+            const extractedItems = bodyItems;
             bodyItems = [];
-            for (const item of firstPassItems) {
-              const grounding = decideEmailImportGrounding({
-                sourceText: emailBodyText,
-                item: item as unknown as Record<string, unknown>,
-              });
-              if (grounding.kind === "review") {
-                unresolvedAiItems.push({
-                  item: grounding.candidate,
-                  reasons: ["REQUIRES_AI_SEMANTIC_GROUNDING"],
-                });
-                continue;
-              }
-              if (grounding.kind === "reject") {
-                unresolvedAiItems.push({
-                  item: item as unknown as Record<string, unknown>,
-                  reasons: grounding.reasons,
-                });
-                continue;
-              }
+            for (const item of extractedItems) {
               unresolvedAiItems.push({
-                item: grounding.transaction,
+                item: item as unknown as Record<string, unknown>,
                 reasons: ["REQUIRES_AI_SEMANTIC_GROUNDING"],
               });
             }
@@ -2163,28 +2188,6 @@ export async function handleResendInboundWebhook(
               },
             );
           }
-          if (bodyItems.length === 0) {
-            const fallback = extractLabeledTransactionFallback({
-              sourceText: emailBodyText,
-              receivedDate: emailData.created_at ||
-                event.created_at ||
-                new Date().toISOString(),
-            });
-            if (fallback) {
-              bodyItems = [
-                {
-                  ...fallback,
-                  category: "other",
-                  currencySymbol: "",
-                },
-              ];
-              console.info(
-                "[resend-inbound-webhook] labeled fallback recovered email import",
-                { providerEmailId: emailData.email_id },
-              );
-            }
-          }
-
           if (bodyItems.length === 0) {
             // A note accompanying a file is valid even when it does not
             // describe another transaction, so only surface this result when
@@ -2427,6 +2430,20 @@ export async function handleResendInboundWebhook(
           });
           throw error;
         }
+        try {
+          await sendImportReviewRequiredNotification({
+            supabase,
+            owner,
+            reviewId: review.reviewId,
+            savedCount: 0,
+            reviewCount: reviewCandidates.length,
+          });
+        } catch (sideEffectError) {
+          console.error(
+            "[resend-inbound-webhook] review notification failed",
+            sideEffectError,
+          );
+        }
         return jsonResponse({ success: true, awaitingReview: true });
       }
 
@@ -2595,51 +2612,69 @@ export async function handleResendInboundWebhook(
           });
           throw error;
         }
+        try {
+          await sendImportReviewRequiredNotification({
+            supabase,
+            owner,
+            reviewId: review!.reviewId,
+            savedCount,
+            reviewCount: reviewCandidates.length,
+          });
+        } catch (sideEffectError) {
+          console.error(
+            "[resend-inbound-webhook] review notification failed",
+            sideEffectError,
+          );
+        }
       }
 
-      try {
-        ensureSoftDeadline(processingStartedAtMs, "send_followup_email");
-        setStage("send_followup_email_start");
-        await sendEmail({
-          to: owner.defaultEmail,
-          from: EMAIL_FROM,
-          subject: followup.subject,
-          html: followup.html,
-          text: followup.text,
-        });
-        setStage("send_followup_email_complete");
-      } catch (sideEffectError) {
-        setStage("send_followup_email_error", {
-          error: sideEffectError instanceof Error
-            ? sideEffectError.message
-            : String(sideEffectError),
-        });
-        console.error(
-          "[resend-inbound-webhook] follow-up email failed after finalization",
-          sideEffectError,
-        );
+      if (reviewCandidates.length === 0) {
+        try {
+          ensureSoftDeadline(processingStartedAtMs, "send_followup_email");
+          setStage("send_followup_email_start");
+          await sendEmail({
+            to: owner.defaultEmail,
+            from: EMAIL_FROM,
+            subject: followup.subject,
+            html: followup.html,
+            text: followup.text,
+          });
+          setStage("send_followup_email_complete");
+        } catch (sideEffectError) {
+          setStage("send_followup_email_error", {
+            error: sideEffectError instanceof Error
+              ? sideEffectError.message
+              : String(sideEffectError),
+          });
+          console.error(
+            "[resend-inbound-webhook] follow-up email failed after finalization",
+            sideEffectError,
+          );
+        }
       }
 
-      try {
-        ensureSoftDeadline(processingStartedAtMs, "push_notification");
-        setStage("push_notification_start");
-        await sendImportProcessedNotification({
-          supabase,
-          owner,
-          senderEmail,
-          savedCount,
-        });
-        setStage("push_notification_complete");
-      } catch (sideEffectError) {
-        setStage("push_notification_error", {
-          error: sideEffectError instanceof Error
-            ? sideEffectError.message
-            : String(sideEffectError),
-        });
-        console.error(
-          "[resend-inbound-webhook] push notification failed after finalization",
-          sideEffectError,
-        );
+      if (reviewCandidates.length === 0) {
+        try {
+          ensureSoftDeadline(processingStartedAtMs, "push_notification");
+          setStage("push_notification_start");
+          await sendImportProcessedNotification({
+            supabase,
+            owner,
+            senderEmail,
+            savedCount,
+          });
+          setStage("push_notification_complete");
+        } catch (sideEffectError) {
+          setStage("push_notification_error", {
+            error: sideEffectError instanceof Error
+              ? sideEffectError.message
+              : String(sideEffectError),
+          });
+          console.error(
+            "[resend-inbound-webhook] push notification failed after finalization",
+            sideEffectError,
+          );
+        }
       }
 
       return jsonResponse({
