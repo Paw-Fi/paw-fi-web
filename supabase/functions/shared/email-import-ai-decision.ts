@@ -18,6 +18,19 @@ export const EMAIL_IMPORT_DECISION_MODELS = GEMINI_MODEL_FALLBACKS;
 const EMAIL_IMPORT_DECISION_TOOL_NAME = "review_email_import";
 const MAX_AI_DECISIONS = 10;
 const REVIEW_FIELDS = new Set(["amount", "currency", "type", "date"]);
+const SAFE_REJECTION_CODES = new Set([
+  "AI_REJECTED",
+  "NO_TRANSACTION_IN_SOURCE",
+  "INVALID_AI_DECISION",
+  "INVALID_AI_CANDIDATE",
+  "UNGROUNDED_AI_SEMANTICS",
+  "INVALID_AI_REVIEW_OPTIONS",
+  "AMOUNT_NOT_FOUND_IN_SOURCE",
+  "CURRENCY_CONTRADICTS_SOURCE",
+  "TIME_NOT_FOUND_IN_SOURCE",
+  "MERCHANT_NOT_FOUND_IN_SOURCE",
+  "DESCRIPTION_NOT_GROUNDED_IN_SOURCE",
+]);
 
 interface EmailImportAiDecisionParams {
   sourceText: string;
@@ -64,6 +77,19 @@ export function emailImportAiFailureCode(error: unknown): string {
   if (status != null) return `HTTP_${status}`;
   const message = error instanceof Error ? error.message : String(error ?? "");
   return /timed out|timeout/i.test(message) ? "TIMEOUT" : "MODEL_ERROR";
+}
+
+export function emailImportSafeRejectionCodes(
+  decisions: ImportGroundingDecision[],
+): string[] {
+  const codes = new Set<string>();
+  for (const decision of decisions) {
+    if (decision.kind !== "reject") continue;
+    for (const reason of decision.reasons) {
+      codes.add(SAFE_REJECTION_CODES.has(reason) ? reason : "AI_REJECTED");
+    }
+  }
+  return Array.from(codes).slice(0, 10);
 }
 
 export async function classifyEmailImportWithAi(
@@ -402,12 +428,13 @@ function buildPrompt(params: EmailImportAiDecisionParams): string {
   return `Review the email for financial transactions in any language.
 
 Return one decision per real transaction. Use semantic understanding rather than locale-specific templates.
+Analyze the complete nested forwarded content. Treat forwarding headers and email envelope dates as context, and extract transactions from the forwarded receipt or notification body.
 - accept: one source-grounded transaction is clear.
 - auto_repair: a supplied candidate is wrong but one source-grounded correction is clear.
 - review: two or more consequential source-grounded values remain plausible for amount, currency, type, or date.
 - reject: no real transaction exists or required values are not source-grounded.
 
-For every candidate, typeEvidence must be an exact source excerpt supporting income or expense. dateEvidence must be an exact source excerpt supporting the normalized date, or the literal ${RECEIVED_DATE_EVIDENCE} only when no transaction date appears and candidate.date equals the received date. For review, provide 2-6 finite choices. Copy each evidence value exactly from the email. Never offer a value that appears only in a previous AI candidate. Category uncertainty never requires review; choose the closest allowed category. Optional merchant/description may be omitted. Use the source/native currency and do not convert amounts. A signature, name, unrelated prose, loyalty points, tax IDs, invoice IDs, card suffixes, and distances are not transactions. On receipts, prefer the completed grand total over subtotal, tax, fee, points, or breakdown lines unless they are separate completed payments.
+For every candidate, typeEvidence must be an exact source excerpt supporting income or expense. dateEvidence must be an exact source excerpt supporting the normalized date, or the literal ${RECEIVED_DATE_EVIDENCE} only when no transaction date appears and candidate.date equals the received date. For review, provide 2-6 finite choices. Copy each evidence value exactly from the email. Never offer a value that appears only in a previous AI candidate. Category uncertainty never requires review; choose the closest allowed category. Optional merchant/description may be omitted. Use the source/native currency and do not convert amounts. A signature, name, unrelated prose, loyalty points, tax IDs, invoice IDs, card suffixes, and distances are not transactions. On receipts, prefer the completed grand total over subtotal, tax, fee, points, or breakdown lines unless they are separate completed payments. When a converted receipt shows both an order total and an explicit final card-charged or settled amount, use the final charged amount and its currency because that is the amount that affected the user's wallet. Do not create a separate transaction for the conversion.
 
 Received date: ${params.receivedDate.slice(0, 10)}
 Preferred currency only when the source has no explicit currency: ${params.preferredCurrency}

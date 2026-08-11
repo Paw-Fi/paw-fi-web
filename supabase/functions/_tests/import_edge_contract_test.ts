@@ -134,10 +134,19 @@ Deno.test(
 );
 
 Deno.test(
-  "import contract: inbound visible email body is sanitized and analyzed separately from attachments",
+  "import contract: complete bounded email body is analyzed separately from attachments",
   async () => {
     const source = await Deno.readTextFile(
       new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+    const emailImport = await Deno.readTextFile(
+      new URL("../shared/email-import.ts", import.meta.url),
+    );
+    const analyzeCore = await Deno.readTextFile(
+      new URL("../shared/analyze-core.ts", import.meta.url),
+    );
+    const emailDecision = await Deno.readTextFile(
+      new URL("../shared/email-import-ai-decision.ts", import.meta.url),
     );
 
     assertStringIncludes(source, "resolveInboundEmailText({");
@@ -154,6 +163,18 @@ Deno.test(
     );
     assertStringIncludes(source, "deduplicateImportedTransactions");
     assertStringIncludes(source, "buildImportSemanticKey");
+    assertStringIncludes(emailImport, "prepareInboundEmailTextForAnalysis");
+    assertStringIncludes(
+      analyzeCore,
+      "Analyze the complete nested forwarded content",
+    );
+    assertStringIncludes(
+      emailDecision,
+      "Analyze the complete nested forwarded content",
+    );
+    assertStringIncludes(analyzeCore, "final card-charged or settled amount");
+    assertStringIncludes(emailDecision, "final card-charged or settled amount");
+    assertStringIncludes(source, "rejectionReasonCodes");
   },
 );
 

@@ -62,19 +62,16 @@ Deno.test(
   },
 );
 
-Deno.test(
-  "email import: prefers meaningful plain text over HTML",
-  () => {
-    const resolved = resolveInboundEmailText({
-      text: "Amount: EUR 10.00\nTo: Plain Merchant",
-      html: "<p>Amount: USD 99.00</p><p>To: HTML Merchant</p>",
-    });
+Deno.test("email import: prefers meaningful plain text over HTML", () => {
+  const resolved = resolveInboundEmailText({
+    text: "Amount: EUR 10.00\nTo: Plain Merchant",
+    html: "<p>Amount: USD 99.00</p><p>To: HTML Merchant</p>",
+  });
 
-    assertEquals(resolved.source, "plain");
-    assertEquals(resolved.text.includes("Plain Merchant"), true);
-    assertEquals(resolved.text.includes("HTML Merchant"), false);
-  },
-);
+  assertEquals(resolved.source, "plain");
+  assertEquals(resolved.text.includes("Plain Merchant"), true);
+  assertEquals(resolved.text.includes("HTML Merchant"), false);
+});
 
 Deno.test(
   "email import: extracts the body of a directly forwarded plain-text email",
@@ -92,6 +89,22 @@ Deno.test(
 );
 
 Deno.test(
+  "email import: sends the complete nested forwarded receipt to analysis",
+  () => {
+    const resolved = resolveInboundEmailText({
+      text:
+        "Begin forwarded message:\nFrom: Yifan Lim <ubereat7020@gmail.com>\nSubject: Fwd: Your Uber Eats receipt\nDate: Tuesday, August 11, 2026 at 09:16:03 GMT+1\nTo: sandbox-files@inbound.moneko.io\n\n---------- Forwarded message ---------\nFrom: Uber Eats <noreply@uber.com>\nDate: Tue, Aug 11, 2026 at 7:42 PM\nSubject: Your Uber Eats receipt\nTo: <your email>\n\nThanks for your order, Charles\n\nUBER EATS\nOrder completed\nTuesday, August 11, 2026 at 7:39 PM\n\nRestaurant\nSushi Garden\n\nTotal $58.40\nPayment\nVisa •••• 4242\nOrder total: USD 58.40\nCard charged: CAD 58.40",
+    });
+
+    assertEquals(resolved.source, "plain");
+    assertEquals(resolved.text.includes("Begin forwarded message"), true);
+    assertEquals(resolved.text.includes("From: Uber Eats"), true);
+    assertEquals(resolved.text.includes("Restaurant\nSushi Garden"), true);
+    assertEquals(resolved.text.includes("Card charged: CAD 58.40"), true);
+  },
+);
+
+Deno.test(
   "email import: still stops at forwarded history after receipt content",
   () => {
     const text = sanitizeInboundEmailText(
@@ -103,16 +116,13 @@ Deno.test(
   },
 );
 
-Deno.test(
-  "email import: keeps transaction From and To fields",
-  () => {
-    const text = sanitizeInboundEmailText(
-      "Dear Customer,\n\nDate & Time:    26 Jul 16:35 (SGT)\nAmount:    SGD2.20\nFrom:    My Account A/C ending 1204\nTo:    SUNRIC SHOPPING PTE. LTD. (UEN ending WSUN)\n\nThank you",
-    );
-    assertEquals(text.includes("From:    My Account"), true);
-    assertEquals(text.includes("To:    SUNRIC SHOPPING"), true);
-  },
-);
+Deno.test("email import: keeps transaction From and To fields", () => {
+  const text = sanitizeInboundEmailText(
+    "Dear Customer,\n\nDate & Time:    26 Jul 16:35 (SGT)\nAmount:    SGD2.20\nFrom:    My Account A/C ending 1204\nTo:    SUNRIC SHOPPING PTE. LTD. (UEN ending WSUN)\n\nThank you",
+  );
+  assertEquals(text.includes("From:    My Account"), true);
+  assertEquals(text.includes("To:    SUNRIC SHOPPING"), true);
+});
 
 Deno.test(
   "email import: filterSupportedImportAttachments keeps importable files only",

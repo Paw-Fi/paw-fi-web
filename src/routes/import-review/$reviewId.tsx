@@ -6,13 +6,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
+  ArrowRight,
   Check,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
   FileText,
-  Mail,
-  XCircle,
+  X,
 } from "lucide-react";
 
 export const Route = createFileRoute("/import-review/$reviewId")({
@@ -229,21 +226,32 @@ function ImportReviewPage() {
   if (!hasLoadedToken || (token && !review && !requestError)) {
     return (
       <ReviewShell>
-        <div className="flex animate-pulse flex-col gap-10">
-          <div className="mb-6">
-            <div className="mb-4 h-10 w-48 rounded-xl bg-slate-200 dark:bg-slate-800" />
-            <div className="h-5 w-64 rounded-lg bg-slate-200 dark:bg-slate-800" />
+        <div className="animate-pulse">
+          <div className="mt-8 mb-16 md:mb-24">
+            <div className="h-12 w-64 rounded-xl bg-slate-100 dark:bg-slate-900 mb-6" />
+            <div className="h-6 w-96 max-w-full rounded-lg bg-slate-50 dark:bg-slate-900/50" />
+          </div>
+          
+          <div className="mb-20 py-8 border-y border-slate-100 dark:border-slate-800/60 grid grid-cols-1 md:grid-cols-3 gap-8">
+             <div className="h-12 bg-slate-50 dark:bg-slate-900 rounded-lg w-full" />
+             <div className="h-12 bg-slate-50 dark:bg-slate-900 rounded-lg w-full" />
+             <div className="h-12 bg-slate-50 dark:bg-slate-900 rounded-lg w-full" />
           </div>
 
-          {[1, 2].map((i) => (
-            <div key={i} className="flex flex-col gap-4">
-              <div className="mx-2 h-6 w-1/3 rounded-lg bg-slate-200 dark:bg-slate-800" />
-              <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-                <div className="h-24 border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900" />
-                <div className="h-24 bg-white dark:bg-slate-900" />
+          <div className="space-y-24">
+            {[1, 2].map((i) => (
+              <div key={i} className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 pb-24 border-b border-slate-100 dark:border-slate-800/60">
+                <div className="lg:col-span-5">
+                   <div className="h-8 w-48 bg-slate-100 dark:bg-slate-900 rounded-lg mb-6" />
+                   <div className="h-4 w-32 bg-slate-50 dark:bg-slate-900/50 rounded-lg" />
+                </div>
+                <div className="lg:col-span-7">
+                   <div className="h-24 w-full bg-slate-50 dark:bg-slate-900 rounded-[2rem] mb-4" />
+                   <div className="h-24 w-full bg-slate-50 dark:bg-slate-900 rounded-[2rem]" />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </ReviewShell>
     );
@@ -253,13 +261,14 @@ function ImportReviewPage() {
     return (
       <ReviewShell>
         <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-          <AlertCircle className="mb-6 h-16 w-16 text-rose-500" />
-          <h1 className="mb-4 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+          <div className="w-24 h-24 mb-8 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center">
+            <AlertCircle className="w-10 h-10 text-slate-500" strokeWidth={2} />
+          </div>
+          <h1 className="mb-4 text-4xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
             {requestError ? "Link Unavailable" : "Invalid Link"}
           </h1>
-          <p className="mb-10 max-w-sm text-lg text-slate-500 dark:text-slate-400">
-            {requestError ??
-              "This secure link is invalid or has already been removed from this browser."}
+          <p className="max-w-md text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
+            {requestError ?? "This secure link is invalid or has already been removed from this browser."}
           </p>
         </div>
       </ReviewShell>
@@ -285,154 +294,148 @@ function ImportReviewPage() {
 
   return (
     <ReviewShell>
-      <div className="mb-10 px-2">
-        <h1 className="mb-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-          Review import
+      <div className="mb-16 md:mb-24 mt-8">
+        <h1 className="text-4xl md:text-5xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
+          Review Required
         </h1>
-        <p className="text-lg text-slate-500 dark:text-slate-400">
-          We need a few clarifications before saving these transactions.
+        <p className="mt-4 max-w-xl text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
+          We need a few clarifications before we can save these transactions to your account.
         </p>
       </div>
 
       <ReviewSourceCard source={review.source} />
 
-      <div className="mt-10 flex flex-col gap-10">
-        {review.items.map((item) => {
+      <div className="flex flex-col gap-24">
+        {review.items.map((item, index) => {
           const isDeclined = selections[`${item.id}:decline`] === "decline";
 
           return (
-            <section key={item.id} className="transition-all duration-500">
-              <h2
-                className={cn(
-                  "mb-4 px-2 text-xl font-semibold tracking-tight transition-colors",
-                  isDeclined
-                    ? "text-slate-500 line-through decoration-slate-300 dark:text-slate-500 dark:decoration-slate-600"
-                    : "text-slate-900 dark:text-slate-100",
-                )}
-              >
-                {item.summary}
-              </h2>
+            <section
+              key={item.id}
+              className={cn(
+                "relative transition-all duration-500",
+                index !== review.items.length - 1 && "pb-24 border-b border-slate-100 dark:border-slate-800/60"
+              )}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8">
+                <div className={cn("lg:col-span-5 transition-opacity duration-300", isDeclined && "opacity-40 grayscale")}>
+                  <h2 className="text-lg font-medium text-slate-900 dark:text-white mb-6">
+                    {item.summary}
+                  </h2>
+                  <TransactionContextCard transaction={item.transaction} />
+                </div>
 
-              <TransactionContextCard transaction={item.transaction} />
+                <div className="lg:col-span-7">
+                  <div className="flex flex-col gap-10">
+                    {item.issues.map((issue) => (
+                      <div key={issue.field}>
+                        <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+                          Confirm {issue.field}
+                        </h4>
+                        <div className="flex flex-col gap-3">
+                          {issue.choices.map((choice) => {
+                            const isSelected = selections[`${item.id}:${issue.field}`] === choice.id;
 
-              <div className="mt-6 flex flex-col gap-6">
-                {item.issues.map((issue) => (
-                  <div key={issue.field}>
-                    <h3 className="mb-2 px-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
-                      Select {issue.field}
-                    </h3>
-
-                    <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-                      {issue.choices.map((choice, choiceIdx) => {
-                        const isSelected =
-                          selections[`${item.id}:${issue.field}`] === choice.id;
-
-                        return (
-                          <label
-                            key={choice.id}
-                            className={cn(
-                              "group relative flex cursor-pointer items-center justify-between p-5 transition-colors",
-                              "hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800/50 dark:active:bg-slate-800",
-                              choiceIdx > 0 &&
-                                "border-t border-slate-100 dark:border-slate-800/80",
-                              isDeclined && "opacity-50 grayscale",
-                            )}
-                          >
-                            <input
-                              type="radio"
-                              className="peer sr-only"
-                              name={`${item.id}:${issue.field}`}
-                              checked={isSelected && !isDeclined}
-                              onChange={() =>
-                                setSelections((current) => ({
-                                  ...current,
-                                  [`${item.id}:decline`]: "",
-                                  [`${item.id}:${issue.field}`]: choice.id,
-                                }))}
-                            />
-                            <div className="flex-1 pr-4">
-                              <div
+                            return (
+                              <label
+                                key={choice.id}
                                 className={cn(
-                                  "text-lg transition-colors",
+                                  "group relative flex cursor-pointer items-start justify-between rounded-2xl p-5 transition-all duration-200",
                                   isSelected && !isDeclined
-                                    ? "font-semibold text-slate-900 dark:text-slate-50"
-                                    : "font-medium text-slate-700 dark:text-slate-300",
+                                    ? "bg-slate-900 dark:bg-slate-100"
+                                    : "bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800",
+                                  isDeclined && "opacity-40 grayscale"
                                 )}
                               >
-                                {choice.label}
-                              </div>
-                              {choice.evidence && (
-                                <div className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                                  {choice.evidence}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center">
-                              {isSelected && !isDeclined && (
-                                <Check
-                                  className="h-6 w-6 text-blue-600 dark:text-blue-500"
-                                  strokeWidth={3}
+                                <input
+                                  type="radio"
+                                  className="peer sr-only"
+                                  name={`${item.id}:${issue.field}`}
+                                  checked={isSelected && !isDeclined}
+                                  onChange={() =>
+                                    setSelections((current) => ({
+                                      ...current,
+                                      [`${item.id}:decline`]: "",
+                                      [`${item.id}:${issue.field}`]: choice.id,
+                                    }))
+                                  }
                                 />
-                              )}
-                            </div>
-                          </label>
-                        );
-                      })}
+                                <div className="flex-1 pr-6">
+                                  <div
+                                    className={cn(
+                                      "text-base font-medium transition-colors",
+                                      isSelected && !isDeclined
+                                        ? "text-white dark:text-slate-900"
+                                        : "text-slate-900 dark:text-slate-100"
+                                    )}
+                                  >
+                                    {choice.label}
+                                  </div>
+                                  {choice.evidence && (
+                                    <div
+                                      className={cn(
+                                        "mt-1.5 text-sm leading-relaxed transition-colors",
+                                        isSelected && !isDeclined
+                                          ? "text-slate-300 dark:text-slate-600"
+                                          : "text-slate-500 dark:text-slate-400"
+                                      )}
+                                    >
+                                      {choice.evidence}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex h-6 w-6 shrink-0 items-center justify-center mt-0.5">
+                                  {isSelected && !isDeclined ? (
+                                    <Check
+                                      className="h-5 w-5 text-white dark:text-slate-900"
+                                      strokeWidth={3}
+                                    />
+                                  ) : (
+                                    <div className="h-5 w-5 rounded-full border border-slate-300 dark:border-slate-700 group-hover:border-slate-400 dark:group-hover:border-slate-500 transition-colors" />
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="pt-2">
+                      <label
+                        className={cn(
+                          "group inline-flex cursor-pointer items-center gap-3 transition-colors",
+                          isDeclined
+                            ? "text-rose-600 dark:text-rose-400"
+                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          className="peer sr-only"
+                          name={`${item.id}:decline`}
+                          checked={isDeclined}
+                          onChange={() =>
+                            setSelections((current) => ({
+                              ...current,
+                              [`${item.id}:decline`]: "decline",
+                            }))
+                          }
+                        />
+                        <div
+                          className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                            isDeclined
+                              ? "bg-rose-100 dark:bg-rose-900/30"
+                              : "bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
+                          )}
+                        >
+                          <X className="h-4 w-4" strokeWidth={2.5} />
+                        </div>
+                        <span className="text-sm font-medium">Discard this transaction</span>
+                      </label>
                     </div>
                   </div>
-                ))}
-
-                <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-                  <label
-                    className={cn(
-                      "group relative flex cursor-pointer items-center justify-between p-5 transition-colors",
-                      "hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800/50 dark:active:bg-slate-800",
-                      isDeclined &&
-                        "bg-rose-50 hover:bg-rose-100/80 dark:bg-rose-900/10 dark:hover:bg-rose-900/20",
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      className="peer sr-only"
-                      name={`${item.id}:decline`}
-                      checked={isDeclined}
-                      onChange={() =>
-                        setSelections((current) => ({
-                          ...current,
-                          [`${item.id}:decline`]: "decline",
-                        }))}
-                    />
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-                          isDeclined
-                            ? "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400"
-                            : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500",
-                        )}
-                      >
-                        <XCircle className="h-6 w-6" />
-                      </div>
-                      <span
-                        className={cn(
-                          "text-lg font-semibold",
-                          isDeclined
-                            ? "text-rose-700 dark:text-rose-400"
-                            : "text-slate-700 dark:text-slate-300",
-                        )}
-                      >
-                        Do not import this
-                      </span>
-                    </div>
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center">
-                      {isDeclined && (
-                        <Check
-                          className="h-6 w-6 text-rose-600 dark:text-rose-500"
-                          strokeWidth={3}
-                        />
-                      )}
-                    </div>
-                  </label>
                 </div>
               </div>
             </section>
@@ -441,29 +444,30 @@ function ImportReviewPage() {
       </div>
 
       {requestError && (
-        <div className="mt-10 flex items-center gap-3 rounded-2xl bg-rose-50 p-5 ring-1 ring-rose-200 dark:bg-rose-900/20 dark:ring-rose-800">
-          <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
-          <p
-            className="text-sm font-medium text-rose-800 dark:text-rose-300"
-            role="alert"
-          >
+        <div className="mt-12 flex items-start gap-4 rounded-2xl bg-rose-50/50 p-6 dark:bg-rose-500/10">
+          <AlertCircle className="h-6 w-6 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+          <p className="text-base font-medium text-rose-800 dark:text-rose-300 leading-relaxed" role="alert">
             {requestError}
           </p>
         </div>
       )}
 
-      <div className="mt-16 pb-8">
-        <Button
-          size="lg"
-          className={cn(
-            "w-full rounded-full py-7 text-lg font-semibold shadow-sm transition-all sm:py-8",
-            isSubmitting && "cursor-wait opacity-80",
-          )}
-          disabled={!complete || isSubmitting}
-          onClick={submit}
-        >
-          {isSubmitting ? "Importing..." : "Confirm and import"}
-        </Button>
+      <div className="sticky bottom-8 mt-16 flex justify-end z-10 pointer-events-none">
+        <div className="pointer-events-auto">
+          <Button
+            size="lg"
+            className={cn(
+              "rounded-full px-8 py-6 text-base font-medium shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-300",
+              isSubmitting && "cursor-wait opacity-80",
+              !complete && "opacity-50"
+            )}
+            disabled={!complete || isSubmitting}
+            onClick={submit}
+          >
+            {isSubmitting ? "Importing..." : "Complete Import"}
+            {!isSubmitting && <ArrowRight className="ml-2 w-5 h-5" />}
+          </Button>
+        </div>
       </div>
     </ReviewShell>
   );
@@ -476,83 +480,79 @@ function ReviewResult({
   review: Review;
   onOpenApp: () => void;
 }) {
-  const title = review.status === "completed"
-    ? "Import completed"
+  const isCompleted = review.status === "completed";
+  const isExpired = review.status === "expired";
+  const title = isCompleted
+    ? "Import Completed"
     : review.status === "declined"
-    ? "Import declined"
-    : review.status === "expired"
-    ? "Link expired"
-    : "Import failed";
-  const icon = review.status === "completed"
-    ? <CheckCircle2 className="h-16 w-16 text-emerald-500" />
-    : review.status === "declined"
-    ? <XCircle className="h-16 w-16 text-slate-400" />
-    : review.status === "expired"
-    ? <Clock className="h-16 w-16 text-amber-500" />
-    : <AlertCircle className="h-16 w-16 text-rose-500" />;
+    ? "Import Declined"
+    : isExpired
+    ? "Link Expired"
+    : "Import Failed";
 
   return (
     <ReviewShell>
-      <div className="flex flex-col items-center text-center">
-        {icon}
-        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+      <div className="py-4 md:py-8 flex flex-col items-center text-center">
+        <div className={cn(
+          "size-12 mb-6 rounded-full flex items-center justify-center",
+          isCompleted ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-100 dark:bg-slate-900"
+        )}>
+          {isCompleted ? (
+            <Check className="size-5 text-white dark:text-slate-900" strokeWidth={3} />
+          ) : (
+            <AlertCircle className="size-5 text-slate-500" strokeWidth={2} />
+          )}
+        </div>
+        <h1 className="text-4xl md:text-5xl font-medium tracking-tight text-slate-900 dark:text-slate-50 mb-6">
           {title}
         </h1>
-        <p className="mt-3 max-w-md text-lg text-slate-500 dark:text-slate-400">
+        <p className="text-lg text-slate-500 max-w-md mx-auto leading-relaxed">
           {resultCopy(review.status)}
         </p>
+
+        {isCompleted && (
+          <Button
+            size="lg"
+            className="mt-12 rounded-full px-8 py-6 text-base font-medium"
+            onClick={onOpenApp}
+          >
+            Open Moneko
+            <ArrowRight className="ml-2 w-5 h-5" />
+          </Button>
+        )}
       </div>
 
-      <div className="mt-10">
-        <ReviewSourceCard source={review.source} />
-      </div>
+      <ReviewSourceCard source={review.source} />
 
       {review.items.length > 0 && (
-        <section className="mt-10">
-          <h2 className="mb-4 px-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-            Import results
+        <div className="mt-20">
+          <h2 className="text-xl font-medium tracking-tight text-slate-900 dark:text-white mb-8">
+            Import Summary
           </h2>
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {review.items.map((item) => (
               <div
                 key={item.id}
-                className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
+                className="p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-900/50 flex flex-col justify-between"
               >
-                <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                  {item.saveStatus === "saved"
-                    ? (
-                      <>
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                        <span className="text-emerald-700 dark:text-emerald-400">
-                          Transaction logged
-                        </span>
-                      </>
-                    )
-                    : (
-                      <>
-                        <AlertCircle className="h-5 w-5 text-slate-400" />
-                        <span className="text-slate-600 dark:text-slate-400">
-                          {resultItemLabel(item.saveStatus)}
-                        </span>
-                      </>
-                    )}
-                </div>
                 <TransactionContextCard transaction={item.transaction} />
+                <div className="mt-10 flex items-center gap-3 text-sm font-medium">
+                  {item.saveStatus === "saved" ? (
+                    <>
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span className="text-slate-900 dark:text-slate-100">Logged successfully</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                      <span className="text-slate-500 dark:text-slate-400">{resultItemLabel(item.saveStatus)}</span>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-        </section>
-      )}
-
-      {review.status === "completed" && (
-        <Button
-          size="lg"
-          className="mt-10 w-full rounded-full py-7 text-lg font-semibold sm:py-8"
-          onClick={onOpenApp}
-        >
-          <ExternalLink className="mr-2 h-5 w-5" />
-          Open Moneko
-        </Button>
+        </div>
       )}
     </ReviewShell>
   );
@@ -566,62 +566,27 @@ function ReviewSourceCard({ source }: { source: ReviewSource }) {
   if (!hasDetails) return null;
 
   return (
-    <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-          <Mail className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="font-semibold text-slate-900 dark:text-slate-100">
-            Forwarded import
-          </div>
-          {source.receivedAt && (
-            <div className="text-sm text-slate-500 dark:text-slate-400">
-              Received {formatReviewDate(source.receivedAt)}
-            </div>
-          )}
-        </div>
+    <div className="mb-20 grid grid-cols-1 md:grid-cols-3 gap-8 py-8 border-y border-slate-100 dark:border-slate-800/60">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Source</span>
+        <span className="text-base text-slate-900 dark:text-slate-100">{source.senderEmail || "Unknown Sender"}</span>
       </div>
-      {source.subjectLine && (
-        <div className="mt-5 text-lg font-semibold text-slate-900 dark:text-slate-100">
-          {source.subjectLine}
-        </div>
-      )}
-      {source.senderEmail && (
-        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          From {source.senderEmail}
-        </div>
-      )}
-      {source.files?.length > 0 && (
-        <div className="mt-5 border-t border-slate-100 pt-3 dark:border-slate-800">
-          {source.files.map((file) => (
-            <div key={file.name} className="flex items-center gap-3 py-2">
-              <FileText
-                className={cn(
-                  "h-5 w-5 shrink-0",
-                  file.status === "failed" ? "text-rose-500" : "text-slate-400",
-                )}
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700 dark:text-slate-300">
-                {file.name}
-              </span>
-              <span
-                className={cn(
-                  "text-xs",
-                  file.status === "failed"
-                    ? "text-rose-500"
-                    : "text-slate-500 dark:text-slate-400",
-                )}
-              >
-                {file.status === "failed"
-                  ? "Could not read"
-                  : `${file.transactionCount} found`}
-              </span>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Date</span>
+        <span className="text-base text-slate-900 dark:text-slate-100">{source.receivedAt ? formatReviewDate(source.receivedAt) : "Unknown"}</span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Documents</span>
+        <div className="flex flex-col gap-2 mt-1">
+          {source.files?.map((file) => (
+            <div key={file.name} className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{file.name}</span>
             </div>
           ))}
         </div>
-      )}
-    </section>
+      </div>
+    </div>
   );
 }
 
@@ -641,30 +606,30 @@ function TransactionContextCard({
   ].filter(Boolean) as string[];
 
   return (
-    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-slate-950/60 dark:ring-slate-800">
-      <div className="flex items-start justify-between gap-4">
-        <div className="font-semibold text-slate-900 dark:text-slate-100">
+    <div className="flex flex-col">
+      <div className="flex items-baseline justify-between gap-4">
+        <h3 className="text-2xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
           {title}
-        </div>
+        </h3>
         {typeof transaction.amount === "number" && (
-          <div className="shrink-0 text-lg font-bold text-slate-900 dark:text-slate-50">
+          <div className="text-xl font-medium text-slate-900 dark:text-slate-50 shrink-0">
             {formatReviewAmount(transaction.amount, transaction.currency)}
           </div>
         )}
       </div>
+      
       {transaction.description && transaction.description !== title && (
-        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+        <p className="mt-3 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
           {transaction.description}
         </p>
       )}
+      
       {details.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {details.map((detail) => (
-            <span
-              key={detail}
-              className="rounded-full bg-slate-200/70 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-            >
-              {detail}
+        <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-500">
+          {details.map((detail, i) => (
+            <span key={`${detail}-${i}`} className="flex items-center gap-4">
+              <span>{detail}</span>
+              {i < details.length - 1 && <span className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />}
             </span>
           ))}
         </div>
@@ -675,8 +640,8 @@ function TransactionContextCard({
 
 function ReviewShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50 font-sans dark:bg-slate-950">
-      <main className="mx-auto max-w-2xl px-5 py-12 md:py-20">{children}</main>
+    <div className="min-h-screen bg-white font-sans dark:bg-slate-950 selection:bg-slate-100 dark:selection:bg-slate-800">
+      <main className="mx-auto max-w-4xl px-6 ">{children}</main>
     </div>
   );
 }
@@ -723,3 +688,4 @@ function titleCase(value: string) {
     .map((part) => part[0].toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
 }
+

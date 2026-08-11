@@ -8,6 +8,7 @@ import {
   buildEmailImportAiModelConfig,
   EMAIL_IMPORT_DECISION_MODELS,
   emailImportAiFailureCode,
+  emailImportSafeRejectionCodes,
   parseEmailImportAiDecisionToolCalls,
   shouldEscalateEmailImportAiFailure,
   shouldTryNextEmailImportDecisionModel,
@@ -259,3 +260,19 @@ Deno.test("email import AI diagnostics never include provider messages", () => {
   assertEquals(code, "MODEL_ERROR");
   assertEquals(code.includes("private forwarded email content"), false);
 });
+
+Deno.test(
+  "email import AI rejection diagnostics expose only safe codes",
+  () => {
+    const codes = emailImportSafeRejectionCodes([
+      { kind: "reject", reasons: ["NO_TRANSACTION_IN_SOURCE"] },
+      {
+        kind: "reject",
+        reasons: ["provider echoed private forwarded email content"],
+      },
+    ]);
+
+    assertEquals(codes, ["NO_TRANSACTION_IN_SOURCE", "AI_REJECTED"]);
+    assertEquals(codes.join(" ").includes("private forwarded email"), false);
+  },
+);

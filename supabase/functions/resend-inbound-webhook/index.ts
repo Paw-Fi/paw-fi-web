@@ -28,6 +28,7 @@ import {
 } from "../shared/email-import-grounding-decision.ts";
 import {
   classifyEmailImportWithAi,
+  emailImportSafeRejectionCodes,
   shouldEscalateEmailImportAiFailure,
 } from "../shared/email-import-ai-decision.ts";
 import {
@@ -2156,6 +2157,9 @@ export async function handleResendInboundWebhook(
               {
                 providerEmailId: emailData.email_id,
                 decisionCounts,
+                rejectionReasonCodes: emailImportSafeRejectionCodes(
+                  aiDecisions,
+                ),
               },
             );
           }

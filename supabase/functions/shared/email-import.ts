@@ -35,19 +35,36 @@ export function resolveInboundEmailText(params: {
   text?: string | null;
   html?: string | null;
 }): ResolvedInboundEmailText {
-  const plainText = sanitizeInboundEmailText(params.text);
+  const plainText = prepareInboundEmailTextForAnalysis(params.text);
   if (hasMeaningfulInboundEmailText(plainText)) {
     return { text: plainText, source: "plain" };
   }
 
   const htmlText = typeof params.html === "string"
-    ? sanitizeInboundEmailText(htmlToText(params.html))
+    ? prepareInboundEmailTextForAnalysis(htmlToText(params.html))
     : "";
   if (hasMeaningfulInboundEmailText(htmlText)) {
     return { text: htmlText, source: "html" };
   }
 
   return { text: "", source: "none" };
+}
+
+/**
+ * Preserves the complete visible message for AI analysis. Nested forwards are
+ * intentional import content, so only transport artifacts and size are
+ * normalized here; forwarded sections and quoted text remain available.
+ */
+function prepareInboundEmailTextForAnalysis(value?: string | null): string {
+  if (typeof value !== "string") return "";
+  return removeInboundTransportArtifacts(value.replace(/\r\n?/g, "\n"))
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim()
+    .slice(0, MAX_INBOUND_EMAIL_TEXT_CHARS)
+    .trim();
 }
 
 function hasMeaningfulInboundEmailText(value: string): boolean {
@@ -62,10 +79,9 @@ function hasMeaningfulInboundEmailText(value: string): boolean {
 export function sanitizeInboundEmailText(value?: string | null): string {
   if (typeof value !== "string") return "";
 
-  const lines = value
-    .replace(/\r\n?/g, "\n")
-    .replace(/[\u0000\u200B-\u200D\uFEFF\uFFFC\uFFFD]/g, "")
-    .split("\n");
+  const lines = removeInboundTransportArtifacts(
+    value.replace(/\r\n?/g, "\n"),
+  ).split("\n");
   const kept: string[] = [];
   let skippingForwardEnvelopeHeaders = false;
   let enteredForwardedBody = false;
@@ -113,6 +129,12 @@ export function sanitizeInboundEmailText(value?: string | null): string {
     .trim()
     .slice(0, MAX_INBOUND_EMAIL_TEXT_CHARS)
     .trim();
+}
+
+function removeInboundTransportArtifacts(value: string): string {
+  // These code points are transport placeholders, not user-visible content.
+  // deno-lint-ignore no-control-regex
+  return value.replace(/[\u0000\u200B-\u200D\uFEFF\uFFFC\uFFFD]/g, "");
 }
 
 export function normalizeEmailAddress(value?: string | null): string | null {
