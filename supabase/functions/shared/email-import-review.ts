@@ -50,6 +50,144 @@ export interface ValidatedReviewDecision {
   optionIds: string[];
 }
 
+export interface EmailImportReviewSource {
+  senderEmail: string | null;
+  subjectLine: string | null;
+  receivedAt: string | null;
+  files: Array<{
+    name: string;
+    status: "processed" | "failed" | "unknown";
+    transactionCount: number;
+  }>;
+}
+
+export interface EmailImportReviewTransaction {
+  type?: "expense" | "income";
+  amount?: number;
+  currency?: string;
+  date?: string;
+  merchant?: string;
+  description?: string;
+  category?: string;
+}
+
+export function buildEmailImportReviewSource(
+  event: Record<string, unknown> | null | undefined,
+): EmailImportReviewSource {
+  const result = asRecord(event?.result);
+  const emailSummary = asRecord(result?.emailSummary);
+  const attachmentResults = Array.isArray(result?.attachmentResults)
+    ? result.attachmentResults
+    : [];
+
+  return {
+    senderEmail: boundedString(event?.sender_email, 320),
+    subjectLine: boundedString(emailSummary?.subjectLine, 240),
+    receivedAt: boundedString(emailSummary?.receivedAt, 64) ??
+      boundedString(event?.created_at, 64),
+    files: attachmentResults.slice(0, 25).flatMap((value) => {
+      const attachment = asRecord(value);
+      const name = boundedString(attachment?.filename, 240);
+      if (!name) return [];
+      return [
+        {
+          name,
+          status: attachment?.success === true
+            ? ("processed" as const)
+            : attachment?.success === false
+            ? ("failed" as const)
+            : ("unknown" as const),
+          transactionCount: nonNegativeInteger(attachment?.itemCount),
+        },
+      ];
+    }),
+  };
+}
+
+export function buildEmailImportReviewItem(
+  item: Record<string, unknown>,
+): Record<string, unknown> {
+  const candidate = asRecord(item.candidate) ?? {};
+  const resolved = asRecord(item.resolved_transaction);
+  const transaction = buildEmailImportReviewTransaction(resolved ?? candidate);
+  const saveResult = asRecord(item.save_result);
+  const selectedOptionIds = Array.isArray(item.selected_option_ids)
+    ? item.selected_option_ids
+      .filter((value): value is string => typeof value === "string")
+      .slice(0, 25)
+    : null;
+
+  return {
+    id: boundedString(item.id, 64) ?? "",
+    summary: reviewTransactionSummary(transaction),
+    transaction,
+    issues: Array.isArray(item.issues) ? item.issues : [],
+    options: Array.isArray(item.options) ? item.options : [],
+    selectedOptionIds,
+    saveStatus: boundedString(item.save_status, 32) ?? "pending",
+    transactionId: boundedString(saveResult?.id, 64),
+  };
+}
+
+function buildEmailImportReviewTransaction(
+  value: Record<string, unknown>,
+): EmailImportReviewTransaction {
+  const type = value.type === "expense" || value.type === "income"
+    ? value.type
+    : null;
+  const amount =
+    typeof value.amount === "number" && Number.isFinite(value.amount)
+      ? value.amount
+      : null;
+  const currency = boundedString(value.currency, 8)?.toUpperCase();
+  const date = boundedString(value.date, 32);
+  const merchant = boundedString(value.merchant, 160);
+  const description = boundedString(value.description, 240);
+  const category = boundedString(value.category, 80);
+
+  return {
+    ...ifDefined("type", type),
+    ...ifDefined("amount", amount),
+    ...ifDefined("currency", currency),
+    ...ifDefined("date", date),
+    ...ifDefined("merchant", merchant),
+    ...ifDefined("description", description),
+    ...ifDefined("category", category),
+  } as EmailImportReviewTransaction;
+}
+
+function reviewTransactionSummary(
+  transaction: EmailImportReviewTransaction,
+): string {
+  return (
+    transaction.description ??
+      transaction.merchant ??
+      (transaction.amount != null
+        ? `${transaction.currency ?? ""} ${transaction.amount}`.trim()
+        : "Transaction awaiting review")
+  );
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function boundedString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized ? normalized.slice(0, maxLength) : null;
+}
+
+function nonNegativeInteger(value: unknown): number {
+  return Number.isInteger(value) && Number(value) >= 0 ? Number(value) : 0;
+}
+
+function ifDefined(key: string, value: unknown): Record<string, unknown> {
+  return value == null ? {} : { [key]: value };
+}
+
 export function validateStoredReviewDecisions(
   items: StoredReviewItem[],
   decisions: ReviewDecisionInput[],

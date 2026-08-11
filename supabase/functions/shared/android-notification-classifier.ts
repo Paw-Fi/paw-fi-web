@@ -1,12 +1,9 @@
 import { VALID_CURRENCIES } from "./currency-validator.ts";
+import { GEMINI_MODEL_FALLBACKS } from "./gemini-models.ts";
 
 const MIN_AUTOSAVE_CONFIDENCE = 0.9;
 const CLASSIFICATION_TIMEOUT_MS = 15_000;
-export const ANDROID_NOTIFICATION_MODELS = [
-  "gemini-3.1-flash-lite",
-  "gemini-3.6-flash",
-  "gemini-3.1-pro-preview",
-] as const;
+export const ANDROID_NOTIFICATION_MODELS = GEMINI_MODEL_FALLBACKS;
 // Bump when model, prompt, or validation behavior changes so old terminal
 // failures can be evaluated by the new pipeline.
 export const ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION =

@@ -675,13 +675,17 @@ Deno.test(
   async () => {
     const attempts: string[] = [];
     const provider = createGeminiPdfAnalysisProvider({
-      modelNames: ["gemini-3.1-flash", "gemini-2.5-flash", "gemini-2.5-pro"],
+      modelNames: [
+        "gemini-3.1-flash-lite",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro-preview",
+      ],
       createClient: () => ({
         getGenerativeModel({ model, systemInstruction }: any) {
           return {
             async generateContent(request: Record<string, unknown>) {
               attempts.push(model);
-              if (model !== "gemini-2.5-pro") {
+              if (model !== "gemini-3.1-pro-preview") {
                 throw new Error(`model failed: ${model}`);
               }
 
@@ -719,11 +723,11 @@ Deno.test(
     );
 
     assertEquals(attempts, [
-      "gemini-3.1-flash",
-      "gemini-2.5-flash",
-      "gemini-2.5-pro",
+      "gemini-3.1-flash-lite",
+      "gemini-3.6-flash",
+      "gemini-3.1-pro-preview",
     ]);
-    assertEquals(result.model, "gemini-2.5-pro");
+    assertEquals(result.model, "gemini-3.1-pro-preview");
     assertEquals(result.inputTokens, 10);
     assertEquals(result.outputTokens, 20);
   },

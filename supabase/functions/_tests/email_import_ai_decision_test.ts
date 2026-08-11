@@ -1,8 +1,16 @@
 /// <reference lib="deno.ns" />
 
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import {
+  buildEmailImportAiModelConfig,
+  EMAIL_IMPORT_DECISION_MODELS,
+  emailImportAiFailureCode,
+  parseEmailImportAiDecisionToolCalls,
   shouldEscalateEmailImportAiFailure,
+  shouldTryNextEmailImportDecisionModel,
   validateEmailImportAiDecisions,
 } from "../shared/email-import-ai-decision.ts";
 
@@ -178,4 +186,76 @@ Deno.test("email import AI decision rejects ungrounded type and date", () => {
 Deno.test("only candidate-backed classifier failures are operational", () => {
   assertEquals(shouldEscalateEmailImportAiFailure(0), false);
   assertEquals(shouldEscalateEmailImportAiFailure(1), true);
+});
+
+Deno.test("email import AI decision has a stable fallback model", () => {
+  assertEquals(EMAIL_IMPORT_DECISION_MODELS, [
+    "gemini-3.1-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.1-pro-preview",
+  ]);
+});
+
+Deno.test(
+  "email import AI decision matches analyze-core function calling",
+  () => {
+    const config = buildEmailImportAiModelConfig("review this email");
+
+    assertEquals(config.request.generationConfig, {
+      temperature: 0,
+      maxOutputTokens: 4096,
+    });
+    assertEquals(config.request.toolConfig, {
+      functionCallingConfig: {
+        mode: "ANY",
+        allowedFunctionNames: ["review_email_import"],
+      },
+    });
+    assertEquals(
+      config.tools[0].functionDeclarations[0].name,
+      "review_email_import",
+    );
+    assertEquals("responseSchema" in config.request.generationConfig, false);
+    assertEquals("thinkingConfig" in config.request.generationConfig, false);
+  },
+);
+
+Deno.test(
+  "email import AI decision rejects malformed tool arguments",
+  async () => {
+    await assertRejects(
+      async () =>
+        parseEmailImportAiDecisionToolCalls(
+          [{ name: "review_email_import", args: { decisions: [] } }],
+          { ...baseParams, sourceText: "USD 5.00 purchase" },
+        ),
+      Error,
+      "EMAIL_IMPORT_AI_DECISION_INVALID_TOOL_ARGS",
+    );
+  },
+);
+
+Deno.test("email import AI model fallback stops on auth failures", () => {
+  assertEquals(
+    shouldTryNextEmailImportDecisionModel(
+      Object.assign(new Error("Unauthorized"), { status: 401 }),
+    ),
+    false,
+  );
+  assertEquals(
+    shouldTryNextEmailImportDecisionModel(
+      Object.assign(new Error("Request contains an invalid argument"), {
+        status: 400,
+      }),
+    ),
+    true,
+  );
+});
+
+Deno.test("email import AI diagnostics never include provider messages", () => {
+  const code = emailImportAiFailureCode(
+    new Error("provider echoed private forwarded email content"),
+  );
+  assertEquals(code, "MODEL_ERROR");
+  assertEquals(code.includes("private forwarded email content"), false);
 });

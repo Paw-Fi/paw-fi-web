@@ -2,6 +2,7 @@ import {
   createVertexGenerativeAI,
   getVertexAiConfigFromEnv,
 } from "../../../vertex-ai-chat.ts";
+import { resolveGeminiModelFallbacks } from "../../../gemini-models.ts";
 
 import type {
   PdfAnalysisProvider,
@@ -36,17 +37,9 @@ function getMaxOutputTokens(): number {
 function getGeminiModelNames(): string[] {
   try {
     const configured = Deno.env.get("PDF_ANALYSIS_GEMINI_MODELS")?.trim();
-    if (configured) {
-      const models = configured
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean);
-      if (models.length > 0) return models;
-    }
-
-    return ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"];
+    return resolveGeminiModelFallbacks(configured);
   } catch {
-    return ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"];
+    return resolveGeminiModelFallbacks();
   }
 }
 

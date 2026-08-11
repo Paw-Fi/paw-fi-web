@@ -2366,11 +2366,18 @@ export async function handleResendInboundWebhook(
 
       if (sortedAnalyzedItems.length === 0) {
         const eventResult = {
+          emailSummary: {
+            providerEmailId: emailData.email_id,
+            senderEmail,
+            subjectLine: emailData.subject || "",
+            receivedAt: emailData.created_at || event.created_at || null,
+          },
           savedCount: 0,
           duplicateCount: 0,
           needsReviewCount: reviewCandidates.length,
           rejectedCount: rejectedItemCount,
           failedCount: 0,
+          attachmentResults,
         };
         const review = await createInboundReview({
           supabase,

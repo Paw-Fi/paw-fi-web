@@ -6,6 +6,8 @@ import {
   resolveInternalFunctionKey,
 } from "../shared/auth.ts";
 import {
+  buildEmailImportReviewItem,
+  buildEmailImportReviewSource,
   hashEmailImportReviewToken,
   isValidReviewToken,
   resolveStoredReviewDecision,
@@ -321,20 +323,32 @@ async function inspectTerminal(
 ) {
   const { data: review } = await supabase
     .from("email_import_reviews")
-    .select("status, version, expires_at")
+    .select("status, version, expires_at, email_import_event_id")
     .eq("id", reviewId)
     .single();
-  const { data: items } = await supabase
-    .from("email_import_review_items")
-    .select("id, save_status, save_result, resolved_transaction")
-    .eq("review_id", reviewId)
-    .order("source_index");
+  const [{ data: items }, { data: event }] = await Promise.all([
+    supabase
+      .from("email_import_review_items")
+      .select(
+        "id, candidate, issues, options, selected_option_ids, save_status, save_result, resolved_transaction",
+      )
+      .eq("review_id", reviewId)
+      .order("source_index"),
+    supabase
+      .from("email_import_events")
+      .select("sender_email, created_at, result")
+      .eq("id", review.email_import_event_id)
+      .maybeSingle(),
+  ]);
   return new Response(
     JSON.stringify({
       status: review.status,
       version: review.version,
       expiresAt: review.expires_at,
-      items: items ?? [],
+      source: buildEmailImportReviewSource(event),
+      items: (items ?? []).map((item: Record<string, unknown>) =>
+        buildEmailImportReviewItem(item)
+      ),
     }),
     { headers },
   );

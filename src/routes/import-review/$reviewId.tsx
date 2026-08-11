@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  FileText,
+  Mail,
+  XCircle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/import-review/$reviewId")({
   component: ImportReviewPage,
@@ -22,16 +32,62 @@ interface ReviewItem {
   id: string;
   summary: string;
   issues: ReviewIssue[];
+  transaction: ReviewTransaction;
   saveStatus?: string;
+  transactionId?: string;
+}
+interface ReviewTransaction {
+  type?: "expense" | "income";
+  amount?: number;
+  currency?: string;
+  date?: string;
+  merchant?: string;
+  description?: string;
+  category?: string;
+}
+interface ReviewSourceFile {
+  name: string;
+  status: "processed" | "failed" | "unknown";
+  transactionCount: number;
+}
+interface ReviewSource {
+  senderEmail?: string;
+  subjectLine?: string;
+  receivedAt?: string;
+  files: ReviewSourceFile[];
 }
 interface Review {
   status: string;
   version: number;
   expiresAt?: string;
+  source: ReviewSource;
   items: ReviewItem[];
 }
 
 const REVIEW_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const MOBILE_USER_AGENT_PATTERN = /Android|iPhone|iPad|iPod/i;
+const attemptedAppLaunches = new Set<string>();
+
+function attemptMobileAppLaunch(reviewId: string, secret: string) {
+  const isMobile = MOBILE_USER_AGENT_PATTERN.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (!isMobile) return;
+
+  const launchKey = `moneko:import-review:app-launch:${reviewId}`;
+  if (attemptedAppLaunches.has(launchKey)) return;
+  try {
+    if (window.sessionStorage.getItem(launchKey) === "1") return;
+    window.sessionStorage.setItem(launchKey, "1");
+  } catch {
+    // The in-memory guard still prevents another attempt during this page load.
+  }
+  attemptedAppLaunches.add(launchKey);
+  openMobileApp(reviewId, secret);
+}
+
+function openMobileApp(reviewId: string, secret: string) {
+  window.location.href = `moneko://import-review/${reviewId}#${secret}`;
+}
 
 function ImportReviewPage() {
   const { reviewId } = Route.useParams();
@@ -82,6 +138,7 @@ function ImportReviewPage() {
       // The active page keeps the bearer only in memory when storage is blocked.
     }
     setToken(secret);
+    attemptMobileAppLaunch(reviewId, secret);
     void inspect(secret);
     return cleanup;
   }, [reviewId]);
@@ -138,10 +195,10 @@ function ImportReviewPage() {
               ...(selections[`${item.id}:decline`] === "decline"
                 ? { decline: true }
                 : {
-                    optionIds: item.issues
-                      .map((issue) => selections[`${item.id}:${issue.field}`])
-                      .filter(Boolean),
-                  }),
+                  optionIds: item.issues
+                    .map((issue) => selections[`${item.id}:${issue.field}`])
+                    .filter(Boolean),
+                }),
             })),
           },
         },
@@ -169,99 +226,54 @@ function ImportReviewPage() {
     }
   }
 
-  if (!hasLoadedToken)
+  if (!hasLoadedToken || (token && !review && !requestError)) {
     return (
       <ReviewShell>
-        <div className="flex animate-pulse flex-col gap-12">
-          <div>
-            <div className="mb-4 h-8 w-48 rounded-sm bg-slate-200 dark:bg-slate-800" />
-            <div className="h-5 w-3/4 rounded-sm bg-slate-100 dark:bg-slate-900" />
+        <div className="flex animate-pulse flex-col gap-10">
+          <div className="mb-6">
+            <div className="mb-4 h-10 w-48 rounded-xl bg-slate-200 dark:bg-slate-800" />
+            <div className="h-5 w-64 rounded-lg bg-slate-200 dark:bg-slate-800" />
           </div>
+
+          {[1, 2].map((i) => (
+            <div key={i} className="flex flex-col gap-4">
+              <div className="mx-2 h-6 w-1/3 rounded-lg bg-slate-200 dark:bg-slate-800" />
+              <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                <div className="h-24 border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900" />
+                <div className="h-24 bg-white dark:bg-slate-900" />
+              </div>
+            </div>
+          ))}
         </div>
       </ReviewShell>
     );
+  }
 
-  if (!token)
+  if (!token || requestError) {
     return (
       <ReviewShell>
-        <h1 className="mb-2 text-2xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
-          Invalid Link
-        </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-400">
-          This secure link is invalid or has already been removed from this
-          browser.
-        </p>
-      </ReviewShell>
-    );
-
-  if (!review && requestError)
-    return (
-      <ReviewShell>
-        <h1 className="mb-2 text-2xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
-          Link Unavailable
-        </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-400" role="alert">
-          {requestError}
-        </p>
-      </ReviewShell>
-    );
-
-  if (!review)
-    return (
-      <ReviewShell>
-        <div className="flex animate-pulse flex-col gap-12">
-          <div>
-            <div className="mb-4 h-8 w-48 rounded-sm bg-slate-200 dark:bg-slate-800" />
-            <div className="h-5 w-3/4 rounded-sm bg-slate-100 dark:bg-slate-900" />
-          </div>
-
-          <div className="border-t border-slate-200 pt-8 dark:border-slate-800">
-            <div className="mb-8 h-6 w-1/3 rounded-sm bg-slate-200 dark:bg-slate-800" />
-            <div className="mb-4 h-4 w-16 rounded-sm bg-slate-200 dark:bg-slate-800" />
-            <div className="mb-4 flex gap-4">
-              <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200 dark:bg-slate-800" />
-              <div className="flex-1">
-                <div className="mb-2 h-5 w-1/2 rounded-sm bg-slate-100 dark:bg-slate-900" />
-                <div className="h-4 w-1/3 rounded-sm bg-slate-100 dark:bg-slate-900" />
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200 dark:bg-slate-800" />
-              <div className="flex-1">
-                <div className="mb-2 h-5 w-1/2 rounded-sm bg-slate-100 dark:bg-slate-900" />
-                <div className="h-4 w-1/3 rounded-sm bg-slate-100 dark:bg-slate-900" />
-              </div>
-            </div>
-          </div>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+          <AlertCircle className="mb-6 h-16 w-16 text-rose-500" />
+          <h1 className="mb-4 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+            {requestError ? "Link Unavailable" : "Invalid Link"}
+          </h1>
+          <p className="mb-10 max-w-sm text-lg text-slate-500 dark:text-slate-400">
+            {requestError ??
+              "This secure link is invalid or has already been removed from this browser."}
+          </p>
         </div>
       </ReviewShell>
     );
+  }
+
+  if (!review) return null;
 
   if (review.status !== "pending") {
-    let title = "Review Unavailable";
-
-    if (review.status === "completed") {
-      title = "Import Completed";
-    } else if (review.status === "declined") {
-      title = "Import Declined";
-    } else if (review.status === "expired") {
-      title = "Link Expired";
-    } else if (review.status === "failed") {
-      title = "Import Failed";
-    }
-
     return (
-      <ReviewShell>
-        <h1 className="mb-2 text-2xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
-          {title}
-        </h1>
-        <p className="mb-8 text-lg text-slate-600 dark:text-slate-400">
-          {resultCopy(review.status)}
-        </p>
-        <Button variant="outline" asChild>
-          <Link to="/">Return to Dashboard</Link>
-        </Button>
-      </ReviewShell>
+      <ReviewResult
+        review={review}
+        onOpenApp={() => openMobileApp(reviewId, token)}
+      />
     );
   }
 
@@ -273,54 +285,45 @@ function ImportReviewPage() {
 
   return (
     <ReviewShell>
-      <div className="mb-12">
-        <h1 className="mb-3 text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
+      <div className="mb-10 px-2">
+        <h1 className="mb-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
           Review import
         </h1>
-        <p className="text-lg text-slate-600 dark:text-slate-400">
-          We need a few clarifications before we can save these transactions.
+        <p className="text-lg text-slate-500 dark:text-slate-400">
+          We need a few clarifications before saving these transactions.
         </p>
       </div>
 
-      <div className="flex flex-col gap-12">
-        {review.items.map((item, index) => {
+      <ReviewSourceCard source={review.source} />
+
+      <div className="mt-10 flex flex-col gap-10">
+        {review.items.map((item) => {
           const isDeclined = selections[`${item.id}:decline`] === "decline";
 
           return (
-            <section
-              key={item.id}
-              className={cn(
-                "pt-10 transition-opacity duration-300",
-                index > 0 && "border-t border-slate-200 dark:border-slate-800",
-                isDeclined && "opacity-75 grayscale-[0.2]",
-              )}
-            >
+            <section key={item.id} className="transition-all duration-500">
               <h2
                 className={cn(
-                  "mb-8 text-xl font-medium transition-colors",
+                  "mb-4 px-2 text-xl font-semibold tracking-tight transition-colors",
                   isDeclined
-                    ? "text-slate-500 line-through decoration-slate-300 dark:text-slate-400 dark:decoration-slate-600"
-                    : "text-slate-900 dark:text-slate-50",
+                    ? "text-slate-500 line-through decoration-slate-300 dark:text-slate-500 dark:decoration-slate-600"
+                    : "text-slate-900 dark:text-slate-100",
                 )}
               >
                 {item.summary}
               </h2>
 
-              <div className="flex flex-col gap-10">
+              <TransactionContextCard transaction={item.transaction} />
+
+              <div className="mt-6 flex flex-col gap-6">
                 {item.issues.map((issue) => (
-                  <div
-                    key={issue.field}
-                    className={cn(
-                      "transition-opacity",
-                      isDeclined && "pointer-events-none opacity-50",
-                    )}
-                  >
-                    <h3 className="mb-4 text-sm font-medium text-slate-900 capitalize dark:text-slate-300">
+                  <div key={issue.field}>
+                    <h3 className="mb-2 px-2 text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
                       Select {issue.field}
                     </h3>
 
-                    <div className="flex flex-col gap-1">
-                      {issue.choices.map((choice) => {
+                    <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                      {issue.choices.map((choice, choiceIdx) => {
                         const isSelected =
                           selections[`${item.id}:${issue.field}`] === choice.id;
 
@@ -328,15 +331,16 @@ function ImportReviewPage() {
                           <label
                             key={choice.id}
                             className={cn(
-                              "group relative -mx-4 flex cursor-pointer items-start gap-4 rounded-lg p-4 transition-colors",
-                              isSelected && !isDeclined
-                                ? "bg-slate-50 dark:bg-slate-900/50"
-                                : "hover:bg-slate-50/50 dark:hover:bg-slate-900/30",
+                              "group relative flex cursor-pointer items-center justify-between p-5 transition-colors",
+                              "hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800/50 dark:active:bg-slate-800",
+                              choiceIdx > 0 &&
+                                "border-t border-slate-100 dark:border-slate-800/80",
+                              isDeclined && "opacity-50 grayscale",
                             )}
                           >
                             <input
                               type="radio"
-                              className="mt-1 h-4 w-4 cursor-pointer border-slate-300 text-slate-900 focus:ring-slate-900 dark:border-slate-700 dark:checked:bg-slate-100 dark:focus:ring-slate-100 dark:focus:ring-offset-slate-950"
+                              className="peer sr-only"
                               name={`${item.id}:${issue.field}`}
                               checked={isSelected && !isDeclined}
                               onChange={() =>
@@ -344,24 +348,31 @@ function ImportReviewPage() {
                                   ...current,
                                   [`${item.id}:decline`]: "",
                                   [`${item.id}:${issue.field}`]: choice.id,
-                                }))
-                              }
+                                }))}
                             />
-                            <div className="flex-1">
+                            <div className="flex-1 pr-4">
                               <div
                                 className={cn(
-                                  "text-base transition-colors",
+                                  "text-lg transition-colors",
                                   isSelected && !isDeclined
-                                    ? "font-medium text-slate-900 dark:text-slate-50"
-                                    : "text-slate-700 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100",
+                                    ? "font-semibold text-slate-900 dark:text-slate-50"
+                                    : "font-medium text-slate-700 dark:text-slate-300",
                                 )}
                               >
                                 {choice.label}
                               </div>
                               {choice.evidence && (
-                                <div className="mt-1 text-sm leading-snug text-slate-500 dark:text-slate-400">
+                                <div className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                                   {choice.evidence}
                                 </div>
+                              )}
+                            </div>
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+                              {isSelected && !isDeclined && (
+                                <Check
+                                  className="h-6 w-6 text-blue-600 dark:text-blue-500"
+                                  strokeWidth={3}
+                                />
                               )}
                             </div>
                           </label>
@@ -371,38 +382,55 @@ function ImportReviewPage() {
                   </div>
                 ))}
 
-                <div className="mt-2 border-t border-slate-100 pt-4 dark:border-slate-800/60">
+                <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
                   <label
                     className={cn(
-                      "group relative -mx-4 flex cursor-pointer items-start gap-4 rounded-lg p-4 transition-colors",
-                      isDeclined
-                        ? "bg-rose-50/50 dark:bg-rose-900/20"
-                        : "hover:bg-slate-50/50 dark:hover:bg-slate-900/30",
+                      "group relative flex cursor-pointer items-center justify-between p-5 transition-colors",
+                      "hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800/50 dark:active:bg-slate-800",
+                      isDeclined &&
+                        "bg-rose-50 hover:bg-rose-100/80 dark:bg-rose-900/10 dark:hover:bg-rose-900/20",
                     )}
                   >
                     <input
                       type="radio"
-                      className="mt-1 h-4 w-4 cursor-pointer border-slate-300 text-rose-600 focus:ring-rose-600 dark:border-slate-700 dark:checked:bg-rose-500 dark:focus:ring-rose-500 dark:focus:ring-offset-slate-950"
+                      className="peer sr-only"
                       name={`${item.id}:decline`}
                       checked={isDeclined}
                       onChange={() =>
                         setSelections((current) => ({
                           ...current,
                           [`${item.id}:decline`]: "decline",
-                        }))
-                      }
+                        }))}
                     />
-                    <div className="flex-1">
-                      <span
+                    <div className="flex items-center gap-4">
+                      <div
                         className={cn(
-                          "text-base transition-colors",
+                          "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
                           isDeclined
-                            ? "font-medium text-rose-900 dark:text-rose-200"
-                            : "text-slate-700 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-slate-100",
+                            ? "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400"
+                            : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500",
                         )}
                       >
-                        Do not import this transaction
+                        <XCircle className="h-6 w-6" />
+                      </div>
+                      <span
+                        className={cn(
+                          "text-lg font-semibold",
+                          isDeclined
+                            ? "text-rose-700 dark:text-rose-400"
+                            : "text-slate-700 dark:text-slate-300",
+                        )}
+                      >
+                        Do not import this
                       </span>
+                    </div>
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+                      {isDeclined && (
+                        <Check
+                          className="h-6 w-6 text-rose-600 dark:text-rose-500"
+                          strokeWidth={3}
+                        />
+                      )}
                     </div>
                   </label>
                 </div>
@@ -413,7 +441,8 @@ function ImportReviewPage() {
       </div>
 
       {requestError && (
-        <div className="mt-10 rounded-lg bg-rose-50 p-4 dark:bg-rose-900/20">
+        <div className="mt-10 flex items-center gap-3 rounded-2xl bg-rose-50 p-5 ring-1 ring-rose-200 dark:bg-rose-900/20 dark:ring-rose-800">
+          <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
           <p
             className="text-sm font-medium text-rose-800 dark:text-rose-300"
             role="alert"
@@ -423,25 +452,12 @@ function ImportReviewPage() {
         </div>
       )}
 
-      <div className="mt-16 flex flex-col items-center justify-between gap-6 border-t border-slate-200 pt-8 sm:flex-row dark:border-slate-800">
-        <div className="order-2 w-full sm:order-1 sm:w-auto">
-          <p className="text-center text-sm text-slate-500 sm:text-left dark:text-slate-400">
-            Need to edit details?{" "}
-            <Link
-              to="/login"
-              search={{ redirect: `/import-review/${reviewId}` } as any}
-              className="text-slate-900 underline underline-offset-4 hover:text-slate-600 dark:text-slate-300 dark:hover:text-slate-50"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-
+      <div className="mt-16 pb-8">
         <Button
           size="lg"
           className={cn(
-            "order-1 w-full rounded-none px-8 sm:order-2 sm:w-auto",
-            isSubmitting && "opacity-80",
+            "w-full rounded-full py-7 text-lg font-semibold shadow-sm transition-all sm:py-8",
+            isSubmitting && "cursor-wait opacity-80",
           )}
           disabled={!complete || isSubmitting}
           onClick={submit}
@@ -453,21 +469,257 @@ function ImportReviewPage() {
   );
 }
 
+function ReviewResult({
+  review,
+  onOpenApp,
+}: {
+  review: Review;
+  onOpenApp: () => void;
+}) {
+  const title = review.status === "completed"
+    ? "Import completed"
+    : review.status === "declined"
+    ? "Import declined"
+    : review.status === "expired"
+    ? "Link expired"
+    : "Import failed";
+  const icon = review.status === "completed"
+    ? <CheckCircle2 className="h-16 w-16 text-emerald-500" />
+    : review.status === "declined"
+    ? <XCircle className="h-16 w-16 text-slate-400" />
+    : review.status === "expired"
+    ? <Clock className="h-16 w-16 text-amber-500" />
+    : <AlertCircle className="h-16 w-16 text-rose-500" />;
+
+  return (
+    <ReviewShell>
+      <div className="flex flex-col items-center text-center">
+        {icon}
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+          {title}
+        </h1>
+        <p className="mt-3 max-w-md text-lg text-slate-500 dark:text-slate-400">
+          {resultCopy(review.status)}
+        </p>
+      </div>
+
+      <div className="mt-10">
+        <ReviewSourceCard source={review.source} />
+      </div>
+
+      {review.items.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 px-2 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            Import results
+          </h2>
+          <div className="flex flex-col gap-4">
+            {review.items.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
+              >
+                <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
+                  {item.saveStatus === "saved"
+                    ? (
+                      <>
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                        <span className="text-emerald-700 dark:text-emerald-400">
+                          Transaction logged
+                        </span>
+                      </>
+                    )
+                    : (
+                      <>
+                        <AlertCircle className="h-5 w-5 text-slate-400" />
+                        <span className="text-slate-600 dark:text-slate-400">
+                          {resultItemLabel(item.saveStatus)}
+                        </span>
+                      </>
+                    )}
+                </div>
+                <TransactionContextCard transaction={item.transaction} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {review.status === "completed" && (
+        <Button
+          size="lg"
+          className="mt-10 w-full rounded-full py-7 text-lg font-semibold sm:py-8"
+          onClick={onOpenApp}
+        >
+          <ExternalLink className="mr-2 h-5 w-5" />
+          Open Moneko
+        </Button>
+      )}
+    </ReviewShell>
+  );
+}
+
+function ReviewSourceCard({ source }: { source: ReviewSource }) {
+  const hasDetails = source?.senderEmail ||
+    source?.subjectLine ||
+    source?.receivedAt ||
+    source?.files?.length;
+  if (!hasDetails) return null;
+
+  return (
+    <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+          <Mail className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="font-semibold text-slate-900 dark:text-slate-100">
+            Forwarded import
+          </div>
+          {source.receivedAt && (
+            <div className="text-sm text-slate-500 dark:text-slate-400">
+              Received {formatReviewDate(source.receivedAt)}
+            </div>
+          )}
+        </div>
+      </div>
+      {source.subjectLine && (
+        <div className="mt-5 text-lg font-semibold text-slate-900 dark:text-slate-100">
+          {source.subjectLine}
+        </div>
+      )}
+      {source.senderEmail && (
+        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          From {source.senderEmail}
+        </div>
+      )}
+      {source.files?.length > 0 && (
+        <div className="mt-5 border-t border-slate-100 pt-3 dark:border-slate-800">
+          {source.files.map((file) => (
+            <div key={file.name} className="flex items-center gap-3 py-2">
+              <FileText
+                className={cn(
+                  "h-5 w-5 shrink-0",
+                  file.status === "failed" ? "text-rose-500" : "text-slate-400",
+                )}
+              />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700 dark:text-slate-300">
+                {file.name}
+              </span>
+              <span
+                className={cn(
+                  "text-xs",
+                  file.status === "failed"
+                    ? "text-rose-500"
+                    : "text-slate-500 dark:text-slate-400",
+                )}
+              >
+                {file.status === "failed"
+                  ? "Could not read"
+                  : `${file.transactionCount} found`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TransactionContextCard({
+  transaction,
+}: {
+  transaction: ReviewTransaction;
+}) {
+  if (!transaction || Object.keys(transaction).length === 0) return null;
+  const title = transaction.merchant ||
+    transaction.description ||
+    "Transaction awaiting review";
+  const details = [
+    transaction.type && titleCase(transaction.type),
+    transaction.category && titleCase(transaction.category),
+    transaction.date && formatReviewDate(transaction.date),
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-slate-950/60 dark:ring-slate-800">
+      <div className="flex items-start justify-between gap-4">
+        <div className="font-semibold text-slate-900 dark:text-slate-100">
+          {title}
+        </div>
+        {typeof transaction.amount === "number" && (
+          <div className="shrink-0 text-lg font-bold text-slate-900 dark:text-slate-50">
+            {formatReviewAmount(transaction.amount, transaction.currency)}
+          </div>
+        )}
+      </div>
+      {transaction.description && transaction.description !== title && (
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+          {transaction.description}
+        </p>
+      )}
+      {details.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {details.map((detail) => (
+            <span
+              key={detail}
+              className="rounded-full bg-slate-200/70 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            >
+              {detail}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ReviewShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-white font-sans dark:bg-slate-950">
-      <main className="mx-auto max-w-2xl px-6 py-16 md:py-24">{children}</main>
+    <div className="min-h-screen bg-slate-50 font-sans dark:bg-slate-950">
+      <main className="mx-auto max-w-2xl px-5 py-12 md:py-20">{children}</main>
     </div>
   );
 }
 
 function resultCopy(status: string) {
-  if (status === "completed")
-    return "Your transaction was securely imported into your account.";
-  if (status === "declined")
+  if (status === "completed") {
+    return "The transactions below were securely added to your account.";
+  }
+  if (status === "declined") {
     return "This transaction was discarded and will not be imported.";
-  if (status === "expired")
+  }
+  if (status === "expired") {
     return "For your security, this review link has expired. Please initiate a new import.";
+  }
   if (status === "failed") return "This transaction could not be imported.";
   return "This review link is currently unavailable.";
+}
+
+function resultItemLabel(status?: string) {
+  if (status === "duplicate") return "Already logged";
+  if (status === "declined") return "Not imported";
+  if (status === "failed") return "Could not log";
+  return "Processed";
+}
+
+function formatReviewAmount(amount: number, currency?: string) {
+  return `${currency ?? ""} ${amount.toFixed(2)}`.trim();
+}
+
+function formatReviewDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function titleCase(value: string) {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part[0].toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
 }

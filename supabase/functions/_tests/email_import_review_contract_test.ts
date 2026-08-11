@@ -61,6 +61,12 @@ Deno.test("web review polls processing submissions", async () => {
   assertStringIncludes(route, 'data.status === "processing"');
   assertStringIncludes(route, "window.setTimeout");
   assertStringIncludes(route, "activeReviewIdRef.current === reviewId");
+  assertStringIncludes(route, "moneko://import-review/");
+  assertStringIncludes(route, "navigator.userAgent");
+  assertStringIncludes(route, "moneko:import-review:app-launch:");
+  assertStringIncludes(route, "Open Moneko");
+  assertStringIncludes(route, "review.source");
+  assertStringIncludes(route, "item.transaction");
 });
 
 Deno.test(
@@ -83,6 +89,12 @@ Deno.test(
       submit,
       '.eq("processing_attempt_count", claimedAttemptCount)',
     );
+    assertStringIncludes(inspect, "buildEmailImportReviewSource");
+    assertStringIncludes(inspect, "buildEmailImportReviewItem");
+    assertStringIncludes(submit, "buildEmailImportReviewSource");
+    assertStringIncludes(submit, "buildEmailImportReviewItem");
+    assertStringIncludes(inspect, "sender_email, created_at, result");
+    assertStringIncludes(submit, "sender_email, created_at, result");
 
     const inspectConfig = await Deno.readTextFile(
       new URL("../email-import-review-inspect/config.toml", import.meta.url),

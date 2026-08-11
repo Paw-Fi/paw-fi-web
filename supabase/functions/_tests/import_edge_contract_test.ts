@@ -4,6 +4,7 @@ import {
   assertEquals,
   assertStringIncludes,
 } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
 
 Deno.test(
   "import contract: mobile save-expense payload fields are supported",
@@ -102,7 +103,12 @@ Deno.test(
       new URL("../shared/analyze-core.ts", import.meta.url),
     );
 
-    assertStringIncludes(source, '"gemini-3.1-flash-lite"');
+    assertStringIncludes(source, "GEMINI_MODEL_FALLBACKS");
+    assertEquals(GEMINI_MODEL_FALLBACKS, [
+      "gemini-3.1-flash-lite",
+      "gemini-3.6-flash",
+      "gemini-3.1-pro-preview",
+    ]);
     assertStringIncludes(source, "returned no transaction tool call");
     assertStringIncludes(source, "returned empty or invalid items");
     assertStringIncludes(source, "trying fallback model");

@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCorsHeaders } from "../shared/cors.ts";
 import {
+  buildEmailImportReviewItem,
+  buildEmailImportReviewSource,
   hashEmailImportReviewToken,
   isValidReviewToken,
 } from "../shared/email-import-review.ts";
@@ -39,7 +41,7 @@ serve(async (request) => {
     const { data: review, error: reviewError } = await supabase
       .from("email_import_reviews")
       .select(
-        "id, status, version, expires_at, completed_at, declined_at, last_error",
+        "id, email_import_event_id, status, version, expires_at, completed_at, declined_at, last_error",
       )
       .eq("id", body.reviewId)
       .eq("token_hash", tokenHash)
@@ -59,29 +61,34 @@ serve(async (request) => {
         { headers },
       );
     }
-    const { data: items, error: itemsError } = await supabase
-      .from("email_import_review_items")
-      .select(
-        "id, candidate, issues, options, selected_option_ids, resolved_transaction, save_status, save_result",
-      )
-      .eq("review_id", review.id)
-      .order("source_index");
+    const [
+      { data: items, error: itemsError },
+      { data: event, error: eventError },
+    ] = await Promise.all([
+      supabase
+        .from("email_import_review_items")
+        .select(
+          "id, candidate, issues, options, selected_option_ids, resolved_transaction, save_status, save_result",
+        )
+        .eq("review_id", review.id)
+        .order("source_index"),
+      supabase
+        .from("email_import_events")
+        .select("sender_email, created_at, result")
+        .eq("id", review.email_import_event_id)
+        .maybeSingle(),
+    ]);
     if (itemsError) throw itemsError;
+    if (eventError) throw eventError;
     return new Response(
       JSON.stringify({
         status: review.status,
         version: review.version,
         expiresAt: review.expires_at,
-        items: (items ?? []).map((item: any) => ({
-          id: item.id,
-          summary: summary(item.candidate),
-          issues: item.issues,
-          options: item.options,
-          selectedOptionIds: item.selected_option_ids,
-          resolvedTransaction: item.resolved_transaction,
-          saveStatus: item.save_status,
-          result: item.save_result,
-        })),
+        source: buildEmailImportReviewSource(event),
+        items: (items ?? []).map((item: Record<string, unknown>) =>
+          buildEmailImportReviewItem(item)
+        ),
       }),
       { headers },
     );
@@ -105,12 +112,6 @@ function isUuid(value: unknown): value is string {
         value,
       )
   );
-}
-
-function summary(candidate: Record<string, unknown>): string {
-  return typeof candidate.description === "string"
-    ? candidate.description.slice(0, 160)
-    : "Transaction awaiting review";
 }
 
 async function readBoundedJson(

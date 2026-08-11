@@ -103,6 +103,7 @@ import {
   createVertexGenerativeAI,
   getVertexAiConfigFromEnv,
 } from "./vertex-ai-chat.ts";
+import { GEMINI_MODEL_FALLBACKS } from "./gemini-models.ts";
 import {
   buildTransactionCategoryClusters,
   type TransactionCategoryCluster,
@@ -165,11 +166,7 @@ const DEBUG_LOGS = (() => {
     return false;
   }
 })();
-const GEMINI_FALLBACK_MODEL_NAMES = [
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash-preview",
-  "gemini-2.5-pro",
-] as const;
+const GEMINI_FALLBACK_MODEL_NAMES = GEMINI_MODEL_FALLBACKS;
 const PDF_CATEGORY_BATCH_SIZE = 80;
 
 const UUID_REGEX =
@@ -2256,13 +2253,13 @@ Return JSON only: {"decision":"APPROVE"|"REJECT","evidence":["exact source fragm
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-pro",
+      model: GEMINI_MODEL_FALLBACKS[2],
       systemInstruction:
         "You independently verify proposed household allocations. False approval is worse than rejection.",
     });
     const response = await generateGeminiWithRetry({
       model,
-      modelName: "gemini-2.5-pro-household-split-verifier",
+      modelName: `${GEMINI_MODEL_FALLBACKS[2]}-household-split-verifier`,
       request: {
         contents: [
           {
@@ -4012,7 +4009,7 @@ Do NOT summarize - extract every single transaction.
       return itemsWithDesc;
     } catch (error) {
       lastError = error;
-      if (!isRetriableGeminiError(error)) {
+      if (!shouldTryNextGeminiFallbackModel(error)) {
         throw error;
       }
       const message = error instanceof Error ? error.message : String(error);
@@ -5021,6 +5018,16 @@ function isRetriableGeminiError(error: unknown): boolean {
     );
   }
   return false;
+}
+
+export function shouldTryNextGeminiFallbackModel(error: unknown): boolean {
+  if (isRetriableGeminiError(error)) return true;
+  const status = extractModelErrorStatus(error);
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    (status === 400 || /\b400\b/.test(message)) &&
+    /invalid(?:_|\s+)argument/i.test(message)
+  );
 }
 
 function isTransientModelErrorMessage(message: string): boolean {

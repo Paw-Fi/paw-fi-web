@@ -17,8 +17,32 @@ import {
   parseTransactionsJsonToItems,
   resolveHouseholdContext,
   sanitizeTransactionSourceGrounding,
+  shouldTryNextGeminiFallbackModel,
   validateTransactionSourceGrounding,
 } from "../shared/analyze-core.ts";
+
+Deno.test(
+  "analyze-core: Gemini INVALID_ARGUMENT tries the next fallback model",
+  () => {
+    const invalidArgument = Object.assign(
+      new Error("Request contains an invalid argument"),
+      { status: 400 },
+    );
+    const unauthorized = Object.assign(new Error("Unauthorized"), {
+      status: 401,
+    });
+    const wrappedInvalidArgument = new Error(
+      "Request contains an invalid argument (400)",
+    );
+
+    assertEquals(shouldTryNextGeminiFallbackModel(invalidArgument), true);
+    assertEquals(
+      shouldTryNextGeminiFallbackModel(wrappedInvalidArgument),
+      true,
+    );
+    assertEquals(shouldTryNextGeminiFallbackModel(unauthorized), false);
+  },
+);
 
 Deno.test(
   "analyze-core: category guidance passes allowed user preferences without schema enums",
@@ -159,18 +183,21 @@ Deno.test("analyze-core: transaction JSON fallback preserves merchant", () => {
   assertEquals(item.merchant, "Blue Bottle Coffee");
 });
 
-Deno.test("analyze-core: extracts only explicitly labeled transaction time", () => {
-  assertEquals(
-    extractExplicitTransactionTime(
-      "Date & Time: 26 Jul 14:05 (SGT)\nForwarded at: 18:00",
-    ),
-    "14:05:00",
-  );
-  assertEquals(
-    extractExplicitTransactionTime("Forwarded at: 18:00\nAmount: SGD 2.20"),
-    undefined,
-  );
-});
+Deno.test(
+  "analyze-core: extracts only explicitly labeled transaction time",
+  () => {
+    assertEquals(
+      extractExplicitTransactionTime(
+        "Date & Time: 26 Jul 14:05 (SGT)\nForwarded at: 18:00",
+      ),
+      "14:05:00",
+    );
+    assertEquals(
+      extractExplicitTransactionTime("Forwarded at: 18:00\nAmount: SGD 2.20"),
+      undefined,
+    );
+  },
+);
 
 Deno.test(
   "analyze-core: rejects hallucinated values and recovers a grounded labeled transaction",
@@ -272,34 +299,28 @@ Deno.test(
       transactionTime: "10:59:00",
     };
 
-    assertEquals(
-      validateTransactionSourceGrounding({ sourceText, item }),
-      {
-        grounded: false,
-        reasons: ["TIME_NOT_FOUND_IN_SOURCE"],
+    assertEquals(validateTransactionSourceGrounding({ sourceText, item }), {
+      grounded: false,
+      reasons: ["TIME_NOT_FOUND_IN_SOURCE"],
+    });
+    assertEquals(sanitizeTransactionSourceGrounding({ sourceText, item }), {
+      grounded: true,
+      reasons: [],
+      item: {
+        type: "expense",
+        amount: 8.1,
+        category: "taxi & ride apps",
+        currency: "SGD",
+        merchant: "Grab",
+        date: "2026-08-01",
       },
-    );
-    assertEquals(
-      sanitizeTransactionSourceGrounding({ sourceText, item }),
-      {
-        grounded: true,
-        reasons: [],
-        item: {
-          type: "expense",
-          amount: 8.1,
-          category: "taxi & ride apps",
-          currency: "SGD",
-          merchant: "Grab",
-          date: "2026-08-01",
+      removedFields: [
+        {
+          field: "transactionTime",
+          reason: "TIME_NOT_FOUND_IN_SOURCE",
         },
-        removedFields: [
-          {
-            field: "transactionTime",
-            reason: "TIME_NOT_FOUND_IN_SOURCE",
-          },
-        ],
-      },
-    );
+      ],
+    });
   },
 );
 
