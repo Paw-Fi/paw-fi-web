@@ -20,6 +20,15 @@ const updateFunction = await Deno.readTextFile(
 const unconfirmFunction = await Deno.readTextFile(
   new URL("../unconfirm-recurring-occurrence/index.ts", import.meta.url),
 );
+const overrideFunction = await Deno.readTextFile(
+  new URL("../save-recurring-occurrence-override/index.ts", import.meta.url),
+);
+const overrideMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260811130000_atomic_recurring_occurrence_override.sql",
+    import.meta.url,
+  ),
+);
 const listFunction = await Deno.readTextFile(
   new URL("../list-recurring-occurrences/index.ts", import.meta.url),
 );
@@ -142,4 +151,23 @@ Deno.test("recurring template deletion is included in deployment", () => {
     householdDeployScript,
     "supabase functions deploy delete-recurring-template",
   );
+});
+
+Deno.test("one-off overrides reuse confirmation atomically and retain income source", () => {
+  assertStringIncludes(overrideFunction, "authenticateUserOrInternalSecret");
+  assertStringIncludes(
+    overrideFunction,
+    "save_recurring_occurrence_override_v1",
+  );
+  assertStringIncludes(
+    overrideFunction,
+    "p_source: body.source?.trim() || null",
+  );
+  assertStringIncludes(
+    householdDeployScript,
+    "supabase functions deploy save-recurring-occurrence-override",
+  );
+  assertStringIncludes(overrideMigration, "confirm_recurring_occurrence_v1");
+  assertStringIncludes(overrideMigration, "source = coalesce");
+  assertStringIncludes(overrideMigration, "p_source text default null");
 });

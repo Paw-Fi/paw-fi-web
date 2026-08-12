@@ -83,6 +83,18 @@ Deno.test("household purchase guards use period-aware access checks", async () =
   }
 });
 
+Deno.test("trial household-sharing emails explain automatic paid-plan sharing", async () => {
+  const source = await Deno.readTextFile(
+    new URL("../households-accept-invite/index.ts", import.meta.url),
+  );
+
+  assertStringIncludes(source, "isOwnerTrialing");
+  assertStringIncludes(
+    source,
+    "When you upgrade to Moneko Plus, they'll automatically share your upgraded plan.",
+  );
+});
+
 Deno.test(
   "household subscription sharing allows already-bound users at the limit",
   () => {

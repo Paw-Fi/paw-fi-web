@@ -129,6 +129,11 @@ supabase functions deploy confirm-recurring-occurrence --project-ref $PROJECT_RE
 echo "✅ confirm-recurring-occurrence deployed"
 echo ""
 
+echo "📦 Deploying save-recurring-occurrence-override function..."
+supabase functions deploy save-recurring-occurrence-override --project-ref $PROJECT_REF
+echo "✅ save-recurring-occurrence-override deployed"
+echo ""
+
 # Step 19: Deploy skip-recurring-occurrence
 echo "📦 [19/19] Deploying skip-recurring-occurrence function..."
 supabase functions deploy skip-recurring-occurrence --project-ref $PROJECT_REF
