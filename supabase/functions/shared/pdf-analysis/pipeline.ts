@@ -26,6 +26,7 @@ import {
 import { cleanExtractedText } from "./utils/cleaner.ts";
 import { hashPdfBytes, hashPdfCacheKey } from "./utils/hasher.ts";
 import { detectDocumentLanguageHint } from "./utils/language.ts";
+import { resolveGeminiModelFallbacks } from "../gemini-models.ts";
 
 const PDF_ANALYSIS_CACHE_VERSION = "2026-04-23-v2";
 
@@ -40,12 +41,11 @@ function getMaxNativePages(): number {
 function getProviderFingerprint(): string {
   try {
     const configuredModels = Deno.env.get("PDF_ANALYSIS_GEMINI_MODELS")?.trim();
-    if (configuredModels) {
-      return `vertex:${configuredModels}|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
-    }
-    return `vertex:gemini-3.1-flash-lite,gemini-2.5-flash,gemini-2.5-pro|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
+    const models = resolveGeminiModelFallbacks(configuredModels);
+    return `vertex:${models.join(",")}|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
   } catch {
-    return `vertex:gemini-3.1-flash-lite,gemini-2.5-flash,gemini-2.5-pro|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
+    const models = resolveGeminiModelFallbacks();
+    return `vertex:${models.join(",")}|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
   }
 }
 

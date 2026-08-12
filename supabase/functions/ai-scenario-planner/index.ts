@@ -8,6 +8,9 @@ import {
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
+import {
+  resolveGeminiModelFallbacks,
+} from "../shared/gemini-models.ts";
 
 // Initialize Supabase client with service role key for DB access
 const supabaseClient = createClient(
@@ -36,22 +39,11 @@ interface CurrencyTotals {
 
 type ScenarioGenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
 
-const SCENARIO_PLANNER_MODEL_NAMES = [
-  "gemini-3.1-flash-lite-preview",
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-] as const;
 const DEFAULT_SCENARIO_VERTEX_TIMEOUT_MS = 60000;
 
 function getScenarioPlannerModelNames(): string[] {
   const configured = Deno.env.get("AI_SCENARIO_GEMINI_MODELS")?.trim();
-  if (!configured) return [...SCENARIO_PLANNER_MODEL_NAMES];
-
-  const modelNames = configured
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  return modelNames.length > 0 ? modelNames : [...SCENARIO_PLANNER_MODEL_NAMES];
+  return resolveGeminiModelFallbacks(configured);
 }
 
 function getScenarioVertexTimeoutMs(): number {

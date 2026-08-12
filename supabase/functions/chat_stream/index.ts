@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
 import { prompt as FA_PROMPT } from "./fa-prompt.ts";
 import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
+import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
 import {
   processGoalTrackingRequest,
   getGeminiFunctionDeclarations,
@@ -14,7 +15,7 @@ import {
 
 // Configuration constants
 const AI_MODEL = "gemini-3.1-flash-lite";
-const AI_MODEL_COMPREHENSIVE = "gemini-2.5-pro";
+const AI_MODEL_COMPREHENSIVE = GEMINI_MODEL_FALLBACKS[2];
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_OUTPUT_TOKENS = 8000;
 const MAX_JSON_COMPLETION_ATTEMPTS = 5;

@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database.types'
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database.types";
 
 // Add type declaration for window.__ENV__
 declare global {
@@ -8,55 +8,78 @@ declare global {
   }
 }
 
+function captureImportReviewSecret(): void {
+  if (typeof window === "undefined") return;
+  const match = window.location.pathname.match(
+    /^\/import-review\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i,
+  );
+  const secret = window.location.hash.slice(1);
+  if (!match || !/^[A-Za-z0-9_-]{43}$/.test(secret)) return;
+  try {
+    window.sessionStorage.setItem(`moneko:import-review:${match[1]}`, secret);
+    window.history.replaceState(null, "", window.location.pathname);
+  } catch {
+    // The route can still consume the fragment when browser storage is disabled.
+  }
+}
+
+captureImportReviewSecret();
+
 // Get environment variables with fallbacks for different environments
 const getEnvVariable = (key: string): string => {
   // For client-side in Vite
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     // In browser environment
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (typeof import.meta !== "undefined" && import.meta.env) {
       const value = import.meta.env[key];
-      if (value && typeof value === 'string' && !value.includes('${')) {
+      if (value && typeof value === "string" && !value.includes("${")) {
         return value;
       }
     }
-    
+
     // Try window.__ENV__ if it exists (sometimes used for runtime injection)
     if (window.__ENV__ && window.__ENV__[key]) {
       return window.__ENV__[key];
     }
   } else {
     // Server-side environment
-    if (typeof process !== 'undefined' && process.env) {
+    if (typeof process !== "undefined" && process.env) {
       // Try both the original key and alternatives
-      const value = process.env[key] || 
-                   (key === 'VITE_SUPABASE_URL' ? process.env.SUPABASE_URL : '') || 
-                   (key === 'VITE_SUPABASE_ANON_KEY' ? process.env.SUPABASE_ANON_KEY : '');
-      
-      if (value && typeof value === 'string' && !value.includes('${')) {
+      const value =
+        process.env[key] ||
+        (key === "VITE_SUPABASE_URL" ? process.env.SUPABASE_URL : "") ||
+        (key === "VITE_SUPABASE_ANON_KEY" ? process.env.SUPABASE_ANON_KEY : "");
+
+      if (value && typeof value === "string" && !value.includes("${")) {
         return value;
       }
     }
   }
-  
+
   // Hardcoded fallbacks as absolute last resort
   // These should match the values in your production environment
-  if (key === 'VITE_SUPABASE_URL') {
-    return 'https://pbopcsmrcykdzbilpilf.supabase.co';
+  if (key === "VITE_SUPABASE_URL") {
+    return "https://pbopcsmrcykdzbilpilf.supabase.co";
   }
-  if (key === 'VITE_SUPABASE_ANON_KEY') {
-    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxODczMzAsImV4cCI6MjA1OTc2MzMzMH0.oPnodbMGz5seQf-pHIP8gtanD62d-mhRjvhRhPDYPzA';
+  if (key === "VITE_SUPABASE_ANON_KEY") {
+    return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxODczMzAsImV4cCI6MjA1OTc2MzMzMH0.oPnodbMGz5seQf-pHIP8gtanD62d-mhRjvhRhPDYPzA";
   }
-  
-  return '';
+
+  return "";
 };
 
 // Get Supabase credentials
-const supabaseUrl = getEnvVariable('VITE_SUPABASE_URL');
-const supabaseAnonKey = getEnvVariable('VITE_SUPABASE_ANON_KEY');
+const supabaseUrl = getEnvVariable("VITE_SUPABASE_URL");
+const supabaseAnonKey = getEnvVariable("VITE_SUPABASE_ANON_KEY");
 
 // Validate that we have the required environment variables
-if (!supabaseUrl || supabaseUrl.includes('${') || !supabaseAnonKey || supabaseAnonKey.includes('${')) {
-  console.error('Missing or invalid Supabase environment variables');
+if (
+  !supabaseUrl ||
+  supabaseUrl.includes("${") ||
+  !supabaseAnonKey ||
+  supabaseAnonKey.includes("${")
+) {
+  console.error("Missing or invalid Supabase environment variables");
 }
 
 // Global singleton to prevent multiple GoTrueClient instances
@@ -71,17 +94,35 @@ const createSafeClient = () => {
 
   try {
     // Validate URL format before creating client
-    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('${') || supabaseAnonKey.includes('${')) {
-      console.error('Invalid Supabase credentials. Check environment variables.');
+    if (
+      !supabaseUrl ||
+      !supabaseAnonKey ||
+      supabaseUrl.includes("${") ||
+      supabaseAnonKey.includes("${")
+    ) {
+      console.error(
+        "Invalid Supabase credentials. Check environment variables.",
+      );
       // Return a dummy client that won't crash but will log errors
       const dummyClient = {
-        auth: { onAuthStateChange: () => ({ data: null, error: new Error('Invalid credentials') }) },
-        from: () => ({ select: () => Promise.resolve({ data: null, error: new Error('Invalid credentials') }) })
+        auth: {
+          onAuthStateChange: () => ({
+            data: null,
+            error: new Error("Invalid credentials"),
+          }),
+        },
+        from: () => ({
+          select: () =>
+            Promise.resolve({
+              data: null,
+              error: new Error("Invalid credentials"),
+            }),
+        }),
       } as any;
       supabaseInstance = dummyClient;
       return dummyClient;
     }
-    
+
     // Only create the client if we have valid credentials
     supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -89,18 +130,18 @@ const createSafeClient = () => {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         // Add storage key to prevent conflicts between multiple apps
-        storageKey: 'moneko-supabase-auth-token',
-      }
+        storageKey: "moneko-supabase-auth-token",
+      },
       // Removed global Content-Type header to allow proper MIME types for file uploads
     });
-    
+
     return supabaseInstance;
   } catch (error) {
-    console.error('Error creating Supabase client:', error);
+    console.error("Error creating Supabase client:", error);
     // Return a dummy client that won't crash but will log errors
     const errorClient = {
       auth: { onAuthStateChange: () => ({ data: null, error }) },
-      from: () => ({ select: () => Promise.resolve({ data: null, error }) })
+      from: () => ({ select: () => Promise.resolve({ data: null, error }) }),
     } as any;
     supabaseInstance = errorClient;
     return errorClient;

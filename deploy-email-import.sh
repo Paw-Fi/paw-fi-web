@@ -83,6 +83,8 @@ fi
 
 # Settings endpoint (JWT verified — called by Flutter app)
 deploy_function "email-import-settings"
+deploy_function "email-import-review-inspect"
+deploy_function "email-import-review-submit"
 
 # Shared mailbox webhook (Resend verified — called by Resend inbound webhooks)
 deploy_public_function "resend-inbound-webhook"

@@ -39,6 +39,7 @@ interface SubscriptionBindingEmailContext {
   grantOwnerUserId: string;
   grantedUserCount: number;
   remainingGrantCount: number;
+  isOwnerTrialing: boolean;
 }
 
 serve(async (req) => {
@@ -490,6 +491,8 @@ serve(async (req) => {
                           safeGrantedUserCount,
                         0,
                       ),
+                      isOwnerTrialing:
+                        String(newSubCheck.status).toLowerCase() === "trialing",
                     };
                   } else {
                     console.log(
@@ -790,6 +793,7 @@ async function sendSubscriptionBindingEmails(params: {
         remainingGrantCount: params.binding.remainingGrantCount,
         grantOwnerName,
         isInviterGrantOwner,
+        isOwnerTrialing: params.binding.isOwnerTrialing,
       });
       const inviterSend = await sendEmail({
         to: inviterEmail,
@@ -842,6 +846,7 @@ function buildInviterSubscriptionBindingEmail(data: {
   remainingGrantCount: number;
   grantOwnerName: string;
   isInviterGrantOwner: boolean;
+  isOwnerTrialing: boolean;
 }) {
   const ownershipText = data.isInviterGrantOwner
     ? "your subscription"
@@ -861,6 +866,9 @@ function buildInviterSubscriptionBindingEmail(data: {
     <p>You can still share subscription access with <strong>${escapeHtml(
       remainingText,
     )}</strong> on the current plan.</p>
+    ${data.isOwnerTrialing ? `
+      <p>${escapeHtml(data.inviteeName)}'s subscription is linked to yours. When you upgrade to Moneko Plus, they'll automatically share your upgraded plan.</p>
+    ` : ""}
     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 28px 0;" />
     <p><strong>FAQ: What if I invite more than ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users?</strong></p>
     <p>You can invite unlimited people to your household, but only ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users can share subscription access with your current plan. Additional members can still join the household; they just keep their own subscription status.</p>

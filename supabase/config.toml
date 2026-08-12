@@ -149,3 +149,11 @@ verify_jwt = false
 
 [functions.expense-daily-nudges]
 verify_jwt = false
+
+# These public endpoints authenticate a single bounded review with a hashed
+# high-entropy bearer secret in the JSON body.
+[functions.email-import-review-inspect]
+verify_jwt = false
+
+[functions.email-import-review-submit]
+verify_jwt = false

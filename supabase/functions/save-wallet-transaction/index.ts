@@ -74,6 +74,7 @@ import {
   loadLatestSubscriptionForUser,
 } from "../shared/plus-entitlement.ts";
 import { resolveFinancialPeriodRangeForUser } from "../shared/budgets-helpers.ts";
+import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -92,12 +93,7 @@ const CATEGORIZE_FUNCTION_CALLING_CONFIG = {
 
 const IDEMPOTENCY_PROCESSING_TTL_MS = 10 * 60 * 1000;
 const IDEMPOTENCY_KEY_TTL_HOURS = 24;
-const GEMINI_CATEGORIZATION_MODELS = [
-  "gemini-3.1-flash-lite",
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-] as const;
+const GEMINI_CATEGORIZATION_MODELS = GEMINI_MODEL_FALLBACKS;
 
 type GenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
 const GEMINI_RETRY_DELAYS_MS = [300] as const;
