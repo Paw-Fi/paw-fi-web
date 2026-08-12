@@ -33,10 +33,10 @@ const changelogs: ChangelogEntry[] = [
   {
     title: "Smoother Transactions & Email Receipt Fixes",
     date: "2026-08-05",
-    version: "3.0.4",
+    version: "3.0.5",
     tags: ["Fix", "Performance", "Email", "Wallet", "AI"],
     description:
-      "Moneko 3.0.4 makes adding, editing, and deleting transactions noticeably faster, fixes incorrect wallet balances and duplicate recurring entries, and gives you a clearer way to confirm email receipts when the AI isn't sure.",
+      "Moneko 3.0.5 makes adding, editing, and deleting transactions noticeably faster, fixes incorrect wallet balances and duplicate recurring entries, and gives you a clearer way to confirm email receipts when the AI isn't sure.",
     items: [
       "When you forward an email receipt and the AI can't confidently read the details, you'll now see a few quick options to confirm the transaction yourself instead of a generic failure message",
       "Fixed an issue where duplicate recurring transactions could appear on the wallet details page",
