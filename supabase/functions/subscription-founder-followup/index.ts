@@ -301,10 +301,7 @@ async function handleUpdate(
 
   const recipientName = resolveRecipientName(user.full_name);
   const planLabel = resolvePlanLabel(payload.record);
-  const text = buildCancellationEmailText(
-    recipientName,
-    isDeliberateCancellation(payload.record, payload.old_record),
-  );
+  const text = buildCancellationEmailText(recipientName);
   const subject = buildCancellationEmailSubject();
   const dedupeKey = buildCancellationDedupeKey(payload.record);
 
@@ -400,22 +397,6 @@ function didTransitionToCanceled(
   return false;
 }
 
-function isDeliberateCancellation(
-  nextRecord: SubscriptionRecord,
-  previousRecord: SubscriptionRecord,
-): boolean {
-  const cancelAtPeriodEnd = nextRecord.cancel_at_period_end;
-  if (cancelAtPeriodEnd === true || cancelAtPeriodEnd === "true") {
-    return true;
-  }
-
-  const nextCanceledAt = asNonEmptyString(nextRecord.canceled_at);
-  const previousCanceledAt = asNonEmptyString(previousRecord.canceled_at);
-  const endedAt = asNonEmptyString(nextRecord.ended_at);
-
-  return Boolean(nextCanceledAt && !previousCanceledAt && !endedAt);
-}
-
 function resolveRecipientName(fullName: string | null): string {
   const name = asNonEmptyString(fullName);
   if (!name) {
@@ -460,58 +441,35 @@ function buildWelcomeEmailText(name: string): string {
   return [
     buildGreeting(name),
     "",
-    "Yifan here, co-founder and CTO of Moneko. Thanks for joining us—I wanted to personally welcome you.",
+    "Yifan here, one of the co-founders of Moneko. I saw you joined recently and thought I’d say hi.",
     "",
-    'A great way to get started is to log your next expense through WhatsApp. Simply send a message like "12.50 for lunch," and Moneko will automatically record it for you.',
-    "",
-    "You can also set up Email Receipt Capture. Once it’s set up, simply forward any receipt email to Moneko, and we’ll automatically log the expense for you.",
-    "",
-    "I’d love to know—what are you hoping Moneko will help you with?",
-    "",
-    "If you have any questions or need help getting started, feel free to reply directly to this email. I personally read every response.",
-    "",
-    "Best,",
+    "Out of curiosity, what were you using to manage your money before Moneko?",
     "",
     "Yifan",
-    "Co-founder & CTO, Moneko",
+    "Co-founder, Moneko",
   ].join("\n");
 }
 
 function buildWelcomeEmailSubject(): string {
-  return "A quick question from Moneko’s co-founder";
+  return "Quick question about Moneko";
 }
 
 function buildCancellationEmailSubject(): string {
-  return "Was Moneko missing something?";
+  return "Quick question about your Moneko subscription";
 }
 
-function buildCancellationEmailText(
-  name: string,
-  deliberateCancellation: boolean,
-): string {
+function buildCancellationEmailText(name: string): string {
   return [
     buildGreeting(name),
     "",
-    "Yifan here, co-founder and CTO of Moneko.",
+    "Yifan here, co-founder of Moneko. I saw you recently cancelled your subscription and wanted to ask you directly.",
     "",
-    deliberateCancellation
-      ? "I noticed you recently cancelled your Moneko subscription, so I wanted to personally reach out."
-      : "I noticed your Moneko subscription recently ended, so I wanted to personally reach out.",
+    "What made you decide to stop using Moneko?",
     "",
-    deliberateCancellation
-      ? "Would you mind sharing the main reason you decided to cancel?"
-      : "Would you mind sharing what prevented you from continuing with Moneko?",
-    "",
-    "Whether it was the price, a missing feature, or simply not the right fit, even a short and honest reply would be really helpful.",
-    "",
-    "If you ran into a problem or couldn’t find a feature you needed, let me know and I’ll see whether there’s anything I can do to help.",
-    "",
-    "Either way, thank you for giving Moneko a try.",
-    "",
-    "Best,",
+    "Feel free to be completely honest — if something was frustrating, missing, too expensive, or just not useful enough, I’d like to know.",
     "",
     "Yifan",
-    "Co-founder & CTO, Moneko",
+    "Co-founder, Moneko",
   ].join("\n");
 }
 
