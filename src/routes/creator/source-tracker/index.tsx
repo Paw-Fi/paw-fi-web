@@ -34,13 +34,6 @@ import { RangeComparisonCard } from "@/components/performance/range-comparison-c
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
@@ -78,6 +71,9 @@ function SourceTrackerPage() {
     startDate,
     endDate,
     compareEnabled,
+    compareMode,
+    compareStartDate,
+    compareEndDate,
     normalizedRange,
     compareRange,
     rangeLabel,
@@ -85,6 +81,9 @@ function SourceTrackerPage() {
     setStartDate,
     setEndDate,
     setCompareEnabled,
+    setCompareMode,
+    setCompareStartDate,
+    setCompareEndDate,
     applyPreset,
   } = useCreatorDateRange();
 
@@ -242,17 +241,15 @@ function SourceTrackerPage() {
         safeRate(totals.downloadedCount, totals.sessionCount),
       ),
       detail: compareEnabled
-        ? `${formatChangeDelta(totals.downloadedCount, compareTotals.downloadedCount)} vs previous period`
+        ? `${formatChangeDelta(totals.downloadedCount, compareTotals.downloadedCount)} vs prev period`
         : `${totals.downloadedCount.toLocaleString()} downloaded sessions`,
-      icon: <Download className="h-4 w-4" />,
     },
     {
       title: "Top source share",
       value: formatPercent(topSourceShare),
       detail: topSource
         ? `${topSource.source} · ${topSource.sessionCount.toLocaleString()} sessions`
-        : "No source data in this range",
-      icon: <Layers3 className="h-4 w-4" />,
+        : "No source data in range",
     },
     {
       title: "Clicks per session",
@@ -260,7 +257,6 @@ function SourceTrackerPage() {
         2,
       ),
       detail: `${totals.downloadClickCount.toLocaleString()} total download clicks`,
-      icon: <MousePointerClick className="h-4 w-4" />,
     },
     {
       title: "Platform preference",
@@ -269,7 +265,6 @@ function SourceTrackerPage() {
           ? `${formatPercent(iosShare)} iOS / ${formatPercent(androidShare)} Android`
           : "No platform clicks",
       detail: `${totalPlatformClicks.toLocaleString()} tracked platform clicks`,
-      icon: <Gauge className="h-4 w-4" />,
     },
     {
       title: "Fastest moving source",
@@ -277,221 +272,231 @@ function SourceTrackerPage() {
       detail: topGrowingSource
         ? `${formatChangeDelta(topGrowingSource.currentSessions, topGrowingSource.previousSessions)} sessions`
         : "Not enough compare data",
-      icon: <TrendingUp className="h-4 w-4" />,
     },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 py-10 text-white">
-      <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
-        <CreatorHeader />
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased pb-20 selection:bg-slate-800">
+      <CreatorHeader />
+
+      <div className="mx-auto w-full max-w-7xl space-y-10 px-6 pt-8">
+        {/* Header & Page Title */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-slate-800/80 pb-6">
           <div className="space-y-1">
-            <p className="text-xs tracking-[0.25em] text-white/60 uppercase">
-              Creator Dashboard
-            </p>
-            <h1 className="text-3xl font-bold text-white">Source Tracker</h1>
-            <p className="max-w-2xl text-sm text-white/55">
-              Track download attribution sessions, source counts, platform
-              clicks, and per-session metadata.
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-400 uppercase">
+              <span>Creator Console</span>
+              <span className="text-slate-600">•</span>
+              <span>Attribution Analytics</span>
+            </div>
+            <h1 className="text-3xl font-black text-white tracking-tight">
+              Source Tracker
+            </h1>
+            <p className="max-w-2xl text-xs text-slate-400 font-normal">
+              Track download attribution sessions, referral source counts, platform clicks, and session metadata.
             </p>
           </div>
           <Button
-            variant="outline"
-            className="border-primary/30 text-primary hover:bg-primary/10 gap-2 bg-transparent"
+            variant="ghost"
+            size="sm"
+            className="border border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-900 hover:text-white gap-2 transition-all self-start sm:self-auto text-xs"
             onClick={() => setRefreshKey((key) => key + 1)}
           >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Refresh</span>
           </Button>
         </header>
 
+        {/* Global Date Control Toolbar */}
         <RangeComparisonCard
           rangePreset={rangePreset}
           startDate={startDate}
           endDate={endDate}
           compareEnabled={compareEnabled}
+          compareMode={compareMode}
+          compareStartDate={compareStartDate}
+          compareEndDate={compareEndDate}
           rangeLabel={rangeLabel}
           compareLabel={compareLabel}
           onPresetChange={applyPreset}
           onStartDateChange={setStartDate}
           onEndDateChange={setEndDate}
           onCompareToggle={() => setCompareEnabled((prev) => !prev)}
+          onCompareModeChange={setCompareMode}
+          onCompareStartDateChange={setCompareStartDate}
+          onCompareEndDateChange={setCompareEndDate}
         />
 
+        {/* SECTION 1: PERIOD KPI SUMMARY METRICS */}
         <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-white">
-              Onboarding Sources
-            </h2>
-            <p className="text-sm text-white/45">
-              {onboardingSourcesQuery.isLoading
-                ? "Loading sources..."
-                : `${(onboardingSourcesQuery.data?.length ?? 0).toLocaleString()} sources`}
-            </p>
+          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Attribution Overview
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="font-medium text-slate-300">{rangeLabel}</span>
+              {compareEnabled && (
+                <>
+                  <span className="text-slate-600">vs</span>
+                  <span className="font-medium text-indigo-300">{compareLabel}</span>
+                </>
+              )}
+            </div>
           </div>
-          <Card className="border-white/10 bg-slate-900/50">
-            <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-white/60">Source</TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Responses
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {onboardingSourcesQuery.data?.map((source) => (
-                    <TableRow
-                      key={source.source}
-                      className="border-white/10 hover:bg-white/5"
-                    >
-                      <TableCell className="font-medium text-white">
-                        {source.source}
-                      </TableCell>
-                      <TableCell className="text-right text-white/80">
-                        {source.count.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!onboardingSourcesQuery.isLoading &&
-                    (onboardingSourcesQuery.data?.length ?? 0) === 0 && (
-                      <TableRow className="border-white/10 hover:bg-transparent">
-                        <TableCell
-                          colSpan={2}
-                          className="py-8 text-center text-white/45"
-                        >
-                          No onboarding source responses in this date range.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                </TableBody>
-              </Table>
-              {onboardingSourcesQuery.isLoading && (
-                <p className="py-8 text-center text-sm text-white/45">
-                  Loading onboarding source responses...
-                </p>
-              )}
-              {onboardingSourcesQuery.error && (
-                <p className="pt-4 text-sm text-red-200">
-                  Unable to load onboarding source responses.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricBlock
+              title="Tracked Sessions"
+              value={totals.sessionCount}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      totals.sessionCount,
+                      compareTotals.sessionCount,
+                    )
+                  : "In selected date range"
+              }
+              badgeText="PERIOD"
+            />
+            <MetricBlock
+              title="Unique Sources"
+              value={totals.sourceCount}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      totals.sourceCount,
+                      compareTotals.sourceCount,
+                    )
+                  : "Unique attribution channels"
+              }
+              badgeText="PERIOD"
+            />
+            <MetricBlock
+              title="Downloaded Sessions"
+              value={totals.downloadedCount}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      totals.downloadedCount,
+                      compareTotals.downloadedCount,
+                    )
+                  : "Converted download sessions"
+              }
+              badgeText="PERIOD"
+            />
+            <MetricBlock
+              title="Download Clicks"
+              value={totals.downloadClickCount}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      totals.downloadClickCount,
+                      compareTotals.downloadClickCount,
+                    )
+                  : "Total platform click intent"
+              }
+              badgeText="PERIOD"
+            />
+          </div>
         </section>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            title="Tracked Sessions"
-            value={totals.sessionCount}
-            detail={
-              compareEnabled
-                ? formatChangeDelta(
-                    totals.sessionCount,
-                    compareTotals.sessionCount,
-                  )
-                : "In selected date range"
-            }
-            icon={<TableProperties className="h-4 w-4" />}
-          />
-          <MetricCard
-            title="Unique Sources"
-            value={totals.sourceCount}
-            detail={
-              compareEnabled
-                ? formatChangeDelta(
-                    totals.sourceCount,
-                    compareTotals.sourceCount,
-                  )
-                : "Unique attribution sources"
-            }
-            icon={<BarChart3 className="h-4 w-4" />}
-          />
-          <MetricCard
-            title="Downloaded Sessions"
-            value={totals.downloadedCount}
-            detail={
-              compareEnabled
-                ? formatChangeDelta(
-                    totals.downloadedCount,
-                    compareTotals.downloadedCount,
-                  )
-                : "Downloaded sessions"
-            }
-            icon={<Download className="h-4 w-4" />}
-          />
-          <MetricCard
-            title="Download Clicks"
-            value={totals.downloadClickCount}
-            detail={
-              compareEnabled
-                ? formatChangeDelta(
-                    totals.downloadClickCount,
-                    compareTotals.downloadClickCount,
-                  )
-                : "Total click intent"
-            }
-            icon={<MousePointerClick className="h-4 w-4" />}
-          />
-        </div>
-
-        <Card className="border-white/10 bg-slate-900/50">
-          <CardHeader className="gap-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* SEARCH BAR & INSIGHTS STRIP */}
+        <section className="space-y-4 pt-2">
+          {/* Integrated Search Input Toolbar */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-slate-800 bg-slate-900/40 p-3.5">
             <div>
-              <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                Search
-              </CardDescription>
-              <CardTitle className="mt-1 text-xl text-white">
-                Filter source tracker data
-              </CardTitle>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                Filter Attribution Data
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Search across sources, sessions, paths, referrers, and timezones
+              </p>
             </div>
-            <div className="relative w-full lg:max-w-md">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search source, session, URL, referrer, timezone..."
-                className="border-white/10 bg-slate-950/80 pl-9 text-white placeholder:text-white/35"
+                placeholder="Search source, session, URL..."
+                className="h-8 border-slate-800 bg-slate-950 pl-8 text-xs text-slate-200 placeholder:text-slate-500"
               />
             </div>
-          </CardHeader>
-        </Card>
+          </div>
+
+          {/* Key Insights Grid */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {insightCards.map((insight) => (
+              <div
+                key={insight.title}
+                className="rounded-lg border border-slate-800/80 bg-slate-950/60 p-3 space-y-1 transition-colors hover:border-slate-700/80"
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block truncate">
+                  {insight.title}
+                </span>
+                <p className="text-lg font-extrabold text-white tracking-tight truncate">
+                  {insight.value}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate leading-tight font-normal">
+                  {insight.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {error && (
-          <Card className="border-red-400/30 bg-red-500/10">
-            <CardContent className="pt-6 text-sm text-red-100">
-              {error}
-            </CardContent>
-          </Card>
+          <div className="rounded-lg border border-rose-900/40 bg-rose-950/20 p-4 text-xs text-rose-300">
+            {error}
+          </div>
         )}
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Trend Visuals</h2>
-          <div className="grid gap-4 xl:grid-cols-2">
-            <Card className="border-white/10 bg-slate-900/50">
-              <CardHeader>
-                <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                  Acquisition
-                </CardDescription>
-                <CardTitle className="mt-1 text-xl text-white">
-                  Sessions: Current vs Compare
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="h-72">
+        {/* SECTION 2: INTERACTIVE TREND VISUALS */}
+        <section className="space-y-4 pt-2">
+          <div className="border-b border-slate-800/80 pb-2">
+            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              Attribution Trends & Channel Mix
+            </h2>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Acquisition Sessions Line Chart */}
+            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Traffic Volume
+                  </span>
+                  <h3 className="text-base font-bold text-white tracking-tight mt-0.5">
+                    Sessions: Current vs Compare
+                  </h3>
+                </div>
+                <span className="text-xs font-semibold text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/40 bg-emerald-950/30">
+                  {totals.sessionCount} Sessions
+                </span>
+              </div>
+              <div className="h-64 pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dailyComparisonChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="label" stroke="#94A3B8" />
-                    <YAxis stroke="#94A3B8" allowDecimals={false} />
-                    <Tooltip />
-                    <Legend />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" opacity={0.7} />
+                    <XAxis dataKey="label" stroke="#64748B" fontSize={11} tickLine={false} />
+                    <YAxis stroke="#64748B" fontSize={11} allowDecimals={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0F172A",
+                        borderColor: "#334155",
+                        borderRadius: "0.375rem",
+                        color: "#fff",
+                        fontSize: "0.75rem",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
                     <Line
                       type="monotone"
                       dataKey="current"
-                      name="Current"
-                      stroke="#22C55E"
+                      name={`Current (${rangeLabel})`}
+                      stroke="#10B981"
                       strokeWidth={2}
                       dot={false}
                     />
@@ -499,35 +504,49 @@ function SourceTrackerPage() {
                       <Line
                         type="monotone"
                         dataKey="compare"
-                        name="Compare"
-                        stroke="#94A3B8"
-                        strokeWidth={2}
+                        name={`Compare (${compareLabel})`}
+                        stroke="#64748B"
+                        strokeWidth={1.5}
                         dot={false}
                         strokeDasharray="4 4"
                       />
                     )}
                   </LineChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card className="border-white/10 bg-slate-900/50">
-              <CardHeader>
-                <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                  Engagement
-                </CardDescription>
-                <CardTitle className="mt-1 text-xl text-white">
-                  Daily Downloads, Clicks & Views
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="h-72">
+            {/* Daily Engagement Area Chart */}
+            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Engagement Conversion
+                  </span>
+                  <h3 className="text-base font-bold text-white tracking-tight mt-0.5">
+                    Daily Downloads, Clicks & Views
+                  </h3>
+                </div>
+                <span className="text-xs font-semibold text-blue-400 px-2 py-0.5 rounded border border-blue-900/40 bg-blue-950/30">
+                  {totals.downloadedCount} Downloads
+                </span>
+              </div>
+              <div className="h-64 pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={engagementChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="label" stroke="#94A3B8" />
-                    <YAxis stroke="#94A3B8" allowDecimals={false} />
-                    <Tooltip />
-                    <Legend />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" opacity={0.7} />
+                    <XAxis dataKey="label" stroke="#64748B" fontSize={11} tickLine={false} />
+                    <YAxis stroke="#64748B" fontSize={11} allowDecimals={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0F172A",
+                        borderColor: "#334155",
+                        borderRadius: "0.375rem",
+                        color: "#fff",
+                        fontSize: "0.75rem",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
                     <Area
                       type="monotone"
                       dataKey="downloads"
@@ -535,7 +554,7 @@ function SourceTrackerPage() {
                       stackId="engagement"
                       stroke="#10B981"
                       fill="#10B981"
-                      fillOpacity={0.3}
+                      fillOpacity={0.2}
                     />
                     <Area
                       type="monotone"
@@ -544,137 +563,181 @@ function SourceTrackerPage() {
                       stackId="engagement"
                       stroke="#3B82F6"
                       fill="#3B82F6"
-                      fillOpacity={0.3}
+                      fillOpacity={0.2}
                     />
                     <Line
                       type="monotone"
                       dataKey="pageViews"
                       name="Page Views"
                       stroke="#F59E0B"
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       dot={false}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
-          <Card className="border-white/10 bg-slate-900/50">
-            <CardHeader>
-              <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                Source mix
-              </CardDescription>
-              <CardTitle className="mt-1 text-xl text-white">
-                Top Sources by Sessions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-72">
+          {/* Top Sources Bar Chart */}
+          <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Channel Breakdown
+                </span>
+                <h3 className="text-base font-bold text-white tracking-tight mt-0.5">
+                  Top Referral Sources by Sessions & Downloads
+                </h3>
+              </div>
+              <span className="text-xs font-semibold text-purple-400 px-2 py-0.5 rounded border border-purple-900/40 bg-purple-950/30">
+                {filteredSummaries.length} Sources
+              </span>
+            </div>
+            <div className="h-60 pt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topSourceChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="source" stroke="#94A3B8" />
-                  <YAxis stroke="#94A3B8" allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" opacity={0.7} />
+                  <XAxis dataKey="source" stroke="#64748B" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#64748B" fontSize={11} allowDecimals={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0F172A",
+                      borderColor: "#334155",
+                      borderRadius: "0.375rem",
+                      color: "#fff",
+                      fontSize: "0.75rem",
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
                   <Bar
                     dataKey="sessions"
                     name="Sessions"
                     fill="#8B5CF6"
-                    radius={[4, 4, 0, 0]}
+                    radius={[3, 3, 0, 0]}
                   />
                   <Bar
                     dataKey="downloads"
                     name="Downloads"
                     fill="#10B981"
-                    radius={[4, 4, 0, 0]}
+                    radius={[3, 3, 0, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-white">Insights</h2>
-            <p className="text-sm text-white/45">
-              {filteredRows.length.toLocaleString()} sessions in range
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            {insightCards.map((insight) => (
-              <InsightCard
-                key={insight.title}
-                title={insight.title}
-                value={insight.value}
-                detail={insight.detail}
-                icon={insight.icon}
-              />
-            ))}
+            </div>
           </div>
         </section>
 
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-white">Source Counts</h2>
-            <p className="text-sm text-white/45">
-              {filteredSummaries.length.toLocaleString()} sources
-            </p>
-          </div>
-          <Card className="border-white/10 bg-slate-900/50">
-            <CardContent className="pt-6">
+        {/* SECTION 3: ONBOARDING SOURCES TABLE */}
+        <section className="space-y-3 pt-4 border-t border-slate-800/80">
+          <div className="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/40">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+                  Onboarding Survey Responses ("How Did You Hear About Us?")
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Direct user responses captured during account onboarding
+                </p>
+              </div>
+              <span className="text-xs font-medium text-slate-400 px-2 py-0.5 rounded border border-slate-800 bg-slate-900">
+                {onboardingSourcesQuery.isLoading
+                  ? "Loading..."
+                  : `${(onboardingSourcesQuery.data?.length ?? 0).toLocaleString()} channels`}
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
-                  <TableRow className="border-white/10 hover:bg-transparent">
-                    <TableHead className="text-white/60">Source</TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Sessions
-                    </TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Share
-                    </TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Downloads
-                    </TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Conversion
-                    </TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Clicks
-                    </TableHead>
-                    <TableHead className="text-right text-white/60">
-                      iOS
-                    </TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Android
-                    </TableHead>
-                    <TableHead className="text-right text-white/60">
-                      Details
-                    </TableHead>
+                <TableHeader className="bg-slate-900/60 border-b border-slate-800">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Survey Source</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Responses</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {onboardingSourcesQuery.data?.map((source) => (
+                    <TableRow key={source.source} className="border-slate-800/60 hover:bg-slate-900/40 transition-colors">
+                      <TableCell className="font-medium text-xs text-white py-2.5">
+                        {source.source}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-bold text-slate-200 py-2.5">
+                        {source.count.toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!onboardingSourcesQuery.isLoading &&
+                    (onboardingSourcesQuery.data?.length ?? 0) === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="py-8 text-center text-xs text-slate-500">
+                          No onboarding survey responses recorded in this date range.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                </TableBody>
+              </Table>
+              {onboardingSourcesQuery.isLoading && (
+                <p className="py-8 text-center text-xs text-slate-500">
+                  Loading onboarding source responses...
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION 4: SOURCE COUNTS DIRECTORY TABLE */}
+        <section className="space-y-3 pt-2">
+          <div className="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/40">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+                  Source Counts Directory
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Aggregated sessions, conversion rates, and platform click metrics per source
+                </p>
+              </div>
+              <span className="text-xs font-medium text-slate-400 px-2 py-0.5 rounded border border-slate-800 bg-slate-900">
+                {filteredSummaries.length.toLocaleString()} Sources
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-900/60 border-b border-slate-800">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Source</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Sessions</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Share</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Downloads</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Conversion</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Clicks</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">iOS</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Android</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredSummaries.map((summary) => (
                     <TableRow
                       key={summary.source}
-                      className="border-white/10 hover:bg-white/5"
+                      className="border-slate-800/60 hover:bg-slate-900/40 transition-colors"
                     >
-                      <TableCell className="font-medium text-white">
+                      <TableCell className="font-medium text-xs text-white py-2.5">
                         {summary.source}
                       </TableCell>
-                      <TableCell className="text-right text-white/80">
+                      <TableCell className="text-right text-xs font-semibold text-slate-200 py-2.5">
                         {summary.sessionCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-right text-white/70">
+                      <TableCell className="text-right text-xs text-slate-400 py-2.5">
                         {formatPercent(
                           safeRate(summary.sessionCount, totals.sessionCount),
                         )}
                       </TableCell>
-                      <TableCell className="text-right text-emerald-300">
+                      <TableCell className="text-right text-xs font-semibold text-emerald-400 py-2.5">
                         {summary.downloadedCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-right text-emerald-200">
+                      <TableCell className="text-right text-xs font-semibold text-emerald-300 py-2.5">
                         {formatPercent(
                           safeRate(
                             summary.downloadedCount,
@@ -682,32 +745,32 @@ function SourceTrackerPage() {
                           ),
                         )}
                       </TableCell>
-                      <TableCell className="text-right text-sky-300">
+                      <TableCell className="text-right text-xs font-semibold text-blue-400 py-2.5">
                         {summary.downloadClickCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-right text-white/70">
+                      <TableCell className="text-right text-xs text-slate-400 py-2.5">
                         {summary.iosClickCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-right text-white/70">
+                      <TableCell className="text-right text-xs text-slate-400 py-2.5">
                         {summary.androidClickCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right py-2.5">
                         <Link
                           to="/creator/source-tracker/$source"
                           params={{ source: summary.source }}
-                          className="inline-flex items-center gap-2 rounded-md border border-white/10 px-3 py-1 text-xs text-white/75 transition hover:bg-white/10 hover:text-white"
+                          className="inline-flex items-center gap-1.5 rounded border border-slate-800 bg-slate-900 px-2.5 py-1 text-[11px] text-slate-300 transition-colors hover:border-slate-700 hover:text-white"
                         >
-                          <Eye className="h-3.5 w-3.5" />
-                          View Details
+                          <Eye className="h-3 w-3" />
+                          Details
                         </Link>
                       </TableCell>
                     </TableRow>
                   ))}
                   {!isLoading && filteredSummaries.length === 0 && (
-                    <TableRow className="border-white/10 hover:bg-transparent">
+                    <TableRow>
                       <TableCell
                         colSpan={9}
-                        className="py-8 text-center text-white/45"
+                        className="py-8 text-center text-xs text-slate-500"
                       >
                         No source data matched your search and date range.
                       </TableCell>
@@ -716,23 +779,25 @@ function SourceTrackerPage() {
                 </TableBody>
               </Table>
               {isLoading && (
-                <p className="py-8 text-center text-sm text-white/45">
+                <p className="py-8 text-center text-xs text-slate-500">
                   Loading source tracker data...
                 </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </section>
 
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-white">
-              Recent Sessions
+        {/* SECTION 5: RECENT SESSIONS DIRECTORY TABLE */}
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              Recent Attribution Sessions
             </h2>
-            <p className="text-sm text-white/45">
-              {filteredRows.length.toLocaleString()} rows
-            </p>
+            <span className="text-[11px] font-mono text-slate-500">
+              Showing top {Math.min(100, filteredRows.length)} of {filteredRows.length.toLocaleString()} rows
+            </span>
           </div>
+
           <AttributionRowsTable rows={filteredRows.slice(0, 100)} />
         </section>
       </div>
@@ -740,32 +805,40 @@ function SourceTrackerPage() {
   );
 }
 
-function MetricCard({
+function MetricBlock({
   title,
   value,
   detail,
-  icon,
+  badgeText,
 }: {
   title: string;
   value: number;
   detail: string;
-  icon: ReactNode;
+  badgeText?: string;
 }) {
   return (
-    <Card className="border-white/10 bg-slate-900/50">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-          {title}
-        </CardDescription>
-        <div className="rounded-full bg-white/10 p-2 text-white/70">{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold text-white">
+    <div className="flex flex-col justify-between rounded-lg border border-slate-800/80 bg-slate-950/60 p-4 transition-colors hover:border-slate-700/80 space-y-2">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            {title}
+          </span>
+          {badgeText && (
+            <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.2 rounded border border-slate-800 bg-slate-900 text-slate-400">
+              {badgeText}
+            </span>
+          )}
+        </div>
+
+        <div className="text-3xl font-extrabold tracking-tight text-white pt-0.5">
           {value.toLocaleString()}
         </div>
-        <p className="mt-1 text-xs text-white/50">{detail}</p>
-      </CardContent>
-    </Card>
+      </div>
+
+      <p className="text-xs text-slate-500 font-normal leading-tight">
+        {detail}
+      </p>
+    </div>
   );
 }
 
@@ -791,114 +864,86 @@ async function fetchOnboardingSourceCounts(
   }));
 }
 
-function InsightCard({
-  title,
-  value,
-  detail,
-  icon,
-}: {
-  title: string;
-  value: string;
-  detail: string;
-  icon: ReactNode;
-}) {
-  return (
-    <Card className="border-white/10 bg-slate-900/50">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardDescription className="text-xs tracking-[0.2em] text-white/60 uppercase">
-          {title}
-        </CardDescription>
-        <div className="rounded-full bg-white/10 p-2 text-white/70">{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-lg font-semibold text-white">{value}</div>
-        <p className="mt-1 text-xs text-white/50">{detail}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function AttributionRowsTable({
   rows,
 }: {
   rows: DownloadAttributionSession[];
 }) {
   return (
-    <Card className="border-white/10 bg-slate-900/50">
-      <CardContent className="pt-6">
+    <div className="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+      <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow className="border-white/10 hover:bg-transparent">
-              <TableHead className="text-white/60">Source</TableHead>
-              <TableHead className="text-white/60">Session</TableHead>
-              <TableHead className="text-white/60">Path</TableHead>
-              <TableHead className="text-white/60">Platforms</TableHead>
-              <TableHead className="text-right text-white/60">Views</TableHead>
-              <TableHead className="text-right text-white/60">Clicks</TableHead>
-              <TableHead className="text-white/60">Updated</TableHead>
+          <TableHeader className="bg-slate-900/60 border-b border-slate-800">
+            <TableRow className="border-slate-800 hover:bg-transparent">
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Source</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Session ID</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Last Path</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Platforms</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Views</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Clicks</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Updated</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
               <TableRow
                 key={row.id}
-                className="border-white/10 hover:bg-white/5"
+                className="border-slate-800/60 hover:bg-slate-900/40 transition-colors"
               >
-                <TableCell className="font-medium text-white">
+                <TableCell className="font-medium text-xs text-white py-2.5">
                   {getAttributionSource(row)}
                 </TableCell>
-                <TableCell className="max-w-[180px] truncate font-mono text-xs text-white/60">
+                <TableCell className="max-w-[180px] truncate font-mono text-[11px] text-slate-400 py-2.5">
                   {row.session_id}
                 </TableCell>
-                <TableCell className="max-w-[220px] truncate text-white/75">
+                <TableCell className="max-w-[220px] truncate text-xs text-slate-300 py-2.5">
                   {row.last_path || row.first_path || "-"}
                 </TableCell>
-                <TableCell>
+                <TableCell className="py-2.5">
                   <PlatformBadges row={row} />
                 </TableCell>
-                <TableCell className="text-right text-white/75">
+                <TableCell className="text-right text-xs font-semibold text-slate-300 py-2.5">
                   {row.page_view_count.toLocaleString()}
                 </TableCell>
-                <TableCell className="text-right text-white/75">
+                <TableCell className="text-right text-xs font-semibold text-blue-400 py-2.5">
                   {row.download_click_count.toLocaleString()}
                 </TableCell>
-                <TableCell className="text-white/60">
+                <TableCell className="text-xs text-slate-400 py-2.5">
                   {formatDate(row.updated_at)}
                 </TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (
-              <TableRow className="border-white/10 hover:bg-transparent">
+              <TableRow>
                 <TableCell
                   colSpan={7}
-                  className="py-8 text-center text-white/45"
+                  className="py-8 text-center text-xs text-slate-500"
                 >
-                  No sessions to show.
+                  No attribution sessions match the filter criteria.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 function PlatformBadges({ row }: { row: DownloadAttributionSession }) {
   if (row.clicked_platforms.length === 0) {
-    return <span className="text-white/35">-</span>;
+    return <span className="text-slate-600 text-xs">-</span>;
   }
 
   return (
     <div className="flex flex-wrap gap-1">
       {row.clicked_platforms.map((platform) => (
-        <Badge
+        <span
           key={platform}
-          variant="outline"
-          className="border-white/10 text-white/70"
+          className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.2 rounded border border-slate-800 bg-slate-900 text-slate-300"
         >
           {platform}
-        </Badge>
+        </span>
       ))}
     </div>
   );
@@ -1067,3 +1112,4 @@ function truncateLabel(value: string, maxLength: number): string {
 
   return `${value.slice(0, maxLength - 3)}...`;
 }
+

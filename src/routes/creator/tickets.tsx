@@ -234,49 +234,69 @@ function TicketsDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 py-10 text-white">
-      <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
-        <CreatorHeader />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased pb-20 selection:bg-slate-800">
+      <CreatorHeader />
 
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-primary/70 text-sm tracking-[0.3em] uppercase">
-              Creator Console
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">
+      <div className="mx-auto w-full max-w-7xl space-y-10 px-6 pt-8">
+        {/* Header & Page Title */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-slate-800/80 pb-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-400 uppercase">
+              <span>Creator Console</span>
+              <span className="text-slate-600">•</span>
+              <span>Customer Support & Inquiries</span>
+            </div>
+            <h1 className="text-3xl font-black text-white tracking-tight">
               Support Tickets
             </h1>
-            <p className="text-sm text-slate-300">
-              Manage and resolve user support requests efficiently.
+            <p className="max-w-2xl text-xs text-slate-400 font-normal">
+              Review, prioritize, and resolve user support inquiries, technical bug reports, and billing issues.
             </p>
           </div>
           <Button
-            variant="outline"
-            className="border-primary/30 text-primary hover:bg-primary/10 gap-2 bg-transparent"
+            variant="ghost"
+            size="sm"
+            className="border border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-900 hover:text-white gap-2 transition-all self-start sm:self-auto text-xs"
             onClick={() =>
               queryClient.invalidateQueries({ queryKey: ["support-tickets"] })
             }
             disabled={ticketsQuery.isLoading || updateStatusMutation.isPending}
           >
             <RefreshCw
-              className={`h-4 w-4 ${ticketsQuery.isFetching ? "animate-spin" : ""}`}
+              className={`h-3.5 w-3.5 ${ticketsQuery.isFetching ? "animate-spin" : ""}`}
             />
-            Refresh
+            <span>Refresh Tickets</span>
           </Button>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* High-Contrast Ticket Status Readout Strip */}
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statusCards.map((card) => (
-            <Card key={card.key} className={card.className}>
-              <CardHeader className="px-5 py-4">
-                <CardDescription className="text-xs tracking-[0.3em] text-white/60 uppercase">
-                  {card.label}
-                </CardDescription>
-                <CardTitle className="text-3xl text-white">
+            <div
+              key={card.key}
+              className="flex flex-col justify-between rounded-lg border border-slate-800/80 bg-slate-950/60 p-4 space-y-2 transition-colors hover:border-slate-700/80"
+            >
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+                    {card.label}
+                  </span>
+                  <span className={`h-2 w-2 rounded-full ${
+                    card.key === "open" ? "bg-amber-400 animate-pulse" :
+                    card.key === "in_progress" ? "bg-indigo-400" :
+                    card.key === "resolved" ? "bg-emerald-400" : "bg-slate-500"
+                  }`} />
+                </div>
+                <div className="text-3xl font-extrabold tracking-tight text-white pt-0.5">
                   {statusStats[card.key] ?? 0}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 font-normal leading-tight">
+                {card.key === "open" ? "Awaiting first response" :
+                 card.key === "in_progress" ? "Actively being investigated" :
+                 card.key === "resolved" ? "Fix applied or question answered" : "Closed and archived"}
+              </p>
+            </div>
           ))}
         </section>
 

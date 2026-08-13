@@ -8,18 +8,12 @@ import {
   RefreshCw,
   Search,
   TableProperties,
+  TrendingUp,
 } from "lucide-react";
 
 import { CreatorHeader } from "@/components/creator/creator-header";
-import { Badge } from "@/components/ui/badge";
+import { RangeComparisonCard } from "@/components/performance/range-comparison-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -36,6 +30,9 @@ import {
   useDownloadAttributionSessions,
   type DownloadAttributionSession,
 } from "@/hooks/use-download-attribution-sessions";
+import { useCreatorDateRange } from "@/hooks/use-creator-date-range";
+import { dateToIso } from "@/lib/creator-date-range";
+import { parseISO } from "date-fns";
 
 export const Route = createFileRoute("/creator/source-tracker/$source")({
   component: SourceTrackerDetailPage,
@@ -46,134 +43,277 @@ function SourceTrackerDetailPage() {
   const sourceName = safelyDecodeSource(source);
   const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
+
+  const {
+    rangePreset,
+    startDate,
+    endDate,
+    compareEnabled,
+    compareMode,
+    compareStartDate,
+    compareEndDate,
+    normalizedRange,
+    compareRange,
+    rangeLabel,
+    compareLabel,
+    setStartDate,
+    setEndDate,
+    setCompareEnabled,
+    setCompareMode,
+    setCompareStartDate,
+    setCompareEndDate,
+    applyPreset,
+  } = useCreatorDateRange();
+
   const { rows, isLoading, error } = useDownloadAttributionSessions(refreshKey);
-  const sourceRows = useMemo(
+
+  // All-time rows for this source
+  const allTimeSourceRows = useMemo(
     () => rows.filter((row) => getAttributionSource(row) === sourceName),
     [rows, sourceName],
   );
-  const filteredRows = useMemo(
-    () => sourceRows.filter((row) => matchesAttributionSearch(row, search)),
-    [sourceRows, search],
+
+  // Period filtered rows for this source
+  const sourceRowsInRange = useMemo(
+    () =>
+      allTimeSourceRows.filter((row) => {
+        const key = safeDateKey(row.created_at);
+        return key !== null && key >= normalizedRange.start && key <= normalizedRange.end;
+      }),
+    [allTimeSourceRows, normalizedRange.end, normalizedRange.start],
   );
-  const summary = useMemo(
-    () => summarizeDownloadAttributionRows(sourceRows)[0] ?? null,
-    [sourceRows],
+
+  const sourceRowsInCompareRange = useMemo(
+    () =>
+      allTimeSourceRows.filter((row) => {
+        const key = safeDateKey(row.created_at);
+        return key !== null && key >= compareRange.start && key <= compareRange.end;
+      }),
+    [allTimeSourceRows, compareRange.end, compareRange.start],
+  );
+
+  // Search filtered rows
+  const filteredRows = useMemo(
+    () => sourceRowsInRange.filter((row) => matchesAttributionSearch(row, search)),
+    [sourceRowsInRange, search],
+  );
+
+  // Summaries
+  const allTimeSummary = useMemo(
+    () => summarizeDownloadAttributionRows(allTimeSourceRows)[0] ?? null,
+    [allTimeSourceRows],
+  );
+
+  const periodSummary = useMemo(
+    () => summarizeDownloadAttributionRows(sourceRowsInRange)[0] ?? null,
+    [sourceRowsInRange],
+  );
+
+  const compareSummary = useMemo(
+    () => summarizeDownloadAttributionRows(sourceRowsInCompareRange)[0] ?? null,
+    [sourceRowsInCompareRange],
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 py-10 text-white">
-      <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
-        <CreatorHeader />
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased pb-20 selection:bg-slate-800">
+      <CreatorHeader />
+
+      <div className="mx-auto w-full max-w-7xl space-y-10 px-6 pt-8">
+        {/* Header & Page Title */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-slate-800/80 pb-6">
+          <div className="space-y-2">
             <Link
               to="/creator/source-tracker"
-              className="inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-white"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back to source counts
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to source directory</span>
             </Link>
             <div className="space-y-1">
-              <p className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                Source Detail
-              </p>
-              <h1 className="text-3xl font-bold text-white">{sourceName}</h1>
-              <p className="max-w-2xl text-sm text-white/55">
-                Breakdown of every attribution session recorded for this source.
+              <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-slate-400 uppercase">
+                <span>Creator Console</span>
+                <span className="text-slate-600">•</span>
+                <span>Source Analytics</span>
+              </div>
+              <h1 className="text-3xl font-black text-white tracking-tight">
+                {sourceName}
+              </h1>
+              <p className="max-w-2xl text-xs text-slate-400 font-normal">
+                Detailed attribution breakdown and session log recorded for channel "{sourceName}".
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
             <Button
               variant="outline"
-              className="gap-2 border-white/20 bg-transparent text-white hover:bg-white/10"
-              disabled={isLoading || sourceRows.length === 0}
-              onClick={() => exportInfluencerReportPdf(sourceName, sourceRows)}
+              size="sm"
+              className="border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-900 hover:text-white gap-1.5 transition-all text-xs"
+              disabled={isLoading || allTimeSourceRows.length === 0}
+              onClick={() => exportInfluencerReportPdf(sourceName, allTimeSourceRows)}
             >
-              <FileText className="h-4 w-4" />
-              Export PDF
+              <FileText className="h-3.5 w-3.5" />
+              <span>Export PDF Report</span>
             </Button>
             <Button
-              variant="outline"
-              className="border-primary/30 text-primary hover:bg-primary/10 gap-2 bg-transparent"
+              variant="ghost"
+              size="sm"
+              className="border border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-900 hover:text-white gap-1.5 transition-all text-xs"
               onClick={() => setRefreshKey((key) => key + 1)}
             >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Refresh</span>
             </Button>
           </div>
         </header>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            title="Sessions"
-            value={summary?.sessionCount ?? 0}
-            icon={<TableProperties className="h-4 w-4" />}
-          />
-          <MetricCard
-            title="Downloads"
-            value={summary?.downloadedCount ?? 0}
-            icon={<Download className="h-4 w-4" />}
-          />
-          <MetricCard
-            title="Clicks"
-            value={summary?.downloadClickCount ?? 0}
-            icon={<MousePointerClick className="h-4 w-4" />}
-          />
-          <MetricCard
-            title="Page Views"
-            value={summary?.pageViewCount ?? 0}
-            icon={<Search className="h-4 w-4" />}
-          />
-        </div>
+        {/* Global Date Control Toolbar */}
+        <RangeComparisonCard
+          rangePreset={rangePreset}
+          startDate={startDate}
+          endDate={endDate}
+          compareEnabled={compareEnabled}
+          compareMode={compareMode}
+          compareStartDate={compareStartDate}
+          compareEndDate={compareEndDate}
+          rangeLabel={rangeLabel}
+          compareLabel={compareLabel}
+          onPresetChange={applyPreset}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          onCompareToggle={() => setCompareEnabled((prev) => !prev)}
+          onCompareModeChange={setCompareMode}
+          onCompareStartDateChange={setCompareStartDate}
+          onCompareEndDateChange={setCompareEndDate}
+        />
 
-        <Card className="border-white/10 bg-slate-900/50">
-          <CardHeader className="gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                Search
-              </CardDescription>
-              <CardTitle className="mt-1 text-xl text-white">
-                Filter rows for {sourceName}
-              </CardTitle>
+        {/* SECTION 1: ALL-TIME OVERVIEW vs PERIOD ACTIVITY */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Source Channel Performance
+              </h2>
             </div>
-            <div className="relative w-full lg:max-w-md">
-              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="font-medium text-slate-300">{rangeLabel}</span>
+              {compareEnabled && (
+                <>
+                  <span className="text-slate-600">vs</span>
+                  <span className="font-medium text-indigo-300">{compareLabel}</span>
+                </>
+              )}
+              <span className="text-slate-600">·</span>
+              <span className="font-mono">
+                All-Time: {(allTimeSummary?.sessionCount ?? 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricBlock
+              title="Tracked Sessions"
+              value={periodSummary?.sessionCount ?? 0}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      periodSummary?.sessionCount ?? 0,
+                      compareSummary?.sessionCount ?? 0,
+                    )
+                  : `All-time total: ${(allTimeSummary?.sessionCount ?? 0).toLocaleString()}`
+              }
+              badgeText="PERIOD"
+            />
+            <MetricBlock
+              title="Downloaded Sessions"
+              value={periodSummary?.downloadedCount ?? 0}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      periodSummary?.downloadedCount ?? 0,
+                      compareSummary?.downloadedCount ?? 0,
+                    )
+                  : `All-time downloads: ${(allTimeSummary?.downloadedCount ?? 0).toLocaleString()}`
+              }
+              badgeText="PERIOD"
+            />
+            <MetricBlock
+              title="Download Clicks"
+              value={periodSummary?.downloadClickCount ?? 0}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      periodSummary?.downloadClickCount ?? 0,
+                      compareSummary?.downloadClickCount ?? 0,
+                    )
+                  : `All-time clicks: ${(allTimeSummary?.downloadClickCount ?? 0).toLocaleString()}`
+              }
+              badgeText="PERIOD"
+            />
+            <MetricBlock
+              title="Total Page Views"
+              value={periodSummary?.pageViewCount ?? 0}
+              detail={
+                compareEnabled
+                  ? formatChangeDelta(
+                      periodSummary?.pageViewCount ?? 0,
+                      compareSummary?.pageViewCount ?? 0,
+                    )
+                  : `All-time views: ${(allTimeSummary?.pageViewCount ?? 0).toLocaleString()}`
+              }
+              badgeText="PERIOD"
+            />
+          </div>
+        </section>
+
+        {/* SEARCH TOOLBAR */}
+        <section className="space-y-4 pt-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-slate-800 bg-slate-900/40 p-3.5">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                Search Channel Session Logs
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Filter session IDs, paths, referrers, and timezones for {sourceName}
+              </p>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search session, URL, referrer, timezone..."
-                className="border-white/10 bg-slate-950/80 pl-9 text-white placeholder:text-white/35"
+                placeholder="Search session, URL, timezone..."
+                className="h-8 border-slate-800 bg-slate-950 pl-8 text-xs text-slate-200 placeholder:text-slate-500"
               />
             </div>
-          </CardHeader>
-        </Card>
+          </div>
+        </section>
 
         {error && (
-          <Card className="border-red-400/30 bg-red-500/10">
-            <CardContent className="pt-6 text-sm text-red-100">
-              {error}
-            </CardContent>
-          </Card>
+          <div className="rounded-lg border border-rose-900/40 bg-rose-950/20 p-4 text-xs text-rose-300">
+            {error}
+          </div>
         )}
 
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-white">
-              Session Breakdown
+        {/* SECTION 2: VIRTUALIZED ATTRIBUTION SESSIONS TABLE */}
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
+            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              Session Breakdown ({filteredRows.length.toLocaleString()} rows)
             </h2>
-            <p className="text-sm text-white/45">
-              {filteredRows.length.toLocaleString()} rows
-            </p>
+            <span className="text-[11px] font-mono text-slate-500">
+              Showing filtered date range results
+            </span>
           </div>
+
           {isLoading && (
-            <p className="rounded-lg border border-white/10 bg-slate-900/50 p-8 text-center text-sm text-white/45">
-              Loading source rows...
+            <p className="rounded-lg border border-slate-800 bg-slate-950/60 p-8 text-center text-xs text-slate-500">
+              Loading source session logs...
             </p>
           )}
           {!isLoading && filteredRows.length === 0 && (
-            <p className="rounded-lg border border-white/10 bg-slate-900/50 p-8 text-center text-sm text-white/45">
-              No rows matched this source and search.
+            <p className="rounded-lg border border-slate-800 bg-slate-950/60 p-8 text-center text-xs text-slate-500">
+              No sessions matched this source, date range, and search query.
             </p>
           )}
           {filteredRows.length > 0 && (
@@ -185,29 +325,40 @@ function SourceTrackerDetailPage() {
   );
 }
 
-function MetricCard({
+function MetricBlock({
   title,
   value,
-  icon,
+  detail,
+  badgeText,
 }: {
   title: string;
   value: number;
-  icon: ReactNode;
+  detail: string;
+  badgeText?: string;
 }) {
   return (
-    <Card className="border-white/10 bg-slate-900/50">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-          {title}
-        </CardDescription>
-        <div className="rounded-full bg-white/10 p-2 text-white/70">{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold text-white">
+    <div className="flex flex-col justify-between rounded-lg border border-slate-800/80 bg-slate-950/60 p-4 transition-colors hover:border-slate-700/80 space-y-2">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
+            {title}
+          </span>
+          {badgeText && (
+            <span className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.2 rounded border border-slate-800 bg-slate-900 text-slate-400">
+              {badgeText}
+            </span>
+          )}
+        </div>
+
+        <div className="text-3xl font-extrabold tracking-tight text-white pt-0.5">
           {value.toLocaleString()}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <p className="text-xs text-slate-500 font-normal leading-tight">
+        {detail}
+      </p>
+    </div>
   );
 }
 
@@ -216,10 +367,11 @@ function VirtualizedAttributionRowsTable({
 }: {
   rows: DownloadAttributionSession[];
 }) {
-  const rowHeight = 64;
-  const viewportHeight = 640;
+  const rowHeight = 48;
+  const viewportHeight = 600;
   const overscan = 8;
   const [scrollTop, setScrollTop] = useState(0);
+
   const visibleRange = useMemo(() => {
     const startIndex = Math.max(
       0,
@@ -230,6 +382,7 @@ function VirtualizedAttributionRowsTable({
 
     return { startIndex, endIndex };
   }, [rows.length, scrollTop]);
+
   const visibleRows = rows.slice(
     visibleRange.startIndex,
     visibleRange.endIndex,
@@ -241,107 +394,93 @@ function VirtualizedAttributionRowsTable({
   );
 
   return (
-    <Card className="border-white/10 bg-slate-900/50">
-      <CardContent className="pt-6">
-        <div
-          className="max-h-[640px] overflow-auto rounded-lg border border-white/10"
-          onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
-        >
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-slate-900">
-              <TableRow className="border-white/10 hover:bg-transparent">
-                <TableHead className="min-w-[130px] text-white/60">
-                  Platforms
-                </TableHead>
-                <TableHead className="min-w-[160px] text-white/60">
-                  Created
-                </TableHead>
-                <TableHead className="min-w-[120px] text-right text-white/60">
-                  Views
-                </TableHead>
-                <TableHead className="min-w-[140px] text-white/60">
-                  Downloaded
-                </TableHead>
-                <TableHead className="min-w-[150px] text-white/60">
-                  Timezone
-                </TableHead>
+    <div className="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden space-y-2 p-1">
+      <div
+        className="max-h-[600px] overflow-auto rounded border border-slate-800/80"
+        onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+      >
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800">
+            <TableRow className="border-slate-800 hover:bg-transparent">
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Platforms</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Created</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Views</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Downloaded</TableHead>
+              <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Timezone</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {topPadding > 0 && (
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableCell
+                  colSpan={5}
+                  style={{ height: topPadding, padding: 0 }}
+                />
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {topPadding > 0 && (
-                <TableRow className="border-0 hover:bg-transparent">
-                  <TableCell
-                    colSpan={5}
-                    style={{ height: topPadding, padding: 0 }}
-                  />
-                </TableRow>
-              )}
-              {visibleRows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="h-16 border-white/10 hover:bg-white/5"
-                >
-                  <TableCell>
-                    <PlatformBadges row={row} />
-                  </TableCell>
-                  <TableCell className="text-white/70">
-                    {formatDate(row.created_at)}
-                  </TableCell>
-                  <TableCell className="text-right text-white/75">
-                    {row.page_view_count.toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        row.downloaded
-                          ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
-                          : "border-white/10 text-white/70"
-                      }
-                    >
-                      {row.downloaded ? "Yes" : "No"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[180px] truncate text-white/65">
-                    {row.timezone || "-"}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {bottomPadding > 0 && (
-                <TableRow className="border-0 hover:bg-transparent">
-                  <TableCell
-                    colSpan={5}
-                    style={{ height: bottomPadding, padding: 0 }}
-                  />
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <p className="mt-3 text-xs text-white/40">
-          Showing rows {visibleRange.startIndex + 1}-{visibleRange.endIndex} of{" "}
-          {rows.length.toLocaleString()}
-        </p>
-      </CardContent>
-    </Card>
+            )}
+            {visibleRows.map((row) => (
+              <TableRow
+                key={row.id}
+                className="h-12 border-slate-800/60 hover:bg-slate-900/40 transition-colors"
+              >
+                <TableCell className="py-2">
+                  <PlatformBadges row={row} />
+                </TableCell>
+                <TableCell className="text-xs text-slate-300 py-2">
+                  {formatDate(row.created_at)}
+                </TableCell>
+                <TableCell className="text-right text-xs font-semibold text-slate-300 py-2">
+                  {row.page_view_count.toLocaleString()}
+                </TableCell>
+                <TableCell className="py-2">
+                  <span
+                    className={
+                      row.downloaded
+                        ? "text-[10px] font-semibold uppercase px-1.5 py-0.2 rounded border border-emerald-900/50 bg-emerald-950/40 text-emerald-300"
+                        : "text-[10px] font-medium uppercase px-1.5 py-0.2 rounded border border-slate-800 bg-slate-900 text-slate-400"
+                    }
+                  >
+                    {row.downloaded ? "Yes" : "No"}
+                  </span>
+                </TableCell>
+                <TableCell className="max-w-[180px] truncate text-xs text-slate-400 py-2">
+                  {row.timezone || "-"}
+                </TableCell>
+              </TableRow>
+            ))}
+            {bottomPadding > 0 && (
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableCell
+                  colSpan={5}
+                  style={{ height: bottomPadding, padding: 0 }}
+                />
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="px-3 pb-2 text-[11px] text-slate-500 font-mono">
+        Showing rows {visibleRange.startIndex + 1}-{visibleRange.endIndex} of{" "}
+        {rows.length.toLocaleString()}
+      </p>
+    </div>
   );
 }
 
 function PlatformBadges({ row }: { row: DownloadAttributionSession }) {
   if (row.clicked_platforms.length === 0) {
-    return <span className="text-white/35">-</span>;
+    return <span className="text-slate-600 text-xs">-</span>;
   }
 
   return (
     <div className="flex flex-wrap gap-1">
       {row.clicked_platforms.map((platform) => (
-        <Badge
+        <span
           key={platform}
-          variant="outline"
-          className="border-white/10 text-white/70"
+          className="text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.2 rounded border border-slate-800 bg-slate-900 text-slate-300"
         >
           {platform}
-        </Badge>
+        </span>
       ))}
     </div>
   );
@@ -353,6 +492,31 @@ function safelyDecodeSource(value: string): string {
   } catch {
     return value;
   }
+}
+
+function safeDateKey(value: string | null): string | null {
+  if (!value) return null;
+  const parsed = parseISO(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return dateToIso(parsed);
+}
+
+function calculateChangePercent(current: number, previous: number): number {
+  if (previous <= 0) return 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+function formatChangeDelta(current: number, previous: number): string {
+  const delta = current - previous;
+  const sign = delta >= 0 ? "+" : "-";
+  const absDelta = Math.abs(delta).toLocaleString();
+  const percent = calculateChangePercent(current, previous);
+
+  if (previous <= 0) {
+    return `${sign}${absDelta}`;
+  }
+
+  return `${sign}${absDelta} (${percent >= 0 ? "+" : ""}${percent}%)`;
 }
 
 function exportInfluencerReportPdf(
@@ -518,3 +682,4 @@ function formatDate(value: string | null): string {
     minute: "2-digit",
   }).format(new Date(value));
 }
+

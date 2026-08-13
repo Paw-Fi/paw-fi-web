@@ -1,7 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   Activity,
-  BarChart3,
   MousePointerClick,
   Ticket,
   UserSearch,
@@ -12,11 +11,6 @@ export function CreatorHeader() {
   const location = useLocation();
 
   const links = [
-    {
-      href: "/creator/analytics" as const,
-      label: "Analytics",
-      icon: <BarChart3 className="h-4 w-4" />,
-    },
     {
       href: "/creator/tickets" as const,
       label: "Tickets",

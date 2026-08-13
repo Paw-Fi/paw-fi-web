@@ -1,4 +1,5 @@
-import { TrendingUp, TrendingDown, MessageCircle } from "lucide-react";
+import type { ReactNode } from "react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -9,6 +10,7 @@ import {
 } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface MessageAnalyticsCardProps {
@@ -17,7 +19,7 @@ interface MessageAnalyticsCardProps {
   dailyData: { date: string; whatsapp: number; telegram: number }[];
   changePercent: number;
   channel: "whatsapp" | "telegram";
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }
 
 export function MessageAnalyticsCard({
@@ -39,28 +41,34 @@ export function MessageAnalyticsCard({
   }));
 
   return (
-    <Card className="border-white/10 bg-slate-900/50">
-      <CardHeader className="flex flex-row items-start justify-between pb-2">
+    <Card className="border-white/10 bg-slate-900/60 backdrop-blur-sm hover:border-white/20 transition-all shadow-md flex flex-col justify-between">
+      <CardHeader className="flex flex-row items-start justify-between pb-2 space-y-0">
         <div className="space-y-1">
-          <p className="text-xs tracking-[0.25em] text-white/60 uppercase">
-            {title}
-          </p>
-          <CardTitle className="text-2xl font-bold text-white">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              {title}
+            </p>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-white/15 bg-white/5 text-slate-300">
+              Period Metric
+            </Badge>
+          </div>
+          <CardTitle className="text-2xl font-bold text-white tracking-tight">
             {totalValue.toLocaleString()}
           </CardTitle>
+          <p className="text-xs text-slate-400">Messages in selected period</p>
         </div>
         {icon && (
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: `${color}20` }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10"
+            style={{ backgroundColor: `${color}15` }}
           >
             <span style={{ color }}>{icon}</span>
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 pt-1">
         {/* Mini area chart */}
-        <div className="h-16 w-full">
+        <div className="h-14 w-full pt-1">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <XAxis dataKey="date" hide />
@@ -70,8 +78,8 @@ export function MessageAnalyticsCard({
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="rounded-md bg-slate-800 px-2 py-1 text-xs text-white shadow-lg">
-                        <div className="text-white/60">{data.fullDate}</div>
+                      <div className="rounded bg-slate-800 border border-slate-700 px-2 py-1 text-xs text-white shadow-md">
+                        <div className="text-slate-400">{data.fullDate}</div>
                         <div className="font-medium">{data.value} messages</div>
                       </div>
                     );
@@ -92,13 +100,13 @@ export function MessageAnalyticsCard({
         </div>
 
         {/* Change indicator */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 text-xs">
           <div
             className={cn(
-              "flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium",
+              "flex items-center gap-1 rounded px-1.5 py-0.5 font-medium",
               isPositive
-                ? "bg-emerald-500/20 text-emerald-400"
-                : "bg-red-500/20 text-red-400"
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                : "bg-rose-500/15 text-rose-400 border border-rose-500/20"
             )}
           >
             {isPositive ? (
@@ -109,7 +117,7 @@ export function MessageAnalyticsCard({
             {isPositive ? "+" : ""}
             {changePercent}%
           </div>
-          <span className="text-xs text-white/50">vs last 30 days</span>
+          <span className="text-slate-400 text-[11px]">vs previous period</span>
         </div>
       </CardContent>
     </Card>
@@ -120,3 +128,4 @@ function formatShortDate(dateStr: string): string {
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
+

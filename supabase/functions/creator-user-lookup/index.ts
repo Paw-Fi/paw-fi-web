@@ -16,11 +16,47 @@ import { normalizeLookupEmail } from "../shared/creator-user-lookup.ts";
 
 interface LookupRequest {
   email?: string | null;
+  section?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
 }
 
 interface ProviderErrors {
   stripe?: string | null;
   appStore?: string | null;
+}
+
+const DEFAULT_PAGE_SIZE = 10;
+
+type SectionName =
+  | "transactions"
+  | "accounts"
+  | "budgets"
+  | "recurring"
+  | "devices"
+  | "households"
+  | "bank-connections"
+  | "chat-sessions"
+  | "email-import";
+
+const PAGINATED_SECTIONS: Set<SectionName> = new Set([
+  "transactions",
+  "recurring",
+  "chat-sessions",
+]);
+
+function isSectionName(value: unknown): value is SectionName {
+  return typeof value === "string" && [
+    "transactions",
+    "accounts",
+    "budgets",
+    "recurring",
+    "devices",
+    "households",
+    "bank-connections",
+    "chat-sessions",
+    "email-import",
+  ].includes(value);
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -108,6 +144,26 @@ serve(async (req) => {
   }
 
   const user = exactUsers[0];
+  const section = body?.section;
+  const page = Math.max(1, body?.page ?? 1);
+  const pageSize = Math.max(
+    1,
+    Math.min(100, body?.pageSize ?? DEFAULT_PAGE_SIZE),
+  );
+
+  // SECTION MODE: fetch detailed data for a single section
+  if (isSectionName(section)) {
+    const sectionData = await fetchSectionData(
+      supabase,
+      user.id,
+      section,
+      page,
+      pageSize,
+    );
+    return jsonResponse({ section, data: sectionData }, 200, corsHeaders);
+  }
+
+  // SUMMARY MODE: fetch core data + counts for all sections
   const [contactResult, subscriptionResult] = await Promise.all([
     fetchContact(user.id),
     fetchLatestSubscription(user.id),
@@ -123,9 +179,10 @@ serve(async (req) => {
 
   const subscription = subscriptionResult.data;
   const errors: ProviderErrors = {};
-  const [stripeData, appStoreData] = await Promise.all([
+  const [stripeData, appStoreData, counts] = await Promise.all([
     fetchStripeDetails(subscription, errors),
     fetchAppStoreDetails(supabase, subscription, errors),
+    fetchAllSectionCounts(supabase, user.id),
   ]);
 
   return jsonResponse(
@@ -136,11 +193,132 @@ serve(async (req) => {
       stripe: stripeData,
       appStore: appStoreData,
       errors,
+      counts,
     },
     200,
     corsHeaders,
   );
 });
+
+// ====================
+// SECTION COUNTS (for summary mode)
+// ====================
+
+async function fetchAllSectionCounts(client: typeof supabase, userId: string) {
+  const [
+    transactionsCount,
+    accountsCount,
+    budgetsCount,
+    recurringCount,
+    devicesCount,
+    householdsCount,
+    bankConnectionsCount,
+    chatSessionsCount,
+    emailImportSendersCount,
+  ] = await Promise.all([
+    countRows(client, "expenses", "user_id", userId),
+    countRows(client, "accounts", "user_id", userId),
+    countRows(client, "budgets", "user_id", userId),
+    countRowsFiltered(client, "expenses", "user_id", userId, {
+      is_recurring: true,
+    }),
+    countRows(client, "devices", "user_id", userId),
+    countRows(client, "household_members", "user_id", userId),
+    countRows(client, "bank_connections", "user_id", userId),
+    countRows(client, "chat_sessions", "user_id", userId),
+    countRows(client, "email_import_sender_whitelist", "user_id", userId),
+  ]);
+
+  return {
+    transactions: transactionsCount,
+    accounts: accountsCount,
+    budgets: budgetsCount,
+    recurring: recurringCount,
+    devices: devicesCount,
+    households: householdsCount,
+    bankConnections: bankConnectionsCount,
+    chatSessions: chatSessionsCount,
+    emailImportSenders: emailImportSendersCount,
+  };
+}
+
+async function countRows(
+  client: typeof supabase,
+  table: string,
+  column: string,
+  userId: string,
+): Promise<number> {
+  try {
+    const { count, error } = await client
+      .from(table)
+      .select("*", { count: "exact", head: true })
+      .eq(column, userId);
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function countRowsFiltered(
+  client: typeof supabase,
+  table: string,
+  column: string,
+  userId: string,
+  filters: Record<string, unknown>,
+): Promise<number> {
+  try {
+    let query = client
+      .from(table)
+      .select("*", { count: "exact", head: true })
+      .eq(column, userId);
+    for (const [key, value] of Object.entries(filters)) {
+      query = query.eq(key, value);
+    }
+    const { count, error } = await query;
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+// ====================
+// SECTION DATA FETCHER (dispatches to specific section fetchers)
+// ====================
+
+async function fetchSectionData(
+  client: typeof supabase,
+  userId: string,
+  section: SectionName,
+  page: number,
+  pageSize: number,
+): Promise<Record<string, unknown>> {
+  const offset = (page - 1) * pageSize;
+
+  switch (section) {
+    case "transactions":
+      return await fetchTransactionsSection(client, userId, page, pageSize, offset);
+    case "accounts":
+      return await fetchAccountsSection(client, userId);
+    case "budgets":
+      return await fetchBudgetsSection(client, userId);
+    case "recurring":
+      return await fetchRecurringSection(client, userId, page, pageSize, offset);
+    case "devices":
+      return await fetchDevicesSection(client, userId);
+    case "households":
+      return await fetchHouseholdsSection(client, userId);
+    case "bank-connections":
+      return await fetchBankConnectionsSection(client, userId);
+    case "chat-sessions":
+      return await fetchChatSessionsSection(client, userId, page, pageSize, offset);
+    case "email-import":
+      return await fetchEmailImportSection(client, userId);
+    default:
+      return {};
+  }
+}
 
 async function fetchContact(userId: string) {
   return await supabase
@@ -430,6 +608,367 @@ function toIsoFromStripeSeconds(value: number | null | undefined) {
   return typeof value === "number"
     ? new Date(value * 1000).toISOString()
     : null;
+}
+
+// ====================
+// SECTION DATA FETCHERS (lazy-loaded with pagination)
+// ====================
+
+async function fetchTransactionsSection(
+  client: typeof supabase,
+  userId: string,
+  page: number,
+  pageSize: number,
+  offset: number,
+): Promise<Record<string, unknown>> {
+  try {
+    const [
+      pageResult,
+      countResult,
+      totalsResult,
+    ] = await Promise.all([
+      client
+        .from("expenses")
+        .select(
+          "id,date,amount_cents,currency,category,source,type,account_id,created_at,updated_at",
+        )
+        .eq("user_id", userId)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range(offset, offset + pageSize - 1),
+      client
+        .from("expenses")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+      client
+        .from("expenses")
+        .select("amount_cents,currency,type")
+        .eq("user_id", userId)
+        .limit(10000),
+    ]);
+
+    const totalsMap = new Map<
+      string,
+      { expense: number; income: number; expenseCount: number; incomeCount: number }
+    >();
+    for (const rec of totalsResult.data ?? []) {
+      const key = rec.currency ?? "UNKNOWN";
+      const entry = totalsMap.get(key) ?? {
+        expense: 0,
+        income: 0,
+        expenseCount: 0,
+        incomeCount: 0,
+      };
+      if (rec.type === "income") {
+        entry.income += rec.amount_cents ?? 0;
+        entry.incomeCount += 1;
+      } else {
+        entry.expense += rec.amount_cents ?? 0;
+        entry.expenseCount += 1;
+      }
+      totalsMap.set(key, entry);
+    }
+
+    const totalsByCurrency = Array.from(totalsMap.entries()).map(
+      ([currency, val]) => ({
+        currency,
+        expenseTotalCents: val.expense,
+        incomeTotalCents: val.income,
+        expenseCount: val.expenseCount,
+        incomeCount: val.incomeCount,
+      }),
+    );
+
+    return {
+      rows: pageResult.data ?? [],
+      totalCount: countResult.count ?? 0,
+      page,
+      pageSize,
+      totalsByCurrency,
+    };
+  } catch {
+    return { rows: [], totalCount: 0, page, pageSize, totalsByCurrency: [] };
+  }
+}
+
+async function fetchAccountsSection(
+  client: typeof supabase,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const { data, error } = await client
+      .from("accounts")
+      .select(
+        "id,name,icon,color,opening_balance_cents,goal_amount_cents,is_default,is_system,is_archived,household_id,linked_bank_account_id,created_at,updated_at",
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) return { rows: [] };
+    return { rows: data ?? [] };
+  } catch {
+    return { rows: [] };
+  }
+}
+
+async function fetchBudgetsSection(
+  client: typeof supabase,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const { data: budgets, error: budgetsError } = await client
+      .from("budgets")
+      .select(
+        "id,period_month,currency,total_budget_cents,household_id,created_at,updated_at",
+      )
+      .eq("user_id", userId)
+      .order("period_month", { ascending: false })
+      .limit(50);
+
+    if (budgetsError || !budgets || budgets.length === 0) {
+      return { budgets: [], envelopes: [] };
+    }
+
+    const budgetIds = budgets.map((b) => b.id);
+    const { data: envelopes, error: envelopesError } = await client
+      .from("budget_envelopes")
+      .select(
+        "id,budget_id,name,budget_percentage,currency,icon,color,created_at,updated_at",
+      )
+      .in("budget_id", budgetIds)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (envelopesError) {
+      return { budgets, envelopes: [] };
+    }
+
+    return { budgets, envelopes: envelopes ?? [] };
+  } catch {
+    return { budgets: [], envelopes: [] };
+  }
+}
+
+async function fetchRecurringSection(
+  client: typeof supabase,
+  userId: string,
+  page: number,
+  pageSize: number,
+  offset: number,
+): Promise<Record<string, unknown>> {
+  try {
+    const [pageResult, countResult] = await Promise.all([
+      client
+        .from("expenses")
+        .select(
+          "id,date,amount_cents,currency,category,source,type,recurrence_rule,is_recurring,created_at,updated_at",
+        )
+        .eq("user_id", userId)
+        .eq("is_recurring", true)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + pageSize - 1),
+      client
+        .from("expenses")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("is_recurring", true),
+    ]);
+
+    return {
+      rows: pageResult.data ?? [],
+      totalCount: countResult.count ?? 0,
+      page,
+      pageSize,
+    };
+  } catch {
+    return { rows: [], totalCount: 0, page, pageSize };
+  }
+}
+
+async function fetchDevicesSection(
+  client: typeof supabase,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const { data, error } = await client
+      .from("devices")
+      .select(
+        "id,platform,device_model,os_version,app_version,locale,timezone,is_active,last_seen_at,created_at,updated_at",
+      )
+      .eq("user_id", userId)
+      .order("last_seen_at", { ascending: false, nullsFirst: false })
+      .limit(50);
+
+    if (error) return { rows: [] };
+    return { rows: data ?? [] };
+  } catch {
+    return { rows: [] };
+  }
+}
+
+async function fetchHouseholdsSection(
+  client: typeof supabase,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const { data: memberships, error: membershipsError } = await client
+      .from("household_members")
+      .select("household_id,role,joined_at,created_at,updated_at")
+      .eq("user_id", userId)
+      .order("joined_at", { ascending: false });
+
+    if (membershipsError || !memberships || memberships.length === 0) {
+      return { rows: [] };
+    }
+
+    const householdIds = memberships.map((m) => m.household_id);
+    const [householdsResult, membersResult] = await Promise.all([
+      client
+        .from("households")
+        .select(
+          "id,name,owner_id,currency,cover_image_url,theme_color,created_at,updated_at",
+        )
+        .in("id", householdIds)
+        .order("created_at", { ascending: false }),
+      client
+        .from("household_members")
+        .select("household_id,user_id,role,joined_at")
+        .in("household_id", householdIds),
+    ]);
+
+    if (householdsResult.error || !householdsResult.data) return { rows: [] };
+
+    const memberCounts = new Map<string, number>();
+    for (const m of membersResult.data ?? []) {
+      memberCounts.set(
+        m.household_id,
+        (memberCounts.get(m.household_id) ?? 0) + 1,
+      );
+    }
+
+    const rows = householdsResult.data.map((h) => ({
+      ...h,
+      member_count: memberCounts.get(h.id) ?? 0,
+      current_user_role: memberships.find((m) => m.household_id === h.id)
+        ?.role ?? null,
+      current_user_joined_at: memberships.find(
+        (m) => m.household_id === h.id,
+      )?.joined_at ?? null,
+    }));
+
+    return { rows };
+  } catch {
+    return { rows: [] };
+  }
+}
+
+async function fetchBankConnectionsSection(
+  client: typeof supabase,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const [connectionsResult, accountsResult] = await Promise.all([
+      client
+        .from("bank_connections")
+        .select(
+          "id,provider,status,last_synced_at,error_code,error_message,country_code,household_id,created_at,updated_at",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      client
+        .from("bank_accounts")
+        .select(
+          "id,bank_connection_id,provider,name,official_name,mask,currency,type,subtype,status,last_synced_at,created_at,updated_at",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+
+    if (connectionsResult.error) return { connections: [], bankAccounts: [] };
+
+    return {
+      connections: connectionsResult.data ?? [],
+      bankAccounts: accountsResult.data ?? [],
+    };
+  } catch {
+    return { connections: [], bankAccounts: [] };
+  }
+}
+
+async function fetchChatSessionsSection(
+  client: typeof supabase,
+  userId: string,
+  page: number,
+  pageSize: number,
+  offset: number,
+): Promise<Record<string, unknown>> {
+  try {
+    const [pageResult, countResult] = await Promise.all([
+      client
+        .from("chat_sessions")
+        .select("id,session_id,model,is_active,created_at,updated_at")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false, nullsFirst: false })
+        .range(offset, offset + pageSize - 1),
+      client
+        .from("chat_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+    ]);
+
+    const sessions = pageResult.data ?? [];
+    if (sessions.length === 0) {
+      return { rows: [], totalCount: countResult.count ?? 0, page, pageSize };
+    }
+
+    const sessionIds = sessions.map((s) => s.id);
+    const { data: messageRows } = await client
+      .from("chat_messages")
+      .select("chat_session_id")
+      .in("chat_session_id", sessionIds);
+
+    const counts = new Map<string, number>();
+    for (const m of messageRows ?? []) {
+      counts.set(
+        m.chat_session_id,
+        (counts.get(m.chat_session_id) ?? 0) + 1,
+      );
+    }
+
+    return {
+      rows: sessions.map((s) => ({
+        ...s,
+        message_count: counts.get(s.id) ?? 0,
+      })),
+      totalCount: countResult.count ?? 0,
+      page,
+      pageSize,
+    };
+  } catch {
+    return { rows: [], totalCount: 0, page, pageSize };
+  }
+}
+
+async function fetchEmailImportSection(
+  client: typeof supabase,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const { data: senders, error } = await client
+      .from("email_import_sender_whitelist")
+      .select("id,sender_email,normalized_sender_email,created_at,updated_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) return { senders: [] };
+    return { senders: senders ?? [] };
+  } catch {
+    return { senders: [] };
+  }
 }
 
 function jsonResponse(
