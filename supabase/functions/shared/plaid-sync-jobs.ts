@@ -3,6 +3,13 @@ import { PLAID_PROVIDER } from "./plaid-client.ts";
 export interface EnqueuePlaidSyncJobParams {
   supabase: {
     from: (table: string) => any;
+    rpc: (
+      functionName: string,
+      parameters: Record<string, unknown>,
+    ) => Promise<{
+      data: unknown;
+      error: any;
+    }>;
   };
   connectionId: string;
   triggerSource: string;
@@ -27,62 +34,34 @@ export async function enqueuePlaidSyncJob(
     ? `${jobType}:${params.connectionId}`
     : params.dedupeKey;
 
-  const { error } = await params.supabase
-    .from("bank_sync_jobs")
-    .insert({
-      bank_connection_id: params.connectionId,
-      provider: PLAID_PROVIDER,
-      trigger_source: params.triggerSource,
-      job_type: jobType,
-      dedupe_key: dedupeKey,
-      webhook_event_id: params.webhookEventId ?? null,
-      payload: params.payload ?? {},
-      next_attempt_at: null,
-      attempt_count: 0,
-    });
+  const { data, error } = await params.supabase.rpc(
+    "enqueue_bank_sync_job_v1",
+    {
+      p_bank_connection_id: params.connectionId,
+      p_provider: PLAID_PROVIDER,
+      p_trigger_source: params.triggerSource,
+      p_job_type: jobType,
+      p_dedupe_key: dedupeKey,
+      p_webhook_event_id: params.webhookEventId ?? null,
+      p_payload: params.payload ?? {},
+      p_set_needs_resync_on_duplicate:
+        params.setNeedsResyncOnDuplicate !== false,
+    },
+  );
 
-  if (!error) {
-    return {
-      enqueued: true,
-      duplicate: false,
-      needsResyncQueued: false,
-    };
-  }
-
-  if (error.code !== "23505") {
+  if (error) {
     throw error;
   }
 
-  const duplicateReason = `${error.message ?? ""} ${error.details ?? ""}`;
-  const isWebhookDuplicate = duplicateReason.includes("webhook_event_id");
-
-  if (
-    params.setNeedsResyncOnDuplicate !== false &&
-    jobType === "transactions_sync" &&
-    !isWebhookDuplicate
-  ) {
-    const { error: updateError } = await params.supabase
-      .from("bank_connections")
-      .update({
-        needs_resync: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", params.connectionId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    return {
-      enqueued: false,
-      duplicate: true,
-      needsResyncQueued: true,
-    };
-  }
+  const result = data as {
+    enqueued?: boolean;
+    duplicate?: boolean;
+    needs_resync_queued?: boolean;
+  } | null;
 
   return {
-    enqueued: false,
-    duplicate: true,
-    needsResyncQueued: false,
+    enqueued: result?.enqueued === true,
+    duplicate: result?.duplicate === true,
+    needsResyncQueued: result?.needs_resync_queued === true,
   };
 }
