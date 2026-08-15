@@ -53,43 +53,8 @@
 #   Where to use: configured as a Supabase secret; used to encrypt access/refresh tokens at rest.
 #
 # SKIP_WEBHOOK_VERIFICATION (optional, dev-only)
-#   Example: "true" to disable Plaid/Tink webhook signature verification.
+#   Example: "true" to disable Plaid webhook signature verification.
 #   WARNING: Never enable in production.
-#
-# --- Tink ---
-# NOTE: Tink documentation sites are not fetchable from this environment (JS-only / network).
-# Docs (open in a browser): https://docs.tink.com/
-# Values below are based on how our code reads them in `supabase/functions/shared/tink-client.ts`.
-#
-# TINK_CLIENT_ID
-#   Example: "..." (string)
-#   Where to get: Tink developer console / application settings.
-#
-# TINK_CLIENT_SECRET
-#   Example: "..." (string)
-#   Where to get: Tink developer console / application settings.
-#
-# TINK_ENV
-#   Example: "sandbox" | "production" (repo default is sandbox)
-#   Where to get: choose the Tink environment for your app.
-#
-# TINK_REDIRECT_URI
-#   Example: "moneko://tink" (must match your registered redirect URI in Tink)
-#   Where to get: set in Tink app settings + must match your mobile deep link.
-#
-# TINK_SCOPES
-#   Example: "accounts:read,transactions:read,offline_access"
-#   Where to get: configured per your Tink app + consent requirements.
-#
-# TINK_DEFAULT_MARKET
-#   Example: "GB" (ISO country code)
-#
-# TINK_DEFAULT_LOCALE
-#   Example: "en_US"
-#
-# TINK_WEBHOOK_SECRET
-#   Example: "..." (string)
-#   Where to get: Tink webhook signing secret from Tink console (used to verify X-Tink-Signature).
 #
 # --- Internal auth ---
 # SECRET_SUPABASE_SERVICE_ROLE_API_KEY
@@ -107,7 +72,7 @@
 #   supabase/migrations/20260120_bank_sync_resilience.sql
 #     - Creates bank_webhook_events, bank_sync_jobs (+ RLS/indexes)
 #   supabase/migrations/20260128_bank_sync_hardening.sql
-#     - Idempotency, locks, tink_auth_states (with connection_id for delegated auth)
+#     - Idempotency and locks
 #     - Atomic RPC upsert_bank_connection_with_household
 #   supabase/migrations/20260129_bank_sync_cron_scheduler.sql
 #     - pg_cron schedules (bank-sync-processor + cleanup) + verify_bank_sync_cron_config()

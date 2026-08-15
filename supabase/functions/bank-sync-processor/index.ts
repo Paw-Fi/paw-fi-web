@@ -19,7 +19,6 @@ import {
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
-import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -340,13 +339,7 @@ Deno.serve(async (req) => {
         }
 
         // Process based on provider
-        if (connection.provider === TINK_PROVIDER) {
-          await processTinkJob(
-            supabase as any,
-            job,
-            connection as BankConnection,
-          );
-        } else if (connection.provider === PLAID_PROVIDER) {
+        if (connection.provider === PLAID_PROVIDER) {
           const accessState = await loadPlaidUserAccessState(
             supabase as any,
             connection.user_id,
@@ -664,68 +657,6 @@ async function alertPlaidWebhookDeadLetters(
         provider_item_id: event.provider_item_id || null,
       },
     });
-  }
-}
-
-async function processTinkJob(
-  supabase: any,
-  job: BankSyncJob,
-  connection: BankConnection,
-): Promise<void> {
-  const internalHeaders = buildInternalInvokeHeaders(
-    RESOLVED_INTERNAL_FUNCTION_KEY,
-  );
-
-  const payload = job.payload as Record<string, unknown> | null;
-  const event = payload?.event as string | undefined;
-
-  // Handle Tink account-transactions:deleted event
-  if (event === "account-transactions:deleted") {
-    const content = payload?.content as Record<string, unknown> | undefined;
-    const transactions = content?.transactions as
-      | Record<string, unknown>
-      | undefined;
-    const deletedIds = transactions?.ids as string[] | undefined;
-
-    if (deletedIds && deletedIds.length > 0) {
-      // Soft-delete the transactions
-      await supabase
-        .from("expenses")
-        .update({
-          deleted_at: new Date().toISOString(),
-          deleted_reason: "provider_removed",
-        })
-        .eq("provider", TINK_PROVIDER)
-        .eq("user_id", connection.user_id)
-        .is("deleted_at", null)
-        .in("provider_transaction_id", deletedIds);
-
-      console.log(
-        `[bank-sync-processor] Soft-deleted ${deletedIds.length} Tink transactions for job ${job.id}`,
-      );
-      return;
-    }
-  }
-
-  // For other Tink events, call tink-sync-transactions
-  console.log(`[bank-sync-processor] Triggering Tink sync for job ${job.id}`);
-  const response = await fetch(
-    `${SUPABASE_URL}/functions/v1/tink-sync-transactions`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...internalHeaders,
-      },
-      body: JSON.stringify({
-        connectionId: connection.id,
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Tink sync failed: ${response.status} ${errorText}`);
   }
 }
 

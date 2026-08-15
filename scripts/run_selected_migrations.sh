@@ -9,7 +9,6 @@ if [ -z "$DB_URL" ]; then
 fi
 
 MIGRATIONS=(
-  "supabase/migrations/20260409120000_add_target_household_id_to_tink_auth_states.sql"
   "supabase/migrations/202604101130_plaid_function_consolidation.sql"
   "supabase/migrations/20260410_plaid_production_hardening.sql"
   "supabase/migrations/20260415_bank_sync_cron_auth_alignment.sql"

@@ -1,10 +1,9 @@
 /**
  * Webhook Verification Utilities
  *
- * Provides signature verification for Plaid and Tink webhooks.
+ * Provides signature verification for Plaid webhooks.
  *
  * Plaid: Uses JWT with ES256, verified against a JWK from /webhook_verification_key/get
- * Tink: Uses HMAC-SHA256 with X-Tink-Signature header
  */
 
 import { fetchWithRetry } from "./bank-retry.ts";
@@ -303,55 +302,14 @@ export async function verifyPlaidWebhook(
 }
 
 // ============================================================================
-// TINK WEBHOOK VERIFICATION
+// WEBHOOK IDEMPOTENCY
 // ============================================================================
 
-const TINK_WEBHOOK_SECRET_ENV = "TINK_WEBHOOK_SECRET";
-
-// Maximum age of webhook (15 minutes) to prevent replay attacks while allowing delayed deliveries
-// Extended from 5 minutes to handle provider outages and retry storms
-const TINK_MAX_TIMESTAMP_AGE_SECONDS = 900;
-
-export interface TinkWebhookVerificationResult {
-  valid: boolean;
+export interface WebhookIdempotencyResult {
+  isDuplicate: boolean;
   error?: string;
-  timestamp?: number;
 }
 
-/**
- * Parses the X-Tink-Signature header.
- * Format: "t=<timestamp>,v1=<signature>" (may have spaces after commas)
- */
-function parseTinkSignatureHeader(
-  header: string,
-): { timestamp: string; signature: string } | null {
-  const parts = header.split(",");
-  let timestamp: string | null = null;
-  let signature: string | null = null;
-
-  for (const part of parts) {
-    const [key, ...valueParts] = part.split("=");
-    const value = valueParts.join("="); // Handle values that might contain '='
-    // Trim whitespace from keys and values to handle "t=..., v1=..." format
-    const trimmedKey = key.trim();
-    const trimmedValue = value.trim();
-    if (trimmedKey === "t") {
-      timestamp = trimmedValue;
-    } else if (trimmedKey === "v1") {
-      signature = trimmedValue;
-    }
-  }
-
-  if (!timestamp || !signature) {
-    return null;
-  }
-
-  return { timestamp, signature };
-}
-
-/**
- * Constant-time string comparison to prevent timing attacks.
- */
 function constantTimeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;
@@ -363,114 +321,6 @@ function constantTimeCompare(a: string, b: string): boolean {
   }
 
   return result === 0;
-}
-
-/**
- * Computes HMAC-SHA256 signature.
- */
-async function computeHmacSha256(
-  secret: string,
-  message: string,
-): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const messageData = encoder.encode(message);
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyData,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
-  const hashArray = Array.from(new Uint8Array(signature));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/**
- * Verifies a Tink webhook signature.
- *
- * @param body - The raw request body as a string
- * @param tinkSignatureHeader - The X-Tink-Signature header value
- * @param secret - Optional secret override (defaults to TINK_WEBHOOK_SECRET env var)
- * @returns Verification result
- */
-export async function verifyTinkWebhook(
-  body: string,
-  tinkSignatureHeader: string | null,
-  secret?: string,
-): Promise<TinkWebhookVerificationResult> {
-  const webhookSecret = secret || Deno.env.get(TINK_WEBHOOK_SECRET_ENV);
-
-  if (!webhookSecret) {
-    return { valid: false, error: "TINK_WEBHOOK_SECRET not configured" };
-  }
-
-  if (!tinkSignatureHeader) {
-    return { valid: false, error: "Missing X-Tink-Signature header" };
-  }
-
-  const parsed = parseTinkSignatureHeader(tinkSignatureHeader);
-  if (!parsed) {
-    return { valid: false, error: "Invalid X-Tink-Signature header format" };
-  }
-
-  const { timestamp, signature: receivedSignature } = parsed;
-
-  // Verify timestamp freshness
-  const timestampSeconds = parseInt(timestamp, 10);
-  if (isNaN(timestampSeconds)) {
-    return { valid: false, error: "Invalid timestamp in signature header" };
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const age = now - timestampSeconds;
-
-  if (age > TINK_MAX_TIMESTAMP_AGE_SECONDS) {
-    return {
-      valid: false,
-      error: `Timestamp too old (${age}s > ${TINK_MAX_TIMESTAMP_AGE_SECONDS}s)`,
-      timestamp: timestampSeconds,
-    };
-  }
-
-  if (age < -60) {
-    // Allow 1 minute clock skew into the future
-    return {
-      valid: false,
-      error: "Timestamp is in the future",
-      timestamp: timestampSeconds,
-    };
-  }
-
-  // Compute expected signature
-  const messageToSign = `${timestamp}.${body}`;
-  const expectedSignature = await computeHmacSha256(
-    webhookSecret,
-    messageToSign,
-  );
-
-  // Constant-time comparison
-  if (!constantTimeCompare(expectedSignature, receivedSignature)) {
-    return {
-      valid: false,
-      error: "Signature mismatch",
-      timestamp: timestampSeconds,
-    };
-  }
-
-  return { valid: true, timestamp: timestampSeconds };
-}
-
-// ============================================================================
-// WEBHOOK IDEMPOTENCY
-// ============================================================================
-
-export interface WebhookIdempotencyResult {
-  isDuplicate: boolean;
-  error?: string;
 }
 
 /**
@@ -522,10 +372,9 @@ function sortObjectKeys(obj: unknown): unknown {
  * - A hash of the full payload (including nested fields) to disambiguate events
  *
  * For Plaid: item_id + webhook_type + webhook_code + content_hash
- * For Tink: event + externalUserId + credentialsId + content_hash
  */
 export async function generateWebhookEventId(
-  provider: "plaid" | "tink",
+  provider: "plaid",
   payload: Record<string, unknown>,
 ): Promise<string> {
   // Create a stable JSON string of the payload for hashing
@@ -534,28 +383,8 @@ export async function generateWebhookEventId(
   const payloadString = JSON.stringify(sortedPayload);
   const contentHash = await hashContent(payloadString);
 
-  if (provider === "plaid") {
-    const itemId = payload.item_id as string;
-    const webhookCode = payload.webhook_code as string;
-    const webhookType = payload.webhook_type as string;
-
-    // Combine structural identifiers with content hash
-    return `plaid:${itemId}:${webhookType}:${webhookCode}:${contentHash}`;
-  } else {
-    const event = payload.event as string;
-    const context = payload.context as
-      | { userId?: string; externalUserId?: string }
-      | undefined;
-    const externalUserId =
-      context?.externalUserId || context?.userId || "unknown";
-    const content = payload.content as
-      | {
-          credentialsId?: string;
-        }
-      | undefined;
-    const credentialsId = content?.credentialsId || "";
-
-    // Combine structural identifiers with content hash
-    return `tink:${event}:${externalUserId}:${credentialsId}:${contentHash}`;
-  }
+  const itemId = payload.item_id as string;
+  const webhookCode = payload.webhook_code as string;
+  const webhookType = payload.webhook_type as string;
+  return `plaid:${itemId}:${webhookType}:${webhookCode}:${contentHash}`;
 }
