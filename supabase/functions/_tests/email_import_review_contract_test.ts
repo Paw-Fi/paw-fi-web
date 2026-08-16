@@ -160,3 +160,22 @@ Deno.test(
     assertStringIncludes(submitConfig, "verify_jwt = false");
   },
 );
+
+Deno.test(
+  "reviewed email imports preserve the original scope and resolve the account per currency",
+  async () => {
+    const webhook = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+    const submit = await Deno.readTextFile(
+      new URL("../email-import-review-submit/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(webhook, "importContext: {");
+    assertStringIncludes(webhook, "accountId: owner.accountId");
+    assertStringIncludes(submit, "createEmailImportAccountResolver");
+    assertStringIncludes(submit, "householdId: importContext.householdId");
+    assertStringIncludes(submit, "...(importContext.householdId");
+    assertStringIncludes(submit, "if (importEventError)");
+  },
+);

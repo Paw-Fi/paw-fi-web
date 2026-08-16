@@ -17,6 +17,7 @@ import {
   resolveNewestSenderOwner,
   shouldProcessInboundRecipients,
 } from "../shared/email-import.ts";
+import { createEmailImportAccountResolver } from "../shared/email-import-account.ts";
 import {
   type AnalyzeRequestBody,
   runAnalyzeExpense,
@@ -146,18 +147,18 @@ interface ExistingInboundEvent {
 
 type ClaimInboundEventResult =
   | {
-    kind: "claimed";
-    owner: InboundEventLeaseOwner;
-    recovered: boolean;
-  }
+      kind: "claimed";
+      owner: InboundEventLeaseOwner;
+      recovered: boolean;
+    }
   | {
-    kind: "duplicate";
-    rowId: string | null;
-    status: InboundEventStatus | null;
-    processedAt: string | null;
-    inProgress: boolean;
-    reason: string;
-  };
+      kind: "duplicate";
+      rowId: string | null;
+      status: InboundEventStatus | null;
+      processedAt: string | null;
+      inProgress: boolean;
+      reason: string;
+    };
 
 function chunkDiagnosticText(value: string): string[] {
   return value.match(/[\s\S]{1,450}/g) ?? [];
@@ -204,8 +205,8 @@ function resolveImportInboxEmails(): string[] {
 }
 
 const IMPORT_INBOX_EMAILS = resolveImportInboxEmails();
-const PRIMARY_IMPORT_INBOX_EMAIL = IMPORT_INBOX_EMAILS[0] ||
-  DEFAULT_IMPORT_INBOX_EMAIL;
+const PRIMARY_IMPORT_INBOX_EMAIL =
+  IMPORT_INBOX_EMAILS[0] || DEFAULT_IMPORT_INBOX_EMAIL;
 const buildFollowupEmail = createFollowupEmailBuilder({
   appTransactionsUrl: APP_TRANSACTIONS_URL,
   importInboxEmail: PRIMARY_IMPORT_INBOX_EMAIL,
@@ -220,7 +221,7 @@ function shouldProcessInboundToConfiguredInboxes(
   recipients?: string[] | null,
 ): boolean {
   return IMPORT_INBOX_EMAILS.some((inbox) =>
-    shouldProcessInboundRecipients(recipients ?? undefined, inbox)
+    shouldProcessInboundRecipients(recipients ?? undefined, inbox),
   );
 }
 
@@ -232,10 +233,9 @@ function ensureSoftDeadline(startedAtMs: number, stage: string): void {
 }
 
 function matchesRetryableFailurePattern(message: string): boolean {
-  return /(SOFT_DEADLINE_EXCEEDED|EMAIL_IMPORT_AI_DECISION_MALFORMED_RESULT|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i
-    .test(
-      message,
-    );
+  return /(SOFT_DEADLINE_EXCEEDED|EMAIL_IMPORT_AI_DECISION_MALFORMED_RESULT|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i.test(
+    message,
+  );
 }
 
 function isRetryableAnalyzeFailure(result: {
@@ -332,10 +332,9 @@ function errorResponse(message: string, status = 400, code?: string) {
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      .test(
-        trimmed,
-      )
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    trimmed,
+  )
     ? trimmed
     : null;
 }
@@ -392,9 +391,10 @@ async function claimInboundEvent(params: {
       kind: "claimed",
       owner: {
         rowId: data.id as string,
-        attemptCount: typeof data.processing_attempt_count === "number"
-          ? data.processing_attempt_count
-          : 1,
+        attemptCount:
+          typeof data.processing_attempt_count === "number"
+            ? data.processing_attempt_count
+            : 1,
       },
       recovered: false,
     };
@@ -510,14 +510,15 @@ async function claimInboundEvent(params: {
 
 function mapInboundEventRow(row: any): ExistingInboundEvent | null {
   const statusCandidate = typeof row?.status === "string" ? row.status : null;
-  const status: InboundEventStatus | null = statusCandidate === "received" ||
-      statusCandidate === "processing" ||
-      statusCandidate === "awaiting_review" ||
-      statusCandidate === "ignored" ||
-      statusCandidate === "processed" ||
-      statusCandidate === "failed"
-    ? statusCandidate
-    : null;
+  const status: InboundEventStatus | null =
+    statusCandidate === "received" ||
+    statusCandidate === "processing" ||
+    statusCandidate === "awaiting_review" ||
+    statusCandidate === "ignored" ||
+    statusCandidate === "processed" ||
+    statusCandidate === "failed"
+      ? statusCandidate
+      : null;
 
   if (!row?.id || !status) return null;
 
@@ -526,22 +527,21 @@ function mapInboundEventRow(row: any): ExistingInboundEvent | null {
     status,
     user_id: typeof row.user_id === "string" ? row.user_id : null,
     error_text: typeof row.error_text === "string" ? row.error_text : null,
-    processed_at: typeof row.processed_at === "string"
-      ? row.processed_at
-      : null,
+    processed_at:
+      typeof row.processed_at === "string" ? row.processed_at : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
-    processing_attempt_count: typeof row.processing_attempt_count === "number"
-      ? Math.max(0, Math.trunc(row.processing_attempt_count))
-      : 0,
-    lock_expires_at: typeof row.lock_expires_at === "string"
-      ? row.lock_expires_at
-      : null,
-    last_svix_id: typeof row.last_svix_id === "string"
-      ? row.last_svix_id
-      : null,
-    last_svix_timestamp: typeof row.last_svix_timestamp === "string"
-      ? row.last_svix_timestamp
-      : null,
+    processing_attempt_count:
+      typeof row.processing_attempt_count === "number"
+        ? Math.max(0, Math.trunc(row.processing_attempt_count))
+        : 0,
+    lock_expires_at:
+      typeof row.lock_expires_at === "string" ? row.lock_expires_at : null,
+    last_svix_id:
+      typeof row.last_svix_id === "string" ? row.last_svix_id : null,
+    last_svix_timestamp:
+      typeof row.last_svix_timestamp === "string"
+        ? row.last_svix_timestamp
+        : null,
   };
 }
 
@@ -740,27 +740,27 @@ async function resolveOwnerBySender(params: {
   const candidates = [
     ...(Array.isArray(matchingUsers)
       ? matchingUsers.map((row: any) => ({
-        userId: String(row.id),
-        normalizedSenderEmail,
-        createdAt: typeof row.created_at === "string" ? row.created_at : null,
-        source: "default" as const,
-      }))
+          userId: String(row.id),
+          normalizedSenderEmail,
+          createdAt: typeof row.created_at === "string" ? row.created_at : null,
+          source: "default" as const,
+        }))
       : []),
     ...(Array.isArray(whitelistRows)
       ? whitelistRows.map((row: any) => ({
-        userId: String(row.user_id),
-        normalizedSenderEmail,
-        createdAt: typeof row.created_at === "string" ? row.created_at : null,
-        source: "whitelist" as const,
-      }))
+          userId: String(row.user_id),
+          normalizedSenderEmail,
+          createdAt: typeof row.created_at === "string" ? row.created_at : null,
+          source: "whitelist" as const,
+        }))
       : []),
   ];
 
   const resolved = resolveNewestSenderOwner(candidates);
   if (!resolved) return null;
 
-  const [{ data: user }, { data: contact, error: contactError }] = await Promise
-    .all([
+  const [{ data: user }, { data: contact, error: contactError }] =
+    await Promise.all([
       supabase
         .from("users")
         .select("email, full_name")
@@ -788,8 +788,8 @@ async function resolveOwnerBySender(params: {
     });
   }
 
-  const defaultEmail = normalizeEmailAddress(user?.email) ||
-    normalizedSenderEmail;
+  const defaultEmail =
+    normalizeEmailAddress(user?.email) || normalizedSenderEmail;
   const accountId = sanitizeUuid(contact?.email_import_account_id ?? null);
 
   return {
@@ -797,14 +797,16 @@ async function resolveOwnerBySender(params: {
     fullName: typeof user?.full_name === "string" ? user.full_name : null,
     defaultEmail,
     enabled: contact?.email_import_enabled === true,
-    preferredCurrency: typeof contact?.preferred_currency === "string" &&
-        contact.preferred_currency.trim().length > 0
-      ? contact.preferred_currency.trim().toUpperCase()
-      : "USD",
-    preferredTimezone: typeof contact?.preferred_timezone === "string" &&
-        contact.preferred_timezone.trim().length > 0
-      ? contact.preferred_timezone.trim()
-      : null,
+    preferredCurrency:
+      typeof contact?.preferred_currency === "string" &&
+      contact.preferred_currency.trim().length > 0
+        ? contact.preferred_currency.trim().toUpperCase()
+        : "USD",
+    preferredTimezone:
+      typeof contact?.preferred_timezone === "string" &&
+      contact.preferred_timezone.trim().length > 0
+        ? contact.preferred_timezone.trim()
+        : null,
     householdId: sanitizeUuid(contact?.email_import_household_id ?? null),
     isPortfolio: contact?.email_import_is_portfolio === true,
     accountId,
@@ -820,7 +822,7 @@ function hasVerifiedSender(headers?: Record<string, string>): boolean {
         "authentication-results",
         "arc-authentication-results",
         "received-spf",
-      ].includes(entry[0].toLowerCase())
+      ].includes(entry[0].toLowerCase()),
     )
     .map((entry) => entry[1].toLowerCase())
     .join(" ");
@@ -957,7 +959,7 @@ function boundedReviewEvidence(
     candidate.merchant,
     candidate.description,
     ...issues.flatMap((issue) =>
-      (issue.choices ?? []).map((choice) => choice.evidence)
+      (issue.choices ?? []).map((choice) => choice.evidence),
     ),
   ]
     .filter(
@@ -970,7 +972,7 @@ function boundedReviewEvidence(
       terms.flatMap(
         (term) =>
           sourceText.match(new RegExp(`.{0,180}${term}.{0,180}`, "i"))?.[0] ??
-            [],
+          [],
       ),
     ),
   )
@@ -994,16 +996,18 @@ function sortImportedTransactions(
     const rightAmount = Number(right.amount ?? 0);
     if (leftAmount !== rightAmount) return leftAmount - rightAmount;
 
-    const leftDescription = typeof left.description === "string"
-      ? left.description
-      : typeof left.merchant === "string"
-      ? left.merchant
-      : "";
-    const rightDescription = typeof right.description === "string"
-      ? right.description
-      : typeof right.merchant === "string"
-      ? right.merchant
-      : "";
+    const leftDescription =
+      typeof left.description === "string"
+        ? left.description
+        : typeof left.merchant === "string"
+          ? left.merchant
+          : "";
+    const rightDescription =
+      typeof right.description === "string"
+        ? right.description
+        : typeof right.merchant === "string"
+          ? right.merchant
+          : "";
     return leftDescription.localeCompare(rightDescription);
   });
 }
@@ -1148,7 +1152,8 @@ async function sendFcmV1Notification(params: {
   if (!FIREBASE_PROJECT_ID) return false;
 
   try {
-    const isWeb = typeof platform === "string" &&
+    const isWeb =
+      typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
     const message = {
       message: {
@@ -1182,16 +1187,16 @@ async function sendFcmV1Notification(params: {
         },
         ...(isWeb
           ? {
-            webpush: {
-              data: {
-                ...data,
-                deep_link: data.deep_link || "moneko://home",
+              webpush: {
+                data: {
+                  ...data,
+                  deep_link: data.deep_link || "moneko://home",
+                },
+                fcm_options: {
+                  link: APP_URL,
+                },
               },
-              fcm_options: {
-                link: APP_URL,
-              },
-            },
-          }
+            }
           : {}),
       },
     };
@@ -1242,12 +1247,10 @@ async function sendImportProcessedNotification(params: {
   if (!accessToken) return;
 
   const title = `Your files are ready!`;
-  const body = `${savedCount} ${
-    pluralize(
-      savedCount,
-      "transaction",
-    )
-  } have been added to your account`;
+  const body = `${savedCount} ${pluralize(
+    savedCount,
+    "transaction",
+  )} have been added to your account`;
   const data = {
     event_type: "email_import_processed",
     notification_type: "email_import_processed",
@@ -1266,7 +1269,7 @@ async function sendImportProcessedNotification(params: {
         data,
         accessToken,
         platform: device.platform ?? undefined,
-      })
+      }),
     ),
   );
 }
@@ -1286,24 +1289,19 @@ async function sendImportReviewRequiredNotification(params: {
   if (!accessToken) return;
 
   const title = "Action needed: review your import";
-  const body = savedCount > 0
-    ? `${savedCount} ${
-      pluralize(
-        savedCount,
-        "transaction",
-      )
-    } added. ${reviewCount} ${
-      pluralize(
-        reviewCount,
-        "transaction",
-      )
-    } need your review. Tap to review.`
-    : `${reviewCount} ${
-      pluralize(
-        reviewCount,
-        "transaction",
-      )
-    } need your review. Tap to review.`;
+  const body =
+    savedCount > 0
+      ? `${savedCount} ${pluralize(
+          savedCount,
+          "transaction",
+        )} added. ${reviewCount} ${pluralize(
+          reviewCount,
+          "transaction",
+        )} need your review. Tap to review.`
+      : `${reviewCount} ${pluralize(
+          reviewCount,
+          "transaction",
+        )} need your review. Tap to review.`;
   const data = {
     event_type: "email_import_review_required",
     notification_type: "email_import_review_required",
@@ -1324,7 +1322,7 @@ async function sendImportReviewRequiredNotification(params: {
         data,
         accessToken,
         platform: device.platform ?? undefined,
-      })
+      }),
     ),
   );
 }
@@ -1591,6 +1589,13 @@ export async function handleResendInboundWebhook(
         return jsonResponse({ success: true, ignored: true });
       }
 
+      const resolveImportAccountId = createEmailImportAccountResolver({
+        supabase,
+        userId: owner.userId,
+        householdId: owner.householdId,
+        accountId: owner.accountId,
+      });
+
       try {
         const subscription = await loadLatestSubscriptionForUser(
           supabase,
@@ -1671,7 +1676,7 @@ export async function handleResendInboundWebhook(
         emailId: emailData.email_id,
         hasText:
           typeof (emailContentResult as { text?: string | null })?.text ===
-            "string",
+          "string",
         attachmentFetchFailed: attachmentListResponse.error != null,
       });
 
@@ -1865,8 +1870,8 @@ export async function handleResendInboundWebhook(
               `Failed to download attachment (${response.status})`,
             );
           }
-          const contentLengthHeader = response.headers.get("content-length") ||
-            "";
+          const contentLengthHeader =
+            response.headers.get("content-length") || "";
           const contentLength = Number.parseInt(contentLengthHeader, 10);
           if (
             Number.isFinite(contentLength) &&
@@ -1947,16 +1952,16 @@ export async function handleResendInboundWebhook(
           });
           const resultCurrencies = Array.isArray(result.items)
             ? Array.from(
-              new Set(
-                result.items
-                  .map((item) =>
-                    typeof item?.currency === "string"
-                      ? item.currency.trim().toUpperCase()
-                      : ""
-                  )
-                  .filter((currency) => currency.length > 0),
-              ),
-            )
+                new Set(
+                  result.items
+                    .map((item) =>
+                      typeof item?.currency === "string"
+                        ? item.currency.trim().toUpperCase()
+                        : "",
+                    )
+                    .filter((currency) => currency.length > 0),
+                ),
+              )
             : [];
           console.log("[resend-inbound-webhook] analyze result", {
             emailId: emailData.email_id,
@@ -1990,27 +1995,31 @@ export async function handleResendInboundWebhook(
             continue;
           }
 
-          const mappedItems = result.items.map((item) => ({
-            type: item.type,
-            amount: item.amount,
-            category: item.category,
-            currency: item.currency,
-            date: item.date,
-            ...(typeof item.description === "string" &&
-                item.description.trim().length > 0
-              ? { description: item.description.trim() }
-              : {}),
-            ...(typeof item.merchant === "string" &&
-                item.merchant.trim().length > 0
-              ? { merchant: item.merchant.trim() }
-              : {}),
-            ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
-              ? { breakdown: item.breakdown }
-              : {}),
-            ...(item.payerUserId ? { payerUserId: item.payerUserId } : {}),
-            ...(item.customSplits ? { customSplits: item.customSplits } : {}),
-            ...(owner.accountId ? { accountId: owner.accountId } : {}),
-          }));
+          const mappedItems: Array<Record<string, unknown>> = [];
+          for (const item of result.items) {
+            const accountId = await resolveImportAccountId(item.currency);
+            mappedItems.push({
+              type: item.type,
+              amount: item.amount,
+              category: item.category,
+              currency: item.currency,
+              date: item.date,
+              ...(typeof item.description === "string" &&
+              item.description.trim().length > 0
+                ? { description: item.description.trim() }
+                : {}),
+              ...(typeof item.merchant === "string" &&
+              item.merchant.trim().length > 0
+                ? { merchant: item.merchant.trim() }
+                : {}),
+              ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
+                ? { breakdown: item.breakdown }
+                : {}),
+              ...(item.payerUserId ? { payerUserId: item.payerUserId } : {}),
+              ...(item.customSplits ? { customSplits: item.customSplits } : {}),
+              ...(accountId ? { accountId } : {}),
+            });
+          }
 
           analyzedItems.push(...mappedItems);
           attachmentResults.push({
@@ -2120,7 +2129,8 @@ export async function handleResendInboundWebhook(
             try {
               aiDecisions = await classifyEmailImportWithAi({
                 sourceText: emailBodyText,
-                receivedDate: emailData.created_at ||
+                receivedDate:
+                  emailData.created_at ||
                   event.created_at ||
                   new Date().toISOString(),
                 preferredCurrency: owner.preferredCurrency,
@@ -2182,9 +2192,8 @@ export async function handleResendInboundWebhook(
               {
                 providerEmailId: emailData.email_id,
                 decisionCounts,
-                rejectionReasonCodes: emailImportSafeRejectionCodes(
-                  aiDecisions,
-                ),
+                rejectionReasonCodes:
+                  emailImportSafeRejectionCodes(aiDecisions),
               },
             );
           }
@@ -2209,30 +2218,32 @@ export async function handleResendInboundWebhook(
               });
             }
           } else {
-            const mappedItems = bodyItems.map((item) => {
+            const mappedItems: Array<Record<string, unknown>> = [];
+            for (const item of bodyItems) {
               const clientCreatedAt =
                 typeof item.transactionTime === "string" &&
-                  owner.preferredTimezone
+                owner.preferredTimezone
                   ? localDateTimeToUtcIso({
-                    date: item.date,
-                    time: item.transactionTime,
-                    timeZone: owner.preferredTimezone,
-                    referenceInstant: emailData.created_at ||
-                      event.created_at || null,
-                  })
+                      date: item.date,
+                      time: item.transactionTime,
+                      timeZone: owner.preferredTimezone,
+                      referenceInstant:
+                        emailData.created_at || event.created_at || null,
+                    })
                   : null;
-              return {
+              const accountId = await resolveImportAccountId(item.currency);
+              mappedItems.push({
                 type: item.type,
                 amount: item.amount,
                 category: item.category,
                 currency: item.currency,
                 date: item.date,
                 ...(typeof item.description === "string" &&
-                    item.description.trim().length > 0
+                item.description.trim().length > 0
                   ? { description: item.description.trim() }
                   : {}),
                 ...(typeof item.merchant === "string" &&
-                    item.merchant.trim().length > 0
+                item.merchant.trim().length > 0
                   ? { merchant: item.merchant.trim() }
                   : {}),
                 ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
@@ -2243,9 +2254,9 @@ export async function handleResendInboundWebhook(
                   ? { customSplits: item.customSplits }
                   : {}),
                 ...(clientCreatedAt ? { clientCreatedAt } : {}),
-                ...(owner.accountId ? { accountId: owner.accountId } : {}),
-              };
-            });
+                ...(accountId ? { accountId } : {}),
+              });
+            }
             analyzedItems.push(...mappedItems);
             attachmentResults.push({
               filename: "Email body",
@@ -2300,7 +2311,7 @@ export async function handleResendInboundWebhook(
               .map((item) =>
                 typeof item.currency === "string"
                   ? item.currency.trim().toUpperCase()
-                  : ""
+                  : "",
               )
               .filter((currency) => currency.length > 0),
           ),
@@ -2379,6 +2390,11 @@ export async function handleResendInboundWebhook(
             subjectLine: emailData.subject || "",
             receivedAt: emailData.created_at || event.created_at || null,
           },
+          importContext: {
+            householdId: owner.householdId,
+            isPortfolio: owner.isPortfolio,
+            accountId: owner.accountId,
+          },
           savedCount: 0,
           duplicateCount: 0,
           needsReviewCount: reviewCandidates.length,
@@ -2396,8 +2412,7 @@ export async function handleResendInboundWebhook(
         });
         if (!review) throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
         const email = buildImportReviewRequiredEmail({
-          reviewUrl:
-            `${APP_URL}/import-review/${review.reviewId}#${review.token}`,
+          reviewUrl: `${APP_URL}/import-review/${review.reviewId}#${review.token}`,
           savedCount: 0,
           reviewCount: reviewCandidates.length,
         });
@@ -2534,6 +2549,11 @@ export async function handleResendInboundWebhook(
           recipients: Array.isArray(emailData.to) ? emailData.to : [],
           receivedAt: emailData.created_at || event.created_at || null,
         },
+        importContext: {
+          householdId: owner.householdId,
+          isPortfolio: owner.isPortfolio,
+          accountId: owner.accountId,
+        },
         savedCount,
         duplicateCount,
         needsReviewCount: reviewCandidates.length,
@@ -2542,16 +2562,17 @@ export async function handleResendInboundWebhook(
         failureReasons,
         attachmentResults,
       };
-      const review = reviewCandidates.length > 0
-        ? await createInboundReview({
-          supabase,
-          eventId: leaseOwner.rowId,
-          eventAttemptCount: leaseOwner.attemptCount,
-          userId: owner.userId,
-          eventResult,
-          candidates: reviewCandidates,
-        })
-        : null;
+      const review =
+        reviewCandidates.length > 0
+          ? await createInboundReview({
+              supabase,
+              eventId: leaseOwner.rowId,
+              eventAttemptCount: leaseOwner.attemptCount,
+              userId: owner.userId,
+              eventResult,
+              candidates: reviewCandidates,
+            })
+          : null;
       if (reviewCandidates.length > 0 && !review) {
         throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
       }
@@ -2642,9 +2663,10 @@ export async function handleResendInboundWebhook(
           setStage("send_followup_email_complete");
         } catch (sideEffectError) {
           setStage("send_followup_email_error", {
-            error: sideEffectError instanceof Error
-              ? sideEffectError.message
-              : String(sideEffectError),
+            error:
+              sideEffectError instanceof Error
+                ? sideEffectError.message
+                : String(sideEffectError),
           });
           console.error(
             "[resend-inbound-webhook] follow-up email failed after finalization",
@@ -2666,9 +2688,10 @@ export async function handleResendInboundWebhook(
           setStage("push_notification_complete");
         } catch (sideEffectError) {
           setStage("push_notification_error", {
-            error: sideEffectError instanceof Error
-              ? sideEffectError.message
-              : String(sideEffectError),
+            error:
+              sideEffectError instanceof Error
+                ? sideEffectError.message
+                : String(sideEffectError),
           });
           console.error(
             "[resend-inbound-webhook] push notification failed after finalization",
