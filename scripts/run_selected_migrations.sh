@@ -32,6 +32,7 @@ MIGRATIONS=(
   "supabase/migrations/20260525120000_ensure_spending_wallets_per_currency.sql"
   "supabase/migrations/20260526120000_currency_scope_wallet_snapshot_legacy_wallets.sql"
   "supabase/migrations/20260526131500_fix_reset_user_financial_data_preserve_system_wallets.sql"
+  "supabase/migrations/20260815120000_fix_sync_job_enqueue_and_summary_analytics.sql"
 )
 
 for file in "${MIGRATIONS[@]}"; do

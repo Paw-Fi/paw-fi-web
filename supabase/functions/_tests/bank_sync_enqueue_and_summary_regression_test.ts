@@ -13,6 +13,10 @@ const migrationUrl = new URL(
   import.meta.url,
 );
 const helperUrl = new URL("../shared/plaid-sync-jobs.ts", import.meta.url);
+const selectedMigrationsUrl = new URL(
+  "../../../scripts/run_selected_migrations.sh",
+  import.meta.url,
+);
 
 Deno.test(
   "summary analytics computes currency expense totals from available columns",
@@ -104,5 +108,17 @@ Deno.test(
     assertStringIncludes(migration, "to service_role");
     assertStringIncludes(helper, '"enqueue_bank_sync_job_v1"');
     assert(!helper.includes('.from("bank_sync_jobs")\n    .insert'));
+  },
+);
+
+Deno.test(
+  "selected migrations include the Plaid sync enqueue RPC migration",
+  async () => {
+    const selectedMigrations = await Deno.readTextFile(selectedMigrationsUrl);
+
+    assertStringIncludes(
+      selectedMigrations,
+      '"supabase/migrations/20260815120000_fix_sync_job_enqueue_and_summary_analytics.sql"',
+    );
   },
 );
