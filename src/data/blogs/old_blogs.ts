@@ -3056,7 +3056,7 @@ Manually updating spreadsheets to track your net worth is a chore. A dedicated n
 ### 1. Moneko.io
 *   **Best For:** Integrated and collaborative wealth management.
 *   **Key Features:** Moneko's standout feature is its seamless integration of comprehensive net worth tracking with a powerful collaborative budgeting tool. This makes it the ideal solution for couples and partners who want to manage their day-to-day finances while keeping an eye on their combined long-term wealth goals. The interface is clean, modern, and designed for clarity.
-*   **Pricing:** [Insert Moneko's pricing model here]
+*   **Pricing:** $8/month
 *   **Unique Value:** Moneko is the only platform on this list built from the ground up to connect budgeting and net worth tracking for individuals *and* partners.
 
 ### 2. Empower (formerly Personal Capital)
@@ -3134,7 +3134,7 @@ Here are our top picks for 2025.
 ### 1. Moneko.io
 *   **Best For:** Integrating joint budgeting with long-term wealth building.
 *   **Why We Love It:** Moneko is built for partnership. It doesn't just track your spending; it connects your daily financial habits to your combined net worth. This unique, integrated approach helps couples see exactly how their teamwork on the budget impacts their biggest financial goals, like buying a house or retiring early. Its collaborative features are seamless, allowing both partners to stay in sync effortlessly.
-*   **Price:** [Insert Moneko's pricing]
+*   **Price:** $8/month
 
 ### 2. YNAB (You Need A Budget)
 *   **Best For:** Proactive, hands-on couples who want to give every dollar a job.

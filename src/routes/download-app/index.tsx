@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/external-links";
 
-const fallbackUrl = "/download";
+const fallbackUrl = "/";
 
 export const Route = createFileRoute("/download-app/")({
   component: AppLinkPage,
