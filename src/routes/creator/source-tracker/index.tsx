@@ -60,6 +60,7 @@ export const Route = createFileRoute("/creator/source-tracker/")({
 
 interface OnboardingSourceCount {
   source: string;
+  timezone: string | null;
   count: number;
 }
 
@@ -643,7 +644,7 @@ function SourceTrackerPage() {
               <span className="text-xs font-medium text-slate-400 px-2 py-0.5 rounded border border-slate-800 bg-slate-900">
                 {onboardingSourcesQuery.isLoading
                   ? "Loading..."
-                  : `${(onboardingSourcesQuery.data?.length ?? 0).toLocaleString()} channels`}
+                  : `${(onboardingSourcesQuery.data?.length ?? 0).toLocaleString()} source-timezone groups`}
               </span>
             </div>
 
@@ -652,14 +653,18 @@ function SourceTrackerPage() {
                 <TableHeader className="bg-slate-900/60 border-b border-slate-800">
                   <TableRow className="border-slate-800 hover:bg-transparent">
                     <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Survey Source</TableHead>
+                    <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9">Timezone</TableHead>
                     <TableHead className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider h-9 text-right">Responses</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {onboardingSourcesQuery.data?.map((source) => (
-                    <TableRow key={source.source} className="border-slate-800/60 hover:bg-slate-900/40 transition-colors">
+                    <TableRow key={`${source.source}-${source.timezone ?? "unknown"}`} className="border-slate-800/60 hover:bg-slate-900/40 transition-colors">
                       <TableCell className="font-medium text-xs text-white py-2.5">
                         {source.source}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-300 py-2.5">
+                        {source.timezone ?? "Not recorded"}
                       </TableCell>
                       <TableCell className="text-right text-xs font-bold text-slate-200 py-2.5">
                         {source.count.toLocaleString()}
@@ -669,7 +674,7 @@ function SourceTrackerPage() {
                   {!onboardingSourcesQuery.isLoading &&
                     (onboardingSourcesQuery.data?.length ?? 0) === 0 && (
                       <TableRow>
-                        <TableCell colSpan={2} className="py-8 text-center text-xs text-slate-500">
+                        <TableCell colSpan={3} className="py-8 text-center text-xs text-slate-500">
                           No onboarding survey responses recorded in this date range.
                         </TableCell>
                       </TableRow>
@@ -860,6 +865,7 @@ async function fetchOnboardingSourceCounts(
 
   return (data ?? []).map((row) => ({
     source: String(row.source),
+    timezone: typeof row.timezone === "string" ? row.timezone : null,
     count: Number(row.count),
   }));
 }
@@ -1112,4 +1118,3 @@ function truncateLabel(value: string, maxLength: number): string {
 
   return `${value.slice(0, maxLength - 3)}...`;
 }
-
