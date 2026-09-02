@@ -11,6 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "react-toastify";
+import { supabase } from "@/lib/supabase";
+import {
+  CancelReasonDialog,
+  type CancelReasonSubmission,
+} from "./CancelReasonDialog";
 import {
   Loader2,
   Crown,
@@ -28,6 +34,8 @@ export function MembershipDashboard() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "billing" | "plans" | "history"
   >("overview");
+  const [isCancelReasonDialogOpen, setIsCancelReasonDialogOpen] =
+    useState(false);
   const {
     subscription,
     features,
@@ -115,6 +123,59 @@ export function MembershipDashboard() {
     }
   };
   const isSharedHouseholdAccess = Boolean(subscription?.bound_to_user_id);
+
+  const submitCancelReason = (submission: CancelReasonSubmission) => {
+    if (!user?.id) return;
+
+    void supabase
+      .from("subscription_cancel_reasons")
+      .insert({
+        user_id: user.id,
+        reason_id: submission.reasonId,
+        reason_label: submission.reasonLabel,
+        detail_text: submission.detailText,
+        provider: "stripe",
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.warn(
+            "Unable to save subscription cancellation reason:",
+            error,
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn("Unable to save subscription cancellation reason:", error);
+      });
+  };
+
+  const handleCancelSubscription = async (
+    submission: CancelReasonSubmission | null,
+  ) => {
+    if (submission) submitCancelReason(submission);
+
+    try {
+      await cancelSubscription();
+      setIsCancelReasonDialogOpen(false);
+      const effectiveDate = subscription?.current_period_end
+        ? new Date(subscription.current_period_end).toLocaleDateString(
+            undefined,
+            {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            },
+          )
+        : null;
+      toast.success(
+        effectiveDate
+          ? `Your subscription will change from ${subscription?.plan ?? "your current plan"} to free at the end of your billing period on ${effectiveDate}.`
+          : "Your subscription has been scheduled for cancellation. You'll retain access until the end of your billing period.",
+      );
+    } catch {
+      toast.error("Failed to cancel subscription. Please try again.");
+    }
+  };
 
   return (
     <motion.div
@@ -318,7 +379,9 @@ export function MembershipDashboard() {
                   <SubscriptionDetails
                     subscription={subscription}
                     features={features}
-                    onCancelSubscription={cancelSubscription}
+                    onRequestCancellation={() =>
+                      setIsCancelReasonDialogOpen(true)
+                    }
                     isCanceling={isMutating}
                     isActive={isActive}
                   />
@@ -429,6 +492,12 @@ export function MembershipDashboard() {
           </div>
         </Tabs>
       </motion.div>
+      <CancelReasonDialog
+        open={isCancelReasonDialogOpen}
+        onOpenChange={setIsCancelReasonDialogOpen}
+        onSubmit={handleCancelSubscription}
+        isSubmitting={isMutating}
+      />
     </motion.div>
   );
 }

@@ -16,7 +16,6 @@ import {
   User,
   Loader2,
 } from "lucide-react";
-import { toast } from "react-toastify";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +51,7 @@ interface SubscriptionDetailsProps {
     included: boolean;
     limit_value: number | null;
   }>;
-  onCancelSubscription?: () => void | Promise<void>;
+  onRequestCancellation?: () => void;
   isCanceling?: boolean;
   isActive?: boolean;
 }
@@ -60,14 +59,15 @@ interface SubscriptionDetailsProps {
 export function SubscriptionDetails({
   subscription,
   features,
-  onCancelSubscription,
+  onRequestCancellation,
   isCanceling = false,
   isActive = false,
 }: SubscriptionDetailsProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const isSharedHouseholdAccess = Boolean(subscription?.bound_to_user_id);
   const isSystemGrantedTrial = isSystemGrantedFreeTrialUser(subscription);
-  const sharedPlanFeatures = planData[subscription?.plan as keyof typeof planData]?.features;
+  const sharedPlanFeatures =
+    planData[subscription?.plan as keyof typeof planData]?.features;
   const displayedFeatures = sharedPlanFeatures
     ? sharedPlanFeatures.map((feature) => ({
         feature,
@@ -107,14 +107,6 @@ export function SubscriptionDetails({
         );
     }
   };
-
-  const cancellationEffectiveDate = subscription?.current_period_end
-    ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
 
   return (
     <div className="space-y-6">
@@ -388,22 +380,11 @@ export function SubscriptionDetails({
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
             <AlertDialogAction
-              onClick={async () => {
-                try {
-                  await onCancelSubscription?.();
-                  setShowCancelDialog(false);
-                  toast.success(
-                    cancellationEffectiveDate
-                      ? `Your subscription will change from ${subscription?.plan ?? "your current plan"} to free at the end of your billing period on ${cancellationEffectiveDate}.`
-                      : "Your subscription has been scheduled for cancellation. You'll retain access until the end of your billing period.",
-                  );
-                } catch {
-                  toast.error(
-                    "Failed to cancel subscription. Please try again.",
-                  );
-                }
+              onClick={() => {
+                setShowCancelDialog(false);
+                onRequestCancellation?.();
               }}
-              disabled={isCanceling}
+              disabled={isCanceling || !onRequestCancellation}
               className="bg-red-600 hover:bg-red-700"
             >
               {isCanceling ? "Canceling..." : "Yes, Cancel Subscription"}

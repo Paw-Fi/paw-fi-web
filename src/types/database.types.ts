@@ -1,6 +1,35 @@
 export type Database = {
   public: {
     Tables: {
+      subscription_cancel_reasons: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          reason_id: string;
+          reason_label: string;
+          detail_text: string | null;
+          provider: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          reason_id: string;
+          reason_label: string;
+          detail_text?: string | null;
+          provider?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          reason_id?: string;
+          reason_label?: string;
+          detail_text?: string | null;
+          provider?: string | null;
+          created_at?: string;
+        };
+      };
       users: {
         Row: {
           id: string;
