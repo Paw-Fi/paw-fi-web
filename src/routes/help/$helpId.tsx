@@ -2,7 +2,7 @@
 
 import { Suspense, lazy } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Clock, FileText,ArrowRight } from "lucide-react";
+import { Clock, FileText, ArrowRight } from "lucide-react";
 import { StructuredData } from "@/components/seo/structured-data";
 import {
   Breadcrumb,
@@ -70,8 +70,17 @@ export const Route = createFileRoute("/help/$helpId")({
         { property: "og:locale", content: "en_US" },
         { property: "article:author", content: "Moneko" },
         { property: "article:section", content: "Help Center" },
-        { property: "article:published_time", content: "2026-05-06" },
-        { property: "article:modified_time", content: "2026-05-06" },
+        ...(article.publishedAt
+          ? [
+              {
+                property: "article:published_time",
+                content: article.publishedAt,
+              },
+            ]
+          : []),
+        ...(article.updatedAt
+          ? [{ property: "article:modified_time", content: article.updatedAt }]
+          : []),
       ],
       links: [
         { rel: "canonical", href: pageUrl },
@@ -89,8 +98,8 @@ function HelpArticlePage() {
     title: article.title,
     description: article.description,
     url: pageUrl,
-    datePublished: "2026-05-06",
-    dateModified: "2026-05-06",
+    datePublished: article.publishedAt,
+    dateModified: article.updatedAt,
     publisher: {
       name: "Moneko",
       url: "https://moneko.io",
@@ -108,32 +117,8 @@ function HelpArticlePage() {
       cssSelector: ["h1", "h2", ".prose p"],
     },
   };
-  const faqItems = article.faqItems?.length
-    ? article.faqItems
-    : [
-        {
-          question: article.title,
-          answer: article.description,
-        },
-      ];
-  const howToSteps = article.howToSteps?.length
-    ? article.howToSteps
-    : article.title.toLowerCase().includes("how")
-      ? [
-          {
-            name: "Open the relevant Moneko area",
-            text: "Start in the Space, Settings, or feature area mentioned in the guide.",
-          },
-          {
-            name: "Follow the setup steps",
-            text: "Use the step-by-step instructions to configure or complete the workflow.",
-          },
-          {
-            name: "Review the result",
-            text: "Check the saved expense, Pocket, Wallet, recurring item, or plan for accuracy.",
-          },
-        ]
-      : [];
+  const faqItems = article.faqItems ?? [];
+  const howToSteps = article.howToSteps ?? [];
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-start lg:gap-16">
@@ -148,7 +133,7 @@ function HelpArticlePage() {
           { name: article.title, url: pageUrl },
         ]}
       />
-      <StructuredData type="faq" data={faqItems} />
+      {faqItems.length ? <StructuredData type="faq" data={faqItems} /> : null}
       {howToSteps.length ? (
         <StructuredData
           type="howto"
@@ -193,11 +178,11 @@ function HelpArticlePage() {
 
           <h1
             id="help-article-title"
-            className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl"
+            className="text-foreground text-3xl leading-tight font-bold tracking-tight sm:text-5xl"
           >
             {article.title}
           </h1>
-          <p className="mt-6 text-lg leading-relaxed text-muted-foreground sm:text-xl">
+          <p className="text-muted-foreground mt-6 text-lg leading-relaxed sm:text-xl">
             {article.description}
           </p>
         </header>
@@ -206,40 +191,51 @@ function HelpArticlePage() {
           <YouTubeEmbed videoId={article.videoId} title={article.title} />
         )}
 
-        <section aria-label="Article content" className="border-t border-border pt-10">
+        <section
+          aria-label="Article content"
+          className="border-border border-t pt-10"
+        >
           <div className="max-w-none">
             <Suspense
               fallback={
                 <div
-                  className="h-80 animate-pulse rounded-2xl bg-muted/40"
+                  className="bg-muted/40 h-80 animate-pulse rounded-2xl"
                   aria-label="Loading article content"
                 />
               }
             >
-              <Markdown content={article.content} className="prose-base sm:prose-lg" />
+              <Markdown
+                content={article.content}
+                className="prose-base sm:prose-lg"
+              />
             </Suspense>
 
             {article.faqItems && article.faqItems.length > 0 && (
-              <div className="mt-16 border-t border-border pt-10">
+              <div className="border-border mt-16 border-t pt-10">
                 <FaqSection faqData={article.faqItems} />
               </div>
             )}
           </div>
         </section>
 
-        <footer className="mt-16 border-t border-border pt-8 text-xs text-muted-foreground">
-          Last updated May 6, 2026. This Help Center article is free to read
-          and maintained by Moneko.
+        <footer className="border-border text-muted-foreground mt-16 border-t pt-8 text-xs">
+          This Help Center article is free to read and maintained by Moneko.
         </footer>
       </div>
 
-      <aside className="order-last mt-10 lg:mt-0 w-full shrink-0 lg:order-last lg:w-64 lg:sticky lg:top-32" aria-label="Related help">
+      <aside
+        className="order-last mt-10 w-full shrink-0 lg:sticky lg:top-32 lg:order-last lg:mt-0 lg:w-64"
+        aria-label="Related help"
+      >
         <div className="space-y-12 pb-12 lg:pb-0">
           <section>
-            <h2 className="mb-4 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+            <h2 className="text-muted-foreground mb-4 text-[10px] font-bold tracking-widest uppercase">
               In this category
             </h2>
-            <nav className="space-y-5 flex flex-col-reverse lg:flex-col" aria-label="Related articles">
+            <nav
+              className="flex flex-col-reverse space-y-5 lg:flex-col"
+              aria-label="Related articles"
+            >
               {relatedArticles.map((relatedArticle) => (
                 <Link
                   key={relatedArticle.id}
@@ -248,12 +244,12 @@ function HelpArticlePage() {
                   className="group block"
                 >
                   <div className="flex items-start gap-3">
-                    <FileText className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-                    <h3 className="text-sm font-medium leading-tight text-foreground transition-colors group-hover:text-primary">
+                    <FileText className="text-muted-foreground group-hover:text-primary mt-1 h-3.5 w-3.5 shrink-0 transition-colors" />
+                    <h3 className="text-foreground group-hover:text-primary text-sm leading-tight font-medium transition-colors">
                       {relatedArticle.title}
                     </h3>
                   </div>
-                  <div className="mt-1.5 flex items-center pl-6 text-[10px] font-bold text-primary opacity-0 transition-all group-hover:opacity-100">
+                  <div className="text-primary mt-1.5 flex items-center pl-6 text-[10px] font-bold opacity-0 transition-all group-hover:opacity-100">
                     Read guide <ArrowRight className="ml-1 h-3 w-3" />
                   </div>
                 </Link>

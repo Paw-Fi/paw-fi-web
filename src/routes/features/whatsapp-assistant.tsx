@@ -10,7 +10,7 @@ import { seo } from "@/utils/seo";
 const META_TITLE =
   "WhatsApp Expense Tracker & AI Receipt Scanner | Moneko Assistant";
 const META_DESCRIPTION =
-  "Log expenses from WhatsApp with Moneko's AI assistant. Send text, voice notes, receipts, and shared spending updates, then review the details before saving.";
+  "Log expenses from WhatsApp with Moneko's AI assistant. Send text, voice notes, receipts, and shared spending updates, then open saved entries to correct details when needed.";
 const META_KEYWORDS =
   "whatsapp expense tracker, whatsapp budget bot, ai receipt scanner, track spending via whatsapp, shared household budget whatsapp, automated expense logging";
 

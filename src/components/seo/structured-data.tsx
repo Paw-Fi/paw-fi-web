@@ -31,7 +31,7 @@ interface ArticleData {
   title: string;
   description: string;
   url: string;
-  datePublished: string;
+  datePublished?: string;
   dateModified?: string;
   author?: {
     name: string;
@@ -175,7 +175,7 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           description: articleData.description,
           url: articleData.url,
           datePublished: articleData.datePublished,
-          dateModified: articleData.dateModified || articleData.datePublished,
+          dateModified: articleData.dateModified,
           author: articleData.author
             ? {
                 "@type": "Person",
@@ -206,8 +206,7 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           description: techArticleData.description,
           url: techArticleData.url,
           datePublished: techArticleData.datePublished,
-          dateModified:
-            techArticleData.dateModified || techArticleData.datePublished,
+          dateModified: techArticleData.dateModified,
           author: techArticleData.author
             ? {
                 "@type": "Person",

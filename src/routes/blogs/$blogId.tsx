@@ -19,6 +19,7 @@ import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { HomeHeader } from "@/components/index/header";
+import { CTASection } from "@/components/homepage/v2/cta-section";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { StructuredData } from "@/components/seo/structured-data";
 import {
@@ -472,7 +473,7 @@ function BlogDetailPage() {
                   <Link to="/">Home</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-                  <BreadcrumbSeparator />
+              <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link to="/blogs">Blog</Link>
@@ -484,7 +485,7 @@ function BlogDetailPage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-        
+
           <div className="mb-8 flex flex-wrap gap-2">
             {blog.tags?.map((tag) => (
               <Link
@@ -663,6 +664,8 @@ function BlogDetailPage() {
             </div>
           </div>
         )}
+
+        <CTASection />
       </div>
     </div>
   );

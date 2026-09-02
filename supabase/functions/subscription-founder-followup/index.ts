@@ -468,6 +468,8 @@ function buildCancellationEmailText(name: string): string {
     "",
     "Feel free to be completely honest — if something was frustrating, missing, too expensive, or just not useful enough, I’d like to know.",
     "",
+    "If you’re open to giving Moneko another try, I’d be happy to offer you 50% off. Just reply to this email and I’ll sort it out for you.",
+    "",
     "Yifan",
     "Co-founder, Moneko",
   ].join("\n");

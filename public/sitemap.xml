@@ -1663,64 +1663,184 @@
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/best-apps-for-couples-to-manage-money-in-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/best-bill-splitting-apps-in-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/best-budget-apps-for-adhd-in-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/best-budget-apps-for-freelancers-in-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/best-free-budget-apps-in-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/moneko-vs-goodbudget-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/moneko-vs-honeydue-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/moneko-vs-splid-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/moneko-vs-splitwise-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
-  <url>
+<url>
     <loc>https://moneko.io/blogs/moneko-vs-ynab-2026</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/moneko-plus-premium-features-guide</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/ios-home-screen-widgets</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/ai-capture-accuracy-and-corrections</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/what-moneko-ai-assistant-can-and-cannot-do</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-settlements-work-in-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/automatically-track-android-notifications-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/avoid-and-fix-duplicate-transactions-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/transfers-credit-card-payments-refunds-cash-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/opening-balances-wallet-balance-reconciliation-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/managing-shared-spaces-households-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/multi-currency-selection-primary-currency-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/financial-month-date-timezone-corrections-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/is-bank-information-secure-after-syncing</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/why-cant-i-see-connect-bank-feature</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/negative-wallet-balance-after-plaid-sync</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/understand-reports-financial-health-numbers-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/report-a-problem-request-feature-contact-support-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/protecting-moneko-with-app-lock</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/moneko-privacy-and-security-standards</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/importing-history-safely-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/exporting-data-without-lock-in-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/offline-pending-saves-sync-changing-devices-moneko</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/notifications-reminders-and-ios-widgets</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/common-moneko-discrepancies-troubleshooting</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>

@@ -11,7 +11,24 @@ import { helpArticles } from "./help-articles/articles";
 import { helpCategories } from "./help-articles/categories";
 import type { HelpArticle } from "./help-articles/types";
 
-export const totalHelpArticles = helpArticles.length;
+const directLinkOnlyHelpArticleIds = new Set([
+  "ai-capture-accuracy",
+  "common-discrepancies",
+  "exporting-data-without-lock-in",
+  "financial-month-date-timezone",
+  "importing-history-safely",
+  "notifications-reminders",
+  "offline-sync-devices",
+  "reports-health-explain-number",
+  "settlements",
+  "transfers-refunds-cash",
+]);
+
+export const listedHelpArticles = helpArticles.filter(
+  (article) => !directLinkOnlyHelpArticleIds.has(article.id),
+);
+
+export const totalHelpArticles = listedHelpArticles.length;
 
 export function findHelpArticleBySlug(slug: string) {
   return helpArticles.find((article) => article.slug === slug);
@@ -22,11 +39,13 @@ export function getHelpCategory(categoryId: string) {
 }
 
 export function getHelpArticlesByCategory(categoryId: string) {
-  return helpArticles.filter((article) => article.categoryId === categoryId);
+  return listedHelpArticles.filter(
+    (article) => article.categoryId === categoryId,
+  );
 }
 
 export function getFeaturedHelpArticles() {
-  return helpArticles.filter((article) => article.featured);
+  return listedHelpArticles.filter((article) => article.featured);
 }
 
 export function getRelatedHelpArticles(article: HelpArticle, limit = 4) {

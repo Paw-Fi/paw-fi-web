@@ -27,6 +27,15 @@ const BUDGETING_APP_VARIANTS_PATH = path.join(
   "home",
   "passive-income-variants.json",
 );
+const HELP_ARTICLES_INDEX_PATH = path.join(
+  __dirname,
+  "..",
+  "src",
+  "data",
+  "help-articles",
+  "articles",
+  "index.ts",
+);
 
 async function updateSitemap() {
   try {
@@ -40,8 +49,12 @@ async function updateSitemap() {
       sitemapWithGeoPages,
       loadBudgetingAppVariants(),
     );
+    const sitemapWithHelpArticles = mergeHelpArticlePages(
+      sitemapWithBudgetingVariants,
+      loadRegisteredHelpArticlePages(),
+    );
 
-    const cleanedSitemap = filterNonPublicUrls(sitemapWithBudgetingVariants);
+    const cleanedSitemap = filterNonPublicUrls(sitemapWithHelpArticles);
 
     const finalSitemap = dedupeSitemapUrls(
       mergeFixedPublicUrls(cleanedSitemap),
@@ -66,6 +79,54 @@ async function updateSitemap() {
 
     process.exit(1);
   }
+}
+
+function loadRegisteredHelpArticlePages() {
+  const source = fs.readFileSync(HELP_ARTICLES_INDEX_PATH, "utf8");
+  const importedArticles = new Map(
+    [...source.matchAll(/import \{ (\w+) \} from "\.\/(.+)";/g)].map(
+      ([, identifier, folder]) => [identifier, folder],
+    ),
+  );
+  const registeredIdentifiers = [...source.matchAll(/^  (\w+),$/gm)].map(
+    ([, identifier]) => identifier,
+  );
+
+  return registeredIdentifiers
+    .map((identifier) => importedArticles.get(identifier))
+    .filter(Boolean)
+    .map((folder) => {
+      const articlePath = path.join(
+        path.dirname(HELP_ARTICLES_INDEX_PATH),
+        folder,
+        "index.ts",
+      );
+      const articleSource = fs.readFileSync(articlePath, "utf8");
+      const slug = articleSource.match(/slug:\s*"([^"]+)"/)?.[1];
+
+      if (!slug) {
+        throw new Error(`Help article ${folder} does not define a slug`);
+      }
+
+      return { slug: `help/${slug}`, changefreq: "monthly", priority: "0.7" };
+    });
+}
+
+function mergeHelpArticlePages(xmlContent, pages) {
+  const existingUrls = new Set(
+    [...xmlContent.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]),
+  );
+  const entries = pages
+    .map((page) => ({ page, url: `https://moneko.io/${page.slug}` }))
+    .filter((item) => !existingUrls.has(item.url))
+    .map((item) => buildUrlEntry(item.url, item.page));
+
+  if (entries.length === 0) return xmlContent;
+
+  console.log(
+    `➕ Adding ${entries.length} Help Centre URLs from the article registry`,
+  );
+  return xmlContent.replace("</urlset>", `${entries.join("\n")}</urlset>`);
 }
 
 async function loadBaseSitemap() {

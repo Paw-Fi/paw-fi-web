@@ -1,4 +1,5 @@
 import type { HelpArticle } from "../../types";
+import { productFacts } from "@/data/product-facts";
 
 export const walletsArticle: HelpArticle = {
   id: "wallets",
@@ -6,7 +7,7 @@ export const walletsArticle: HelpArticle = {
   slug: "how-to-use-wallets-moneko",
   title: "How to Use Wallets in Moneko",
   description:
-    "Learn how to use Wallets in Moneko to track balances, manage cash and bank accounts, transfer money, set goals, and connect your spending with Pockets.",
+    "Learn how to use Wallets in Moneko to track balances, manage cash and bank accounts, transfer money, and connect your spending with Pockets.",
   categoryId: "budgeting-pockets",
   readTime: 6,
   keywords: [
@@ -19,16 +20,17 @@ export const walletsArticle: HelpArticle = {
     "wallet transactions",
     "transfer between wallets",
     "primary wallet",
-    "wallet goals",
   ],
   faqItems: [
     {
       question: "What are Wallets in Moneko?",
-      answer: "Wallets let you track your actual money, balances, and net worth in Moneko.",
+      answer:
+        "Wallets let you track your actual money, balances, and net worth in Moneko.",
     },
     {
       question: "Where do Wallets live?",
-      answer: "Wallets live inside a Space. Each Space can have multiple wallets.",
+      answer:
+        "Wallets live inside a Space. Each Space can have multiple wallets.",
     },
     {
       question: "What can I use Wallets for?",
@@ -38,7 +40,7 @@ export const walletsArticle: HelpArticle = {
     {
       question: "How do I create a wallet?",
       answer:
-        "Go to the Wallets tab, tap + New Wallet, enter a name, set an initial balance, choose an icon and color, optionally set a goal, then tap Save.",
+        "Go to the Wallets tab, tap + New Wallet, enter a name, set an initial balance, choose an icon and color, then tap Save.",
     },
     {
       question: "Can a Space have multiple wallets?",
@@ -51,8 +53,7 @@ export const walletsArticle: HelpArticle = {
     },
     {
       question: "Does each wallet have its own currency?",
-      answer:
-        "Each Space has one currency. If you change the Space currency, all wallets update automatically.",
+      answer: productFacts.walletCurrencies.statement,
     },
     {
       question: "What can I see in the Wallets tab?",
@@ -66,7 +67,8 @@ export const walletsArticle: HelpArticle = {
     },
     {
       question: "How do I set a default wallet?",
-      answer: "Open a wallet and set it as Primary. It will be selected automatically when logging.",
+      answer:
+        "Open a wallet and set it as Primary. It will be selected automatically when logging.",
     },
     {
       question: "Can I transfer money between wallets?",
@@ -74,17 +76,20 @@ export const walletsArticle: HelpArticle = {
         "Yes. Go to the Wallets tab, tap Transfer, select From and To, enter the amount, optionally add a note, then tap Save.",
     },
     {
-      question: "Can I set goals for wallets?",
-      answer: "Yes. You can set a goal for a wallet, and progress updates automatically as money is added.",
+      question: "Can I use a Wallet as a savings tracker?",
+      answer:
+        "Yes. Create a Wallet for the money you want to track and record the transactions that change its balance. A Wallet shows where money is held; use Pockets for spending limits.",
     },
     {
       question: "What is the difference between Wallets and Pockets?",
-      answer: "Wallets track where your money is. Pockets track what you spend on.",
+      answer:
+        "Wallets track where your money is. Pockets track what you spend on.",
     },
     {
-      question: "Why is my wallet showing a negative balance after syncing with Plaid?",
+      question:
+        "Why is my wallet showing a negative balance after syncing with Plaid?",
       answer:
-        "Plaid can only import up to the past 24 months of transactions. If your account had money before that period, Moneko does not know the starting balance. Set the wallet's opening balance to the account balance from before the imported period started.",
+        "Connected-account history can differ by institution and account. If the available history does not explain the starting amount, set an opening balance from the point where you begin tracking and review the imported records before changing it again.",
     },
   ],
   howToSteps: [
@@ -132,7 +137,7 @@ A Space is a separate area for a part of your life. It can be Personal, Couple, 
 Wallets live inside a Space. Each Space can have multiple wallets. If you share a Space, you also share the wallets inside it. Everyone in the shared Space sees the same balances and transactions.
 
 ### Currency
-Each Space has one currency. If you change the Space currency, all wallets update automatically.
+${productFacts.walletCurrencies.statement}
 
 ---
 
@@ -223,7 +228,7 @@ Check whether the transaction was logged to the correct wallet, the initial bala
 ### My Wallet Shows a Negative Balance After Syncing
 A negative wallet balance after syncing is usually because Moneko calculates the balance from the transactions Plaid imported, not from your full lifetime bank history.
 
-Plaid can only provide transaction history for up to the past 24 months. If there was already money in the account before that imported period, Moneko does not automatically know that starting balance. So if the imported expenses are higher than the imported income, the wallet can appear negative.
+Available connected-account history can differ by institution and account. If there was already money in the account before the available history, Moneko may not have enough records to explain the starting balance. Imported expenses can then make a Wallet appear negative.
 
 To fix it, set the wallet's opening balance to the account balance from before the imported Plaid transaction period started.
 

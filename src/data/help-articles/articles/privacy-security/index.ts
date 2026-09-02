@@ -1,4 +1,5 @@
 import type { HelpArticle } from "../../types";
+import { productFacts } from "@/data/product-facts";
 
 export const privacySecurityArticle: HelpArticle = {
   id: "privacy-security",
@@ -6,7 +7,7 @@ export const privacySecurityArticle: HelpArticle = {
   slug: "moneko-privacy-and-security-standards",
   title: "Privacy and Security Standards",
   description:
-    "Learn about Moneko's commitment to your financial privacy, data ownership, encryption, and why we never sell your data.",
+    "Learn how to review Moneko's current privacy terms, control your data, export records, and request account deletion.",
   categoryId: "security-privacy",
   readTime: 6,
   featured: true,
@@ -37,23 +38,22 @@ export const privacySecurityArticle: HelpArticle = {
     },
     {
       question: "Where is my data stored?",
-      answer:
-        "Your production application data is stored in secure, encrypted Supabase (PostgreSQL) databases in AWS's US East (Ohio) region (us-east-2). Third-party services may process data in other locations under their own terms.",
+      answer: productFacts.privacy.statement,
     },
     {
       question: "Is Moneko end-to-end encrypted?",
       answer:
-        "No. Moneko encrypts data at rest with AES-256 and in transit with TLS 1.2+, but it is not an end-to-end encrypted service.",
+        "Moneko's current security practices and encryption statements are described in the Privacy Policy. Moneko is not presented as an end-to-end encrypted service.",
     },
     {
-      question: "What information is sent to Gemini, and is it retained?",
+      question: "What information can AI features process?",
       answer:
-        "The information depends on the AI feature: expense capture can send the text, receipt, image, or voice-derived information you submit, while guidance and scenario planning can send relevant Moneko financial context such as applicable transactions, balances, budgets, recurring items, and conversation context. We never send bank login credentials. We use Gemini's paid API, so prompts, attachments, and responses are not used to train Google's models. Google may retain API data for a limited period for safety, abuse prevention, and legal requirements; Moneko may retain the records and conversation history needed to provide the feature.",
+        "AI features can process the information you submit and relevant Moneko context needed to respond. Review the Privacy Policy for the current providers, processing, retention, and data-use terms. Do not submit bank credentials or sensitive information that is not needed for your request.",
     },
     {
       question: "Can I delete all my data?",
       answer:
-        "Yes. You have full ownership. You can export your data to CSV/Excel or wipe your entire account and all associated data with one click in the app settings.",
+        "You can export available transaction records and receipt files before requesting account deletion. Deletion is irreversible in the app; review the Privacy Policy for the current deletion scope and retention terms.",
     },
   ],
   howToSteps: [
@@ -85,15 +85,9 @@ Moneko is funded by our users through **Moneko Plus**. This means our interests 
 
 ---
 
-## Technical Security Measures
+## Security and providers
 
-### Encryption
-- **At Rest**: All user data is stored using AES-256 bank-grade encryption.
-- **In Transit**: Data sent between your device and our servers is protected using TLS 1.2+ (SSL) encryption.
-- **Not End-to-End Encrypted**: Moneko is not an end-to-end encrypted service. Access to production data is restricted to authorized personnel and systems that need it to operate, secure, or support the service.
-
-### Data Location
-Our production application data is hosted by Supabase in AWS's US East (Ohio) region (us-east-2). Third-party services, including Plaid, Google Gemini, and payment providers, process data under their own terms and may use different locations.
+The [Privacy Policy](https://www.moneko.io/privacy-policy) is the source of truth for current storage, security, processor, retention, and deletion terms. Moneko is not presented as an end-to-end encrypted service. Do not rely on old Help Centre language for a specific encryption method, data region, provider, or retention period.
 
 ### Secure Authentication
 We use industry-standard authentication protocols (OAuth and JWT) to ensure that only authorized users can access their accounts. We support biometric login (FaceID/TouchID) for an extra layer of local security.
@@ -110,8 +104,8 @@ When you connect your bank:
 
 Whenever possible, Moneko processes your data locally on your device. For example:
 - **Android Notification Capture**: Push notifications are parsed on your phone to extract merchant and amount before being securely synced.
-- **AI Features**: Moneko uses Google Gemini. Expense capture can send the text, receipt, image, or voice-derived information you submit. Guidance and scenario planning can also send the relevant Moneko financial context needed to answer your request, including applicable transactions, balances, budgets, recurring items, and conversation context. We never send bank login credentials.
-- **AI Data Use and Retention**: We use Gemini through its paid API. Prompts, attachments, and responses are not used to train Google's models. Google may retain API data for a limited period for safety, abuse prevention, and legal requirements. Moneko may retain the records and conversation history needed to provide the feature; you can delete your conversation history or account data from Moneko.
+- **AI Features**: AI features can process the text, receipt, image, voice-derived information, and relevant Moneko context needed for your request. Do not submit bank login credentials.
+- **AI Data Use and Retention**: Review the Privacy Policy for the current providers, data-use, and retention terms.
 
 ---
 
@@ -120,14 +114,12 @@ Whenever possible, Moneko processes your data locally on your device. For exampl
 We don't believe in "lock-in." You can take your data with you whenever you want.
 
 - **Excel/CSV Export**: Download your entire transaction history with one tap.
-- **One-Click Wipe**: If you decide to leave Moneko, you can delete your account and every trace of your data from our servers instantly.
+- **Account deletion:** Export the records you need first. App deletion is irreversible; the Privacy Policy describes the current deletion scope and retention terms.
 
 ---
 
 ## Compliance
 
-Moneko is designed to align with modern privacy standards, including GDPR and CCPA principles, giving you the "Right to be Forgotten" and the right to data portability.
-
-For more detailed information, please review our full [Privacy Policy](https://www.moneko.io/privacy).
+For current legal privacy terms, review the full [Privacy Policy](https://www.moneko.io/privacy-policy).
 `,
 };

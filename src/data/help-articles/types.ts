@@ -26,6 +26,8 @@ export interface HelpArticle {
   readTime: number;
   keywords: string[];
   seoTitle?: string;
+  publishedAt?: string;
+  updatedAt?: string;
   featured?: boolean;
   includeTechArticleSchema?: boolean;
   faqItems?: HelpArticleFaqItem[];

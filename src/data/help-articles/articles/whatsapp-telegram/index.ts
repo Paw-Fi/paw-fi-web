@@ -44,7 +44,8 @@ export const whatsappTelegramArticle: HelpArticle = {
     },
     {
       question: "Can I split expenses in WhatsApp or Telegram?",
-      answer: "Yes. Send a message like Dinner 120 split or Groceries 80 shared.",
+      answer:
+        "Yes. Send a message like Dinner 120 split or Groceries 80 shared.",
     },
     {
       question: "Can I upload receipts through WhatsApp or Telegram?",
@@ -53,7 +54,8 @@ export const whatsappTelegramArticle: HelpArticle = {
     },
     {
       question: "Can I add recurring expenses from chat?",
-      answer: "Yes. Send a message like Rent 1200 monthly or Gym 50 every month.",
+      answer:
+        "Yes. Send a message like Rent 1200 monthly or Gym 50 every month.",
     },
     {
       question: "Can I check my budget in WhatsApp or Telegram?",
@@ -200,11 +202,11 @@ Examples:
 - Gym 50 every month
 - Netflix 14 monthly
 
-Moneko will automatically track these going forward.
+Moneko creates a recurring item from the details you provide. A scheduled item is a forecast until its occurrence is confirmed; it is not automatically treated as completed spending.
 
 ### Expected Result
 
-The recurring expense is added and tracked automatically.
+The recurring item is added with the schedule you supplied. Confirm, skip, edit, or end occurrences from the recurring workflow as needed.
 
 ### Best Practice
 
