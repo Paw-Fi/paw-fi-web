@@ -55,7 +55,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const QUEUE_TABLE = "subscription_followup_email_queue";
-const DEFAULT_SEND_DELAY_MINUTES = 60;
+const DEFAULT_SEND_DELAY_MINUTES = 4 * 60;
 const SEND_DELAY_MINUTES = readPositiveIntegerEnv(
   "SUBSCRIPTION_FOLLOWUP_DELAY_MINUTES",
   DEFAULT_SEND_DELAY_MINUTES,
