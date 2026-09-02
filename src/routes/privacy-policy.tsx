@@ -63,7 +63,7 @@ function PrivacyPolicy() {
         <h1 className="mb-8 text-4xl font-bold">Privacy Policy</h1>
 
         <div className="prose max-w-none">
-          <p className="text-lg text-gray-700">Last updated: 2026-04-14</p>
+          <p className="text-lg text-gray-700">Last updated: 2026-09-02</p>
 
           <h2 className="mt-8 text-2xl font-semibold">1. Introduction</h2>
           <p>
@@ -80,6 +80,15 @@ function PrivacyPolicy() {
             <li>Contact information (such as name and email address)</li>
             <li>Usage data (how you interact with our services)</li>
             <li>Device information (browser type, IP address)</li>
+            <li>
+              Financial data you add or import, such as transactions, balances,
+              budgets, recurring items, and receipts
+            </li>
+            <li>
+              Bank transaction and balance data that Plaid provides when you
+              choose to use Bank Sync; Moneko does not receive or store your
+              bank login credentials
+            </li>
           </ul>
 
           <h2 className="mt-8 text-2xl font-semibold">
@@ -95,9 +104,42 @@ function PrivacyPolicy() {
 
           <h2 className="mt-8 text-2xl font-semibold">4. Data Security</h2>
           <p>
-            We implement appropriate security measures to protect your personal
-            information. However, no method of transmission over the Internet is
-            100% secure, and we cannot guarantee absolute security.
+            We use AES-256 encryption at rest and TLS 1.2+ encryption in transit
+            to protect data sent between your device and our services. Moneko is
+            not an end-to-end encrypted service. Access to production data is
+            restricted to authorized personnel and systems that need it to
+            operate, secure, or support the service. However, no method of
+            transmission over the Internet is 100% secure, and we cannot
+            guarantee absolute security.
+          </p>
+
+          <h3 className="mt-6 text-xl font-semibold">Data Location</h3>
+          <p>
+            Our production application data is hosted by Supabase in AWS&apos;s
+            US East (Ohio) region (us-east-2). Third-party services, including
+            Plaid, Google Gemini, and payment providers, process data under
+            their own terms and may use different locations.
+          </p>
+
+          <h2 className="mt-8 text-2xl font-semibold">5. AI Processing</h2>
+          <p>
+            Moneko uses Google Gemini for selected AI features. The information
+            sent depends on the feature you use: expense capture can send the
+            text, receipt, image, or voice-derived information you submit;
+            financial guidance and scenario planning can also send the relevant
+            Moneko financial context needed to answer your request, such as
+            applicable transactions, balances, budgets, recurring items, and
+            conversation context. We do not send bank login credentials to
+            Gemini.
+          </p>
+          <p>
+            We use Gemini through its paid API. Prompts, attachments, and
+            responses are not used to train Google&apos;s models. Google may
+            retain API prompts and responses for a limited period for safety,
+            abuse prevention, and legal requirements. Moneko may retain the
+            records and conversation history needed to provide an AI feature;
+            you can delete your conversation history or account data from
+            Moneko.
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold">

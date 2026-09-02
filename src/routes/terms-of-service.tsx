@@ -62,7 +62,7 @@ function TermsOfService() {
         <h1 className="mb-8 text-4xl font-bold">Terms of Service</h1>
 
         <div className="prose max-w-none">
-          <p className="text-lg text-gray-700">Last updated: 2026-04-14</p>
+          <p className="text-lg text-gray-700">Last updated: 2026-09-02</p>
 
           <h2 className="mt-8 text-2xl font-semibold">
             1. Acceptance of Terms
@@ -106,7 +106,7 @@ function TermsOfService() {
           </ul>
 
           <h2 className="mt-8 text-2xl font-semibold">
-            6. Data Ownership and Control
+            5. Data Ownership and Control
           </h2>
           <p>
             At Moneko, we believe your data belongs to you. You maintain
@@ -142,6 +142,18 @@ function TermsOfService() {
               True deletion - not just deactivation - when you choose to leave
             </li>
           </ul>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            6. Plans and Lifetime Purchases
+          </h2>
+          <p>
+            A Lifetime purchase is a one-time payment for permanent access to
+            Moneko Plus features, without a recurring Moneko subscription fee.
+            This includes AI features and Bank Sync while they are offered as
+            Plus features. Bank Sync depends on Plaid, supported financial
+            institutions, and supported regions, so availability can change
+            outside Moneko&apos;s control.
+          </p>
 
           <h2 className="mt-8 text-2xl font-semibold">
             7. Intellectual Property

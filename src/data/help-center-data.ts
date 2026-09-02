@@ -971,7 +971,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "data-privacy",
         question: "How does Moneko handle my personal and financial data?",
         answer:
-          "Your privacy is our priority. We collect only the data necessary to provide and improve our services. We do not sell your personal data to third parties.[22] Financial data you input is used to personalize your experience, power the AI advisor, and track your goals. All data is subject to our strict privacy policy, which you can review at any time. You have full control over your data and can request its deletion.[23]",
+          "We collect the data needed to provide Moneko, including the financial records you add or import, such as transactions, balances, budgets, recurring items, and receipts. If you use Bank Sync, we receive the transaction and balance data Plaid provides, but never your bank login credentials. We do not sell personal or financial data, and you can export or delete your account data at any time.",
         category: "security-privacy",
         keywords: [
           "data privacy",
@@ -987,6 +987,46 @@ export const helpCenterData: FAQCategory[] = [
           "delete-my-data",
           "ai-advisor-privacy",
         ],
+      },
+      {
+        id: "data-encryption-and-access",
+        question:
+          "Is my financial data encrypted, and can Moneko employees access it?",
+        answer:
+          "Moneko encrypts data at rest with AES-256 and in transit with TLS 1.2+. It is not an end-to-end encrypted service. Production access is restricted to authorized personnel and systems that need it to operate, secure, or support the service; Moneko employees do not have routine access to customer financial data.",
+        category: "security-privacy",
+        keywords: [
+          "encryption",
+          "end-to-end encryption",
+          "employee access",
+          "financial data security",
+        ],
+        relatedQuestions: ["data-privacy", "data-sharing", "bank-connections"],
+      },
+      {
+        id: "data-location",
+        question: "Where is my financial data stored?",
+        answer:
+          "Moneko's production application data is hosted by Supabase in AWS's US East (Ohio) region (us-east-2). Third-party services, including Plaid, Google Gemini, and payment providers, process data under their own terms and may use different locations.",
+        category: "security-privacy",
+        keywords: ["data location", "data residency", "us east", "us-east-2"],
+        relatedQuestions: ["data-privacy", "data-sharing"],
+      },
+      {
+        id: "gemini-financial-data",
+        question:
+          "What financial information is sent to Gemini, and is it retained?",
+        answer:
+          "The information sent depends on the AI feature. Expense capture can send the text, receipt, image, or voice-derived information you submit. Guidance and scenario planning can also send relevant Moneko financial context, such as applicable transactions, balances, budgets, recurring items, and conversation context. Bank login credentials are never sent. We use Gemini's paid API, so prompts, attachments, and responses are not used to train Google's models. Google may retain API data for a limited period for safety, abuse prevention, and legal requirements; Moneko may retain records and conversation history needed to provide the feature.",
+        category: "security-privacy",
+        keywords: [
+          "gemini",
+          "ai privacy",
+          "ai training",
+          "ai retention",
+          "financial data",
+        ],
+        relatedQuestions: ["data-privacy", "data-sharing"],
       },
       {
         id: "data-sharing",
@@ -1046,6 +1086,23 @@ export const helpCenterData: FAQCategory[] = [
           "platform-security",
           "updating-progress",
         ],
+      },
+      {
+        id: "investment-tracking-roadmap",
+        question: "Does Moneko support investment tracking?",
+        answer:
+          "Investment tracking for mutual funds, ETFs, stocks, and REITs is not currently available. Our next release is focused on strengthening Moneko's web and desktop experience, so you can securely view and update your financial data from any device. We are interested in exploring investment tracking afterwards, but do not have a committed release date or scope to announce.",
+        category: "overview",
+        keywords: [
+          "investment tracking",
+          "mutual funds",
+          "etf",
+          "stocks",
+          "reits",
+          "web",
+          "desktop",
+        ],
+        relatedQuestions: ["data-privacy"],
       },
       {
         id: "privacy-policy-link",

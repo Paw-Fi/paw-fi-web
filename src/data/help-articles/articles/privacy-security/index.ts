@@ -33,12 +33,22 @@ export const privacySecurityArticle: HelpArticle = {
     {
       question: "Who can see my transactions?",
       answer:
-        "Only you. If you explicitly join a shared Space (Household), other members of that specific Space can see the transactions logged there, but not your Personal space data.",
+        "You control who sees your data. Members of a shared Space can see the transactions logged in that Space, but not your Personal space data. Moneko does not provide routine employee access; production access is restricted to authorized personnel and systems that need it to operate, secure, or support the service.",
     },
     {
       question: "Where is my data stored?",
       answer:
-        "Your data is stored in secure, encrypted databases provided by Supabase (PostgreSQL). We use bank-grade AES-256 encryption for data at rest.",
+        "Your production application data is stored in secure, encrypted Supabase (PostgreSQL) databases in AWS's US East (Ohio) region (us-east-2). Third-party services may process data in other locations under their own terms.",
+    },
+    {
+      question: "Is Moneko end-to-end encrypted?",
+      answer:
+        "No. Moneko encrypts data at rest with AES-256 and in transit with TLS 1.2+, but it is not an end-to-end encrypted service.",
+    },
+    {
+      question: "What information is sent to Gemini, and is it retained?",
+      answer:
+        "The information depends on the AI feature: expense capture can send the text, receipt, image, or voice-derived information you submit, while guidance and scenario planning can send relevant Moneko financial context such as applicable transactions, balances, budgets, recurring items, and conversation context. We never send bank login credentials. We use Gemini's paid API, so prompts, attachments, and responses are not used to train Google's models. Google may retain API data for a limited period for safety, abuse prevention, and legal requirements; Moneko may retain the records and conversation history needed to provide the feature.",
     },
     {
       question: "Can I delete all my data?",
@@ -80,6 +90,10 @@ Moneko is funded by our users through **Moneko Plus**. This means our interests 
 ### Encryption
 - **At Rest**: All user data is stored using AES-256 bank-grade encryption.
 - **In Transit**: Data sent between your device and our servers is protected using TLS 1.2+ (SSL) encryption.
+- **Not End-to-End Encrypted**: Moneko is not an end-to-end encrypted service. Access to production data is restricted to authorized personnel and systems that need it to operate, secure, or support the service.
+
+### Data Location
+Our production application data is hosted by Supabase in AWS's US East (Ohio) region (us-east-2). Third-party services, including Plaid, Google Gemini, and payment providers, process data under their own terms and may use different locations.
 
 ### Secure Authentication
 We use industry-standard authentication protocols (OAuth and JWT) to ensure that only authorized users can access their accounts. We support biometric login (FaceID/TouchID) for an extra layer of local security.
@@ -96,7 +110,8 @@ When you connect your bank:
 
 Whenever possible, Moneko processes your data locally on your device. For example:
 - **Android Notification Capture**: Push notifications are parsed on your phone to extract merchant and amount before being securely synced.
-- **AI Categorization**: We use secure, private AI instances that do not "train" on your personal data to improve models for other users.
+- **AI Features**: Moneko uses Google Gemini. Expense capture can send the text, receipt, image, or voice-derived information you submit. Guidance and scenario planning can also send the relevant Moneko financial context needed to answer your request, including applicable transactions, balances, budgets, recurring items, and conversation context. We never send bank login credentials.
+- **AI Data Use and Retention**: We use Gemini through its paid API. Prompts, attachments, and responses are not used to train Google's models. Google may retain API data for a limited period for safety, abuse prevention, and legal requirements. Moneko may retain the records and conversation history needed to provide the feature; you can delete your conversation history or account data from Moneko.
 
 ---
 

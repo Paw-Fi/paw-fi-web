@@ -45,6 +45,11 @@ export const monekoPlusArticle: HelpArticle = {
       answer:
         "Yes, Plus users get unlimited access to our AI-powered natural language expense logging and receipt extraction.",
     },
+    {
+      question: "Does a Lifetime purchase include Bank Sync and AI features?",
+      answer:
+        "Yes. A Lifetime purchase is a one-time payment for permanent access to Moneko Plus features, including AI features and Bank Sync, with no recurring Moneko subscription fee. Bank Sync remains subject to Plaid availability, supported financial institutions, and supported regions.",
+    },
   ],
   howToSteps: [
     {
@@ -100,7 +105,7 @@ We offer flexible plans to fit your needs:
 
 - **Monthly**: Best for short-term projects or testing the waters.
 - **Yearly**: The most popular choice, offering significant savings over the monthly rate.
-- **Lifetime**: A one-time payment for permanent access to all current and future Plus features.
+- **Lifetime**: A one-time payment for permanent access to all current and future Plus features, with no recurring Moneko subscription fee. Bank Sync remains subject to Plaid availability, supported financial institutions, and supported regions.
 
 ---
 
