@@ -7,14 +7,25 @@ interface CompareWithChatGptButtonProps {
   className?: string;
   labelClassName?: string;
   source?: string;
+  topic?: string;
+  prompt?: string;
+  label?: string;
 }
 
 export function CompareWithChatGptButton({
   className,
   labelClassName,
   source = "compare-with-chatgpt",
+  topic,
+  prompt,
+  label = "Compare with ChatGPT",
 }: CompareWithChatGptButtonProps) {
-  const compareUrl = `/compare-with-chatgpt?source=${encodeURIComponent(source)}`;
+  const params = new URLSearchParams();
+  if (source) params.set("source", source);
+  if (topic) params.set("topic", topic);
+  if (prompt) params.set("prompt", prompt);
+
+  const compareUrl = `/compare-with-chatgpt?${params.toString()}`;
 
   return (
     <Button
@@ -38,7 +49,7 @@ export function CompareWithChatGptButton({
         />
       </div>
       <span className={cn("min-w-0", labelClassName)}>
-        Compare with ChatGPT
+        {label}
       </span>
       <ArrowRight className="ml-1 h-4 w-4 shrink-0 opacity-70 transition-transform group-hover:translate-x-1 sm:ml-2" />
     </Button>

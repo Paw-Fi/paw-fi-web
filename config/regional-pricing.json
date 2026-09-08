@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 1,
+  "catalogVersion": 2,
   "defaultMarket": "usd",
   "markets": {
     "aed": {
@@ -9,6 +9,7 @@
       "monthly": 1499,
       "yearly": 9999,
       "lifetime": 34999,
+      "lifetimePromo": 24499,
       "compareAtMonthly": 2399,
       "compareAtYearly": 15999,
       "countries": [
@@ -22,6 +23,7 @@
       "monthly": 599,
       "yearly": 3999,
       "lifetime": 14999,
+      "lifetimePromo": 10499,
       "compareAtMonthly": 959,
       "compareAtYearly": 6399,
       "countries": [
@@ -35,6 +37,7 @@
       "monthly": 2490,
       "yearly": 14990,
       "lifetime": 59990,
+      "lifetimePromo": 41990,
       "compareAtMonthly": 3984,
       "compareAtYearly": 23984,
       "countries": [
@@ -48,6 +51,7 @@
       "monthly": 1499,
       "yearly": 9999,
       "lifetime": 19999,
+      "lifetimePromo": 13999,
       "compareAtMonthly": 2399,
       "compareAtYearly": 15999,
       "countries": [
@@ -61,6 +65,7 @@
       "monthly": 300,
       "yearly": 2000,
       "lifetime": 8000,
+      "lifetimePromo": 5600,
       "compareAtMonthly": 480,
       "compareAtYearly": 3200,
       "countries": [
@@ -74,6 +79,7 @@
       "monthly": 4990,
       "yearly": 29990,
       "lifetime": 99990,
+      "lifetimePromo": 69990,
       "compareAtMonthly": 7984,
       "compareAtYearly": 47984,
       "countries": [
@@ -87,6 +93,7 @@
       "monthly": 2800,
       "yearly": 16800,
       "lifetime": 59800,
+      "lifetimePromo": 41800,
       "compareAtMonthly": 4480,
       "compareAtYearly": 26880,
       "countries": [
@@ -100,6 +107,7 @@
       "monthly": 19900,
       "yearly": 119900,
       "lifetime": 399900,
+      "lifetimePromo": 279900,
       "compareAtMonthly": 31840,
       "compareAtYearly": 191840,
       "countries": [
@@ -113,6 +121,7 @@
       "monthly": 9900,
       "yearly": 69900,
       "lifetime": 249000,
+      "lifetimePromo": 174300,
       "compareAtMonthly": 15840,
       "compareAtYearly": 111840,
       "countries": [
@@ -126,6 +135,7 @@
       "monthly": 3900,
       "yearly": 19900,
       "lifetime": 79900,
+      "lifetimePromo": 55900,
       "compareAtMonthly": 6240,
       "compareAtYearly": 31840,
       "countries": [
@@ -139,6 +149,7 @@
       "monthly": 19999,
       "yearly": 129999,
       "lifetime": 499999,
+      "lifetimePromo": 349999,
       "compareAtMonthly": 31999,
       "compareAtYearly": 207999,
       "countries": [
@@ -152,6 +163,7 @@
       "monthly": 499,
       "yearly": 2999,
       "lifetime": 9999,
+      "lifetimePromo": 6999,
       "compareAtMonthly": 799,
       "compareAtYearly": 4799,
       "countries": [
@@ -165,6 +177,7 @@
       "monthly": 499,
       "yearly": 2999,
       "lifetime": 9999,
+      "lifetimePromo": 6999,
       "compareAtMonthly": 799,
       "compareAtYearly": 4799,
       "countries": [
@@ -201,6 +214,7 @@
       "monthly": 399,
       "yearly": 2499,
       "lifetime": 8999,
+      "lifetimePromo": 6299,
       "compareAtMonthly": 639,
       "compareAtYearly": 3999,
       "countries": [
@@ -214,6 +228,7 @@
       "monthly": 3200,
       "yearly": 18800,
       "lifetime": 68800,
+      "lifetimePromo": 48200,
       "compareAtMonthly": 5120,
       "compareAtYearly": 30080,
       "countries": [
@@ -227,6 +242,7 @@
       "monthly": 1790,
       "yearly": 9990,
       "lifetime": 39990,
+      "lifetimePromo": 27990,
       "compareAtMonthly": 2864,
       "compareAtYearly": 15984,
       "countries": [
@@ -240,6 +256,7 @@
       "monthly": 69000,
       "yearly": 399000,
       "lifetime": 1499000,
+      "lifetimePromo": 1049000,
       "compareAtMonthly": 110400,
       "compareAtYearly": 638400,
       "countries": [
@@ -253,6 +270,7 @@
       "monthly": 1490,
       "yearly": 8990,
       "lifetime": 29990,
+      "lifetimePromo": 20990,
       "compareAtMonthly": 2384,
       "compareAtYearly": 14384,
       "countries": [
@@ -266,6 +284,7 @@
       "monthly": 39900,
       "yearly": 249900,
       "lifetime": 990000,
+      "lifetimePromo": 693000,
       "compareAtMonthly": 63840,
       "compareAtYearly": 399840,
       "countries": [
@@ -279,6 +298,7 @@
       "monthly": 600,
       "yearly": 4000,
       "lifetime": 15000,
+      "lifetimePromo": 10500,
       "compareAtMonthly": 960,
       "compareAtYearly": 6400,
       "countries": [
@@ -292,6 +312,7 @@
       "monthly": 6600,
       "yearly": 44000,
       "lifetime": 149000,
+      "lifetimePromo": 104300,
       "compareAtMonthly": 10560,
       "compareAtYearly": 70400,
       "countries": [
@@ -305,6 +326,7 @@
       "monthly": 249000,
       "yearly": 1499000,
       "lifetime": 4999000,
+      "lifetimePromo": 3499000,
       "compareAtMonthly": 398400,
       "compareAtYearly": 2398400,
       "countries": [
@@ -318,6 +340,7 @@
       "monthly": 8900,
       "yearly": 49900,
       "lifetime": 199900,
+      "lifetimePromo": 139900,
       "compareAtMonthly": 14240,
       "compareAtYearly": 79840,
       "countries": [
@@ -331,6 +354,7 @@
       "monthly": 1990,
       "yearly": 11990,
       "lifetime": 39990,
+      "lifetimePromo": 27990,
       "compareAtMonthly": 3184,
       "compareAtYearly": 19184,
       "countries": [
@@ -344,6 +368,7 @@
       "monthly": 690000,
       "yearly": 3990000,
       "lifetime": 14990000,
+      "lifetimePromo": 10490000,
       "compareAtMonthly": 1104000,
       "compareAtYearly": 6384000,
       "countries": [
@@ -357,6 +382,7 @@
       "monthly": 4900,
       "yearly": 29900,
       "lifetime": 99900,
+      "lifetimePromo": 69900,
       "compareAtMonthly": 7840,
       "compareAtYearly": 47840,
       "countries": [
@@ -370,6 +396,7 @@
       "monthly": 699,
       "yearly": 4999,
       "lifetime": 14999,
+      "lifetimePromo": 10499,
       "compareAtMonthly": 1119,
       "compareAtYearly": 7999,
       "countries": [
@@ -383,6 +410,7 @@
       "monthly": 1790,
       "yearly": 9990,
       "lifetime": 39990,
+      "lifetimePromo": 27990,
       "compareAtMonthly": 2864,
       "compareAtYearly": 15984,
       "countries": [
@@ -396,6 +424,7 @@
       "monthly": 24900,
       "yearly": 149000,
       "lifetime": 599000,
+      "lifetimePromo": 419000,
       "compareAtMonthly": 39840,
       "compareAtYearly": 238400,
       "countries": [
@@ -409,6 +438,7 @@
       "monthly": 110000,
       "yearly": 690000,
       "lifetime": 2490000,
+      "lifetimePromo": 1743000,
       "compareAtMonthly": 176000,
       "compareAtYearly": 1104000,
       "countries": [
@@ -422,6 +452,7 @@
       "monthly": 1999,
       "yearly": 9999,
       "lifetime": 39999,
+      "lifetimePromo": 27999,
       "compareAtMonthly": 3199,
       "compareAtYearly": 15999,
       "countries": [
@@ -435,6 +466,7 @@
       "monthly": 1499,
       "yearly": 9999,
       "lifetime": 29999,
+      "lifetimePromo": 20999,
       "compareAtMonthly": 2399,
       "compareAtYearly": 15999,
       "countries": [
@@ -448,6 +480,7 @@
       "monthly": 1999,
       "yearly": 12999,
       "lifetime": 49999,
+      "lifetimePromo": 34999,
       "compareAtMonthly": 3199,
       "compareAtYearly": 20799,
       "countries": [
@@ -461,6 +494,7 @@
       "monthly": 34900,
       "yearly": 229000,
       "lifetime": 799000,
+      "lifetimePromo": 559000,
       "compareAtMonthly": 55840,
       "compareAtYearly": 366400,
       "countries": [
@@ -474,6 +508,7 @@
       "monthly": 1799,
       "yearly": 9999,
       "lifetime": 39999,
+      "lifetimePromo": 27999,
       "compareAtMonthly": 2879,
       "compareAtYearly": 15999,
       "countries": [
@@ -487,6 +522,7 @@
       "monthly": 4900,
       "yearly": 29900,
       "lifetime": 119500,
+      "lifetimePromo": 83600,
       "compareAtMonthly": 7840,
       "compareAtYearly": 47840,
       "countries": [
@@ -500,6 +536,7 @@
       "monthly": 598,
       "yearly": 3498,
       "lifetime": 12998,
+      "lifetimePromo": 9099,
       "compareAtMonthly": 957,
       "compareAtYearly": 5597,
       "countries": [
@@ -513,6 +550,7 @@
       "monthly": 14900,
       "yearly": 99900,
       "lifetime": 299000,
+      "lifetimePromo": 209000,
       "compareAtMonthly": 23840,
       "compareAtYearly": 159840,
       "countries": [
@@ -526,6 +564,7 @@
       "monthly": 19999,
       "yearly": 129999,
       "lifetime": 499999,
+      "lifetimePromo": 349999,
       "compareAtMonthly": 31999,
       "compareAtYearly": 207999,
       "countries": [
@@ -539,6 +578,7 @@
       "monthly": 12000,
       "yearly": 79000,
       "lifetime": 299000,
+      "lifetimePromo": 209000,
       "compareAtMonthly": 19200,
       "compareAtYearly": 126400,
       "countries": [
@@ -552,6 +592,7 @@
       "monthly": 1190000,
       "yearly": 6990000,
       "lifetime": 24990000,
+      "lifetimePromo": 17490000,
       "compareAtMonthly": 1904000,
       "compareAtYearly": 11184000,
       "countries": [
@@ -565,6 +606,7 @@
       "monthly": 1099,
       "yearly": 7999,
       "lifetime": 14999,
+      "lifetimePromo": 9999,
       "compareAtMonthly": 1759,
       "compareAtYearly": 12799,
       "countries": [
@@ -578,6 +620,7 @@
       "monthly": 1099,
       "yearly": 7999,
       "lifetime": 14999,
+      "lifetimePromo": 9999,
       "compareAtMonthly": 1759,
       "compareAtYearly": 12799,
       "countries": [
@@ -670,6 +713,7 @@
       "monthly": 1099,
       "yearly": 7999,
       "lifetime": 14999,
+      "lifetimePromo": 9999,
       "compareAtMonthly": 1759,
       "compareAtYearly": 12799,
       "countries": [
@@ -690,6 +734,7 @@
       "monthly": 1099,
       "yearly": 7999,
       "lifetime": 14999,
+      "lifetimePromo": 9999,
       "compareAtMonthly": 1759,
       "compareAtYearly": 12799,
       "countries": [
@@ -722,6 +767,7 @@
       "monthly": 119000,
       "yearly": 799000,
       "lifetime": 2999000,
+      "lifetimePromo": 2099000,
       "compareAtMonthly": 190400,
       "compareAtYearly": 1278400,
       "countries": [
@@ -735,6 +781,7 @@
       "monthly": 7999,
       "yearly": 49999,
       "lifetime": 199999,
+      "lifetimePromo": 139999,
       "compareAtMonthly": 12799,
       "compareAtYearly": 79999,
       "countries": [

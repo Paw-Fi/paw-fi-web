@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(11);
+SELECT plan(14);
 
 DO $$
 DECLARE
@@ -87,6 +87,52 @@ BEGIN
     'USD'
   );
   PERFORM set_config('test.account_deletion_household_id', v_household_id::text, false);
+END;
+$$;
+
+DO $$
+DECLARE
+  v_ticket_owner_id UUID := gen_random_uuid();
+BEGIN
+  INSERT INTO auth.users (
+    id,
+    aud,
+    role,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at
+  ) VALUES (
+    v_ticket_owner_id,
+    'authenticated',
+    'authenticated',
+    'account-deletion-ticket-owner@example.com',
+    '',
+    NOW(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{}'::jsonb,
+    NOW(),
+    NOW()
+  );
+
+  PERFORM set_config('test.account_deletion_ticket_owner_id', v_ticket_owner_id::text, false);
+
+  INSERT INTO public.support_tickets (
+    user_id,
+    status,
+    is_resolved,
+    message,
+    resolved_by
+  ) VALUES (
+    v_ticket_owner_id,
+    'resolved',
+    TRUE,
+    'Ticket resolved by the account deletion test user.',
+    current_setting('test.account_deletion_user_id')::UUID
+  );
 END;
 $$;
 
@@ -241,6 +287,35 @@ SELECT ok(
     WHERE user_id = current_setting('test.account_deletion_user_id')::UUID
   ),
   'delete_user_account removes user expenses before account cleanup'
+);
+
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1
+    FROM auth.users
+    WHERE id = current_setting('test.account_deletion_user_id')::UUID
+  ),
+  'delete_user_account removes the auth account'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.financial_storage_cleanup_jobs
+    WHERE user_id = current_setting('test.account_deletion_user_id')::UUID
+      AND status = 'pending'
+  ),
+  'account deletion leaves the Storage cleanup job queued after auth removal'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1
+    FROM public.support_tickets
+    WHERE user_id = current_setting('test.account_deletion_ticket_owner_id')::UUID
+      AND resolved_by IS NULL
+  ),
+  'deleting an account clears support ticket resolver references'
 );
 
 SELECT * FROM finish();

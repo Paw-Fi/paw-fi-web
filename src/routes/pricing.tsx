@@ -59,7 +59,7 @@ export const Route = createFileRoute("/pricing")({
         url: pageUrl,
         priceCurrency: "USD",
         lowPrice: "0",
-        highPrice: "79.99",
+        highPrice: "99.99",
         offerCount: pricingOffers.length,
         availability: "https://schema.org/InStock",
         offers: pricingOffers,

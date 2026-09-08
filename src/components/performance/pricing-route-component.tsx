@@ -31,8 +31,11 @@ import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
 import { FaqSection } from "@/components/ui/faq-section";
 import { PricingCardsGrid } from "@/components/pricing/pricing-cards-grid";
+import { PricingPromoBanner } from "@/components/pricing/countdown-timer";
 import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
+import { CompareWithChatGptButton } from "@/components/homepage/compare-with-chatgpt-button";
+import { useInView } from "react-intersection-observer";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
 import { getPricingTiers } from "@/data/pricing-plans";
 import {
@@ -160,6 +163,12 @@ export function PricingRouteComponent() {
     DEFAULT_REGIONAL_PRICING_COUNTRY,
   );
 
+  const { ref: heroRef, inView: heroInView } = useInView({
+    threshold: 0,
+    rootMargin: "-100px 0px 0px 0px",
+    initialInView: true,
+  });
+
   type PlanType = "free" | "plus_monthly" | "plus_yearly" | "plus_lifetime";
 
   useEffect(() => {
@@ -258,8 +267,7 @@ export function PricingRouteComponent() {
       if (planId === "free") {
         setIsLoading(false);
         navigate({
-          to: "/register",
-          search: { redirect: undefined, code: undefined, trial: false },
+          to: "/download-app",
         });
         return;
       }
@@ -417,7 +425,7 @@ export function PricingRouteComponent() {
 
       <div className="min-h-screen pb-20">
         {/* Unified Pricing Hero Section */}
-        <section className="relative mx-auto max-w-7xl px-4 pt-20 pb-16 md:pt-32 md:pb-24">
+        <section ref={heroRef} className="relative mx-auto max-w-7xl px-4 pt-20 pb-16 md:pt-32 md:pb-24">
           <motion.div
             initial="hidden"
             animate="visible"
@@ -457,6 +465,7 @@ export function PricingRouteComponent() {
               variants={itemVariants}
               className="flex w-full flex-col items-center gap-4"
             >
+              <PricingPromoBanner />
               <BillingToggle
                 isYearly={isYearly}
                 onChange={setIsYearly}
@@ -482,13 +491,36 @@ export function PricingRouteComponent() {
                 pmTier={pmTier}
                 pyTier={pyTier}
                 lifetimePrice={regionalPrices.lifetime}
+                lifetimeOriginalPrice={regionalPrices.lifetimeOriginal}
+                lifetimeDiscountPercent={regionalPrices.lifetimeDiscountPercent}
                 freePrice={formatRegionalPrice(regionalPrices.market, 0)}
                 yearlySavingsPercent={regionalPrices.yearlySavingsPercent}
                 onSubscribe={handleSubscribe}
               />
+
+              <div className="mt-8 flex justify-center">
+                <CompareWithChatGptButton
+                  source="compare-pricings-with-chatgpt"
+                  topic="pricing"
+                  label="Compare Pricings with ChatGPT"
+                  className="border-primary/20 bg-background/80 hover:bg-background text-foreground rounded-full shadow-sm"
+                />
+              </div>
             </motion.div>
           </motion.div>
         </section>
+
+        {!heroInView && (
+          <div className="animate-in fade-in slide-in-from-bottom-5 zoom-in-95 fixed right-0 bottom-6 left-0 z-50 mx-auto flex w-full max-w-[90%] justify-center duration-300 sm:bottom-10 sm:max-w-max">
+            <CompareWithChatGptButton
+              source="compare-pricings-with-chatgpt"
+              topic="pricing"
+              label="Compare Pricings with ChatGPT"
+              labelClassName="truncate"
+              className="border-primary/20 bg-background/80 hover:bg-background/95 text-foreground group w-full rounded-full shadow-[0_8px_30px_rgba(var(--primary),0.2)] backdrop-blur-md transition-all duration-300 sm:w-auto"
+            />
+          </div>
+        )}
 
         {/* Community Showcase (Social Proof) */}
         <motion.div

@@ -231,9 +231,10 @@ const getFirstQueryParamValue = (value: string | string[] | undefined) => {
 };
 
 const shouldTrackPageViewImmediately = () => {
+  const source = new URLSearchParams(window.location.search).get("source");
   return (
-    new URLSearchParams(window.location.search).get("source") ===
-    "compare-with-chatgpt"
+    source === "compare-with-chatgpt" ||
+    source === "compare-pricings-with-chatgpt"
   );
 };
 

@@ -10,25 +10,33 @@ import {
   monekoSameAs,
 } from "@/utils/app-schema";
 
-interface OrganizationData {
+interface BaseSchemaData {
+  "@context"?: string;
+  "@type"?: string;
+  "@id"?: string;
+  [key: string]: any;
+}
+
+interface OrganizationData extends BaseSchemaData {
   name: string;
   url: string;
-  logo?: string;
+  logo?: string | { url: string; [key: string]: any };
   description?: string;
-  alternateName?: string[];
+  alternateName?: string | string[];
   sameAs?: string[];
   knowsAbout?: string[];
 }
 
-interface WebsiteData {
+interface WebsiteData extends BaseSchemaData {
   url: string;
   name: string;
   description?: string;
   publisher?: OrganizationData;
 }
 
-interface ArticleData {
-  title: string;
+interface ArticleData extends BaseSchemaData {
+  title?: string;
+  headline?: string;
   description: string;
   url: string;
   datePublished?: string;
@@ -39,19 +47,21 @@ interface ArticleData {
     jobTitle?: string;
     image?: string;
     sameAs?: string[];
+    [key: string]: any;
   };
-  image?: string;
+  image?: string | { url: string; [key: string]: any };
   publisher?: OrganizationData;
   wordCount?: number;
   timeRequired?: string;
   educationalLevel?: string;
   isAccessibleForFree?: boolean;
-  keywords?: string[];
+  keywords?: string[] | string;
   articleSection?: string;
   proficiencyLevel?: string;
   dependencies?: string;
   speakable?: {
     cssSelector: string[];
+    [key: string]: any;
   };
 }
 
@@ -65,26 +75,27 @@ interface FAQItem {
   answer: string;
 }
 
-interface HowToStep {
+interface HowToStep extends BaseSchemaData {
   name: string;
   text: string;
   url?: string;
   image?: string;
 }
 
-interface HowToData {
+interface HowToData extends BaseSchemaData {
   name: string;
   description: string;
   totalTime?: string;
   estimatedCost?: {
-    currency: string;
-    value: string;
-  };
+    currency?: string;
+    value?: string;
+    [key: string]: any;
+  } | string;
   steps: HowToStep[];
   image?: string;
 }
 
-interface SoftwareApplicationData {
+interface SoftwareApplicationData extends BaseSchemaData {
   name: string;
   description: string;
   url: string;
@@ -101,141 +112,124 @@ interface SoftwareApplicationData {
   };
 }
 
-interface PersonData {
+interface PersonData extends BaseSchemaData {
   name: string;
   jobTitle?: string;
   description?: string;
   image?: string;
   url?: string;
   sameAs?: string[];
-  worksFor?: OrganizationData;
+  worksFor?: OrganizationData | { [key: string]: any };
   knowsAbout?: string[];
-  alumniOf?: string[];
+  alumniOf?: string | string[];
   email?: string;
 }
 
-interface StructuredDataProps {
-  type:
-    | "organization"
-    | "website"
-    | "article"
-    | "techArticle"
-    | "breadcrumb"
-    | "faq"
-    | "howto"
-    | "software"
-    | "person";
-  data:
-    | OrganizationData
-    | WebsiteData
-    | ArticleData
-    | BreadcrumbItem[]
-    | FAQItem[]
-    | HowToData
-    | SoftwareApplicationData
-    | PersonData;
+interface EducationalOrganizationData extends BaseSchemaData {
+  name: string;
+  description: string;
+  url: string;
+  logo?: string;
+  hasCredential?: string[];
+  educationalCredentialAwarded?: string;
+  offers?: {
+    "@type": string;
+    name: string;
+    description: string;
+    provider?: {
+      "@type": string;
+      name: string;
+    };
+    [key: string]: any;
+  };
 }
 
-export function StructuredData({ type, data }: StructuredDataProps) {
+export type StructuredDataProps =
+  | { type: "organization"; data: OrganizationData }
+  | { type: "educationalorganization"; data: EducationalOrganizationData }
+  | { type: "website"; data: WebsiteData }
+  | { type: "article"; data: ArticleData }
+  | { type: "techArticle"; data: ArticleData }
+  | { type: "breadcrumb"; data: BreadcrumbItem[] }
+  | { type: "faq"; data: FAQItem[] }
+  | { type: "howto"; data: HowToData }
+  | { type: "software"; data: SoftwareApplicationData }
+  | { type: "person"; data: PersonData };
+
+export function StructuredData(props: StructuredDataProps) {
   const getStructuredData = () => {
     const baseContext = "https://schema.org";
 
-    switch (type) {
+    switch (props.type) {
       case "organization":
-        const orgData = data as OrganizationData;
         return {
           "@context": baseContext,
           "@type": "Organization",
-          name: orgData.name,
-          url: orgData.url,
-          logo: orgData.logo,
-          description: orgData.description,
-          alternateName: orgData.alternateName,
-          sameAs: orgData.sameAs,
-          knowsAbout: orgData.knowsAbout,
+          name: props.data.name,
+          url: props.data.url,
+          logo: props.data.logo,
+          description: props.data.description,
+          alternateName: props.data.alternateName,
+          sameAs: props.data.sameAs,
+          knowsAbout: props.data.knowsAbout,
+        };
+
+      case "educationalorganization":
+        return {
+          "@context": baseContext,
+          "@type": "EducationalOrganization",
+          name: props.data.name,
+          url: props.data.url,
+          logo: props.data.logo,
+          description: props.data.description,
+          hasCredential: props.data.hasCredential,
+          educationalCredentialAwarded: props.data.educationalCredentialAwarded,
+          offers: props.data.offers,
         };
 
       case "website":
-        const websiteData = data as WebsiteData;
         return {
           "@context": baseContext,
           "@type": "WebSite",
-          name: websiteData.name,
-          url: websiteData.url,
-          description: websiteData.description,
-          publisher: websiteData.publisher,
+          name: props.data.name,
+          url: props.data.url,
+          description: props.data.description,
+          publisher: props.data.publisher,
         };
 
       case "article":
-        const articleData = data as ArticleData;
         return {
           "@context": baseContext,
           "@type": "Article",
-          headline: articleData.title,
-          description: articleData.description,
-          url: articleData.url,
-          datePublished: articleData.datePublished,
-          dateModified: articleData.dateModified,
-          author: articleData.author
+          ...props.data,
+          headline: props.data.headline || props.data.title,
+          author: props.data.author
             ? {
                 "@type": "Person",
-                name: articleData.author.name,
-                url: articleData.author.url,
-                jobTitle: articleData.author.jobTitle,
-                image: articleData.author.image,
-                sameAs: articleData.author.sameAs,
+                ...props.data.author,
               }
             : undefined,
-          image: articleData.image,
-          publisher: articleData.publisher,
-          wordCount: articleData.wordCount,
-          timeRequired: articleData.timeRequired,
-          educationalLevel: articleData.educationalLevel,
-          isAccessibleForFree: articleData.isAccessibleForFree,
-          keywords: articleData.keywords,
-          articleSection: articleData.articleSection,
-          speakable: articleData.speakable,
         };
 
       case "techArticle":
-        const techArticleData = data as ArticleData;
         return {
           "@context": baseContext,
           "@type": "TechArticle",
-          headline: techArticleData.title,
-          description: techArticleData.description,
-          url: techArticleData.url,
-          datePublished: techArticleData.datePublished,
-          dateModified: techArticleData.dateModified,
-          author: techArticleData.author
+          ...props.data,
+          headline: props.data.headline || props.data.title,
+          author: props.data.author
             ? {
                 "@type": "Person",
-                name: techArticleData.author.name,
-                url: techArticleData.author.url,
-                jobTitle: techArticleData.author.jobTitle,
-                image: techArticleData.author.image,
-                sameAs: techArticleData.author.sameAs,
+                ...props.data.author,
               }
             : undefined,
-          image: techArticleData.image,
-          publisher: techArticleData.publisher,
-          wordCount: techArticleData.wordCount,
-          timeRequired: techArticleData.timeRequired,
-          educationalLevel: techArticleData.educationalLevel,
-          isAccessibleForFree: techArticleData.isAccessibleForFree,
-          keywords: techArticleData.keywords,
-          articleSection: techArticleData.articleSection,
-          proficiencyLevel: techArticleData.proficiencyLevel,
-          dependencies: techArticleData.dependencies,
-          speakable: techArticleData.speakable,
         };
 
       case "breadcrumb":
-        const breadcrumbData = data as BreadcrumbItem[];
         return {
           "@context": baseContext,
           "@type": "BreadcrumbList",
-          itemListElement: breadcrumbData.map((item, index) => ({
+          itemListElement: props.data.map((item, index) => ({
             "@type": "ListItem",
             position: index + 1,
             name: item.name,
@@ -244,11 +238,10 @@ export function StructuredData({ type, data }: StructuredDataProps) {
         };
 
       case "faq":
-        const faqData = data as FAQItem[];
         return {
           "@context": baseContext,
           "@type": "FAQPage",
-          mainEntity: faqData.map((item) => ({
+          mainEntity: props.data.map((item) => ({
             "@type": "Question",
             name: item.question,
             acceptedAnswer: {
@@ -259,16 +252,15 @@ export function StructuredData({ type, data }: StructuredDataProps) {
         };
 
       case "howto":
-        const howtoData = data as HowToData;
         return {
           "@context": baseContext,
           "@type": "HowTo",
-          name: howtoData.name,
-          description: howtoData.description,
-          totalTime: howtoData.totalTime,
-          estimatedCost: howtoData.estimatedCost,
-          image: howtoData.image,
-          step: howtoData.steps.map((step, index) => ({
+          name: props.data.name,
+          description: props.data.description,
+          totalTime: props.data.totalTime,
+          estimatedCost: props.data.estimatedCost,
+          image: props.data.image,
+          step: props.data.steps.map((step, index) => ({
             "@type": "HowToStep",
             position: index + 1,
             name: step.name,
@@ -279,47 +271,45 @@ export function StructuredData({ type, data }: StructuredDataProps) {
         };
 
       case "software":
-        const softwareData = data as SoftwareApplicationData;
         return {
           "@context": baseContext,
           "@type": "SoftwareApplication",
-          name: softwareData.name,
-          description: softwareData.description,
-          url: softwareData.url,
-          applicationCategory: softwareData.applicationCategory,
-          operatingSystem: softwareData.operatingSystem,
+          name: props.data.name,
+          description: props.data.description,
+          url: props.data.url,
+          applicationCategory: props.data.applicationCategory,
+          operatingSystem: props.data.operatingSystem,
           availableLanguage: monekoAvailableLanguages,
-          requirements: softwareData.requirements,
-          screenshot: softwareData.screenshot,
-          softwareVersion: softwareData.softwareVersion,
-          dateModified: softwareData.dateModified,
-          publisher: softwareData.publisher,
-          offers: createMonekoFreeOffer(softwareData.url),
-          aggregateRating: softwareData.aggregateRating
+          requirements: props.data.requirements,
+          screenshot: props.data.screenshot,
+          softwareVersion: props.data.softwareVersion,
+          dateModified: props.data.dateModified,
+          publisher: props.data.publisher,
+          offers: createMonekoFreeOffer(props.data.url),
+          aggregateRating: props.data.aggregateRating
             ? {
                 "@type": "AggregateRating",
-                ratingValue: softwareData.aggregateRating.ratingValue,
-                ratingCount: softwareData.aggregateRating.ratingCount,
+                ratingValue: props.data.aggregateRating.ratingValue,
+                ratingCount: props.data.aggregateRating.ratingCount,
               }
             : monekoAggregateRating,
           review: monekoFeaturedReview,
         };
 
       case "person":
-        const personData = data as PersonData;
         return {
           "@context": baseContext,
           "@type": "Person",
-          name: personData.name,
-          jobTitle: personData.jobTitle,
-          description: personData.description,
-          image: personData.image,
-          url: personData.url,
-          sameAs: personData.sameAs,
-          worksFor: personData.worksFor,
-          knowsAbout: personData.knowsAbout,
-          alumniOf: personData.alumniOf,
-          email: personData.email,
+          name: props.data.name,
+          jobTitle: props.data.jobTitle,
+          description: props.data.description,
+          image: props.data.image,
+          url: props.data.url,
+          sameAs: props.data.sameAs,
+          worksFor: props.data.worksFor,
+          knowsAbout: props.data.knowsAbout,
+          alumniOf: props.data.alumniOf,
+          email: props.data.email,
         };
 
       default:

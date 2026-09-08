@@ -104,5 +104,16 @@ export function createMonekoPricingOffers(pageUrl: string) {
       availability: "https://schema.org/InStock",
       category: "Digital Good",
     },
+    {
+      "@type": "Offer",
+      name: "Moneko Lifetime Access",
+      price: "99.99",
+      priceCurrency: "USD",
+      description:
+        "Limited-time promotional lifetime access offer for Moneko Plus with every current and future budgeting feature included.",
+      url: pageUrl,
+      availability: "https://schema.org/InStock",
+      category: "Digital Good",
+    },
   ];
 }

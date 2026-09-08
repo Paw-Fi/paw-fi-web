@@ -30,17 +30,57 @@ Output structure:
 
 The final response should feel like a modern SaaS product comparison page: clean, professional, easy to skim, and no unnecessary details.`;
 
-const CHATGPT_URL = `https://chatgpt.com/?q=${encodeURIComponent(CHATGPT_PROMPT)}`;
+const CHATGPT_PRICING_PROMPT = `I'm evaluating Moneko, an AI-first budgeting and personal finance app, and comparing its pricing model and value against traditional budgeting apps (such as YNAB, Copilot, Monarch Money, and EveryDollar).
+
+Compare Moneko against traditional subscription budgeting apps in terms of pricing structure, flexibility, and feature value.
+
+Focus primarily on:
+- Pricing options: Free tier, monthly subscription, annual billing, and one-time lifetime access vs recurring-only SaaS subscriptions
+- Value received: WhatsApp & Telegram expense capture, zero-based pocket envelopes, shared household spaces under one account, bank synchronization, multi-currency support, and AI scenario forecasting
+- Plan selection guidance: who benefits most from monthly, annual, or lifetime access
+
+Requirements:
+- Start with a clear comparison table: Moneko vs Traditional Subscription Budgeting Apps
+- Highlight key feature differences and value differentiators
+- Brief verdict (2–3 sentences) summarizing overall value
+
+Output structure:
+1. Comparison Table
+2. Feature & Value Breakdown
+3. Objective Verdict`;
+
 const ATTRIBUTION_TIMEOUT_MS = 800;
 
 export const Route = createFileRoute("/compare-with-chatgpt")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      source: (search.source as string) || "compare-with-chatgpt",
+      topic: (search.topic as string) || undefined,
+      prompt: (search.prompt as string) || undefined,
+    };
+  },
   component: CompareWithChatGptPage,
 });
 
 function CompareWithChatGptPage() {
+  const { topic, prompt } = Route.useSearch();
+
   useEffect(() => {
     let cancelled = false;
     window.opener = null;
+
+    let selectedPrompt = CHATGPT_PROMPT;
+    if (prompt) {
+      selectedPrompt = prompt;
+    } else if (
+      topic === "pricing" ||
+      topic === "lifetime" ||
+      topic === "lifetime-deal"
+    ) {
+      selectedPrompt = CHATGPT_PRICING_PROMPT;
+    }
+
+    const chatGptUrl = `https://chatgpt.com/?q=${encodeURIComponent(selectedPrompt)}`;
 
     const attributionTimeout = new Promise<void>((resolve) => {
       window.setTimeout(resolve, ATTRIBUTION_TIMEOUT_MS);
@@ -52,13 +92,13 @@ function CompareWithChatGptPage() {
     ]).finally(() => {
       if (cancelled) return;
 
-      window.location.replace(CHATGPT_URL);
+      window.location.replace(chatGptUrl);
     });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [topic, prompt]);
 
   return null;
 }
