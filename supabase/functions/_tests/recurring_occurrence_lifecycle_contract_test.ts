@@ -14,6 +14,12 @@ const followUpMigration = await Deno.readTextFile(
     import.meta.url,
   ),
 );
+const recurringDeleteMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260908180000_delete_recurring_series_and_occurrences.sql",
+    import.meta.url,
+  ),
+);
 const updateFunction = await Deno.readTextFile(
   new URL("../update-recurring-occurrence/index.ts", import.meta.url),
 );
@@ -125,23 +131,34 @@ Deno.test(
 );
 
 Deno.test(
-  "recurring deletion keeps materialized templates available to lifecycle RPCs",
+  "recurring deletion removes the series and its occurrences atomically",
   () => {
     assertStringIncludes(
       deleteRecurringFunction,
       "authenticateUserOrInternalSecret",
     );
-    assertStringIncludes(deleteRecurringFunction, "recurring_occurrences");
-    assertStringIncludes(deleteRecurringFunction, "actual_transaction_id");
-    assertStringIncludes(deleteRecurringFunction, "end_date");
-    assertStringIncludes(deleteRecurringFunction, "privacy_scope");
+    assertStringIncludes(deleteRecurringFunction, "delete_recurring_series_v1");
     assertStringIncludes(
-      deleteRecurringFunction,
-      'template.user_id !== actorUserId && template.privacy_scope !== "full"',
+      recurringDeleteMigration,
+      "delete from public.recurring_occurrences",
+    );
+    assertStringIncludes(recurringDeleteMigration, "actual_transaction_id");
+    assertStringIncludes(recurringDeleteMigration, "parent_recurring_id");
+    assertStringIncludes(
+      recurringDeleteMigration,
+      "deleted_reason = 'user_deleted'",
     );
     assertStringIncludes(
-      deleteRecurringFunction,
-      'deleted_reason: "user_deleted"',
+      recurringDeleteMigration,
+      "recurring_transaction_reminders_sent",
+    );
+    assertStringIncludes(
+      recurringDeleteMigration,
+      "RECURRING_DELETE_UNAUTHORIZED",
+    );
+    assertStringIncludes(
+      recurringDeleteMigration,
+      "grant execute on function public.delete_recurring_series_v1",
     );
   },
 );
@@ -153,21 +170,24 @@ Deno.test("recurring template deletion is included in deployment", () => {
   );
 });
 
-Deno.test("one-off overrides reuse confirmation atomically and retain income source", () => {
-  assertStringIncludes(overrideFunction, "authenticateUserOrInternalSecret");
-  assertStringIncludes(
-    overrideFunction,
-    "save_recurring_occurrence_override_v1",
-  );
-  assertStringIncludes(
-    overrideFunction,
-    "p_source: body.source?.trim() || null",
-  );
-  assertStringIncludes(
-    householdDeployScript,
-    "supabase functions deploy save-recurring-occurrence-override",
-  );
-  assertStringIncludes(overrideMigration, "confirm_recurring_occurrence_v1");
-  assertStringIncludes(overrideMigration, "source = coalesce");
-  assertStringIncludes(overrideMigration, "p_source text default null");
-});
+Deno.test(
+  "one-off overrides reuse confirmation atomically and retain income source",
+  () => {
+    assertStringIncludes(overrideFunction, "authenticateUserOrInternalSecret");
+    assertStringIncludes(
+      overrideFunction,
+      "save_recurring_occurrence_override_v1",
+    );
+    assertStringIncludes(
+      overrideFunction,
+      "p_source: body.source?.trim() || null",
+    );
+    assertStringIncludes(
+      householdDeployScript,
+      "supabase functions deploy save-recurring-occurrence-override",
+    );
+    assertStringIncludes(overrideMigration, "confirm_recurring_occurrence_v1");
+    assertStringIncludes(overrideMigration, "source = coalesce");
+    assertStringIncludes(overrideMigration, "p_source text default null");
+  },
+);
