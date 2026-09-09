@@ -21,6 +21,16 @@ import { importTransactionsCsvArticle } from "./import-transactions-csv";
 import { importTransactionsExcelArticle } from "./import-transactions-excel";
 import { importTransactionsPdfArticle } from "./import-transactions-pdf";
 import { migrateFromOtherBudgetingAppsArticle } from "./migrate-from-other-budgeting-apps";
+import { migrateFromYnabArticle } from "./migrate-from-ynab-to-moneko";
+import { migrateFromMonarchArticle } from "./migrate-from-monarch-to-moneko";
+import { migrateFromCopilotArticle } from "./migrate-from-copilot-to-moneko";
+import { migrateFromPocketguardArticle } from "./migrate-from-pocketguard-to-moneko";
+import { migrateFromSplitwiseArticle } from "./migrate-from-splitwise-to-moneko";
+import { migrateFromEverydollarArticle } from "./migrate-from-everydollar-to-moneko";
+import { migrateFromCashewArticle } from "./migrate-from-cashew-to-moneko";
+import { migrateFromMintArticle } from "./migrate-from-mint-to-moneko";
+import { migrateFromGoodbudgetArticle } from "./migrate-from-goodbudget-to-moneko";
+import { migrateFromSpendeeArticle } from "./migrate-from-spendee-to-moneko";
 import { importingHistorySafelyArticle } from "./importing-history-safely";
 import { exportingDataWithoutLockInArticle } from "./exporting-data-without-lock-in";
 import { financialMonthDateTimezoneArticle } from "./financial-month-date-timezone";
@@ -86,6 +96,16 @@ export const helpArticles: HelpArticle[] = [
   importTransactionsExcelArticle,
   importTransactionsPdfArticle,
   migrateFromOtherBudgetingAppsArticle,
+  migrateFromYnabArticle,
+  migrateFromMonarchArticle,
+  migrateFromCopilotArticle,
+  migrateFromPocketguardArticle,
+  migrateFromSplitwiseArticle,
+  migrateFromEverydollarArticle,
+  migrateFromCashewArticle,
+  migrateFromMintArticle,
+  migrateFromGoodbudgetArticle,
+  migrateFromSpendeeArticle,
   offlineSyncDevicesArticle,
   notificationsRemindersArticle,
   commonDiscrepanciesArticle,

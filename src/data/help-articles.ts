@@ -22,6 +22,16 @@ const directLinkOnlyHelpArticleIds = new Set([
   "reports-health-explain-number",
   "settlements",
   "transfers-refunds-cash",
+  "migrate-from-ynab-to-moneko",
+  "migrate-from-monarch-to-moneko",
+  "migrate-from-copilot-to-moneko",
+  "migrate-from-pocketguard-to-moneko",
+  "migrate-from-splitwise-to-moneko",
+  "migrate-from-everydollar-to-moneko",
+  "migrate-from-cashew-to-moneko",
+  "migrate-from-mint-to-moneko",
+  "migrate-from-goodbudget-to-moneko",
+  "migrate-from-spendee-to-moneko",
 ]);
 
 export const listedHelpArticles = helpArticles.filter(
