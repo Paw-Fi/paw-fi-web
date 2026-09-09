@@ -263,7 +263,7 @@ export async function executeBotFinancialInsight(params: {
       range.startDate,
       range.endDate,
     );
-    const rawTotals = buildFinancialSnapshotTotals([...actual, ...projected]);
+    const rawTotals = buildFinancialSnapshotTotals(actual);
     const totals = {
       ...rawTotals,
       categories: rawTotals.categories.map((entry) => ({
@@ -639,8 +639,8 @@ function buildFinancialInsightSummary(
     lines.push(
       "",
       includesFutureRecurring
-        ? `Includes ${snapshot.projected_recurring_count} scheduled recurring occurrence(s), including future projections through ${snapshot.endDate}.`
-        : `Includes ${snapshot.projected_recurring_count} recurring occurrence(s) scheduled in this period.`,
+        ? `Upcoming: ${snapshot.projected_recurring_count} scheduled recurring occurrence(s), including future projections through ${snapshot.endDate}.`
+        : `Upcoming: ${snapshot.projected_recurring_count} recurring occurrence(s) scheduled in this period.`,
     );
   }
   return lines.join("\n");

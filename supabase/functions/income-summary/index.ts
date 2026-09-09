@@ -267,6 +267,7 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", userId)
       .is("household_id", null)
       .is("deleted_at", null)
+      .or("is_recurring.eq.false,is_recurring.is.null")
       .gte("date", ytdStart)
       .lte("date", endDate);
     if (body.currency) {

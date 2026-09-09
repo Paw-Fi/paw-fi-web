@@ -253,6 +253,7 @@ async function queryExpenseRows(
       "amount_cents, currency, category, date, user_id, privacy_scope, analytics_is_final, analytics_spending_multiplier",
     )
     .eq("analytics_is_final", true)
+    .or("is_recurring.eq.false,is_recurring.is.null")
     .is("deleted_at", null)
     .gte("date", startDate)
     .lte("date", endDate)

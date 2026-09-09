@@ -312,6 +312,7 @@ Deno.serve(async (req: Request) => {
     .eq("date", dateStr)
     .eq("currency", budgetCurrency)
     .eq("analytics_is_final", true)
+    .or("is_recurring.eq.false,is_recurring.is.null")
     .is("deleted_at", null);
 
   const totalSpentCents = (expenseRows || []).reduce(

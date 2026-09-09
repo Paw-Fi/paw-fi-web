@@ -1014,6 +1014,7 @@ export async function getBudgetStatusDirect(
     )
     .eq("currency", currency)
     .eq("analytics_is_final", true)
+    .or("is_recurring.eq.false,is_recurring.is.null")
     .is("deleted_at", null)
     .gte("date", monthStartStr)
     .lt("date", nextMonthStr);

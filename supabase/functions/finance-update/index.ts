@@ -563,6 +563,7 @@ Rules:
       .eq("contact_id", contactId)
       .eq("date", dateStr)
       .eq("analytics_is_final", true)
+      .or("is_recurring.eq.false,is_recurring.is.null")
       .is("deleted_at", null);
 
     // Group expenses by currency
@@ -642,6 +643,7 @@ Rules:
       .eq("contact_id", contactId)
       .eq("date", dateForTotals)
       .eq("analytics_is_final", true)
+      .or("is_recurring.eq.false,is_recurring.is.null")
       .is("deleted_at", null);
 
     const currencyTotals = new Map<string, number>();

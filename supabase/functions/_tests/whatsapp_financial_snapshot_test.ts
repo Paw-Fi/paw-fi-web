@@ -33,7 +33,7 @@ function recurringRow(
 }
 
 Deno.test(
-  "financial snapshot projects recurring income and spending into the period",
+  "financial snapshot keeps projected recurring income and spending out of actual totals",
   () => {
     const recurringRows = [
       recurringRow(),
@@ -69,11 +69,15 @@ Deno.test(
       projected.map((row) => row.parent_recurring_id),
       ["recurring-expense", "recurring-income"],
     );
+    assertEquals(
+      projected.every((row) => row.analytics_is_final === false),
+      true,
+    );
     assertEquals(totals, {
-      totalExpense: 95000,
-      totalIncome: 125000,
-      net: 30000,
-      categories: [{ category: "housing", amount_cents: 95000 }],
+      totalExpense: 0,
+      totalIncome: 0,
+      net: 0,
+      categories: [],
     });
   },
 );
@@ -244,5 +248,5 @@ Deno.test("financial snapshot applies daily and biweekly frequencies", () => {
 
   assertEquals(dailyCount, 31);
   assertEquals(biweeklyCount, 3);
-  assertEquals(buildFinancialSnapshotTotals(projected).totalExpense, 4600);
+  assertEquals(buildFinancialSnapshotTotals(projected).totalExpense, 0);
 });

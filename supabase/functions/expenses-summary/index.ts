@@ -536,6 +536,7 @@ Deno.serve(async (req) => {
         "id, user_id, amount_cents, currency, category, date, analytics_is_final, analytics_spending_multiplier",
       )
       .eq("user_id", finalUserId)
+      .or("is_recurring.eq.false,is_recurring.is.null")
       .is("deleted_at", null)
       .gte("date", startDateIso)
       .lte("date", endDateIso);

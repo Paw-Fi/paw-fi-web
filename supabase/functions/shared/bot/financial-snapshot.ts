@@ -88,6 +88,9 @@ export function projectRecurringSnapshotRows(
         parent_recurring_id: row.id ?? row.parent_recurring_id ?? null,
         date: occurrenceDate,
         recurrence_rule: null,
+        // Projected rows may be shown as upcoming, but are never actual
+        // financial activity until an occurrence is confirmed.
+        analytics_is_final: false,
       };
       const hasLinkedOccurrence =
         row.id && linkedActualOccurrences.has(`${row.id}|${occurrenceDate}`);

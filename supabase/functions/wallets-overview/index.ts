@@ -520,7 +520,9 @@ function projectRecurringTransactions(
         splitGroupId: recurring.splitGroupId,
         walletId: recurring.accountId,
         type: recurring.type,
-        analyticsIsFinal: true,
+        // A scheduled occurrence is a forecast until its confirmation
+        // materializes an actual transaction.
+        analyticsIsFinal: false,
         analyticsSpendingMultiplier:
           recurring.type.toLowerCase() === "income" ? 0 : 1,
         analyticsCountsTowardIncome: recurring.type.toLowerCase() === "income",
@@ -726,7 +728,7 @@ Deno.serve(async (req: Request) => {
         .from("expenses")
         .select("account_id, amount_cents, type, currency, analytics_is_final")
         .in("account_id", accountIds)
-        .eq("is_recurring", false)
+        .or("is_recurring.eq.false,is_recurring.is.null")
         .lte("date", formatDateOnly(new Date()))
         .is("deleted_at", null);
 
@@ -837,7 +839,7 @@ Deno.serve(async (req: Request) => {
       .select(
         "id, user_id, household_id, date, amount_cents, currency, category, raw_text, split_group_id, account_id, type, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
       )
-      .eq("is_recurring", false)
+      .or("is_recurring.eq.false,is_recurring.is.null")
       .is("deleted_at", null)
       .eq("currency", selectedCurrency)
       .lte("date", formatDateOnly(new Date()));
@@ -933,18 +935,11 @@ Deno.serve(async (req: Request) => {
       actualTransactions,
     );
 
-    const recurringAwareTransactions = [
-      ...actualTransactions,
-      ...projectedTransactions,
-    ];
-    const availableMonths = buildWalletAvailableMonths(
-      now,
-      recurringAwareTransactions,
-    );
+    const availableMonths = buildWalletAvailableMonths(now, actualTransactions);
     const netWorthSeries = [...availableMonths].reverse().map((monthStart) => {
       const baseSnapshot = buildWalletSnapshot(
         wallets,
-        recurringAwareTransactions,
+        actualTransactions,
         walletSnapshotEndExclusive(monthStart, now),
       );
       const snapshot =
@@ -960,7 +955,7 @@ Deno.serve(async (req: Request) => {
     const monthSnapshots = requestedMonths.map((monthStart) => {
       const baseSnapshot = buildWalletSnapshot(
         wallets,
-        recurringAwareTransactions,
+        actualTransactions,
         walletSnapshotEndExclusive(monthStart, now),
       );
       const snapshot =
@@ -993,6 +988,15 @@ Deno.serve(async (req: Request) => {
           net_worth_series: netWorthSeries,
         },
         month_snapshots: monthSnapshots,
+        upcoming_recurring: projectedTransactions.map((transaction) => ({
+          id: transaction.id,
+          date: formatDateOnly(transaction.date),
+          amount_cents: transaction.amountCents,
+          currency: transaction.currency,
+          category: transaction.category,
+          wallet_id: transaction.walletId,
+          type: transaction.type,
+        })),
       },
     });
   } catch (error) {
