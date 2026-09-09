@@ -3,6 +3,11 @@
 
 create extension if not exists pgcrypto with schema extensions;
 
+-- Freeze writes while normalizing legacy identities and installing the unique
+-- index. Without this, an older app client could insert a duplicate between
+-- the repair below and the new database invariant.
+lock table public.budget_envelopes in share row exclusive mode;
+
 update public.budget_envelopes
 set rollover_group_id = gen_random_uuid()
 where rollover_group_id is null;
@@ -11,34 +16,26 @@ alter table public.budget_envelopes
   alter column rollover_group_id set default gen_random_uuid(),
   alter column rollover_group_id set not null;
 
-do $$
-declare
-  v_duplicates jsonb;
-begin
-  select coalesce(jsonb_agg(jsonb_build_object(
-    'budget_id', duplicate_rows.budget_id,
-    'rollover_group_id', duplicate_rows.rollover_group_id,
-    'envelope_ids', duplicate_rows.envelope_ids
-  )), '[]'::jsonb)
-  into v_duplicates
-  from (
-    select
-      e.budget_id,
-      e.rollover_group_id,
-      array_agg(e.id order by e.id) as envelope_ids
-    from public.budget_envelopes e
-    group by e.budget_id, e.rollover_group_id
-    having count(*) > 1
-  ) duplicate_rows;
-
-  if v_duplicates <> '[]'::jsonb then
-    raise exception
-      'Cannot enforce budget_envelopes(budget_id, rollover_group_id) uniqueness; duplicate persistent lineages: %',
-      v_duplicates
-      using errcode = '23505';
-  end if;
-end;
-$$;
+-- A legacy monthly copy could create two envelope rows with the same rollover
+-- group inside one budget. v4 gives that UUID the stricter meaning of one
+-- persistent pocket identity, so retain the oldest envelope's history and
+-- split every additional same-month row into its own lineage. This preserves
+-- all envelope IDs, allocations, category links, and transaction history;
+-- only an ambiguous legacy identity is disambiguated.
+with ranked_duplicate_lineages as (
+  select
+    envelope.id,
+    row_number() over (
+      partition by envelope.budget_id, envelope.rollover_group_id
+      order by envelope.created_at asc, envelope.id asc
+    ) as lineage_rank
+  from public.budget_envelopes envelope
+)
+update public.budget_envelopes envelope
+set rollover_group_id = gen_random_uuid()
+from ranked_duplicate_lineages duplicate
+where duplicate.id = envelope.id
+  and duplicate.lineage_rank > 1;
 
 create unique index if not exists budget_envelopes_budget_lineage_unique
   on public.budget_envelopes(budget_id, rollover_group_id);

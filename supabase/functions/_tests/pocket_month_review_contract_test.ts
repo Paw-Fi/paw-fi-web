@@ -145,6 +145,23 @@ Deno.test(
       ),
     );
     assertEquals(
+      migration.includes("with ranked_duplicate_lineages as ("),
+      true,
+    );
+    assertEquals(
+      migration.includes(
+        "lock table public.budget_envelopes in share row exclusive mode",
+      ),
+      true,
+    );
+    assertEquals(migration.includes("and duplicate.lineage_rank > 1"), true);
+    assertEquals(
+      migration.includes(
+        "Cannot enforce budget_envelopes(budget_id, rollover_group_id) uniqueness",
+      ),
+      false,
+    );
+    assertEquals(
       migration.includes("analytics_spending_multiplier <> 0"),
       true,
     );
