@@ -13,6 +13,7 @@ import { BLOG_AI_BUDGETING_APPS_2026 } from "./blog-ai-budgeting-apps-2026";
 import { BLOG_EASIEST_EXPENSE_TRACKING_2026 } from "./blog-easiest-expense-tracking-2026";
 import { BLOG_WHY_BUDGETING_APPS_FAIL_2026 } from "./blog-why-budgeting-apps-fail-2026";
 import { NEW_COMPARISON_BLOGS_2026 } from "./new-comparison-blogs-2026";
+import { NEW_MIGRATED_BLOGS_2026 } from "./new-migrated-blogs-2026";
 import { old_blogs } from "./old_blogs";
 
 // --- Blog Data ---
@@ -32,4 +33,5 @@ export const blogs: Blog[] = [
   ...BLOG_EASIEST_EXPENSE_TRACKING_2026,
   ...BLOG_WHY_BUDGETING_APPS_FAIL_2026,
   ...NEW_COMPARISON_BLOGS_2026,
+  ...NEW_MIGRATED_BLOGS_2026,
 ];
