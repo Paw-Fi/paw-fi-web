@@ -17,6 +17,10 @@ import { duplicateTransactionsArticle } from "./duplicate-transactions";
 import { emailReceiptsArticle } from "./email-receipts";
 import { envelopeBudgetingArticle } from "./envelope-budgeting";
 import { importExportDataArticle } from "./import-export-data";
+import { importTransactionsCsvArticle } from "./import-transactions-csv";
+import { importTransactionsExcelArticle } from "./import-transactions-excel";
+import { importTransactionsPdfArticle } from "./import-transactions-pdf";
+import { migrateFromOtherBudgetingAppsArticle } from "./migrate-from-other-budgeting-apps";
 import { importingHistorySafelyArticle } from "./importing-history-safely";
 import { exportingDataWithoutLockInArticle } from "./exporting-data-without-lock-in";
 import { financialMonthDateTimezoneArticle } from "./financial-month-date-timezone";
@@ -78,6 +82,10 @@ export const helpArticles: HelpArticle[] = [
   aiScenarioPlanningArticle,
   importingHistorySafelyArticle,
   exportingDataWithoutLockInArticle,
+  importTransactionsCsvArticle,
+  importTransactionsExcelArticle,
+  importTransactionsPdfArticle,
+  migrateFromOtherBudgetingAppsArticle,
   offlineSyncDevicesArticle,
   notificationsRemindersArticle,
   commonDiscrepanciesArticle,

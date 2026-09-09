@@ -2582,6 +2582,501 @@ export const helpCenterData: FAQCategory[] = [
       },
     ],
   },
+  {
+    id: "importing-migrating-data",
+    name: "Importing & Migrating Data",
+    description:
+      "Move your historical transactions from other apps and bank statements into Moneko with the import wizard.",
+    icon: "Download",
+    questions: [
+      {
+        id: "import-overview",
+        question:
+          "How do I import or migrate historical transactions into Moneko?",
+        answer:
+          'Moneko has a built-in import wizard that lets you bring historical transactions in from almost any other budgeting app or bank statement. To start an import from the Moneko mobile app: 1) Open the Home screen and tap the AI capture button (the round action button). 2) In the sheet that appears, choose "Files". 3) The Import Wizard opens and walks you through three steps: Select File → Map Columns → Preview & Confirm. The wizard supports CSV, TSV, TXT, PDF, and Excel (XLSX/XLS) files, and it recognizes exports from popular apps including YNAB, Monarch, Copilot, PocketGuard, Splitwise, EveryDollar, Cashew, Mint, Goodbudget, and Spendee. For any other tool, choose "Other" and upload a generic CSV or spreadsheet export. When you pick a known source, Moneko auto-detects the column layout and, when confidence is high, skips the mapping step entirely so you can go straight to preview. Your imported transactions land in the personal account or shared space you choose, and you can review, edit, or remove rows before anything is saved.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import transactions",
+          "migrate to moneko",
+          "import data",
+          "transfer transactions",
+          "import wizard",
+          "import historical data",
+          "move data to moneko",
+          "import from file",
+        ],
+        relatedQuestions: [
+          "import-supported-formats",
+          "import-wizard-walkthrough",
+          "import-from-ynab",
+          "import-from-goodbudget",
+        ],
+      },
+      {
+        id: "import-supported-formats",
+        question: "What file formats can I import into Moneko?",
+        answer:
+          "Moneko's import wizard accepts the following file formats: CSV (comma-separated values) — the most common export format from budgeting apps and banks. TSV (tab-separated values) — used by some exports such as YNAB. TXT (plain text) — treated like a delimited file; Moneko auto-detects the delimiter. PDF — digital bank or card statements; Moneko uses AI to extract transactions from the PDF (keep files under 20MB and ideally 1–5 pages for best results). XLSX / XLS (Microsoft Excel) — spreadsheet exports; if the workbook has multiple sheets, Moneko parses all of them and lets you pick which sheet to import. When you select a known source app in the wizard, the file picker is filtered to these supported extensions. If your tool only exports in an unusual format, open it in a spreadsheet app and re-save it as CSV before importing.",
+        category: "importing-migrating-data",
+        keywords: [
+          "supported file formats",
+          "csv import",
+          "pdf import",
+          "excel import",
+          "xlsx import",
+          "tsv import",
+          "file types",
+          "what files can i import",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-wizard-walkthrough",
+          "import-pdf-statements",
+          "import-excel-multiple-sheets",
+        ],
+      },
+      {
+        id: "import-wizard-walkthrough",
+        question:
+          "What are the steps in the Moneko import wizard?",
+        answer:
+          "The import wizard has three steps, shown as a timeline at the top of the screen: STEP 1 — SELECT FILE: Pick the app you are migrating from (YNAB, Monarch, Copilot, PocketGuard, Splitwise, EveryDollar, Cashew, Mint, Goodbudget, Spendee, or Other). A hint card tells you exactly which file to upload for that source. Tap the file row to open the file picker and choose your export. Moneko parses the file and auto-maps the columns. If the mapping confidence is high and most sample rows parse cleanly, you skip straight to Step 3. STEP 2 — MAP COLUMNS (only if needed): Match each column in your file to a Moneko field. Required fields are Date and an Amount (or separate Debit and Credit columns if your file splits them — toggle the Split Debit/Credit switch). Optional fields include Category, Description, Merchant, Currency, Type, Reference, and Balance. A format badge may show the detected bank (for example Chase, Bank of America, Wells Fargo, Revolut, N26, Wise, or PayPal). Tap Next when the required fields are mapped. STEP 3 — PREVIEW & CONFIRM: Review every parsed row. The summary card shows total rows, valid rows, rows with errors, and duplicates. Choose where the transactions go (your personal account or a shared household space) and which wallet/account receives them. You can tap any row to edit it, remove rows, handle detected recurring series, and toggle whether to skip duplicates. When you are happy, tap Import to save. A progress dialog shows live status, and a completion summary reports how many rows were imported, failed, or skipped as duplicates.",
+        category: "importing-migrating-data",
+        keywords: [
+          "import wizard steps",
+          "import walkthrough",
+          "how to import",
+          "import process",
+          "map columns",
+          "preview import",
+          "import wizard",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+          "import-duplicates",
+        ],
+      },
+      {
+        id: "import-column-mapping",
+        question:
+          "How does column mapping work when importing transactions?",
+        answer:
+          "Column mapping tells Moneko which column in your file corresponds to which transaction field. Moneko auto-detects mappings by matching column headers against known synonyms and by sampling the values in each column, then assigns a confidence score. If confidence is high and at least 70% of sampled rows parse successfully, the mapping step is skipped automatically — you will see a banner in the preview letting you review the mapping if you want. Otherwise, the Map Columns step appears. REQUIRED FIELDS: Date and Amount (or Debit and Credit if your file uses separate columns for money in/out — turn on the Split Debit/Credit toggle, and Moneko computes amount = credit − debit). OPTIONAL FIELDS: Category, Description, Merchant, Currency, Type (expense/income), Reference, and Balance. To map a field, tap it and pick the matching column from the action sheet, or choose None to leave it unmapped. A format badge may appear showing the detected bank or app format (Chase, Bank of America, Wells Fargo, Revolut, N26, Wise, PayPal, or Debit/Credit Split). For Excel files with multiple sheets, a sheet selector lets you switch between sheets before mapping. You can always go back to this step from the preview if a mapping looks wrong.",
+        category: "importing-migrating-data",
+        keywords: [
+          "column mapping",
+          "map columns",
+          "match columns",
+          "import fields",
+          "debit credit split",
+          "auto mapping",
+          "format detection",
+          "map csv columns",
+        ],
+        relatedQuestions: [
+          "import-wizard-walkthrough",
+          "import-preview-review",
+          "import-excel-multiple-sheets",
+        ],
+      },
+      {
+        id: "import-preview-review",
+        question:
+          "How do I review and edit transactions before importing?",
+        answer:
+          "The Preview step is where you confirm everything looks right before saving. SUMMARY CARD: Shows total rows, valid rows, rows with errors, and duplicates. TARGET: Choose where the transactions go — your personal account or a shared household space — and pick the specific wallet/account that will receive them. The account list is filtered to match the currency of your rows (or your primary currency if rows are mixed). If you do not have a matching account yet, you can create one right from this screen. ROW LIST: Each row shows the parsed date, amount, category, description, and status. Tap any row to open the edit sheet, where you can fix the date, amount, category, description, merchant, currency, and whether it is income or expense. When you change a category, Moneko offers to apply the same category to all matching transactions at once. RECURRING SERIES: If Moneko detects a recurring transaction series in your file, it groups the occurrences and lets you release the series (import each occurrence as a standalone transaction) or keep them grouped. OPTIONS: A toggle lets you skip duplicates (on by default), so rows that already exist in Moneko are not imported again. AUTO-SKIP BANNER: If the mapping step was skipped due to high confidence, a banner appears letting you go back and review the mapping. When you are ready, tap Import (N) to save the valid rows in batches with live progress.",
+        category: "importing-migrating-data",
+        keywords: [
+          "preview import",
+          "review transactions",
+          "edit import rows",
+          "import review",
+          "fix import",
+          "recurring series import",
+          "skip duplicates",
+          "apply category to all",
+        ],
+        relatedQuestions: [
+          "import-wizard-walkthrough",
+          "import-duplicates",
+          "import-recurring-series",
+          "import-multi-currency",
+        ],
+      },
+      {
+        id: "import-duplicates",
+        question:
+          "How does Moneko handle duplicate transactions during import?",
+        answer:
+          "Moneko automatically detects duplicate transactions in two ways: duplicates within the same import file (two rows with the same key details), and duplicates against transactions that already exist in your Moneko database. In the Preview step, the summary card shows a duplicate count, and each duplicate row is flagged with the reason (in-file or already in your account). The Skip Duplicates toggle is on by default, which means flagged duplicates are excluded from the import and counted as skipped in the completion summary. If you want to import duplicates anyway — for example, when re-importing after a partial failure — turn the toggle off. The completion dialog at the end reports how many rows were imported, how many failed, and how many were skipped as duplicates, so you always know exactly what landed in your account.",
+        category: "importing-migrating-data",
+        keywords: [
+          "duplicate transactions",
+          "skip duplicates",
+          "duplicate detection",
+          "import duplicates",
+          "dedupe import",
+          "duplicate flag",
+        ],
+        relatedQuestions: [
+          "import-preview-review",
+          "import-wizard-walkthrough",
+        ],
+      },
+      {
+        id: "import-recurring-series",
+        question:
+          "What happens to recurring transactions during import?",
+        answer:
+          "When Moneko detects a recurring transaction series in your import file (for example, a monthly rent payment that appears multiple times), it groups those occurrences together so you can decide how to handle them. In the Preview step, recurring rows show a badge with the number of occurrences in the series. The first row of each series is the anchor. You can tap Release series on the anchor row to break the grouping and import each occurrence as an individual, standalone transaction instead. If you keep the series grouped, Moneko imports the anchor and links the related occurrences as a recurring series, so they continue to be recognized as part of the same recurring pattern in your account. This is especially useful when migrating from apps like YNAB or EveryDollar that track scheduled/recurring payments, because it preserves the recurrence structure rather than flattening everything into isolated transactions.",
+        category: "importing-migrating-data",
+        keywords: [
+          "recurring transactions import",
+          "recurring series",
+          "scheduled transactions",
+          "release series",
+          "recurring import",
+          "recurring pattern",
+        ],
+        relatedQuestions: [
+          "import-preview-review",
+          "what-are-recurring-transactions",
+          "how-to-create-recurring",
+        ],
+      },
+      {
+        id: "import-multi-currency",
+        question:
+          "How does currency work when importing transactions?",
+        answer:
+          "Moneko is multi-currency aware during import. If your file has a Currency column, map it in the Map Columns step so each row keeps its native currency. When all rows in the file share the same currency, Moneko automatically selects that currency for the import target. When rows are mixed or no currency column is mapped, Moneko falls back to your primary (home) currency. In the Preview step, the account/wallet picker is filtered to accounts matching the resolved target currency, so you cannot accidentally import EUR rows into a USD-only wallet. If you do not yet have an account in the needed currency, you can create one directly from the account picker. Each imported row stays in its native currency for display; aggregate totals convert into your display/base currency as normal, consistent with Moneko's multi-currency behavior.",
+        category: "importing-migrating-data",
+        keywords: [
+          "multi-currency import",
+          "currency import",
+          "import foreign currency",
+          "import eur usd",
+          "currency column",
+          "currency mapping",
+        ],
+        relatedQuestions: [
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-pdf-statements",
+        question: "Can I import transactions from a PDF bank statement?",
+        answer:
+          "Yes. Moneko can extract transactions from digital PDF bank and card statements using AI. To import a PDF: 1) In the import wizard, pick a source (or Other) and tap the file row. 2) Choose your PDF file. 3) Moneko sends the PDF to its secure import service, which reads the statement and returns a structured table of transactions. 4) From there, the normal Map Columns and Preview steps apply. LIMITS & TIPS: Keep PDFs under 20MB. For best results, split long statements into smaller files of 1–5 pages each — very long PDFs can time out or hit the page limit. Use a digital (text-based) PDF rather than a scanned image whenever possible; if you only have a scan, make sure it is clear and high-contrast. If Moneko cannot extract transactions from a PDF, the error message will suggest using a clearer scan or a digital statement. You can always export a CSV from your bank's website instead, which is more reliable than PDF.",
+        category: "importing-migrating-data",
+        keywords: [
+          "pdf import",
+          "bank statement import",
+          "import pdf",
+          "statement pdf",
+          "pdf transactions",
+          "extract transactions pdf",
+        ],
+        relatedQuestions: [
+          "import-supported-formats",
+          "import-wizard-walkthrough",
+          "import-troubleshooting",
+        ],
+      },
+      {
+        id: "import-excel-multiple-sheets",
+        question:
+          "How do I import from an Excel file with multiple sheets?",
+        answer:
+          "When you import an XLSX or XLS file, Moneko parses every sheet in the workbook. If the file has more than one sheet, a sheet selector appears as a horizontal row of tabs in the Map Columns step. By default, Moneko selects the sheet with the most rows, but you can tap any tab to switch to a different sheet. After switching sheets, the column mapping and preview update for the selected sheet. This is handy when a single export workbook contains separate tabs for different accounts or different months — import each sheet one at a time, choosing the right target wallet for each. If no data is found in the Excel file, Moneko shows an error and lets you pick a different file.",
+        category: "importing-migrating-data",
+        keywords: [
+          "excel import",
+          "xlsx import",
+          "multiple sheets",
+          "workbook import",
+          "spreadsheet import",
+          "excel tabs",
+        ],
+        relatedQuestions: [
+          "import-supported-formats",
+          "import-column-mapping",
+          "import-wizard-walkthrough",
+        ],
+      },
+      {
+        id: "import-target-personal-vs-household",
+        question:
+          "Can I import transactions into a shared household space?",
+        answer:
+          "Yes. In the Preview step, the summary card has an Import Into selector. Tap it to choose your personal account or any shared household space you belong to. When you pick a household, the wallet/account picker filters to wallets belonging to that household. If you started the import from onboarding, the target is locked to your personal account and a note explains that onboarding imports always sync to your personal account — you can move transactions into a household later. After the import completes, Moneko refreshes the relevant data for the chosen target (personal analytics, or household expenses, splits, budgets, and members) so everything updates immediately.",
+        category: "importing-migrating-data",
+        keywords: [
+          "import to household",
+          "import shared space",
+          "household import",
+          "personal vs household import",
+          "import joint account",
+        ],
+        relatedQuestions: [
+          "import-preview-review",
+          "personal-vs-household-mode",
+        ],
+      },
+      {
+        id: "import-from-ynab",
+        question: "How do I migrate my transactions from YNAB to Moneko?",
+        answer:
+          'To import from YNAB (You Need A Budget): 1) Export your transactions from YNAB as a CSV or TSV file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "YNAB" as the source. The hint card will say "Upload YNAB export (CSV/TSV). Note: targets may not transfer." 4) Pick your exported file. Moneko auto-detects columns by matching headers against known synonyms. 5) If your file uses separate outflow/inflow columns, enable the Split Debit/Credit toggle in the Map Columns step and map them to Debit and Credit. 6) In Preview, choose your target wallet and review the rows. The wizard notes that YNAB targets may not transfer — Moneko maps categories to its own category system, and you can remap categories by tapping a row in the preview. 7) Tap Import.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from ynab",
+          "ynab to moneko",
+          "ynab migration",
+          "ynab export",
+          "you need a budget import",
+          "ynab csv",
+          "ynab tsv",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+          "moneko-vs-ynab",
+        ],
+      },
+      {
+        id: "import-from-goodbudget",
+        question: "How do I migrate my transactions from Goodbudget to Moneko?",
+        answer:
+          'To import from Goodbudget: 1) Export your transactions from Goodbudget as a CSV file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "Goodbudget" as the source. The hint card will say "Upload Transactions CSV." 4) Pick your exported CSV. Moneko auto-detects columns by matching headers against known synonyms. 5) In the Map Columns step, confirm which columns map to Date, Amount, Category, Description, and Merchant. 6) In Preview, choose your target wallet and review the rows. After import, you can set up Moneko Pockets to organize your budget. 7) Tap Import.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from goodbudget",
+          "goodbudget to moneko",
+          "goodbudget migration",
+          "goodbudget export",
+          "envelope budget import",
+          "goodbudget csv",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-from-monarch",
+        question: "How do I migrate my transactions from Monarch to Moneko?",
+        answer:
+          'To import from Monarch Money: 1) Export your transactions from Monarch as a CSV file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "Monarch" as the source. The hint card will say "Upload Transactions CSV (all accounts). Optional: Balance history CSV." 4) Pick your transactions CSV. Moneko auto-detects columns by matching headers against known synonyms. 5) In Preview, choose the target wallet. The hint indicates the CSV covers all accounts, so if you want transactions in separate Moneko wallets you may need to split the file by account before importing. 6) Review and edit rows as needed, then tap Import. The optional Balance history CSV is not part of the transaction import flow.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from monarch",
+          "monarch to moneko",
+          "monarch money migration",
+          "monarch export",
+          "monarch csv",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-from-copilot",
+        question: "How do I migrate my transactions from Copilot to Moneko?",
+        answer:
+          'To import from Copilot Money: 1) Export your transactions from Copilot as a CSV file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "Copilot" as the source. The hint card will say "Upload your Copilot transactions CSV export." 4) Pick your exported CSV. Moneko auto-detects columns by matching headers against known synonyms. 5) In the Map Columns step, confirm the mappings. If your file uses a single Amount column, map it to Amount (no Debit/Credit split needed). 6) In Preview, choose your target wallet, review the rows, and tap Import. After import, use the edit sheet to remap any categories to Moneko\'s built-in categories if you want them to match your budgets and pockets.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from copilot",
+          "copilot to moneko",
+          "copilot money migration",
+          "copilot export",
+          "copilot csv",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-from-pocketguard",
+        question:
+          "How do I migrate my transactions from PocketGuard to Moneko?",
+        answer:
+          'To import from PocketGuard: 1) Export your transactions from PocketGuard as a CSV file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "PocketGuard" as the source. The hint card will say "Upload your PocketGuard transactions CSV export." 4) Pick your exported CSV. Moneko auto-detects columns by matching headers against known synonyms. 5) In the Map Columns step, confirm the mappings. 6) In Preview, choose your target wallet, review the rows, and tap Import.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from pocketguard",
+          "pocketguard to moneko",
+          "pocketguard migration",
+          "pocketguard export",
+          "pocketguard csv",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-from-splitwise",
+        question: "How do I migrate my transactions from Splitwise to Moneko?",
+        answer:
+          'To import from Splitwise: 1) Export your expenses from Splitwise as a CSV file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "Splitwise" as the source. The hint card will say "Upload your Splitwise CSV export." 4) Pick your exported CSV. Moneko auto-detects columns by matching headers against known synonyms. 5) In the Map Columns step, map the relevant columns to Date, Amount, Description, and Category. 6) In Preview, choose your target wallet and review the rows. If you use Moneko\'s household feature, you can import shared expenses into a household space and use splits to allocate them among members. 7) Tap Import.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from splitwise",
+          "splitwise to moneko",
+          "splitwise migration",
+          "splitwise export",
+          "splitwise csv",
+          "shared expenses import",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-target-personal-vs-household",
+        ],
+      },
+      {
+        id: "import-from-everydollar",
+        question: "How do I migrate my transactions from EveryDollar to Moneko?",
+        answer:
+          'To import from EveryDollar: 1) Export your transactions from EveryDollar as a CSV file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "EveryDollar" as the source. The hint card will say "Upload one or more monthly Transactions CSV exports." 4) Pick one monthly CSV to start. Moneko auto-detects columns by matching headers against known synonyms. 5) In the Map Columns step, confirm the mappings. 6) In Preview, choose your target wallet and review the rows. 7) Tap Import, then repeat the wizard for each additional monthly export. The hint indicates these are monthly exports, so you may need multiple files to cover your full history. After import, you can set up Moneko Pockets to organize your budget.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from everydollar",
+          "everydollar to moneko",
+          "everydollar migration",
+          "everydollar export",
+          "everydollar csv",
+          "ramsey everydollar",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-from-cashew",
+        question: "How do I migrate my transactions from Cashew to Moneko?",
+        answer:
+          'To import from Cashew: 1) Create a data file backup in Cashew. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "Cashew" as the source. The hint card will say "Upload Cashew Data File backup (preferred)." 4) Pick your Cashew backup file. Moneko parses the file and extracts the transactions. 5) In the Map Columns step, confirm the mappings. 6) In Preview, choose your target wallet, review the rows, and tap Import. The hint indicates the Data File backup is the preferred source. If you only have a CSV export, that works too — just choose Cashew or Other as the source.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from cashew",
+          "cashew to moneko",
+          "cashew migration",
+          "cashew backup",
+          "cashew data file",
+          "cashew export",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-from-mint",
+        question: "How do I migrate my transactions from Mint to Moneko?",
+        answer:
+          'To import from Mint (now discontinued): 1) If you still have your Mint data, locate the transactions CSV export you downloaded before Mint shut down. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "Mint" as the source. The hint card will say "Upload one or more Mint Transactions CSV exports (may require multiple exports)." 4) Pick one Mint CSV to start. Moneko auto-detects columns by matching headers against known synonyms. 5) In the Map Columns step, confirm the mappings. If your file has a Transaction Type column, map it to the Type field so Moneko knows which rows are income vs expense. 6) In Preview, choose your target wallet and review the rows. 7) Tap Import, then repeat for any additional Mint export files. The hint indicates you may need multiple exports to cover your full history. If you no longer have your Mint export, you can import from your bank\'s own CSV or PDF statement exports — choose Other as the source.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from mint",
+          "mint to moneko",
+          "mint migration",
+          "mint export",
+          "mint csv",
+          "mint.com import",
+          "mint discontinued",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+          "moneko-vs-mint",
+        ],
+      },
+      {
+        id: "import-from-spendee",
+        question: "How do I migrate my transactions from Spendee to Moneko?",
+        answer:
+          'To import from Spendee: 1) Export your transactions from Spendee as a CSV or XLS file. 2) In Moneko, open the import wizard from the Home AI button → Files. 3) Select "Spendee" as the source. The hint card will say "Upload CSV/XLS export (All wallets; free users limited to 365 days)." 4) Pick your exported file. Moneko auto-detects columns by matching headers against known synonyms. 5) In the Map Columns step, confirm the mappings. If the export uses separate income/expense columns, enable the Split Debit/Credit toggle. 6) In Preview, choose your target wallet. The hint indicates the export covers all wallets, so if you want transactions in separate Moneko wallets you may need to split the file by wallet before importing. 7) Review the rows and tap Import. The hint also notes free users are limited to 365 days of history; if you need older history, consider reconstructing those transactions from bank statements using the Other source.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from spendee",
+          "spendee to moneko",
+          "spendee migration",
+          "spendee export",
+          "spendee csv",
+          "spendee xls",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-preview-review",
+        ],
+      },
+      {
+        id: "import-from-other-app",
+        question:
+          "How do I import transactions from an app not listed in Moneko?",
+        answer:
+          'If your budgeting app or bank is not one of the named sources, use the "Other" option. 1) In Moneko, open the import wizard from the Home AI button → Files. 2) Select "Other" as the source. The hint card will say "Upload a CSV, XLS/XLSX, TXT, or PDF export from your tool." 3) Pick your exported file. Moneko will attempt to auto-detect the columns; if confidence is low, you will land on the Map Columns step. 4) Map the required fields (Date and Amount, or Debit + Credit with the split toggle on) and any optional fields you care about (Category, Description, Merchant, Currency, Type, Reference, Balance). 5) In Preview, choose your target wallet, review and edit rows, then tap Import. TIP: Almost every budgeting app and bank lets you export a CSV. If your tool only exports to PDF, Moneko can extract transactions from digital PDF statements. If the export is in a proprietary format, open it in a spreadsheet app and save it as CSV first. The most important columns for a clean import are Date and Amount — make sure those are present and unambiguous in your file.',
+        category: "importing-migrating-data",
+        keywords: [
+          "import from other app",
+          "generic import",
+          "other source",
+          "import any csv",
+          "import bank statement",
+          "unlisted app import",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-column-mapping",
+          "import-pdf-statements",
+          "import-supported-formats",
+        ],
+      },
+      {
+        id: "import-troubleshooting",
+        question:
+          "What should I do if my import fails or rows are missing?",
+        answer:
+          "If your import does not go smoothly, try these steps in order: FILE NOT PARSING — Make sure the file is a supported format (CSV, TSV, TXT, PDF, XLSX, XLS). For CSV, re-save it as UTF-8 encoding; non-UTF-8 files can fail with an encoding error. For Excel, ensure the sheet actually contains data. WRONG COLUMNS MAPPED — Go back to the Map Columns step from the Preview (use the Back button or the auto-skip banner) and re-map the fields manually. The format badge and sheet selector can help confirm you are reading the right data. ROWS SHOWING ERRORS — Tap any row with an error to open the edit sheet. Common causes are an unparseable date or a non-numeric amount; fix the value or delete the row. Rows with errors are excluded from the import automatically. TOO MANY DUPLICATES — If valid rows are being skipped as duplicates but you want them, turn off the Skip Duplicates toggle in the Preview options. If you are re-importing after a partial failure, leaving the toggle on avoids creating duplicates. PDF TOO LARGE OR TIMING OUT — Split the PDF into smaller files of 1–5 pages each and import them one at a time. Keep PDFs under 20MB. Use a digital (text) PDF rather than a scanned image. SESSION EXPIRED — If you see a session-expired message, sign back into Moneko and retry the import. IMPORT SERVICE UNAVAILABLE — This is usually temporary; wait a moment and retry. If the issue persists, contact support@moneko.io with a description of the file and the error message. The completion dialog always reports imported, failed, and skipped counts so you know exactly what landed in your account.",
+        category: "importing-migrating-data",
+        keywords: [
+          "import troubleshooting",
+          "import failed",
+          "import error",
+          "rows missing",
+          "import not working",
+          "csv encoding error",
+          "pdf too large",
+          "import session expired",
+        ],
+        relatedQuestions: [
+          "import-overview",
+          "import-pdf-statements",
+          "import-duplicates",
+          "contact-support",
+        ],
+      },
+    ],
+  },
 ];
 // Calculate and export metadata
 export const totalQuestions = helpCenterData.reduce(
