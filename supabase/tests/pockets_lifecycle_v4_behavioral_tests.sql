@@ -3,7 +3,7 @@
 
 begin;
 create extension if not exists pgtap;
-select plan(26);
+select plan(31);
 
 select is(public.financial_cycle_start_for_month(date '2026-04-03', 1), date '2026-04-01', 'day 1 anchors the calendar month');
 select is(public.previous_financial_cycle_start(date '2026-04-15', 15), date '2026-03-15', 'day 15 compares dates before its cycle boundary to the prior anchor');
@@ -38,6 +38,9 @@ declare
   v_update jsonb;
   v_preview jsonb;
   v_retirement jsonb;
+  v_retirement_replay jsonb;
+  v_month_response jsonb;
+  v_retired_month_response jsonb;
   v_lineage_id uuid;
   v_month date := date_trunc('month', current_date)::date;
 begin
@@ -69,14 +72,24 @@ begin
     'Updated fixture pocket', 'savings', '#445566', null, false, false, null,
     'decide_each_cycle', null, array['food', 'groceries'], 500
   );
+  v_month_response := public.get_pockets_month_v4(
+    v_user_id, 'personal', v_month, null, 'USD', true, false
+  );
   v_preview := public.preview_pocket_lineage_retirement_v1(v_user_id, 'personal', null, v_lineage_id, v_month);
   v_retirement := public.retire_pocket_lineage_v1(v_user_id, 'personal', null, v_lineage_id, v_month, 1, 'fixture', 'release_positive', null);
+  v_retirement_replay := public.retire_pocket_lineage_v1(v_user_id, 'personal', null, v_lineage_id, v_month, 1, 'fixture retry', 'release_positive', null);
+  v_retired_month_response := public.get_pockets_month_v4(
+    v_user_id, 'personal', v_month, null, 'USD', true, false
+  );
   perform set_config('test.pockets_lifecycle_fixture_lineage_id', v_lineage_id::text, false);
   perform set_config('test.pockets_lifecycle_create', v_response::text, false);
   perform set_config('test.pockets_lifecycle_replay', v_replay::text, false);
   perform set_config('test.pockets_lifecycle_update', v_update::text, false);
   perform set_config('test.pockets_lifecycle_preview', v_preview::text, false);
   perform set_config('test.pockets_lifecycle_retirement', v_retirement::text, false);
+  perform set_config('test.pockets_lifecycle_retirement_replay', v_retirement_replay::text, false);
+  perform set_config('test.pockets_lifecycle_month_response', v_month_response::text, false);
+  perform set_config('test.pockets_lifecycle_retired_month_response', v_retired_month_response::text, false);
 end;
 $$;
 
@@ -109,6 +122,30 @@ select is(
   (select status from public.pocket_lineages where id = current_setting('test.pockets_lifecycle_fixture_lineage_id')::uuid),
   'retired',
   'retirement finalizes the fixture lineage'
+);
+select is(
+  (select rollover_cap_cents from public.pocket_lineages where id = current_setting('test.pockets_lifecycle_fixture_lineage_id')::uuid),
+  null::bigint,
+  'a lifecycle update can intentionally clear a nullable rollover cap'
+);
+select is(
+  (current_setting('test.pockets_lifecycle_create')::jsonb -> 'lineage' ->> 'activation_reason'),
+  'user_created',
+  'new lifecycle pockets identify the user-created origin'
+);
+select ok(
+  current_setting('test.pockets_lifecycle_month_response')::jsonb #> '{envelopes,0,lineage}' ? 'logo_url'
+  and current_setting('test.pockets_lifecycle_month_response')::jsonb #> '{envelopes,0,effective_categories}' = '["food","groceries"]'::jsonb,
+  'materialized pockets expose lineage metadata and effective categories'
+);
+select ok(
+  (current_setting('test.pockets_lifecycle_retirement_replay')::jsonb ->> 'idempotent_replay')::boolean,
+  'a retirement retry returns an idempotent response instead of duplicating adjustments'
+);
+select is(
+  jsonb_array_length(current_setting('test.pockets_lifecycle_retired_month_response')::jsonb -> 'envelopes'),
+  0,
+  'a retirement filters its materialized envelope from the v4 month payload'
 );
 select * from finish();
 rollback;

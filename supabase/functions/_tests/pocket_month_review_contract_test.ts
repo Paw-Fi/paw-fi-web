@@ -180,3 +180,23 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "final pockets lifecycle migration keeps its logo backfill executable",
+  async () => {
+    const migration = await Deno.readTextFile(
+      new URL(
+        "../../migrations/20260908210000_finalize_pockets_lifecycle_v4_contract.sql",
+        import.meta.url,
+      ),
+    );
+    assertEquals(migration.includes("from lateral ("), false);
+    assertEquals(migration.includes("with latest_logo as ("), true);
+    assertEquals(
+      migration.includes(
+        "logo_url = coalesce(\n          nullif(trim(new.logo_url), ''),\n          v_lineage.logo_url",
+      ),
+      true,
+    );
+  },
+);
