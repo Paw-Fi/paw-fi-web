@@ -7,7 +7,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="${1:-pbopcsmrcykdzbilpilf}"  # Can override with arg
+PROJECT_REF="${1:-qbuynyxyemigtnvdujts}"  # Can override with arg
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🤖 Deploying GPT Functions"
