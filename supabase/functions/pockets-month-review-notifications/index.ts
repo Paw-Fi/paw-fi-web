@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
   const url = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceKey) {
@@ -34,7 +33,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
   try {
     const supabase = createClient(url, serviceKey, {
       auth: {
@@ -43,8 +41,6 @@ Deno.serve(async (req) => {
         detectSessionInUrl: false,
       },
     });
-    // This v4-owned RPC atomically checks edit access, active pockets, review state,
-    // timezone/cycle boundaries, and the one-event-per-user/cycle uniqueness rule.
     const { data, error } = await supabase.rpc(
       "enqueue_pockets_month_review_notifications_v1",
     );

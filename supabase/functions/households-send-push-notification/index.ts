@@ -1684,15 +1684,11 @@ function buildNotificationMessage(
       const cycleLabel = String(payload.financial_cycle_label || "this cycle");
       return {
         title: `Review your ${cycleLabel} plan`,
-        body: "Your pockets are ready. Review this cycle’s amounts and anything carried over.",
+        body: "Review and update your pockets whenever you are ready.",
         data: {
           type: "openPocketsPage",
           action: "openPocketsPage",
           cycle_start: String(payload.cycle_start || ""),
-          budget_month: String(payload.budget_month || ""),
-          scope: String(payload.scope || ""),
-          household_id: String(payload.household_id || ""),
-          currency: String(payload.currency || ""),
           deep_link: "moneko://pockets",
         },
       };

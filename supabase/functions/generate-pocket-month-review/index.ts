@@ -9,13 +9,6 @@ import {
   sendGeminiMessageWithRetry,
 } from "../shared/gemini-retry.ts";
 import {
-  buildCuratedPocketMonthReviewContext,
-  buildPocketMonthReviewFallback,
-  hashPocketMonthReviewInput,
-  isPocketMonthReviewPermissionError,
-  normalizePocketMonthReview,
-} from "../shared/pocket-month-review.ts";
-import {
   createVertexChatSession,
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
@@ -25,16 +18,17 @@ import {
   loadLatestSubscriptionForUser,
 } from "../shared/plus-entitlement.ts";
 
-const PROMPT_VERSION = "pocket-month-review-v1";
 const MAX_REQUEST_BYTES = 2_000;
+const MAX_SUGGESTIONS = 30;
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-interface ReviewRequest {
-  scope?: unknown;
-  householdId?: unknown;
-  currency?: unknown;
-  cycleStart?: unknown;
+type PocketScope = "personal" | "portfolio" | "household";
+
+interface Suggestion {
+  envelope_id: string;
+  suggested_amount_cents: number;
+  reason: string;
 }
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
@@ -44,100 +38,158 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
-function boundedString(value: unknown, maxLength: number): string | null {
-  if (typeof value !== "string") return null;
-  const normalized = value.trim();
-  return normalized && normalized.length <= maxLength ? normalized : null;
-}
-
 function parseRequest(value: unknown): {
-  scope: "personal" | "portfolio" | "household";
+  scope: PocketScope;
   householdId: string | null;
   currency: string;
   cycleStart: string;
 } | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const body = value as ReviewRequest;
-  const scope = boundedString(body.scope, 20)?.toLowerCase();
-  const currency = boundedString(body.currency, 3)?.toUpperCase();
-  const cycleStart = boundedString(body.cycleStart, 10);
+  const body = value as Record<string, unknown>;
+  const scope = typeof body.scope === "string" ? body.scope.toLowerCase() : "";
+  const currency = typeof body.currency === "string"
+    ? body.currency.toUpperCase().trim()
+    : "";
+  const cycleStart = typeof body.cycleStart === "string"
+    ? body.cycleStart.trim()
+    : "";
   const householdId = body.householdId == null
     ? null
-    : boundedString(body.householdId, 36);
+    : typeof body.householdId === "string"
+    ? body.householdId.trim()
+    : "";
   if (
     (scope !== "personal" && scope !== "portfolio" && scope !== "household") ||
-    !currency ||
     !/^[A-Z]{3}$/.test(currency) ||
-    !cycleStart ||
     !/^\d{4}-\d{2}-\d{2}$/.test(cycleStart) ||
-    (householdId != null && !UUID_REGEX.test(householdId)) ||
-    (scope === "personal") !== (householdId == null)
-  ) {
-    return null;
-  }
+    (householdId !== null && !UUID_REGEX.test(householdId)) ||
+    (scope === "personal" && householdId !== null) ||
+    (scope === "household" && householdId === null)
+  ) return null;
   return { scope, householdId, currency, cycleStart };
 }
 
-function reviewSchema() {
-  const textItem = {
-    type: "OBJECT",
-    properties: {
-      text: { type: "STRING" },
-      fact_ids: { type: "ARRAY", items: { type: "STRING" } },
-    },
-    required: ["text", "fact_ids"],
-  };
+function schema() {
   return {
     type: "OBJECT",
     properties: {
-      headline: textItem,
-      celebration: textItem,
-      previous_cycle_summary: textItem,
-      attention_items: { type: "ARRAY", items: textItem, maxItems: 4 },
-      recommendations: { type: "ARRAY", items: textItem, maxItems: 4 },
-      pocket_explanations: {
+      summary: { type: "STRING" },
+      suggestions: {
         type: "ARRAY",
         items: {
           type: "OBJECT",
           properties: {
-            pocket_lineage_id: { type: "STRING" },
-            text: { type: "STRING" },
-            fact_ids: { type: "ARRAY", items: { type: "STRING" } },
+            envelope_id: { type: "STRING" },
+            suggested_amount_cents: { type: "INTEGER" },
+            reason: { type: "STRING" },
           },
-          required: ["pocket_lineage_id", "text", "fact_ids"],
+          required: ["envelope_id", "suggested_amount_cents", "reason"],
         },
-        maxItems: 4,
       },
     },
-    required: [
-      "headline",
-      "celebration",
-      "previous_cycle_summary",
-      "attention_items",
-      "recommendations",
-      "pocket_explanations",
-    ],
+    required: ["summary", "suggestions"],
   };
 }
 
-function prompt(
-  context: Record<string, unknown>,
-  locale: string | null,
-): string {
-  return `Write a short, warm monthly pocket review in ${
-    locale || "the user's preferred language"
-  }.
-Use only the supplied authoritative facts. Do not calculate, alter, or recommend allocations. Do not invent transactions, income, causes, or investment advice. Avoid shame and alarmist language. Every statement containing an amount must include the matching supplied fact ID in fact_ids. Return only the requested JSON schema.\n\nAUTHORITATIVE_CONTEXT:\n${
-    JSON.stringify(
-      context,
-    )
-  }`;
+function buildContext(month: Record<string, unknown>) {
+  const envelopes = Array.isArray(month.envelopes) ? month.envelopes : [];
+  const pockets = envelopes.flatMap((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+    const row = value as Record<string, unknown>;
+    if (typeof row.id !== "string" || typeof row.name !== "string") return [];
+    return [{
+      id: row.id,
+      name: row.name,
+      current_added_cents: Number(row.base_budget_amount_cents ?? 0),
+      incoming_carry_cents: Number(row.rollover_from_previous_cents ?? 0) +
+        Number(row.opening_rollover_cents ?? 0),
+      available_cents: Number(row.available_budget_cents ?? 0),
+      spent_cents: Number(row.spent_cents ?? 0),
+      remaining_cents: Number(row.remaining_cents ?? 0),
+      rollover_enabled: row.rollover_enabled === true,
+    }];
+  });
+  const budget = month.budget && typeof month.budget === "object"
+    ? month.budget as Record<string, unknown>
+    : {};
+  return {
+    total_budget_cents: Number(budget.total_budget_cents ?? 0),
+    total_spend_cents: Number(month.total_spend_cents ?? 0),
+    pockets,
+  };
 }
 
-async function generateReview(
-  context: Record<string, unknown>,
+function fallback(context: ReturnType<typeof buildContext>) {
+  return {
+    summary:
+      "Here are your current pocket amounts to review. You can change any of them before saving your plan.",
+    suggestions: context.pockets.map((pocket) => ({
+      envelope_id: pocket.id,
+      suggested_amount_cents: Math.max(
+        0,
+        Math.round(pocket.current_added_cents),
+      ),
+      reason: "Keeps this pocket at the amount you already set for this month.",
+    })),
+  };
+}
+
+function normalize(value: unknown, context: ReturnType<typeof buildContext>) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const validIds = new Set(context.pockets.map((pocket) => pocket.id));
+  const rawSuggestions = Array.isArray(raw.suggestions) ? raw.suggestions : [];
+  if (rawSuggestions.length > Math.min(MAX_SUGGESTIONS, validIds.size)) {
+    return null;
+  }
+  const seen = new Set<string>();
+  const suggestions: Suggestion[] = [];
+  for (const item of rawSuggestions) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const row = item as Record<string, unknown>;
+    const id = typeof row.envelope_id === "string" ? row.envelope_id : "";
+    const amount = row.suggested_amount_cents;
+    const reason = typeof row.reason === "string"
+      ? row.reason.trim().replace(/\s+/g, " ")
+      : "";
+    if (
+      !validIds.has(id) ||
+      seen.has(id) ||
+      typeof amount !== "number" ||
+      !Number.isSafeInteger(amount) ||
+      amount < 0 ||
+      amount > 100000000000 ||
+      !reason ||
+      reason.length > 280
+    ) return null;
+    seen.add(id);
+    suggestions.push({
+      envelope_id: id,
+      suggested_amount_cents: amount,
+      reason,
+    });
+  }
+  const total = suggestions.reduce(
+    (sum, item) => sum + item.suggested_amount_cents,
+    0,
+  );
+  if (total > Math.max(0, Math.round(context.total_budget_cents))) return null;
+  const summary = typeof raw.summary === "string"
+    ? raw.summary.trim().replace(/\s+/g, " ")
+    : "";
+  if (!summary || summary.length > 280) return null;
+  return { summary, suggestions };
+}
+
+async function generate(
+  context: ReturnType<typeof buildContext>,
   locale: string | null,
 ) {
+  const prompt = `Suggest a current-month amount for each supplied pocket in ${
+    locale || "the user's preferred language"
+  }. These are suggestions only: never claim you changed anything, never create a pocket, and never include a pocket ID that was not supplied. The sum of suggested_amount_cents must not exceed total_budget_cents. Use only the supplied data. Be warm, practical, and brief. Return only JSON matching the schema.\n\nAUTHORITATIVE_CONTEXT:\n${
+    JSON.stringify(context)
+  }`;
   const vertex = getVertexAiConfigFromEnv();
   let lastError: unknown;
   for (const model of GEMINI_MODEL_FALLBACKS) {
@@ -146,32 +198,30 @@ async function generateReview(
         model,
         vertex,
         systemInstruction:
-          "You provide factual, supportive budget-review wording only.",
+          "You provide factual, supportive monthly budget suggestions.",
       });
       const response = await sendGeminiMessageWithRetry(
         {
           sendMessage: (content) =>
-            chat
-              .sendMessage(content, {
-                generationConfig: {
-                  temperature: 0.2,
-                  maxOutputTokens: 1400,
-                  responseMimeType: "application/json",
-                  responseSchema: reviewSchema(),
-                },
-              })
-              .then((result) => result.response),
+            chat.sendMessage(content, {
+              generationConfig: {
+                temperature: 0.2,
+                maxOutputTokens: 1200,
+                responseMimeType: "application/json",
+                responseSchema: schema(),
+              },
+            }).then((result) => result.response),
         },
-        prompt(context, locale),
-        { logPrefix: "pocket-month-review" },
+        prompt,
+        { logPrefix: "pocket-month-suggestions" },
       );
-      return { model, raw: JSON.parse(response.text()) };
+      return { model, value: JSON.parse(response.text()) };
     } catch (error) {
       lastError = error;
       if (!isRetryableGeminiError(error)) throw error;
     }
   }
-  throw lastError ?? new Error("GEMINI_REVIEW_UNAVAILABLE");
+  throw lastError ?? new Error("GEMINI_UNAVAILABLE");
 }
 
 Deno.serve(async (req) => {
@@ -188,19 +238,22 @@ Deno.serve(async (req) => {
     }
     const input = parseRequest(JSON.parse(rawBody));
     if (!input) {
-      return jsonResponse(
-        { success: false, error: "Invalid review request" },
-        400,
-      );
+      return jsonResponse({
+        success: false,
+        error: "Invalid suggestion request",
+      }, 400);
     }
-
     const url = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const authorization = req.headers.get("Authorization");
     if (!url || !serviceKey) {
-      return jsonResponse(
-        { success: false, error: "Server configuration error" },
-        500,
-      );
+      return jsonResponse({
+        success: false,
+        error: "Server configuration error",
+      }, 500);
+    }
+    if (!authorization) {
+      return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
     const supabase = createClient(url, serviceKey, {
       auth: {
@@ -211,28 +264,20 @@ Deno.serve(async (req) => {
     });
     const auth = await authenticateUser(req, supabase);
     if (!auth.success || !auth.userId) {
-      return jsonResponse(
-        { success: false, error: auth.error || "Unauthorized" },
-        auth.statusCode || 401,
-      );
+      return jsonResponse({
+        success: false,
+        error: auth.error || "Unauthorized",
+      }, auth.statusCode || 401);
     }
-
-    const subscription = await loadLatestSubscriptionForUser(
-      supabase,
-      auth.userId,
-    );
-    if (!hasPlusEntitlement(subscription)) {
+    if (
+      !hasPlusEntitlement(
+        await loadLatestSubscriptionForUser(supabase, auth.userId),
+      )
+    ) {
       return jsonResponse(
-        jsonSubscriptionRequired("AI monthly budget review"),
+        jsonSubscriptionRequired("AI pocket budget suggestions"),
         403,
       );
-    }
-
-    // The service client is limited to entitlement/cache work. The authoritative
-    // financial read must preserve the caller JWT so the RPC enforces scope RLS.
-    const authorization = req.headers.get("Authorization");
-    if (!authorization) {
-      return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
     const userScopedSupabase = createClient(url, serviceKey, {
       auth: {
@@ -242,163 +287,77 @@ Deno.serve(async (req) => {
       },
       global: { headers: { Authorization: authorization } },
     });
-
     const { data: month, error: monthError } = await userScopedSupabase.rpc(
-      "get_pockets_month_v4",
+      "get_pockets_month_v3",
       {
         p_user_id: auth.userId,
         p_scope: input.scope,
         p_budget_month: input.cycleStart,
         p_household_id: input.householdId,
         p_currency: input.currency,
+        p_include_projected_recurring: true,
+        p_allow_currency_fallback: false,
       },
     );
-    if (isPocketMonthReviewPermissionError(monthError)) {
-      return jsonResponse(
-        { success: false, error: "Forbidden", code: "POCKET_SCOPE_FORBIDDEN" },
-        403,
-      );
+    if (monthError?.code === "42501") {
+      return jsonResponse({
+        success: false,
+        error: "Forbidden",
+        code: "POCKET_SCOPE_FORBIDDEN",
+      }, 403);
     }
     if (
-      monthError ||
-      !month ||
-      typeof month !== "object" ||
-      Array.isArray(month)
-    ) {
-      throw monthError || new Error("INVALID_POCKETS_MONTH_CONTEXT");
+      monthError || !month || typeof month !== "object" || Array.isArray(month)
+    ) throw monthError || new Error("INVALID_POCKETS_MONTH_CONTEXT");
+    const context = buildContext(month as Record<string, unknown>);
+    if (context.pockets.length === 0) {
+      return jsonResponse({
+        success: false,
+        error: "Create or copy your pockets before asking for suggestions.",
+        code: "CURRENT_POCKETS_REQUIRED",
+      }, 409);
     }
-    const context = month as Record<string, unknown>;
-    const reviewContext = buildCuratedPocketMonthReviewContext(context);
-    if (!reviewContext || reviewContext.facts.length === 0) {
-      throw new Error("MISSING_AUTHORITATIVE_REVIEW_FACTS");
-    }
-    const facts = reviewContext.facts;
-    const factIds = facts
-      .map((fact) =>
-        fact && typeof fact === "object"
-          ? (fact as Record<string, unknown>).id
-          : null
-      )
-      .filter((id): id is string => typeof id === "string");
-    const pockets = Array.isArray(context.envelopes) ? context.envelopes : [];
-    const virtualPockets = Array.isArray(
-        (context.pockets_v4 as Record<string, unknown> | undefined)
-          ?.lifecycle_virtual_rows,
-      )
-      ? ((context.pockets_v4 as Record<string, unknown>)
-        .lifecycle_virtual_rows as unknown[])
-      : [];
-    const lineageIds = [...pockets, ...virtualPockets]
-      .map((pocket) =>
-        pocket && typeof pocket === "object"
-          ? ((pocket as Record<string, unknown>).pocket_lineage_id ??
-            (pocket as Record<string, unknown>).rollover_group_id ??
-            (pocket as Record<string, unknown>).id)
-          : null
-      )
-      .filter((id): id is string => typeof id === "string");
-    if (factIds.length === 0) {
-      throw new Error("MISSING_AUTHORITATIVE_REVIEW_FACTS");
-    }
-
-    const { data: contact } = await supabase
-      .from("user_contacts")
-      .select("preferred_language")
-      .eq("user_id", auth.userId)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const inputHash = await hashPocketMonthReviewInput(reviewContext);
-    const scopeKey = `${input.scope}:${input.householdId || ""}`;
-    const cacheQuery = supabase
-      .from("pocket_month_review_ai_cache")
-      .select("review_json, model_version")
-      .eq("user_id", auth.userId)
-      .eq("scope_key", scopeKey)
-      .eq("currency", input.currency)
-      .eq("cycle_start", input.cycleStart)
-      .eq("input_hash", inputHash)
-      .eq("prompt_version", PROMPT_VERSION)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const { data: cached, error: cacheError } = await cacheQuery;
-    if (cacheError) throw cacheError;
-    if (cached?.review_json) {
-      const review = normalizePocketMonthReview(
-        cached.review_json,
-        factIds,
-        lineageIds,
-      );
-      if (review) {
-        return jsonResponse({
-          success: true,
-          cached: true,
-          review,
-          modelVersion: cached.model_version,
-        });
-      }
-    }
-
-    let generated: { model: string; raw: unknown };
+    const { data: contact } = await supabase.from("user_contacts").select(
+      "preferred_language",
+    ).eq("user_id", auth.userId).order("updated_at", { ascending: false })
+      .limit(1).maybeSingle();
     try {
-      generated = await generateReview(
-        reviewContext,
+      const generated = await generate(
+        context,
         typeof contact?.preferred_language === "string"
           ? contact.preferred_language
           : null,
       );
+      const suggestions = normalize(generated.value, context);
+      if (!suggestions) {
+        return jsonResponse({
+          success: false,
+          error: "Invalid AI suggestion response",
+          code: "AI_SUGGESTION_SCHEMA_INVALID",
+        }, 502);
+      }
+      return jsonResponse({
+        success: true,
+        deterministicFallback: false,
+        modelVersion: generated.model,
+        suggestions,
+      });
     } catch (error) {
       if (!isRetryableGeminiError(error)) throw error;
       return jsonResponse({
         success: true,
-        cached: false,
         deterministicFallback: true,
-        review: buildPocketMonthReviewFallback(),
+        suggestions: fallback(context),
       });
     }
-    const review = normalizePocketMonthReview(
-      generated.raw,
-      factIds,
-      lineageIds,
-    );
-    if (!review) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "Invalid AI review response",
-          code: "AI_REVIEW_SCHEMA_INVALID",
-        },
-        502,
-      );
-    }
-    const { error: insertError } = await supabase
-      .from("pocket_month_review_ai_cache")
-      .insert({
-        user_id: auth.userId,
-        scope_key: scopeKey,
-        currency: input.currency,
-        cycle_start: input.cycleStart,
-        input_hash: inputHash,
-        prompt_version: PROMPT_VERSION,
-        model_version: generated.model,
-        review_json: review,
-      });
-    if (insertError) throw insertError;
-    return jsonResponse({
-      success: true,
-      cached: false,
-      review,
-      modelVersion: generated.model,
-    });
   } catch (error) {
     console.error(
       "[generate-pocket-month-review] failed",
       error instanceof Error ? error.message : String(error),
     );
-    return jsonResponse(
-      { success: false, error: "Unable to generate AI review" },
-      500,
-    );
+    return jsonResponse({
+      success: false,
+      error: "Unable to generate AI suggestions",
+    }, 500);
   }
 });
