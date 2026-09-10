@@ -395,15 +395,6 @@ function PaymentStatusPage() {
                         </div>
                       </div>
 
-                      <Button
-                        variant="default"
-                        size="lg"
-                        className="mt-8 w-full"
-                        onClick={() => navigate({ to: "/dashboard" })}
-                      >
-                        Open Dashboard
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
                     </motion.div>
                   )
                   : (paymentStatus === "failed" || paymentStatus === "canceled")

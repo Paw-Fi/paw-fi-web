@@ -13,6 +13,7 @@
  */
 
 import { BillingInterval, PlanType } from "./subscription-constants.ts";
+import { getRegionalStripePriceLookupKey } from "./regional-pricing.generated.ts";
 
 interface PriceConfig {
   monthly: string;
@@ -275,6 +276,13 @@ export function resolveInvoicePlanFromLinePrices(
     const priceId = line?.price?.id || line?.pricing?.price_details?.price;
     const planInfo = getPlanFromPriceId(priceId);
     if (planInfo) return planInfo;
+
+    if (
+      line?.price?.lookup_key ===
+        getRegionalStripePriceLookupKey("lifetime")
+    ) {
+      return { plan: "lifetime", interval: null };
+    }
   }
 
   return null;

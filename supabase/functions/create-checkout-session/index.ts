@@ -51,6 +51,7 @@ import {
   checkoutVerificationPersistenceErrorResponse,
   persistCheckoutSessionVerificationOrExpire,
 } from "../shared/checkout-session-security.ts";
+import { findReusableLifetimeCheckoutSession } from "../shared/lifetime-checkout-session-reuse.ts";
 
 // Validate environment on startup
 const env = validateEnvironment();
@@ -643,6 +644,50 @@ serve(async (req: Request) => {
       }
     }
 
+    if (plan === "lifetime") {
+      const openCheckoutSessions = await stripe.checkout.sessions.list({
+        customer: customerId,
+        status: "open",
+        limit: 100,
+      });
+      const matchingOpenSession = findReusableLifetimeCheckoutSession<
+        Stripe.Checkout.Session
+      >(
+        openCheckoutSessions.data,
+        {
+          userId,
+          pricingCountry: requestedCountry ?? "US",
+          currency: requestedCurrency,
+          promoCode: promoCode ?? "",
+        },
+      );
+
+      if (matchingOpenSession?.url) {
+        try {
+          await assertSessionPricingOrExpire(matchingOpenSession, {
+            priceId,
+            currency: checkoutCurrency,
+          });
+          return new Response(
+            JSON.stringify({
+              clientSecret: matchingOpenSession.client_secret,
+              checkoutUrl: matchingOpenSession.url,
+              sessionId: matchingOpenSession.id,
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        } catch (error) {
+          console.warn(
+            "Expired open Lifetime Checkout Session with stale pricing:",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      }
+    }
+
     try {
       const { successUrl: finalSuccessUrl, cancelUrl: finalCancelUrl } =
         buildCheckoutRedirectUrls({
@@ -761,6 +806,7 @@ serve(async (req: Request) => {
             user_id: userId,
             plan: plan,
             checkout_type: "lifetime",
+            promo_code: promoCode ?? "",
             pricing_country: requestedCountry ?? "US",
             presentment_currency: requestedCurrency,
           },

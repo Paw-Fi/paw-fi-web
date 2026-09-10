@@ -76,6 +76,48 @@ Deno.test(
 );
 
 Deno.test(
+  "invoice plan resolution: accepts the trusted regional Lifetime lookup key",
+  () =>
+    withEnv(() => {
+      const resolved = resolveInvoicePlanFromLinePrices({
+        lines: {
+          data: [
+            {
+              price: {
+                id: "price_regional_lifetime",
+                lookup_key: "moneko_lifetime_v1",
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(resolved, { plan: "lifetime", interval: null });
+    }),
+);
+
+Deno.test(
+  "invoice plan resolution: rejects an untrusted Lifetime-like lookup key",
+  () =>
+    withEnv(() => {
+      const resolved = resolveInvoicePlanFromLinePrices({
+        lines: {
+          data: [
+            {
+              price: {
+                id: "price_untrusted_lifetime",
+                lookup_key: "lifetime",
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(resolved, null);
+    }),
+);
+
+Deno.test(
   "subscription price resolution: scans beyond the first item for configured price",
   () =>
     withEnv(() => {

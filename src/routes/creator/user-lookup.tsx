@@ -148,7 +148,7 @@ function CreatorUserLookupPage() {
                 <SummaryBlock
                   title="Account Email"
                   value={stringValue(user.email)}
-                  detail={`ID: ${stringValue(user.id)}`}
+                  detail={stringValue(user.id)}
                   badgeText="PROFILE"
                 />
                 <SummaryBlock
