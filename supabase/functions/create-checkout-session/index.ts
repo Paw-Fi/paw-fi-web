@@ -16,6 +16,7 @@ import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { validate as validateUuid } from "https://deno.land/std@0.177.0/uuid/mod.ts";
 import {
+  getLifetimeStripePriceLookupKey,
   getPriceId,
   validatePriceId,
 } from "../shared/stripe-subscription-prices.ts";
@@ -114,7 +115,9 @@ async function resolveRegionalPriceId(
     : billingInterval === "yearly"
     ? "plus_yearly"
     : "plus_monthly";
-  const lookupKey = getRegionalStripePriceLookupKey(planTarget);
+  const lookupKey = plan === "lifetime"
+    ? getLifetimeStripePriceLookupKey()
+    : getRegionalStripePriceLookupKey(planTarget);
   const cacheKey = buildRegionalPriceCacheKey(lookupKey, market.currencyCode);
   const cached = regionalPriceIdCache.get(cacheKey);
   if (cached) return cached;

@@ -14,6 +14,7 @@ const managedEnvKeys = [
   "STRIPE_MONTHLY_PLUS_PLAN_ID",
   "STRIPE_YEARLY_PLUS_PLAN_ID",
   "STRIPE_LIFETIME_PRICE_ID",
+  "STRIPE_LIFETIME_PRICE_LOOKUP_KEY",
   "STRIPE_MONTHLY_PREMIUM_PLAN_ID",
   "STRIPE_YEARLY_PREMIUM_PLAN_ID",
   "ALLOW_ZERO_AMOUNT_LIFETIME_GRANTS",
@@ -76,15 +77,44 @@ Deno.test(
 );
 
 Deno.test(
-  "invoice plan resolution: accepts the trusted regional Lifetime lookup key",
+  "invoice plan resolution: accepts the configured Lifetime lookup key",
   () =>
     withEnv(() => {
+      Deno.env.set(
+        "STRIPE_LIFETIME_PRICE_LOOKUP_KEY",
+        "moneko_lifetime_promo_v2",
+      );
       const resolved = resolveInvoicePlanFromLinePrices({
         lines: {
           data: [
             {
               price: {
                 id: "price_regional_lifetime",
+                lookup_key: "moneko_lifetime_promo_v2",
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(resolved, { plan: "lifetime", interval: null });
+    }),
+);
+
+Deno.test(
+  "invoice plan resolution: accepts the legacy generated Lifetime lookup key",
+  () =>
+    withEnv(() => {
+      Deno.env.set(
+        "STRIPE_LIFETIME_PRICE_LOOKUP_KEY",
+        "moneko_lifetime_promo_v2",
+      );
+      const resolved = resolveInvoicePlanFromLinePrices({
+        lines: {
+          data: [
+            {
+              price: {
+                id: "price_legacy_regional_lifetime",
                 lookup_key: "moneko_lifetime_v1",
               },
             },

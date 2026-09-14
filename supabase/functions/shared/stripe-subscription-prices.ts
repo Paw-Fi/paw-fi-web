@@ -93,6 +93,30 @@ export function getSubscriptionPrices(): SubscriptionPrices {
  */
 export const SUBSCRIPTION_PRICES = getSubscriptionPrices();
 
+const lifetimeStripePriceLookupKeyEnv = "STRIPE_LIFETIME_PRICE_LOOKUP_KEY";
+
+/**
+ * The active Lifetime catalog key is deployment configuration so a new Stripe
+ * Price can be introduced without regenerating the regional pricing catalog.
+ */
+export function getLifetimeStripePriceLookupKey(): string {
+  return Deno.env.get(lifetimeStripePriceLookupKeyEnv)?.trim() ||
+    getRegionalStripePriceLookupKey("lifetime");
+}
+
+/**
+ * Historical events can still reference the generated catalog key. Keep that
+ * exact key trusted while using the configured key for new Checkout sessions.
+ */
+export function isTrustedLifetimeStripePriceLookupKey(
+  lookupKey: string | null | undefined,
+): boolean {
+  if (!lookupKey) return false;
+
+  return lookupKey === getLifetimeStripePriceLookupKey() ||
+    lookupKey === getRegionalStripePriceLookupKey("lifetime");
+}
+
 /**
  * Get price ID for a specific plan and billing interval
  * Validates inputs and returns the appropriate price ID
@@ -277,10 +301,7 @@ export function resolveInvoicePlanFromLinePrices(
     const planInfo = getPlanFromPriceId(priceId);
     if (planInfo) return planInfo;
 
-    if (
-      line?.price?.lookup_key ===
-        getRegionalStripePriceLookupKey("lifetime")
-    ) {
+    if (isTrustedLifetimeStripePriceLookupKey(line?.price?.lookup_key)) {
       return { plan: "lifetime", interval: null };
     }
   }
