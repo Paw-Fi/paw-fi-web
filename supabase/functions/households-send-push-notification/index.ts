@@ -503,6 +503,9 @@ function buildDeepLink(
       }
       break;
 
+    case "pockets_month_review":
+      return `${appScheme}pockets`;
+
     default:
       // Default to home
       return `${appScheme}home`;
@@ -533,7 +536,7 @@ async function sendFCMv1Notification(
 
   try {
     // Build deep link for navigation
-    const deepLink = buildDeepLink(data.event_type, data);
+    const deepLink = data.deep_link || buildDeepLink(data.event_type, data);
     const isWeb =
       typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
@@ -711,7 +714,9 @@ serve(async (req: Request) => {
       });
     }
 
-    if (!isServiceRoleRequest(req, supabaseServiceRoleKey, supabaseSecretKeys)) {
+    if (
+      !isServiceRoleRequest(req, supabaseServiceRoleKey, supabaseSecretKeys)
+    ) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -811,6 +816,29 @@ serve(async (req: Request) => {
       );
       return new Response(
         JSON.stringify({ success: true, skipped: "already_sent" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const expiresAt =
+      event_type === "pockets_month_review" &&
+      typeof payload.expires_at === "string"
+        ? Date.parse(payload.expires_at)
+        : Number.NaN;
+    if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+      await supabase
+        .from("notification_events")
+        .update({
+          is_sent: true,
+          sent_at: new Date().toISOString(),
+          delivery_error: "Pocket month review expired before delivery",
+        })
+        .eq("id", notification_event_id);
+      return new Response(
+        JSON.stringify({ success: true, skipped: "expired" }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1627,8 +1655,12 @@ function buildNotificationMessage(
         : undefined;
       const title = isIncome ? "💰 Incoming Payment" : "🔔 Upcoming Expense";
       const body = isIncome
-        ? `${capCategory || "Income"} of ${amount} arrives ${timeframe}. Confirm in the app now`
-        : `${capCategory || "Expense"} of ${amount} is due ${timeframe}. Confirm in the app now`;
+        ? `${
+            capCategory || "Income"
+          } of ${amount} arrives ${timeframe}. Confirm in the app now`
+        : `${
+            capCategory || "Expense"
+          } of ${amount} is due ${timeframe}. Confirm in the app now`;
 
       return {
         title,
@@ -1646,6 +1678,20 @@ function buildNotificationMessage(
 
     case "log_expense_reminder": {
       return buildLogExpenseReminderMessage(payload);
+    }
+
+    case "pockets_month_review": {
+      const cycleLabel = String(payload.financial_cycle_label || "this cycle");
+      return {
+        title: `Review your ${cycleLabel} plan`,
+        body: "Review and update your pockets whenever you are ready.",
+        data: {
+          type: "openPocketsPage",
+          action: "openPocketsPage",
+          cycle_start: String(payload.cycle_start || ""),
+          deep_link: "moneko://pockets",
+        },
+      };
     }
 
     case "settlement_completed":
