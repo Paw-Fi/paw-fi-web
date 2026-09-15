@@ -21,6 +21,11 @@ with scenarios as (
   from public.budgets b
   where b.user_id = '4f42e85a-4637-41fb-8fc5-f81933c83861'::uuid
     and b.household_id is not null
+    and exists (
+      select 1 from public.household_members hm
+      where hm.household_id = b.household_id
+        and hm.user_id = '4f42e85a-4637-41fb-8fc5-f81933c83861'::uuid
+    )
 
   union
 

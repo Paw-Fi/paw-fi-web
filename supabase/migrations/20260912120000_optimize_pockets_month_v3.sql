@@ -181,15 +181,21 @@ begin
         (v_scope in ('personal', 'portfolio') and e.user_id = p_user_id)
         or (v_scope = 'household' and e.household_id = p_household_id)
       )
+    order by e.name asc
+  ), env_ids as (
+    -- Preserve v1's array/unnest query shape. Although clients should not need
+    -- unordered arrays, its observed allocation/link ordering is part of v3.
+    select coalesce(array_agg(id), '{}'::uuid[]) as ids
+    from envelope_rows
   ), allocations as (
     select ea.envelope_id, ea.amount_cents
     from public.envelope_allocations ea
     where ea.period_month = p_period_month
-      and ea.envelope_id in (select id from envelope_rows)
+      and ea.envelope_id in (select unnest(ids) from env_ids)
   ), links as (
     select l.envelope_id, lower(trim(coalesce(l.category, ''))) as category
     from public.envelope_category_links l
-    where l.envelope_id in (select id from envelope_rows)
+    where l.envelope_id in (select unnest(ids) from env_ids)
   )
   select jsonb_build_object(
     'selected_currency', v_currency,
@@ -226,10 +232,61 @@ create or replace function public.calculate_pocket_rollovers_batch_v1(
   p_budget_month date,
   p_target_envelope_ids uuid[]
 ) returns table (envelope_id uuid, incoming_rollover_cents bigint)
-language sql
+language plpgsql
 security invoker
 set search_path = public
 as $$
+begin
+  -- Most new budgets have rollover enabled but no prior matching envelope.
+  -- Their carry is deterministically zero, so avoid constructing/scanning the
+  -- historical expense dataset in that common case.
+  if coalesce(array_length(p_target_envelope_ids, 1), 0) = 0 then
+    return;
+  end if;
+
+  if p_budget_month is null then
+    return query
+      select target.id, 0::bigint
+      from public.budget_envelopes target
+      where target.id = any(p_target_envelope_ids)
+        and coalesce(target.rollover_enabled, false)
+        and (target.rollover_group_id is not null or lower(trim(coalesce(target.name, ''))) <> '');
+    return;
+  end if;
+
+  if not exists (
+    select 1
+    from public.budget_envelopes target
+    join public.budgets b
+      on b.period_month >= (
+        date_trunc('month', p_budget_month)::date - interval '121 months'
+      )::date
+      and b.period_month < date_trunc('month', p_budget_month)::date
+      and upper(b.currency) = upper(coalesce(nullif(trim(p_currency), ''), 'USD'))
+      and (
+        (lower(coalesce(nullif(trim(p_scope), ''), 'personal')) = 'personal' and b.household_id is null and b.user_id = p_user_id)
+        or (lower(coalesce(nullif(trim(p_scope), ''), 'personal')) = 'portfolio' and b.household_id = p_household_id and b.user_id = p_user_id)
+        or (lower(coalesce(nullif(trim(p_scope), ''), 'personal')) = 'household' and b.household_id = p_household_id)
+      )
+    join public.budget_envelopes historical
+      on historical.budget_id = b.id
+      and upper(historical.currency) = upper(coalesce(nullif(trim(p_currency), ''), 'USD'))
+      and (
+        (target.rollover_group_id is not null and historical.rollover_group_id = target.rollover_group_id)
+        or (target.rollover_group_id is null and lower(trim(historical.name)) = lower(trim(target.name)))
+      )
+    where target.id = any(p_target_envelope_ids)
+      and coalesce(target.rollover_enabled, false)
+  ) then
+    return query
+      select target.id, 0::bigint
+      from public.budget_envelopes target
+      where target.id = any(p_target_envelope_ids)
+        and coalesce(target.rollover_enabled, false);
+    return;
+  end if;
+
+  return query
   with recursive
   settings as (
     select
@@ -360,6 +417,7 @@ as $$
   select t.target_envelope_id, coalesce(lc.carry_cents, 0)::bigint
   from targets t
   left join latest_carry lc on lc.target_envelope_id = t.target_envelope_id;
+end;
 $$;
 
 create or replace function public.get_pockets_month_v3(
