@@ -1,5 +1,5 @@
 {
-  "catalogVersion": 2,
+  "catalogVersion": 3,
   "defaultMarket": "usd",
   "markets": {
     "aed": {
@@ -12,9 +12,7 @@
       "lifetimePromo": 24499,
       "compareAtMonthly": 2399,
       "compareAtYearly": 15999,
-      "countries": [
-        "AE"
-      ]
+      "countries": ["AE"]
     },
     "aud": {
       "currencyCode": "AUD",
@@ -26,9 +24,7 @@
       "lifetimePromo": 10499,
       "compareAtMonthly": 959,
       "compareAtYearly": 6399,
-      "countries": [
-        "AU"
-      ]
+      "countries": ["AU"]
     },
     "brl": {
       "currencyCode": "BRL",
@@ -40,9 +36,7 @@
       "lifetimePromo": 41990,
       "compareAtMonthly": 3984,
       "compareAtYearly": 23984,
-      "countries": [
-        "BR"
-      ]
+      "countries": ["BR"]
     },
     "cad": {
       "currencyCode": "CAD",
@@ -54,9 +48,7 @@
       "lifetimePromo": 13999,
       "compareAtMonthly": 2399,
       "compareAtYearly": 15999,
-      "countries": [
-        "CA"
-      ]
+      "countries": ["CA"]
     },
     "chf": {
       "currencyCode": "CHF",
@@ -68,9 +60,7 @@
       "lifetimePromo": 5600,
       "compareAtMonthly": 480,
       "compareAtYearly": 3200,
-      "countries": [
-        "CH"
-      ]
+      "countries": ["CH"]
     },
     "clp": {
       "currencyCode": "CLP",
@@ -82,9 +72,7 @@
       "lifetimePromo": 69990,
       "compareAtMonthly": 7984,
       "compareAtYearly": 47984,
-      "countries": [
-        "CL"
-      ]
+      "countries": ["CL"]
     },
     "cny": {
       "currencyCode": "CNY",
@@ -96,9 +84,7 @@
       "lifetimePromo": 41800,
       "compareAtMonthly": 4480,
       "compareAtYearly": 26880,
-      "countries": [
-        "CN"
-      ]
+      "countries": ["CN"]
     },
     "cop": {
       "currencyCode": "COP",
@@ -110,9 +96,7 @@
       "lifetimePromo": 279900,
       "compareAtMonthly": 31840,
       "compareAtYearly": 191840,
-      "countries": [
-        "CO"
-      ]
+      "countries": ["CO"]
     },
     "czk": {
       "currencyCode": "CZK",
@@ -124,9 +108,7 @@
       "lifetimePromo": 174300,
       "compareAtMonthly": 15840,
       "compareAtYearly": 111840,
-      "countries": [
-        "CZ"
-      ]
+      "countries": ["CZ"]
     },
     "dkk": {
       "currencyCode": "DKK",
@@ -138,9 +120,7 @@
       "lifetimePromo": 55900,
       "compareAtMonthly": 6240,
       "compareAtYearly": 31840,
-      "countries": [
-        "DK"
-      ]
+      "countries": ["DK"]
     },
     "egp": {
       "currencyCode": "EGP",
@@ -152,9 +132,7 @@
       "lifetimePromo": 349999,
       "compareAtMonthly": 31999,
       "compareAtYearly": 207999,
-      "countries": [
-        "EG"
-      ]
+      "countries": ["EG"]
     },
     "eur": {
       "currencyCode": "EUR",
@@ -166,9 +144,7 @@
       "lifetimePromo": 6999,
       "compareAtMonthly": 799,
       "compareAtYearly": 4799,
-      "countries": [
-        "ME"
-      ]
+      "countries": ["ME"]
     },
     "eur_2": {
       "currencyCode": "EUR",
@@ -217,9 +193,7 @@
       "lifetimePromo": 6299,
       "compareAtMonthly": 639,
       "compareAtYearly": 3999,
-      "countries": [
-        "GB"
-      ]
+      "countries": ["GB"]
     },
     "hkd": {
       "currencyCode": "HKD",
@@ -231,9 +205,7 @@
       "lifetimePromo": 48200,
       "compareAtMonthly": 5120,
       "compareAtYearly": 30080,
-      "countries": [
-        "HK"
-      ]
+      "countries": ["HK"]
     },
     "huf": {
       "currencyCode": "HUF",
@@ -245,9 +217,7 @@
       "lifetimePromo": 27990,
       "compareAtMonthly": 2864,
       "compareAtYearly": 15984,
-      "countries": [
-        "HU"
-      ]
+      "countries": ["HU"]
     },
     "idr": {
       "currencyCode": "IDR",
@@ -259,9 +229,7 @@
       "lifetimePromo": 1049000,
       "compareAtMonthly": 110400,
       "compareAtYearly": 638400,
-      "countries": [
-        "ID"
-      ]
+      "countries": ["ID"]
     },
     "ils": {
       "currencyCode": "ILS",
@@ -273,9 +241,7 @@
       "lifetimePromo": 20990,
       "compareAtMonthly": 2384,
       "compareAtYearly": 14384,
-      "countries": [
-        "IL"
-      ]
+      "countries": ["IL"]
     },
     "inr": {
       "currencyCode": "INR",
@@ -287,9 +253,7 @@
       "lifetimePromo": 693000,
       "compareAtMonthly": 63840,
       "compareAtYearly": 399840,
-      "countries": [
-        "IN"
-      ]
+      "countries": ["IN"]
     },
     "jpy": {
       "currencyCode": "JPY",
@@ -301,9 +265,7 @@
       "lifetimePromo": 10500,
       "compareAtMonthly": 960,
       "compareAtYearly": 6400,
-      "countries": [
-        "JP"
-      ]
+      "countries": ["JP"]
     },
     "krw": {
       "currencyCode": "KRW",
@@ -315,9 +277,7 @@
       "lifetimePromo": 104300,
       "compareAtMonthly": 10560,
       "compareAtYearly": 70400,
-      "countries": [
-        "KR"
-      ]
+      "countries": ["KR"]
     },
     "kzt": {
       "currencyCode": "KZT",
@@ -329,9 +289,7 @@
       "lifetimePromo": 3499000,
       "compareAtMonthly": 398400,
       "compareAtYearly": 2398400,
-      "countries": [
-        "KZ"
-      ]
+      "countries": ["KZ"]
     },
     "mxn": {
       "currencyCode": "MXN",
@@ -343,9 +301,7 @@
       "lifetimePromo": 139900,
       "compareAtMonthly": 14240,
       "compareAtYearly": 79840,
-      "countries": [
-        "MX"
-      ]
+      "countries": ["MX"]
     },
     "myr": {
       "currencyCode": "MYR",
@@ -357,9 +313,7 @@
       "lifetimePromo": 27990,
       "compareAtMonthly": 3184,
       "compareAtYearly": 19184,
-      "countries": [
-        "MY"
-      ]
+      "countries": ["MY"]
     },
     "ngn": {
       "currencyCode": "NGN",
@@ -371,9 +325,7 @@
       "lifetimePromo": 10490000,
       "compareAtMonthly": 1104000,
       "compareAtYearly": 6384000,
-      "countries": [
-        "NG"
-      ]
+      "countries": ["NG"]
     },
     "nok": {
       "currencyCode": "NOK",
@@ -385,9 +337,7 @@
       "lifetimePromo": 69900,
       "compareAtMonthly": 7840,
       "compareAtYearly": 47840,
-      "countries": [
-        "NO"
-      ]
+      "countries": ["NO"]
     },
     "nzd": {
       "currencyCode": "NZD",
@@ -399,9 +349,7 @@
       "lifetimePromo": 10499,
       "compareAtMonthly": 1119,
       "compareAtYearly": 7999,
-      "countries": [
-        "NZ"
-      ]
+      "countries": ["NZ"]
     },
     "pen": {
       "currencyCode": "PEN",
@@ -413,9 +361,7 @@
       "lifetimePromo": 27990,
       "compareAtMonthly": 2864,
       "compareAtYearly": 15984,
-      "countries": [
-        "PE"
-      ]
+      "countries": ["PE"]
     },
     "php": {
       "currencyCode": "PHP",
@@ -427,9 +373,7 @@
       "lifetimePromo": 419000,
       "compareAtMonthly": 39840,
       "compareAtYearly": 238400,
-      "countries": [
-        "PH"
-      ]
+      "countries": ["PH"]
     },
     "pkr": {
       "currencyCode": "PKR",
@@ -441,9 +385,7 @@
       "lifetimePromo": 1743000,
       "compareAtMonthly": 176000,
       "compareAtYearly": 1104000,
-      "countries": [
-        "PK"
-      ]
+      "countries": ["PK"]
     },
     "pln": {
       "currencyCode": "PLN",
@@ -455,9 +397,7 @@
       "lifetimePromo": 27999,
       "compareAtMonthly": 3199,
       "compareAtYearly": 15999,
-      "countries": [
-        "PL"
-      ]
+      "countries": ["PL"]
     },
     "qar": {
       "currencyCode": "QAR",
@@ -469,9 +409,7 @@
       "lifetimePromo": 20999,
       "compareAtMonthly": 2399,
       "compareAtYearly": 15999,
-      "countries": [
-        "QA"
-      ]
+      "countries": ["QA"]
     },
     "ron": {
       "currencyCode": "RON",
@@ -483,9 +421,7 @@
       "lifetimePromo": 34999,
       "compareAtMonthly": 3199,
       "compareAtYearly": 20799,
-      "countries": [
-        "RO"
-      ]
+      "countries": ["RO"]
     },
     "rub": {
       "currencyCode": "RUB",
@@ -497,9 +433,7 @@
       "lifetimePromo": 559000,
       "compareAtMonthly": 55840,
       "compareAtYearly": 366400,
-      "countries": [
-        "RU"
-      ]
+      "countries": ["RU"]
     },
     "sar": {
       "currencyCode": "SAR",
@@ -511,9 +445,7 @@
       "lifetimePromo": 27999,
       "compareAtMonthly": 2879,
       "compareAtYearly": 15999,
-      "countries": [
-        "SA"
-      ]
+      "countries": ["SA"]
     },
     "sek": {
       "currencyCode": "SEK",
@@ -525,9 +457,7 @@
       "lifetimePromo": 83600,
       "compareAtMonthly": 7840,
       "compareAtYearly": 47840,
-      "countries": [
-        "SE"
-      ]
+      "countries": ["SE"]
     },
     "sgd": {
       "currencyCode": "SGD",
@@ -539,9 +469,7 @@
       "lifetimePromo": 9099,
       "compareAtMonthly": 957,
       "compareAtYearly": 5597,
-      "countries": [
-        "SG"
-      ]
+      "countries": ["SG"]
     },
     "thb": {
       "currencyCode": "THB",
@@ -553,9 +481,7 @@
       "lifetimePromo": 209000,
       "compareAtMonthly": 23840,
       "compareAtYearly": 159840,
-      "countries": [
-        "TH"
-      ]
+      "countries": ["TH"]
     },
     "try": {
       "currencyCode": "TRY",
@@ -567,9 +493,7 @@
       "lifetimePromo": 349999,
       "compareAtMonthly": 31999,
       "compareAtYearly": 207999,
-      "countries": [
-        "TR"
-      ]
+      "countries": ["TR"]
     },
     "twd": {
       "currencyCode": "TWD",
@@ -581,9 +505,7 @@
       "lifetimePromo": 209000,
       "compareAtMonthly": 19200,
       "compareAtYearly": 126400,
-      "countries": [
-        "TW"
-      ]
+      "countries": ["TW"]
     },
     "tzs": {
       "currencyCode": "TZS",
@@ -595,9 +517,7 @@
       "lifetimePromo": 17490000,
       "compareAtMonthly": 1904000,
       "compareAtYearly": 11184000,
-      "countries": [
-        "TZ"
-      ]
+      "countries": ["TZ"]
     },
     "usd": {
       "currencyCode": "USD",
@@ -609,9 +529,7 @@
       "lifetimePromo": 9999,
       "compareAtMonthly": 1759,
       "compareAtYearly": 12799,
-      "countries": [
-        "US"
-      ]
+      "countries": ["US"]
     },
     "usd_2": {
       "currencyCode": "USD",
@@ -716,16 +634,7 @@
       "lifetimePromo": 9999,
       "compareAtMonthly": 1759,
       "compareAtYearly": 12799,
-      "countries": [
-        "BH",
-        "BS",
-        "KG",
-        "KH",
-        "LA",
-        "SR",
-        "TJ",
-        "UZ"
-      ]
+      "countries": ["BH", "BS", "KG", "KH", "LA", "SR", "TJ", "UZ"]
     },
     "usd_4": {
       "currencyCode": "USD",
@@ -770,9 +679,7 @@
       "lifetimePromo": 2099000,
       "compareAtMonthly": 190400,
       "compareAtYearly": 1278400,
-      "countries": [
-        "VN"
-      ]
+      "countries": ["VN"]
     },
     "zar": {
       "currencyCode": "ZAR",
@@ -784,9 +691,7 @@
       "lifetimePromo": 139999,
       "compareAtMonthly": 12799,
       "compareAtYearly": 79999,
-      "countries": [
-        "ZA"
-      ]
+      "countries": ["ZA"]
     }
   }
 }

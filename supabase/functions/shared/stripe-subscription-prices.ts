@@ -34,33 +34,29 @@ function arePremiumPriceIdsConfigured(prices: SubscriptionPrices): boolean {
 type StripeSubscriptionPriceSource = {
   metadata?: Record<string, string | null | undefined> | null;
   items?: {
-    data?: Array<
-      {
-        price?: {
-          id?: string | null;
-          lookup_key?: string | null;
-        } | null;
-      } | null
-    >;
+    data?: Array<{
+      price?: {
+        id?: string | null;
+        lookup_key?: string | null;
+      } | null;
+    } | null>;
   } | null;
 };
 
 type StripeInvoicePriceSource = {
   metadata?: Record<string, string | null | undefined> | null;
   lines?: {
-    data?: Array<
-      {
-        price?: {
-          id?: string | null;
-          lookup_key?: string | null;
+    data?: Array<{
+      price?: {
+        id?: string | null;
+        lookup_key?: string | null;
+      } | null;
+      pricing?: {
+        price_details?: {
+          price?: string | null;
         } | null;
-        pricing?: {
-          price_details?: {
-            price?: string | null;
-          } | null;
-        } | null;
-      } | null
-    >;
+      } | null;
+    } | null>;
   } | null;
 };
 
@@ -72,10 +68,12 @@ export function getSubscriptionPrices(): SubscriptionPrices {
   return {
     free: null,
     plus: {
-      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
+      monthly:
+        Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_MONTHLY_PRICE_ID") ||
         "",
-      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
+      yearly:
+        Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_YEARLY_PRICE_ID") ||
         "",
     },
@@ -93,28 +91,30 @@ export function getSubscriptionPrices(): SubscriptionPrices {
  */
 export const SUBSCRIPTION_PRICES = getSubscriptionPrices();
 
-const lifetimeStripePriceLookupKeyEnv = "STRIPE_LIFETIME_PRICE_LOOKUP_KEY";
+const historicalLifetimeStripePriceLookupKeys = new Set([
+  "moneko_lifetime_v1",
+  "moneko_lifetime_promo_v2",
+]);
 
 /**
- * The active Lifetime catalog key is deployment configuration so a new Stripe
- * Price can be introduced without regenerating the regional pricing catalog.
+ * New Lifetime Checkout sessions always use the generated catalog key.
  */
 export function getLifetimeStripePriceLookupKey(): string {
-  return Deno.env.get(lifetimeStripePriceLookupKeyEnv)?.trim() ||
-    getRegionalStripePriceLookupKey("lifetime");
+  return getRegionalStripePriceLookupKey("lifetime");
 }
 
 /**
- * Historical events can still reference the generated catalog key. Keep that
- * exact key trusted while using the configured key for new Checkout sessions.
+ * Keep the known historical catalog keys trusted for completed legacy purchases.
  */
 export function isTrustedLifetimeStripePriceLookupKey(
   lookupKey: string | null | undefined,
 ): boolean {
   if (!lookupKey) return false;
 
-  return lookupKey === getLifetimeStripePriceLookupKey() ||
-    lookupKey === getRegionalStripePriceLookupKey("lifetime");
+  return (
+    lookupKey === getLifetimeStripePriceLookupKey() ||
+    historicalLifetimeStripePriceLookupKeys.has(lookupKey)
+  );
 }
 
 /**
@@ -168,11 +168,8 @@ export function getPriceId(plan: PlanType, interval?: BillingInterval): string {
     }
   }
 
-  const recurringPrices = plan === "plus"
-    ? prices.plus
-    : plan === "premium"
-    ? prices.premium
-    : null;
+  const recurringPrices =
+    plan === "plus" ? prices.plus : plan === "premium" ? prices.premium : null;
 
   const priceId = recurringPrices?.[interval] || "";
 

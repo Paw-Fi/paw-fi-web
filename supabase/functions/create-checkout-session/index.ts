@@ -110,14 +110,16 @@ async function resolveRegionalPriceId(
   billingInterval: BillingInterval | undefined,
   market: RegionalPricingMarket,
 ): Promise<string> {
-  const planTarget = plan === "lifetime"
-    ? "lifetime"
-    : billingInterval === "yearly"
-    ? "plus_yearly"
-    : "plus_monthly";
-  const lookupKey = plan === "lifetime"
-    ? getLifetimeStripePriceLookupKey()
-    : getRegionalStripePriceLookupKey(planTarget);
+  const planTarget =
+    plan === "lifetime"
+      ? "lifetime"
+      : billingInterval === "yearly"
+        ? "plus_yearly"
+        : "plus_monthly";
+  const lookupKey =
+    plan === "lifetime"
+      ? getLifetimeStripePriceLookupKey()
+      : getRegionalStripePriceLookupKey(planTarget);
   const cacheKey = buildRegionalPriceCacheKey(lookupKey, market.currencyCode);
   const cached = regionalPriceIdCache.get(cacheKey);
   if (cached) return cached;
@@ -134,9 +136,10 @@ async function resolveRegionalPriceId(
   const regionalPrice = matches.data[0];
   if (regionalPrice) {
     const currency = market.currencyCode.toLowerCase();
-    const actualAmount = regionalPrice.currency === currency
-      ? regionalPrice.unit_amount
-      : regionalPrice.currency_options?.[currency]?.unit_amount;
+    const actualAmount =
+      regionalPrice.currency === currency
+        ? regionalPrice.unit_amount
+        : regionalPrice.currency_options?.[currency]?.unit_amount;
     if (!Number.isInteger(actualAmount) || (actualAmount ?? 0) <= 0) {
       throw new Error(
         `Stripe Price does not support ${market.currencyCode} for ${lookupKey}`,
@@ -146,11 +149,10 @@ async function resolveRegionalPriceId(
     return regionalPrice.id;
   }
 
-  // Keep the original USD checkout available until the first catalog sync.
-  if (market.id === DEFAULT_REGIONAL_PRICING_MARKET_ID) {
-    return plan === "lifetime"
-      ? getPriceId(plan)
-      : getPriceId(plan, billingInterval);
+  // Keep the original USD recurring checkout available until the first catalog sync.
+  // Lifetime checkout must use the generated regional catalog Price.
+  if (market.id === DEFAULT_REGIONAL_PRICING_MARKET_ID && plan !== "lifetime") {
+    return getPriceId(plan, billingInterval);
   }
   throw new Error(
     `Regional Stripe Price not found for ${market.id}. Run pricing:stripe:sync.`,
@@ -256,9 +258,8 @@ serve(async (req: Request) => {
     } catch (error) {
       return new Response(
         JSON.stringify({
-          error: error instanceof Error
-            ? error.message
-            : "Invalid checkout market",
+          error:
+            error instanceof Error ? error.message : "Invalid checkout market",
         }),
         {
           status: 400,
@@ -394,9 +395,8 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription = hasActiveHouseholdSubscriptionAccess(
-        ownerSub,
-      );
+      const ownerHasActiveSubscription =
+        hasActiveHouseholdSubscriptionAccess(ownerSub);
 
       if (ownerHasActiveSubscription) {
         console.error("User is bound to active household subscription:", {
@@ -653,17 +653,16 @@ serve(async (req: Request) => {
         status: "open",
         limit: 100,
       });
-      const matchingOpenSession = findReusableLifetimeCheckoutSession<
-        Stripe.Checkout.Session
-      >(
-        openCheckoutSessions.data,
-        {
-          userId,
-          pricingCountry: requestedCountry ?? "US",
-          currency: requestedCurrency,
-          promoCode: promoCode ?? "",
-        },
-      );
+      const matchingOpenSession =
+        findReusableLifetimeCheckoutSession<Stripe.Checkout.Session>(
+          openCheckoutSessions.data,
+          {
+            userId,
+            pricingCountry: requestedCountry ?? "US",
+            currency: requestedCurrency,
+            promoCode: promoCode ?? "",
+          },
+        );
 
       if (matchingOpenSession?.url) {
         try {
@@ -697,7 +696,8 @@ serve(async (req: Request) => {
           appUrl: env.appUrl,
           successUrl: typeof successUrl === "string" ? successUrl : null,
           cancelUrl: typeof cancelUrl === "string" ? cancelUrl : null,
-          allowLocalhost: env.appUrl.includes("localhost") ||
+          allowLocalhost:
+            env.appUrl.includes("localhost") ||
             env.appUrl.includes("127.0.0.1"),
         });
 
@@ -744,8 +744,7 @@ serve(async (req: Request) => {
               return new Response(
                 JSON.stringify({
                   error: "Invalid promotion code",
-                  details:
-                    `The promotion code '${promoCode}' is not valid or has expired.`,
+                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
                 }),
                 {
                   status: 400,
@@ -951,8 +950,7 @@ serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 error: "Invalid promotion code",
-                details:
-                  `The promotion code '${promoCode}' is not valid or has expired.`,
+                details: `The promotion code '${promoCode}' is not valid or has expired.`,
               }),
               {
                 status: 400,
@@ -1179,14 +1177,14 @@ serve(async (req: Request) => {
         currency: requestedCurrency,
       });
 
-      const failureCode = typeof stripeErr?.code === "string" &&
-          stripeErr.code.length > 0
-        ? `STRIPE_${stripeErr.code.toUpperCase()}`
-        : stripeErr?.message?.includes("currency mismatch")
-        ? "CHECKOUT_PRICE_CURRENCY_MISMATCH"
-        : stripeErr?.message?.includes("Price mismatch")
-        ? "CHECKOUT_PRICE_ID_MISMATCH"
-        : "STRIPE_SESSION_CREATION_FAILED";
+      const failureCode =
+        typeof stripeErr?.code === "string" && stripeErr.code.length > 0
+          ? `STRIPE_${stripeErr.code.toUpperCase()}`
+          : stripeErr?.message?.includes("currency mismatch")
+            ? "CHECKOUT_PRICE_CURRENCY_MISMATCH"
+            : stripeErr?.message?.includes("Price mismatch")
+              ? "CHECKOUT_PRICE_ID_MISMATCH"
+              : "STRIPE_SESSION_CREATION_FAILED";
       return new Response(
         JSON.stringify({
           error: "Failed to create checkout session",
