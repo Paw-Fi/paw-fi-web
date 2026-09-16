@@ -84,6 +84,7 @@ interface RequestBody {
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
   description?: string; // Optional description/note
   merchant?: string; // Optional merchant/payee (used for both expense and income)
+  merchantId?: string;
   ownerType?: "me" | "partner" | "household"; // Owner attribution (default: 'me')
   privacyScope?: "private" | "balances_only" | "full"; // Visibility scope (default: 'full')
   householdId?: string; // If provided, share with this household
@@ -159,8 +160,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule = body.recurrence_rule ??
-      (body as any).recurrenceRule;
+    const legacyRecurrenceRule =
+      body.recurrence_rule ?? (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -170,8 +171,8 @@ Deno.serve(async (req: Request) => {
 
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -314,9 +315,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -464,12 +466,13 @@ Deno.serve(async (req: Request) => {
     const requestedAccountIdRaw = hasCamelAccountId
       ? bodyRecord.accountId
       : hasSnakeAccountId
-      ? bodyRecord.account_id
-      : undefined;
-    const requestedAccountId = requestedAccountIdRaw == null ||
-        String(requestedAccountIdRaw).trim().length === 0
-      ? null
-      : sanitizeUuid(String(requestedAccountIdRaw));
+        ? bodyRecord.account_id
+        : undefined;
+    const requestedAccountId =
+      requestedAccountIdRaw == null ||
+      String(requestedAccountIdRaw).trim().length === 0
+        ? null
+        : sanitizeUuid(String(requestedAccountIdRaw));
     if (
       hasRequestedAccountId &&
       requestedAccountIdRaw != null &&
@@ -515,6 +518,8 @@ Deno.serve(async (req: Request) => {
       date: body.date,
       raw_text: body.description || "",
       merchant: normalizedMerchant,
+      merchant_structured_name: normalizedMerchant,
+      merchant_id: sanitizeUuid(body.merchantId),
       currency: currency,
       owner_type: ownerType,
       privacy_scope: privacyScope,
@@ -536,16 +541,16 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const shouldFinalizeHouseholdSplit = resolvedHouseholdId != null &&
+    const shouldFinalizeHouseholdSplit =
+      resolvedHouseholdId != null &&
       !isPortfolio &&
-      resolveEffectiveSplit(
-          body.customSplits,
-          householdAutoSplitSettings,
-        ).kind === "customSplits";
+      resolveEffectiveSplit(body.customSplits, householdAutoSplitSettings)
+        .kind === "customSplits";
 
-    let preparedHouseholdSplit:
-      | { group: SplitGroupRecord; lines: SplitLineRecord[] }
-      | null = null;
+    let preparedHouseholdSplit: {
+      group: SplitGroupRecord;
+      lines: SplitLineRecord[];
+    } | null = null;
     if (shouldFinalizeHouseholdSplit) {
       if (householdMembers.length === 0) {
         return errorResponse(
@@ -641,31 +646,34 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!income) {
-      const atomicResult = preparedHouseholdSplit == null
-        ? null
-        : await createHouseholdTransactionWithSplit({
-          supabase,
-          actorUserId: userId,
-          transaction: incomeRecord,
-          group: preparedHouseholdSplit.group,
-          lines: preparedHouseholdSplit.lines,
-          targetAccountId: accountId,
-          isRecurringTemplate: body.isRecurring === true,
-        });
-      const { data: insertedIncome, error: incomeError } = atomicResult ??
-        await supabase
+      const atomicResult =
+        preparedHouseholdSplit == null
+          ? null
+          : await createHouseholdTransactionWithSplit({
+              supabase,
+              actorUserId: userId,
+              transaction: incomeRecord,
+              group: preparedHouseholdSplit.group,
+              lines: preparedHouseholdSplit.lines,
+              targetAccountId: accountId,
+              isRecurringTemplate: body.isRecurring === true,
+            });
+      const { data: insertedIncome, error: incomeError } =
+        atomicResult ??
+        (await supabase
           .from("expenses")
           .insert(incomeRecord)
           .select()
-          .single();
+          .single());
 
       if (incomeError) {
         console.error("[save-income] Error saving income:", incomeError);
         return errorResponse("Failed to save income", 500, "SERVER_ERROR");
       }
-      income = atomicResult == null
-        ? insertedIncome
-        : (insertedIncome as Record<string, unknown>).expense;
+      income =
+        atomicResult == null
+          ? insertedIncome
+          : (insertedIncome as Record<string, unknown>).expense;
     }
 
     console.log("[save-income] Income saved successfully:", income.id);

@@ -455,6 +455,7 @@ function providerStreamCandidate(params: {
     category: categoryName ? normalizeCategory(categoryName) : null,
     rawText: label,
     merchant: stream.merchant_name ?? null,
+    structuredMerchant: stream.merchant_name?.trim() || null,
     recurrenceRule: {
       frequency: frequency.frequency,
       anchor_date: anchorDate.slice(0, 10),
@@ -584,6 +585,7 @@ async function detectLedgerRecurringCandidates(params: {
       category: latest.category ?? null,
       rawText: latest.raw_text ?? latest.merchant ?? null,
       merchant: latest.merchant ?? null,
+      structuredMerchant: null,
       recurrenceRule: {
         frequency: pattern.frequency,
         anchor_date: anchorDate,

@@ -128,6 +128,7 @@ interface RecurrenceCandidateRow {
   date: string;
   type: "expense" | "income";
   merchant: string | null;
+  merchant_structured_name?: string | null;
   raw_text: string | null;
   is_recurring?: boolean | null;
   recurrence_rule?: Record<string, unknown> | null;
@@ -162,6 +163,7 @@ export interface PlaidRecurringTemplateCandidate {
   category: string | null;
   rawText: string | null;
   merchant: string | null;
+  structuredMerchant: string | null;
   recurrenceRule: Record<string, unknown>;
   providerFields: Record<string, unknown>;
 }
@@ -508,6 +510,7 @@ function inferPlaidRecurringRules(params: {
       date: record.date,
       type: record.type,
       merchant: record.merchant,
+      merchant_structured_name: record.merchant_structured_name ?? null,
       raw_text: record.raw_text,
       is_recurring: record.is_recurring,
       recurrence_rule: record.recurrence_rule,
@@ -674,6 +677,9 @@ function buildPlaidRecurringTemplateCandidates(params: {
       category: shouldReplace ? record.category : existing!.category,
       rawText: shouldReplace ? record.raw_text : existing!.rawText,
       merchant: shouldReplace ? record.merchant : existing!.merchant,
+      structuredMerchant: shouldReplace
+        ? (record.merchant_structured_name ?? null)
+        : existing!.structuredMerchant,
       recurrenceRule: {
         ...(shouldReplace ? recurrenceRule : existing!.recurrenceRule),
         anchor_date: date,
@@ -759,6 +765,7 @@ async function upsertPlaidRecurringTemplates(params: {
       date,
       raw_text: candidate.rawText,
       merchant: candidate.merchant,
+      merchant_structured_name: candidate.structuredMerchant,
       source: candidate.merchant || candidate.rawText,
       type: candidate.type,
       is_recurring: true,
@@ -780,6 +787,7 @@ async function upsertPlaidRecurringTemplates(params: {
           date,
           raw_text: candidate.rawText,
           merchant: candidate.merchant,
+          merchant_structured_name: candidate.structuredMerchant,
           source: candidate.merchant || candidate.rawText,
           type: candidate.type,
           is_recurring: true,
@@ -996,7 +1004,7 @@ export async function preparePlaidTransactionMutations(
     const { data, error } = await params.supabase
       .from("expenses")
       .select(
-        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, merchant_structured_name, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
       )
       .eq("user_id", params.userId)
       .eq("provider", PLAID_PROVIDER)
@@ -1066,6 +1074,7 @@ function normalizeExistingRecurrenceCandidate(
     date: String(record.date).slice(0, 10),
     type,
     merchant: record.merchant || null,
+    merchant_structured_name: record.merchant_structured_name ?? null,
     raw_text: record.raw_text || null,
     is_recurring: record.is_recurring,
     recurrence_rule: record.recurrence_rule,
@@ -1484,7 +1493,7 @@ export async function persistPlaidTransactions(
     const { data, error: selectError } = await params.supabase
       .from("expenses")
       .select(
-        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, merchant_structured_name, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
       )
       .eq("user_id", params.userId)
       .eq("provider", PLAID_PROVIDER)

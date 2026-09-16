@@ -144,12 +144,11 @@ export async function createPlaidLinkToken(
   params: CreateLinkTokenParams,
 ): Promise<CreateLinkTokenResponse> {
   const config = getPlaidConfig();
-  const countryCodes =
-    params.countryCodes && params.countryCodes.length > 0
-      ? params.countryCodes
-          .map((code) => code.trim().toUpperCase())
-          .filter(Boolean)
-      : config.countryCodes;
+  const countryCodes = params.countryCodes && params.countryCodes.length > 0
+    ? params.countryCodes
+      .map((code) => code.trim().toUpperCase())
+      .filter(Boolean)
+    : config.countryCodes;
 
   const platform = params.platform?.toLowerCase();
   const request: Record<string, unknown> = {
@@ -160,10 +159,9 @@ export async function createPlaidLinkToken(
   };
 
   if (!params.omitProducts) {
-    const products =
-      params.products && params.products.length > 0
-        ? params.products
-        : config.products;
+    const products = params.products && params.products.length > 0
+      ? params.products
+      : config.products;
     request.products = products;
     if (!params.accessToken && products.includes("transactions")) {
       request.account_filters = {
@@ -451,6 +449,9 @@ export interface ExpenseUpsertInput {
   category: string | null;
   raw_text: string | null;
   merchant: string | null;
+  // Only Plaid's explicit merchant_name is structured merchant evidence.
+  // `merchant` may fall back to a payment payee or statement name for display.
+  merchant_structured_name?: string | null;
   source: string | null;
   raw_provider_payload: unknown;
   is_recurring: boolean;
@@ -490,15 +491,13 @@ export function mapPlaidTransactionToExpense(
   params: MapPlaidTransactionInput,
 ): ExpenseUpsertInput {
   const txn = params.transaction;
-  const categoryName =
-    txn.personal_finance_category?.detailed ||
+  const categoryName = txn.personal_finance_category?.detailed ||
     txn.personal_finance_category?.primary ||
     null;
   const normalizedCategory = categoryName
     ? normalizeCategory(categoryName)
     : null;
-  const currency =
-    txn.iso_currency_code ||
+  const currency = txn.iso_currency_code ||
     txn.unofficial_currency_code ||
     params.defaultCurrency ||
     "USD";
@@ -508,8 +507,7 @@ export function mapPlaidTransactionToExpense(
   const personalPrimary = txn.personal_finance_category?.primary || "";
   const isIncome = amount < 0 || personalPrimary.toUpperCase() === "INCOME";
   const transactionType = isIncome ? "income" : "expense";
-  const merchantLabel =
-    txn.merchant_name ||
+  const merchantLabel = txn.merchant_name ||
     txn.payment_meta?.payee ||
     txn.payment_meta?.payer ||
     null;
@@ -549,12 +547,12 @@ export function mapPlaidTransactionToExpense(
   const effectiveClassification =
     classificationReview.reason === "low_provider_confidence"
       ? classifyPlaidTransaction({
-          amount,
-          pending: txn.pending ?? false,
-          pfcPrimary: null,
-          transactionCode: txn.transaction_code,
-          accountType: params.accountType,
-        })
+        amount,
+        pending: txn.pending ?? false,
+        pfcPrimary: null,
+        transactionCode: txn.transaction_code,
+        accountType: params.accountType,
+      })
       : classification;
 
   return {
@@ -564,12 +562,13 @@ export function mapPlaidTransactionToExpense(
     provider_transaction_id: txn.transaction_id,
     amount_cents: amountCents,
     currency,
-    date:
-      txn.date || txn.authorized_date || new Date().toISOString().slice(0, 10),
+    date: txn.date || txn.authorized_date ||
+      new Date().toISOString().slice(0, 10),
     type: transactionType,
     category: normalizedCategory,
     raw_text: description,
     merchant: merchantLabel || txn.name || null,
+    merchant_structured_name: txn.merchant_name?.trim() || null,
     source: merchantLabel || txn.name || null,
     raw_provider_payload: {
       transaction_id: txn.transaction_id,
@@ -597,8 +596,8 @@ export function mapPlaidTransactionToExpense(
       null,
     provider_pfc_version:
       txn.personal_finance_category?.version?.trim().toLowerCase() || "v2",
-    provider_transaction_code:
-      txn.transaction_code?.trim().toLowerCase() || null,
+    provider_transaction_code: txn.transaction_code?.trim().toLowerCase() ||
+      null,
     provider_pending: txn.pending ?? false,
     analytics_class: effectiveClassification.analyticsClass,
     analytics_direction: effectiveClassification.direction,

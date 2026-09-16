@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
         };
         break;
       case "listSeries":
-        rpcName = "list_recurring_series_summary_v1";
+        rpcName = "list_recurring_series_summary_v2";
         rpcArguments = {
           p_actor_user_id: actorUserId,
           p_household_id: householdId,
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
         };
         break;
       case "getSeries":
-        rpcName = "get_recurring_series_detail_v1";
+        rpcName = "get_recurring_series_detail_v2";
         rpcArguments = {
           p_actor_user_id: actorUserId,
           p_recurring_id: recurringId,

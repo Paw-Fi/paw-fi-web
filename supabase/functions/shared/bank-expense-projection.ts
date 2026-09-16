@@ -12,6 +12,7 @@ export interface ExistingExpenseProjectionRow {
   date?: string | null;
   type?: "expense" | "income" | string | null;
   merchant?: string | null;
+  merchant_structured_name?: string | null;
   raw_text?: string | null;
   is_recurring?: boolean | null;
   recurrence_rule?: Record<string, unknown> | null;
@@ -65,6 +66,7 @@ function extractProviderFields(
     category: record.category,
     raw_text: record.raw_text,
     merchant: record.merchant,
+    merchant_structured_name: record.merchant_structured_name ?? null,
     source: record.source,
     is_recurring: record.is_recurring,
     recurrence_rule: record.recurrence_rule,
@@ -145,8 +147,8 @@ export function buildBankExpenseMutationPlan(
     const explicitPendingId = params.providerPendingTransactionIds.get(
       record.provider_transaction_id,
     );
-    const pendingTransactionId =
-      explicitPendingId || transaction?.pending_transaction_id || null;
+    const pendingTransactionId = explicitPendingId ||
+      transaction?.pending_transaction_id || null;
 
     const matchedRow =
       pendingTransactionId && existingByProviderId.has(pendingTransactionId)
@@ -158,19 +160,19 @@ export function buildBankExpenseMutationPlan(
       ...(matchedRow?.user_overrides || {}),
       ...(matchedRow?.classification_source === "user_override"
         ? {
-            analytics_class: matchedRow.analytics_class ?? "unknown",
-            classification_source: "user_override",
-            classification_review_state: "user_override",
-            classification_review_reason: null,
-          }
+          analytics_class: matchedRow.analytics_class ?? "unknown",
+          classification_source: "user_override",
+          classification_review_state: "user_override",
+          classification_review_reason: null,
+        }
         : {}),
       ...(matchedRow?.split_group_id
         ? {
-            amount_cents: matchedRow.amount_cents ?? record.amount_cents,
-            currency: matchedRow.currency ?? record.currency,
-            household_id: matchedRow.household_id ?? null,
-            account_id: matchedRow.account_id ?? null,
-          }
+          amount_cents: matchedRow.amount_cents ?? record.amount_cents,
+          currency: matchedRow.currency ?? record.currency,
+          household_id: matchedRow.household_id ?? null,
+          account_id: matchedRow.account_id ?? null,
+        }
         : {}),
     };
     const visibleRecord = applyUserOverridesToRecord(record, userOverrides);
@@ -182,11 +184,10 @@ export function buildBankExpenseMutationPlan(
       sync_version: (matchedRow?.sync_version ?? 0) + 1,
       provider_sync_cursor_generation: params.cursorGeneration,
       provider_pending_transaction_id: pendingTransactionId,
-      provider_posted_from_pending_transaction_id:
-        pendingTransactionId &&
-        pendingTransactionId !== record.provider_transaction_id
-          ? pendingTransactionId
-          : null,
+      provider_posted_from_pending_transaction_id: pendingTransactionId &&
+          pendingTransactionId !== record.provider_transaction_id
+        ? pendingTransactionId
+        : null,
     };
 
     if (!matchedRow) {
@@ -212,8 +213,8 @@ export function buildBankExpenseMutationPlan(
     if (matchedRow.deleted_reason === "user_deleted") {
       updatedMutation.deleted_at = matchedRow.deleted_at ?? null;
       updatedMutation.deleted_reason = "user_deleted";
-      updatedMutation.provider_deleted_at =
-        matchedRow.provider_deleted_at ?? null;
+      updatedMutation.provider_deleted_at = matchedRow.provider_deleted_at ??
+        null;
     }
 
     updates.push(updatedMutation);

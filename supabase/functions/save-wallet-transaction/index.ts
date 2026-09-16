@@ -1878,6 +1878,11 @@ Deno.serve(async (req: Request) => {
 
     // Merchant — allow note/package fallback for notification-based captures.
     const merchantForStorage = resolveWalletTransactionMerchant(tx);
+    // A raw notification/statement label remains display evidence.  Only the
+    // explicit semantic merchant field is eligible for structured reuse.
+    const structuredMerchantForStorage = typeof tx.merchantName === "string"
+      ? tx.merchantName.trim() || null
+      : null;
     const merchantDisplay = (
       merchantForStorage ??
         tx.note ??
@@ -2604,6 +2609,7 @@ Deno.serve(async (req: Request) => {
       date: normalizedDate,
       raw_text: description,
       merchant: merchantForStorage,
+      merchant_structured_name: structuredMerchantForStorage,
       currency,
       breakdown: null,
       receipt_image_url: null,

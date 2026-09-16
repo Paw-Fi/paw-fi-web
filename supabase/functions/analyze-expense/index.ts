@@ -27,6 +27,11 @@ import {
   UserCategoryRemapRow,
 } from "../shared/user-categories.ts";
 import { loadLatestUserPreferredCurrency } from "../shared/user-preferred-currency.ts";
+import {
+  canonicalMerchantDomain,
+  resolveMerchant,
+} from "../shared/merchant-resolver.ts";
+import { searchLogoDevCandidates } from "../shared/logo-dev-discovery.ts";
 
 const CATEGORY_CACHE_TTL_MS = 2 * 60 * 1000;
 const PREFERENCE_CACHE_TTL_MS = 60 * 1000;
@@ -522,6 +527,11 @@ function applyFinalUserCategoryMapping(params: {
 function createSSEStream(
   body: AnalyzeRequestBody,
   geminiApiKey: string,
+  merchantContext: {
+    supabase: any;
+    userId: string;
+    logoDevSecretKey: string;
+  },
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
@@ -554,10 +564,16 @@ function createSSEStream(
               })
             : result.items;
           const collapsedItems = collapseReceiptItems(finalItems, body);
+          const merchantEnrichedItems = await enrichAnalyzedMerchantItems({
+            items: Array.isArray(collapsedItems ?? finalItems)
+              ? ((collapsedItems ?? finalItems) as any[])
+              : [],
+            ...merchantContext,
+          });
           const completeData = {
             success: true,
             data: {
-              items: collapsedItems ?? finalItems,
+              items: merchantEnrichedItems,
               isAnalyzed: true,
               language: result.language,
               diagnostics: result.diagnostics,
@@ -614,6 +630,90 @@ function createSSEStream(
       }
     },
   });
+}
+
+async function enrichAnalyzedMerchantItems(params: {
+  items: any[];
+  supabase: any;
+  userId: string;
+  logoDevSecretKey: string;
+}): Promise<any[]> {
+  return await Promise.all(
+    params.items.map(async (item: any) => {
+      const merchant =
+        typeof item?.merchant === "string" ? item.merchant.trim() : "";
+      if (!merchant) return item;
+      const { data: key, error: keyError } = await params.supabase.rpc(
+        "merchant_resolution_descriptor_key",
+        {
+          p_merchant: merchant,
+          p_raw_text: null,
+          p_raw_text_is_merchant_descriptor: false,
+        },
+      );
+      if (keyError || typeof key !== "string" || !key) return item;
+      const evidencedDomain = canonicalMerchantDomain(
+        typeof item?.merchantUrl === "string" ? item.merchantUrl : null,
+      );
+      const resolution = await resolveMerchant({
+        supabase: params.supabase,
+        input: {
+          userId: params.userId,
+          descriptorKey: key,
+          evidenceContextKey: "merchant_text",
+          structuredKey: key,
+          merchantDomain: evidencedDomain,
+          mode: "INTERACTIVE_ANALYZE",
+        },
+        persistUnknownDomain: evidencedDomain != null,
+        safeDiscoveryQuery: evidencedDomain == null ? key : null,
+        beforeExternalFetch: async () => {
+          const { data: allowed, error } = await params.supabase.rpc(
+            "consume_merchant_search_quota",
+            { p_user_id: params.userId, p_daily_limit: 20 },
+          );
+          if (error) throw error;
+          if (allowed !== true)
+            throw new Error("MERCHANT_SEARCH_QUOTA_EXCEEDED");
+        },
+        discover:
+          evidencedDomain == null && params.logoDevSecretKey
+            ? () => searchLogoDevCandidates(merchant, params.logoDevSecretKey)
+            : undefined,
+      });
+      console.log(
+        "[merchant-resolution]",
+        JSON.stringify({
+          outcome: resolution.suppressed
+            ? "suppressed"
+            : resolution.merchantId
+              ? "internal_hit"
+              : resolution.cacheHit
+                ? "cache_hit"
+                : resolution.candidates.length
+                  ? "candidate_ambiguous"
+                  : "unresolved",
+          mode: "INTERACTIVE_ANALYZE",
+          candidateCount: resolution.candidates.length,
+        }),
+      );
+      return {
+        ...item,
+        ...(resolution.merchantId
+          ? { merchant_id: resolution.merchantId }
+          : {}),
+        ...(resolution.merchantId && evidencedDomain
+          ? {
+              merchant_domain: evidencedDomain,
+              merchant_resolution_source: "evidenced_domain",
+            }
+          : {}),
+        ...(resolution.candidates.length
+          ? { merchant_candidates: resolution.candidates }
+          : {}),
+      };
+    }),
+  );
 }
 
 Deno.serve(async (req: Request) => {
@@ -686,6 +786,7 @@ Deno.serve(async (req: Request) => {
           },
         })
       : supabaseAuthed;
+    const logoDevSecretKey = Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "";
     body.currency = await loadLatestUserPreferredCurrency({
       supabase: preferredCurrencyReader,
       userId: callerId,
@@ -800,7 +901,11 @@ Deno.serve(async (req: Request) => {
     if (isStreamMode) {
       console.log("[analyze-expense] Starting SSE streaming mode");
 
-      const stream = createSSEStream(body, GEMINI_API_KEY);
+      const stream = createSSEStream(body, GEMINI_API_KEY, {
+        supabase: preferredCurrencyReader,
+        userId: callerId,
+        logoDevSecretKey,
+      });
       return new Response(stream, {
         status: 200,
         headers: {
@@ -865,13 +970,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // This is an explicit user action: resolve internal knowledge first, then
+    // cached/interactive discovery. Ambiguous candidates are returned for user
+    // confirmation; analysis never silently invents a domain.
+    const analyzedItems =
+      collapseReceiptItems(result.items, body) ?? result.items;
+    const merchantEnrichedItems = await enrichAnalyzedMerchantItems({
+      items: analyzedItems,
+      supabase: preferredCurrencyReader,
+      userId: callerId,
+      logoDevSecretKey,
+    });
     logStage("total", requestStartedAt);
 
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          items: collapseReceiptItems(result.items, body) ?? result.items,
+          items: merchantEnrichedItems,
           isAnalyzed: true,
           language: result.language,
           diagnostics: result.diagnostics,

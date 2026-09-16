@@ -67,6 +67,7 @@ interface UpdateExpenseRequest {
     category?: string;
     raw_text?: string;
     merchant?: string | null;
+    merchant_structured_name?: string | null;
     date?: string;
     created_at?: string;
     currency?: string;
@@ -614,6 +615,10 @@ Deno.serve(async (req: Request) => {
           updates.merchant = trimmedMerchant;
         }
       }
+      // An explicit user edit is stronger than a prior extracted value. Keep
+      // display and structured evidence aligned so an old identity cannot
+      // return after changing Starbucks to Tesco.
+      updates.merchant_structured_name = updates.merchant;
     }
 
     if (updates.date !== undefined) {
@@ -2197,23 +2202,22 @@ Deno.serve(async (req: Request) => {
     let updatedExpense: unknown = null;
     if (splitWriteNeedsFinalization && pendingSplitCommit) {
       const splitCommit = pendingSplitCommit;
-      const isRecurringTemplate = (
-        updates.is_recurring ?? expenseRecord["is_recurring"] ?? false
-      ) === true;
+      const isRecurringTemplate =
+        (updates.is_recurring ?? expenseRecord["is_recurring"] ?? false) ===
+          true;
       const commitSplit = isRecurringTemplate
         ? commitRecurringTemplateSplitRecordsWithPatch
         : commitHouseholdSplitRecordsWithPatch;
-      const { error: commitSplitError } =
-        await commitSplit({
-          supabase,
-          actorUserId: userId,
-          group: splitCommit.group,
-          lines: splitCommit.lines,
-          expectedParent: expectedSplitParentFromTransaction(expenseRecord),
-          previousSplitGroupId: splitCommit.previousSplitGroupId,
-          targetAccountId: targetAccountIdForAtomicWrite ?? null,
-          expensePatch: updatePayload,
-        });
+      const { error: commitSplitError } = await commitSplit({
+        supabase,
+        actorUserId: userId,
+        group: splitCommit.group,
+        lines: splitCommit.lines,
+        expectedParent: expectedSplitParentFromTransaction(expenseRecord),
+        previousSplitGroupId: splitCommit.previousSplitGroupId,
+        targetAccountId: targetAccountIdForAtomicWrite ?? null,
+        expensePatch: updatePayload,
+      });
       if (commitSplitError) {
         console.error(
           "[update-expense] Failed to commit split write:",
