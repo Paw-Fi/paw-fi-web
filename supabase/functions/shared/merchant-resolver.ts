@@ -50,8 +50,9 @@ export function canonicalMerchantDomain(
       /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) ||
       hostname.includes(":") ||
       hostname.length > 253
-    )
+    ) {
       return null;
+    }
     const labels = hostname.split(".");
     if (
       labels.some(
@@ -60,8 +61,9 @@ export function canonicalMerchantDomain(
           label.length > 63 ||
           !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label),
       )
-    )
+    ) {
       return null;
+    }
     return hostname;
   } catch {
     return null;
@@ -72,8 +74,9 @@ export function sanitizeLogoDevCandidates(value: unknown): LogoDevCandidate[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
   return value.flatMap((candidate) => {
-    const name =
-      typeof candidate?.name === "string" ? candidate.name.trim() : "";
+    const name = typeof candidate?.name === "string"
+      ? candidate.name.trim()
+      : "";
     const domain = canonicalMerchantDomain(candidate?.domain);
     if (!name || !domain || seen.has(domain)) return [];
     seen.add(domain);
@@ -154,10 +157,12 @@ export async function resolveMerchantInternally(
       };
     }
   }
-  for (const [key, source] of [
-    [input.descriptorKey, "trusted_exact"],
-    [input.structuredKey, "trusted_structured"],
-  ] as const) {
+  for (
+    const [key, source] of [
+      [input.descriptorKey, "trusted_exact"],
+      [input.structuredKey, "trusted_structured"],
+    ] as const
+  ) {
     if (!key) continue;
     const { data } = await supabase
       .from("merchant_aliases")
@@ -342,13 +347,13 @@ export async function searchMerchantCandidates(params: {
       const domain = canonicalMerchantDomain(merchant.domain);
       return merchant.id && merchant.canonical_name && domain
         ? [
-            {
-              id: merchant.id,
-              name: merchant.canonical_name,
-              domain,
-              source: "moneko" as const,
-            },
-          ]
+          {
+            id: merchant.id,
+            name: merchant.canonical_name,
+            domain,
+            source: "moneko" as const,
+          },
+        ]
         : [];
     });
     if (internal.length > 0) {

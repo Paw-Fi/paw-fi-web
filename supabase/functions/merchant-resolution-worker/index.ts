@@ -82,18 +82,18 @@ Deno.serve(async (req) => {
   );
   if (error) return response({ error: "Failed to claim jobs" }, 500);
   const claimedJobs = (jobs ?? []) as ResolutionJob[];
-  const { data: expenses, error: expensesError } =
-    claimedJobs.length === 0
-      ? { data: [], error: null }
-      : await supabase
-          .from("expenses")
-          .select("id, merchant, raw_text, user_id, bank_account_id")
-          .in(
-            "id",
-            claimedJobs.map((job) => job.transaction_id),
-          );
-  if (expensesError)
+  const { data: expenses, error: expensesError } = claimedJobs.length === 0
+    ? { data: [], error: null }
+    : await supabase
+      .from("expenses")
+      .select("id, merchant, raw_text, user_id, bank_account_id")
+      .in(
+        "id",
+        claimedJobs.map((job) => job.transaction_id),
+      );
+  if (expensesError) {
     return response({ error: "Failed to load transactions" }, 500);
+  }
   const expensesById = new Map(
     (expenses ?? []).map((expense: any) => [expense.id, expense] as const),
   );

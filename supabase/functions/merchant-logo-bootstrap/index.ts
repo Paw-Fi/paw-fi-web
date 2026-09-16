@@ -87,8 +87,9 @@ Deno.serve(async (req) => {
     const selectedDomain = canonicalMerchantDomain(
       typeof body.selectedDomain === "string" ? body.selectedDomain : null,
     );
-    const selectedName =
-      typeof body.selectedName === "string" ? body.selectedName.trim() : "";
+    const selectedName = typeof body.selectedName === "string"
+      ? body.selectedName.trim()
+      : "";
     if (!group || !selectedDomain || !selectedName) {
       return response({ error: "Invalid merchant selection" }, 400);
     }
@@ -119,8 +120,9 @@ Deno.serve(async (req) => {
         candidate.name === selectedName &&
         canonicalMerchantDomain(candidate.domain) === selectedDomain,
     );
-    if (!selected)
+    if (!selected) {
       return response({ error: "Invalid merchant selection" }, 400);
+    }
     const { data: normalizedName } = await supabase.rpc(
       "merchant_resolution_descriptor_key",
       {
@@ -156,8 +158,9 @@ Deno.serve(async (req) => {
       .eq("status", "pending")
       .order("structured_key")
       .limit(10);
-    if (error)
+    if (error) {
       return response({ error: "Unable to load merchant groups" }, 503);
+    }
     for (const group of groups ?? []) {
       try {
         const resolution = await resolveMerchant({
@@ -176,8 +179,9 @@ Deno.serve(async (req) => {
               { p_user_id: auth.userId, p_daily_limit: 20 },
             );
             if (quotaError) throw quotaError;
-            if (allowed !== true)
+            if (allowed !== true) {
               throw new Error("MERCHANT_SEARCH_QUOTA_EXCEEDED");
+            }
           },
           discover: () => searchLogoDevCandidates(group.display_name, logoKey),
         });
@@ -196,8 +200,9 @@ Deno.serve(async (req) => {
             .map((candidate) => canonicalMerchantDomain(candidate.domain))
             .filter(Boolean),
         );
-        const only =
-          distinctDomains.size === 1 ? resolution.candidates[0] : null;
+        const only = distinctDomains.size === 1
+          ? resolution.candidates[0]
+          : null;
         if (only) {
           const { data: normalizedName } = await supabase.rpc(
             "merchant_resolution_descriptor_key",

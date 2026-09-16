@@ -12,11 +12,13 @@ const source = await Deno.readTextFile(
 );
 
 Deno.test("central resolver keeps external discovery mode-gated", () => {
-  for (const mode of [
-    "INTERNAL_ONLY",
-    "INTERACTIVE_SEARCH",
-    "INTERACTIVE_ANALYZE",
-  ]) {
+  for (
+    const mode of [
+      "INTERNAL_ONLY",
+      "INTERACTIVE_SEARCH",
+      "INTERACTIVE_ANALYZE",
+    ]
+  ) {
     assertStringIncludes(source, `"${mode}"`);
   }
   assertStringIncludes(source, "resolveMerchantInternally");

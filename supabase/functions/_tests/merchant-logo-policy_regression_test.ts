@@ -72,9 +72,10 @@ Deno.test(
 );
 
 Deno.test("internal background resolver has no fetch dependency", () => {
-  const worker = backgroundSources.find((entry) =>
-    entry.path.includes("merchant-resolution-worker"),
-  )!.source;
+  const worker =
+    backgroundSources.find((entry) =>
+      entry.path.includes("merchant-resolution-worker")
+    )!.source;
   assert(!worker.includes("fetch("));
   assertStringIncludes(worker, "resolveMerchant");
   assertStringIncludes(worker, 'mode: "INTERNAL_ONLY"');

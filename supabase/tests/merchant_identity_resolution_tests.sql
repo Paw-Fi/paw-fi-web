@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap;
-select plan(13);
+select plan(16);
 
 do $$
 declare
@@ -166,6 +166,67 @@ select is(
    )),
   'pending:exact evidence b',
   'changed evidence remains eligible after stale completion is rejected'
+);
+
+do $$
+declare
+  v_tim_a uuid := gen_random_uuid();
+  v_tim_b uuid := gen_random_uuid();
+  v_a uuid := gen_random_uuid();
+  v_b uuid := gen_random_uuid();
+  v_c uuid := gen_random_uuid();
+begin
+  insert into public.merchants (
+    id, canonical_name, normalized_name, domain, logo_identifier,
+    confidence, resolution_source
+  ) values
+    (v_tim_a, 'Tim Hortons', 'tim hortons', 'timhortons.ca', 'timhortons.ca', 1, 'logo_dev_search'),
+    (v_tim_b, 'Tim Hortons', 'tim hortons', 'timhortons.co.uk', 'timhortons.co.uk', 1, 'logo_dev_search');
+  insert into public.expenses (
+    id, user_id, date, amount_cents, currency, category, merchant,
+    merchant_structured_name
+  ) values
+    (v_a, current_setting('test.merchant_user_id')::uuid, current_date, 100,
+      'CAD', 'other', 'TIM HORTONS #123 TORONTO', 'Tim Hortons'),
+    (v_b, current_setting('test.merchant_user_id')::uuid, current_date, 100,
+      'GBP', 'other', 'TIM HORTONS #999', 'Tim Hortons'),
+    (v_c, current_setting('test.merchant_user_id')::uuid, current_date, 100,
+      'GBP', 'other', 'TIM HORTONS #888', 'Tim Hortons');
+  perform public.apply_merchant_user_evidence(
+    v_a, current_setting('test.merchant_user_id')::uuid, 'map', v_tim_a, true
+  );
+  update public.merchant_resolution_jobs set status = 'unresolved',
+    next_attempt_at = now() + interval '30 days' where transaction_id = v_c;
+  perform public.apply_merchant_user_evidence(
+    v_b, current_setting('test.merchant_user_id')::uuid, 'map', v_tim_b, true
+  );
+  perform set_config('test.tim_b', v_b::text, false);
+  perform set_config('test.tim_c', v_c::text, false);
+  perform set_config('test.tim_b_merchant', v_tim_b::text, false);
+end;
+$$;
+select ok(
+  not exists (
+    select 1 from public.merchant_user_overrides
+    where user_id = current_setting('test.merchant_user_id')::uuid
+      and normalized_pattern = 'tim hortons'
+      and evidence_context_key = 'structured_merchant_name'
+  ),
+  'conflicting broad structured mappings are removed instead of overwritten'
+);
+select is(
+  (select merchant_id from public.merchant_user_overrides
+   where user_id = current_setting('test.merchant_user_id')::uuid
+     and normalized_pattern = 'tim hortons #999'
+     and evidence_context_key = 'merchant_text'),
+  current_setting('test.tim_b_merchant')::uuid,
+  'conflicting confirmation still stores the exact descriptor mapping'
+);
+select is(
+  (select status from public.merchant_resolution_jobs
+   where transaction_id = current_setting('test.tim_c')::uuid),
+  'unresolved',
+  'ambiguous Tim Hortons structured evidence is not broadly requeued'
 );
 
 select has_column('public', 'merchant_user_overrides', 'action', 'overrides model map versus suppress');

@@ -22,12 +22,14 @@ const catalog = {
       monthly: 1099,
       yearly: 7999,
       lifetime: 14999,
+      lifetimePromo: 10499,
     },
     eur: {
       currencyCode: "EUR",
       monthly: 999,
       yearly: 7499,
       lifetime: 13999,
+      lifetimePromo: 9799,
     },
   },
 };
@@ -70,6 +72,16 @@ test("yearly pricing charges the annual catalog price upfront", () => {
   });
 
   assert.deepEqual(pricing.currencyAmounts, { eur: 7499, usd: 7999 });
+});
+
+test("lifetime Stripe Price uses the advertised promotional amount", () => {
+  const pricing = buildMultiCurrencyPlanPricing(buildCatalogMarkets(catalog), {
+    id: "lifetime",
+    label: "Lifetime",
+    amountKey: "lifetimePromo",
+  });
+
+  assert.deepEqual(pricing.currencyAmounts, { eur: 9799, usd: 10499 });
 });
 
 test("catalog becomes one amount per currency for a plan", () => {

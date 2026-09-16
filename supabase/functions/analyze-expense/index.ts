@@ -120,8 +120,8 @@ function mapProgressEvent(
 
 function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
   const hasImage = Boolean(body.image);
-  const hasAttachments =
-    Array.isArray(body.attachments) && body.attachments.length > 0;
+  const hasAttachments = Array.isArray(body.attachments) &&
+    body.attachments.length > 0;
   return hasImage && !hasAttachments;
 }
 
@@ -129,11 +129,10 @@ function formatBreakdownAmount(item: any): string {
   const amount = Number(item?.amount);
   if (!Number.isFinite(amount)) return "";
   const formatted = amount.toFixed(2);
-  const symbol =
-    typeof item?.currencySymbol === "string" &&
-    item.currencySymbol.trim().length > 0
-      ? item.currencySymbol.trim()
-      : "";
+  const symbol = typeof item?.currencySymbol === "string" &&
+      item.currencySymbol.trim().length > 0
+    ? item.currencySymbol.trim()
+    : "";
   const currency =
     typeof item?.currency === "string" && item.currency.trim().length > 0
       ? item.currency.trim()
@@ -146,8 +145,9 @@ function formatBreakdownAmount(item: any): string {
 function buildReceiptBreakdown(items: any[]): string[] {
   return items
     .map((item) => {
-      const desc =
-        typeof item?.description === "string" ? item.description.trim() : "";
+      const desc = typeof item?.description === "string"
+        ? item.description.trim()
+        : "";
       const amountText = formatBreakdownAmount(item);
       if (!amountText && !desc) return "";
       if (!amountText) return desc;
@@ -160,7 +160,7 @@ function buildReceiptBreakdown(items: any[]): string[] {
 function pickReceiptDescription(items: any[]): string {
   const candidates = items
     .map((item) =>
-      typeof item?.description === "string" ? item.description.trim() : "",
+      typeof item?.description === "string" ? item.description.trim() : ""
     )
     .filter((value) => value.length > 0);
   if (candidates.length === 0) return "Receipt";
@@ -241,10 +241,9 @@ function collapseReceiptItems(
   // into a single expense instead of returning one item per transaction row.
   if (!hasExplicitReceiptSignals(items)) return items;
 
-  const filteredItems =
-    items.length > 1
-      ? items.filter((item) => !isTotalLike(item?.description))
-      : items;
+  const filteredItems = items.length > 1
+    ? items.filter((item) => !isTotalLike(item?.description))
+    : items;
   const workingItems = filteredItems.length > 0 ? filteredItems : items;
 
   const totalAmount = workingItems.reduce((sum, item) => {
@@ -260,15 +259,15 @@ function collapseReceiptItems(
       .map((item) =>
         typeof item?.currency === "string"
           ? item.currency.trim().toUpperCase()
-          : "",
+          : ""
       )
       .filter((currency) => currency.length > 0),
   );
   if (resolvedCurrencies.size > 1) return items;
 
   const breakdown = buildReceiptBreakdown(workingItems);
-  const category =
-    resolveReceiptCategory(workingItems) || primary.category || "other";
+  const category = resolveReceiptCategory(workingItems) || primary.category ||
+    "other";
   const description = pickReceiptDescription(workingItems);
   const merchant =
     typeof primary?.merchant === "string" && primary.merchant.trim().length > 0
@@ -286,8 +285,8 @@ function collapseReceiptItems(
       type,
       amount: Number(totalAmount.toFixed(2)),
       category,
-      currency:
-        resolvedCurrencies.values().next().value || body.currency || "USD",
+      currency: resolvedCurrencies.values().next().value || body.currency ||
+        "USD",
       currencySymbol: primary.currencySymbol || "$",
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
       description,
@@ -354,9 +353,11 @@ function getElapsedMs(startedAt: number): number {
 
 function logStage(stage: string, startedAt: number) {
   console.log(
-    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(
-      startedAt,
-    )}`,
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${
+      getElapsedMs(
+        startedAt,
+      )
+    }`,
   );
 }
 
@@ -482,7 +483,7 @@ function applyFinalUserCategoryMapping(params: {
   const ctx: CategoryContext = {
     allowedExpenseSet: new Set(
       params.allowedExpenseCategories.map((c) =>
-        normalizeStoredUserCategory(c),
+        normalizeStoredUserCategory(c)
       ),
     ),
     allowedIncomeSet: new Set(
@@ -500,8 +501,9 @@ function applyFinalUserCategoryMapping(params: {
         typeof item?.category === "string" && item.category.trim().length > 0
           ? item.category
           : "other",
-      description:
-        typeof item?.description === "string" ? item.description : null,
+      description: typeof item?.description === "string"
+        ? item.description
+        : null,
       transactionType,
       ctx,
     });
@@ -556,12 +558,12 @@ function createSSEStream(
         if (result.success) {
           const finalItems = Array.isArray(result.items)
             ? applyFinalUserCategoryMapping({
-                items: result.items,
-                allowedExpenseCategories: body.allowedExpenseCategories ?? [],
-                allowedIncomeCategories: body.allowedIncomeCategories ?? [],
-                preferences: body.categoryPreferences ?? [],
-                remaps: body.categoryRemaps ?? [],
-              })
+              items: result.items,
+              allowedExpenseCategories: body.allowedExpenseCategories ?? [],
+              allowedIncomeCategories: body.allowedIncomeCategories ?? [],
+              preferences: body.categoryPreferences ?? [],
+              remaps: body.categoryRemaps ?? [],
+            })
             : result.items;
           const collapsedItems = collapseReceiptItems(finalItems, body);
           const merchantEnrichedItems = await enrichAnalyzedMerchantItems({
@@ -608,10 +610,10 @@ function createSSEStream(
             stream: true,
             hasImage: !!body.image,
             hasAudio: !!body.audio,
-            hasAttachments:
-              Array.isArray(body.attachments) && body.attachments.length > 0,
-            hasText:
-              typeof body.text === "string" && body.text.trim().length > 0,
+            hasAttachments: Array.isArray(body.attachments) &&
+              body.attachments.length > 0,
+            hasText: typeof body.text === "string" &&
+              body.text.trim().length > 0,
           },
         });
         const message = error instanceof Error ? error.message : String(error);
@@ -640,8 +642,9 @@ async function enrichAnalyzedMerchantItems(params: {
 }): Promise<any[]> {
   return await Promise.all(
     params.items.map(async (item: any) => {
-      const merchant =
-        typeof item?.merchant === "string" ? item.merchant.trim() : "";
+      const merchant = typeof item?.merchant === "string"
+        ? item.merchant.trim()
+        : "";
       if (!merchant) return item;
       const { data: key, error: keyError } = await params.supabase.rpc(
         "merchant_resolution_descriptor_key",
@@ -673,13 +676,13 @@ async function enrichAnalyzedMerchantItems(params: {
             { p_user_id: params.userId, p_daily_limit: 20 },
           );
           if (error) throw error;
-          if (allowed !== true)
+          if (allowed !== true) {
             throw new Error("MERCHANT_SEARCH_QUOTA_EXCEEDED");
+          }
         },
-        discover:
-          evidencedDomain == null && params.logoDevSecretKey
-            ? () => searchLogoDevCandidates(merchant, params.logoDevSecretKey)
-            : undefined,
+        discover: evidencedDomain == null && params.logoDevSecretKey
+          ? () => searchLogoDevCandidates(merchant, params.logoDevSecretKey)
+          : undefined,
       });
       console.log(
         "[merchant-resolution]",
@@ -687,12 +690,12 @@ async function enrichAnalyzedMerchantItems(params: {
           outcome: resolution.suppressed
             ? "suppressed"
             : resolution.merchantId
-              ? "internal_hit"
-              : resolution.cacheHit
-                ? "cache_hit"
-                : resolution.candidates.length
-                  ? "candidate_ambiguous"
-                  : "unresolved",
+            ? "internal_hit"
+            : resolution.cacheHit
+            ? "cache_hit"
+            : resolution.candidates.length
+            ? "candidate_ambiguous"
+            : "unresolved",
           mode: "INTERACTIVE_ANALYZE",
           candidateCount: resolution.candidates.length,
         }),
@@ -704,9 +707,9 @@ async function enrichAnalyzedMerchantItems(params: {
           : {}),
         ...(resolution.merchantId && evidencedDomain
           ? {
-              merchant_domain: evidencedDomain,
-              merchant_resolution_source: "evidenced_domain",
-            }
+            merchant_domain: evidencedDomain,
+            merchant_resolution_source: "evidenced_domain",
+          }
           : {}),
         ...(resolution.candidates.length
           ? { merchant_candidates: resolution.candidates }
@@ -762,8 +765,8 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } =
-      await supabaseAuthed.auth.getUser();
+    const { data: userData, error: userErr } = await supabaseAuthed.auth
+      .getUser();
     logStage("auth_get_user", requestStartedAt);
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
@@ -776,15 +779,15 @@ Deno.serve(async (req: Request) => {
     body.userId = callerId;
     const preferredCurrencyReader = SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false,
-          },
-          global: {
-            headers: { "X-Client-Info": "moneko-analyze-expense" },
-          },
-        })
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+        global: {
+          headers: { "X-Client-Info": "moneko-analyze-expense" },
+        },
+      })
       : supabaseAuthed;
     const logoDevSecretKey = Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "";
     body.currency = await loadLatestUserPreferredCurrency({
@@ -872,15 +875,15 @@ Deno.serve(async (req: Request) => {
         const canAdminRead = !!SUPABASE_SERVICE_ROLE_KEY;
         const reader = canAdminRead
           ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!, {
-              auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-                detectSessionInUrl: false,
-              },
-              global: {
-                headers: { "X-Client-Info": "moneko-analyze-expense" },
-              },
-            })
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+              detectSessionInUrl: false,
+            },
+            global: {
+              headers: { "X-Client-Info": "moneko-analyze-expense" },
+            },
+          })
           : supabaseAuthed;
 
         const { data: members, error: membersError } = await reader
@@ -951,8 +954,8 @@ Deno.serve(async (req: Request) => {
           stream: false,
           hasImage: !!body.image,
           hasAudio: !!body.audio,
-          hasAttachments:
-            Array.isArray(body.attachments) && body.attachments.length > 0,
+          hasAttachments: Array.isArray(body.attachments) &&
+            body.attachments.length > 0,
           hasText: typeof body.text === "string" && body.text.trim().length > 0,
         },
       });
@@ -973,8 +976,8 @@ Deno.serve(async (req: Request) => {
     // This is an explicit user action: resolve internal knowledge first, then
     // cached/interactive discovery. Ambiguous candidates are returned for user
     // confirmation; analysis never silently invents a domain.
-    const analyzedItems =
-      collapseReceiptItems(result.items, body) ?? result.items;
+    const analyzedItems = collapseReceiptItems(result.items, body) ??
+      result.items;
     const merchantEnrichedItems = await enrichAnalyzedMerchantItems({
       items: analyzedItems,
       supabase: preferredCurrencyReader,
