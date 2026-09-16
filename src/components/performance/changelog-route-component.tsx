@@ -31,6 +31,21 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "AI Budget Suggestions & Recurring Fixes",
+    date: "2026-09-15",
+    version: "3.1.1",
+    tags: ["Feature", "AI", "Pockets", "Fix"],
+    description:
+      "Moneko 3.1.1 brings AI-powered budget suggestions for your pockets, so you can plan next month with confidence, and fixes several issues affecting recurring transactions and sign-in.",
+    items: [
+      "New AI budget suggestions for your pockets — review personalized recommendations and adjust your planned budgets for the month ahead",
+      "Fixed an issue where recurring transactions could go missing from your lists",
+      "Fixed a crash that could happen when closing the bulk recurring confirmation screen",
+      "Verification codes now keep your place when you return to the app after switching away",
+      "Added missing translations and improved the pockets review experience",
+    ],
+  },
+  {
     title: "Smoother Transactions & Email Receipt Fixes",
     date: "2026-08-05",
     version: "3.0.5",
