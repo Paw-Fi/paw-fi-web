@@ -2183,6 +2183,8 @@ Deno.serve(async (req: Request) => {
       "category",
       "raw_text",
       "merchant",
+      "merchant_id",
+      "merchant_structured_name",
       "date",
       "created_at",
       "currency",
