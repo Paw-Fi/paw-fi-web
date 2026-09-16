@@ -81,23 +81,21 @@ Deno.serve(async (req) => {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  const body = (await req.json().catch(() => null)) as
-    | Record<
-      string,
-      unknown
-    >
-    | null;
+  const body = (await req.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
   if (!body) return json({ error: "Invalid JSON body" }, 400);
   if (
     body.action !== "search" &&
     body.action !== "select" &&
-    body.action !== "manual"
+    body.action !== "manual" &&
+    body.action !== "resolve"
   ) {
     if (body?.action !== "clear") return json({ error: "Invalid action" }, 400);
   }
-  const transactionId = typeof body.transactionId === "string"
-    ? body.transactionId.trim()
-    : "";
+  const transactionId =
+    typeof body.transactionId === "string" ? body.transactionId.trim() : "";
   if (body.action === "clear") {
     if (!transactionId) return json({ error: "Transaction is required" }, 400);
     const expense = await loadEditableExpense({
@@ -137,23 +135,24 @@ Deno.serve(async (req) => {
       if (!safeQueryKey) return json({ success: true, candidates: [] });
       const searchableExpense = transactionId
         ? await loadEditableExpense({
-          supabase,
-          userId: auth.userId,
-          transactionId,
-        })
+            supabase,
+            userId: auth.userId,
+            transactionId,
+          })
         : null;
       const descriptorKey = searchableExpense
         ? await resolveEvidenceKey({
-          supabase,
-          merchant: searchableExpense.merchant ??
-            searchableExpense.merchant_structured_name,
-        })
+            supabase,
+            merchant:
+              searchableExpense.merchant ??
+              searchableExpense.merchant_structured_name,
+          })
         : safeQueryKey;
       const structuredKey = searchableExpense?.merchant_structured_name
         ? await resolveEvidenceKey({
-          supabase,
-          merchant: searchableExpense.merchant_structured_name,
-        })
+            supabase,
+            merchant: searchableExpense.merchant_structured_name,
+          })
         : safeQueryKey;
       const discovery = await searchMerchantCandidates({
         supabase,
@@ -166,14 +165,14 @@ Deno.serve(async (req) => {
         },
         suppressionInput: searchableExpense
           ? {
-            userId: auth.userId,
-            descriptorKey,
-            evidenceContextKey: searchableExpense.merchant
-              ? "merchant_text"
-              : "merchant_absent",
-            structuredKey,
-            mode: "INTERACTIVE_SEARCH",
-          }
+              userId: auth.userId,
+              descriptorKey,
+              evidenceContextKey: searchableExpense.merchant
+                ? "merchant_text"
+                : "merchant_absent",
+              structuredKey,
+              mode: "INTERACTIVE_SEARCH",
+            }
           : undefined,
         normalizedQuery: safeQueryKey,
         allowDiscoveryWhenSuppressed: true,
@@ -203,13 +202,14 @@ Deno.serve(async (req) => {
       console.log(
         "[merchant-resolution]",
         JSON.stringify({
-          outcome: discovery.candidates.length === 0
-            ? "unresolved"
-            : discovery.suppressed
-            ? "suppressed_explicit_search"
-            : discovery.cacheHit
-            ? "cache_hit"
-            : "candidate_ambiguous",
+          outcome:
+            discovery.candidates.length === 0
+              ? "unresolved"
+              : discovery.suppressed
+                ? "suppressed_explicit_search"
+                : discovery.cacheHit
+                  ? "cache_hit"
+                  : "candidate_ambiguous",
           mode: "INTERACTIVE_SEARCH",
           candidateCount: discovery.candidates.length,
         }),
@@ -222,20 +222,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const selectedDomain = canonicalMerchantDomain(
-      typeof body.selectedDomain === "string" ? body.selectedDomain : null,
-    ) ?? "";
-    const selectedName = typeof body.selectedName === "string"
-      ? body.selectedName.trim()
-      : "";
-    const selectedSource = body.selectedSource === "manual"
-      ? "manual"
-      : body.selectedSource === "moneko"
-      ? "moneko"
-      : "logo_dev";
-    const selectedMerchantId = typeof body.selectedMerchantId === "string"
-      ? body.selectedMerchantId.trim()
-      : "";
+    const selectedDomain =
+      canonicalMerchantDomain(
+        typeof body.selectedDomain === "string" ? body.selectedDomain : null,
+      ) ?? "";
+    const selectedName =
+      typeof body.selectedName === "string" ? body.selectedName.trim() : "";
+    const selectedSource =
+      body.selectedSource === "manual"
+        ? "manual"
+        : body.selectedSource === "moneko"
+          ? "moneko"
+          : "logo_dev";
+    const selectedMerchantId =
+      typeof body.selectedMerchantId === "string"
+        ? body.selectedMerchantId.trim()
+        : "";
     if (!selectedDomain) {
       return json({ error: "Selected merchant domain is invalid" }, 400);
     }
@@ -294,14 +296,52 @@ Deno.serve(async (req) => {
           canonicalMerchantDomain(item.domain) === selectedDomain &&
           item.name === selectedName,
       );
-      allowStructuredLearning = new Set(
-        discovery.candidates
-          .map((item) => canonicalMerchantDomain(item.domain))
-          .filter((domain): domain is string => Boolean(domain)),
-      ).size === 1;
+      allowStructuredLearning =
+        new Set(
+          discovery.candidates
+            .map((item) => canonicalMerchantDomain(item.domain))
+            .filter((domain): domain is string => Boolean(domain)),
+        ).size === 1;
     }
-    if (!transactionId || (!candidate && !internalMerchant)) {
+    if (
+      (!candidate && !internalMerchant) ||
+      (body.action !== "resolve" && !transactionId)
+    ) {
       return json({ error: "Selected merchant is invalid" }, 400);
+    }
+
+    const selectedCandidate = candidate ?? {
+      name: internalMerchant!.canonical_name,
+      domain: internalMerchant!.domain,
+    };
+    const normalizedCandidate = await resolveEvidenceKey({
+      supabase,
+      merchant: selectedCandidate.name,
+    });
+    if (!normalizedCandidate) {
+      return json({ error: "Selected merchant name is invalid" }, 400);
+    }
+    const merchant =
+      internalMerchant ??
+      (selectedSource === "manual"
+        ? await persistConservativeDomainMerchant({
+            supabase,
+            canonicalDomain: selectedDomain,
+            resolutionSource: "manual",
+          })
+        : await persistCanonicalMerchant({
+            supabase,
+            canonicalName: candidate!.name,
+            normalizedName: normalizedCandidate,
+            canonicalDomain: selectedDomain,
+            verificationStatus: "user_confirmed",
+            resolutionSource: "user_correction",
+          }));
+
+    // New transactions do not yet have an expense ID. Resolve the candidate
+    // first, then let the transaction's own local-first save persist it.
+    if (body.action === "resolve") {
+      return json({ success: true, merchant, allowStructuredLearning });
     }
 
     const expense = await loadEditableExpense({
@@ -323,33 +363,6 @@ Deno.serve(async (req) => {
         400,
       );
     }
-    const selectedCandidate = candidate ?? {
-      name: internalMerchant!.canonical_name,
-      domain: internalMerchant!.domain,
-    };
-    const normalizedCandidate = await resolveEvidenceKey({
-      supabase,
-      merchant: selectedCandidate.name,
-    });
-    if (!normalizedCandidate) {
-      return json({ error: "Selected merchant name is invalid" }, 400);
-    }
-    const merchant = internalMerchant ??
-      (selectedSource === "manual"
-        ? await persistConservativeDomainMerchant({
-          supabase,
-          canonicalDomain: selectedDomain,
-          resolutionSource: "manual",
-        })
-        : await persistCanonicalMerchant({
-          supabase,
-          canonicalName: candidate!.name,
-          normalizedName: normalizedCandidate,
-          canonicalDomain: selectedDomain,
-          verificationStatus: "user_confirmed",
-          resolutionSource: "user_correction",
-        }));
-
     const { error: updateError } = await supabase.rpc(
       "apply_merchant_user_evidence",
       {
