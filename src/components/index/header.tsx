@@ -256,22 +256,6 @@ export const HomeHeader = () => {
               </NavigationMenuItem>
 
               <NavigationMenuItem>
-                <Link
-                  to="/how-it-works"
-                  href={buildPreservedPath("/how-it-works")}
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "hover:text-foreground bg-transparent",
-                    isPathActive("/how-it-works")
-                      ? "text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  How it Works
-                </Link>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
                 <NavigationMenuTrigger
                   className={cn(
                     "hover:text-foreground bg-transparent",
@@ -297,6 +281,38 @@ export const HomeHeader = () => {
                     ))}
                   </ul>
                 </NavigationMenuContent>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <Link
+                  to="/how-it-works"
+                  href={buildPreservedPath("/how-it-works")}
+                  className={cn(
+                    navigationMenuTriggerStyle(),
+                    "hover:text-foreground bg-transparent",
+                    isPathActive("/how-it-works")
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  How it Works
+                </Link>
+              </NavigationMenuItem>
+
+              <NavigationMenuItem>
+                <Link
+                  to="/pricing"
+                  href={buildPreservedPath("/pricing")}
+                  className={cn(
+                    navigationMenuTriggerStyle(),
+                    "hover:text-foreground bg-transparent",
+                    isPathActive("/pricing")
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  Pricing
+                </Link>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
@@ -355,17 +371,17 @@ export const HomeHeader = () => {
 
               <NavigationMenuItem>
                 <Link
-                  to="/pricing"
-                  href={buildPreservedPath("/pricing")}
+                  to="/about"
+                  href={buildPreservedPath("/about")}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
-                    isPathActive("/pricing")
+                    isPathActive("/about")
                       ? "text-foreground"
                       : "text-muted-foreground",
                   )}
                 >
-                  Pricing
+                  About
                 </Link>
               </NavigationMenuItem>
 
@@ -373,7 +389,7 @@ export const HomeHeader = () => {
                 <Link
                   to="/download"
                   href={buildPreservedPath("/download")}
-                  className={cn(
+                   className={cn(
                     navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
                     isPathActive("/download")
@@ -473,6 +489,30 @@ export const HomeHeader = () => {
                     </div>
                   </AccordionContent>
                 </AccordionItem>
+              </Accordion>
+
+              <MobileLink
+                href={buildPreservedPath("/how-it-works")}
+                setIsOpen={setIsOpen}
+                className={cn(
+                  "px-2 py-3 text-base",
+                  isPathActive("/how-it-works") && "bg-accent text-primary",
+                )}
+              >
+                How it Works
+              </MobileLink>
+              <MobileLink
+                href={buildPreservedPath("/pricing")}
+                setIsOpen={setIsOpen}
+                className={cn(
+                  "px-2 py-3 text-base",
+                  isPathActive("/pricing") && "bg-accent text-primary",
+                )}
+              >
+                Pricing
+              </MobileLink>
+
+              <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="resources" className="border-b-0">
                   <AccordionTrigger
                     className={cn(
@@ -518,38 +558,28 @@ export const HomeHeader = () => {
                 </AccordionItem>
               </Accordion>
 
-              <div className="bg-border mx-2 my-2 h-px" />
+              <MobileLink
+                href={buildPreservedPath("/about")}
+                setIsOpen={setIsOpen}
+                className={cn(
+                  "px-2 py-3 text-base",
+                  isPathActive("/about") && "bg-accent text-primary",
+                )}
+              >
+                About
+              </MobileLink>
 
-              <MobileLink
-                href={buildPreservedPath("/how-it-works")}
-                setIsOpen={setIsOpen}
-                className={cn(
-                  "px-2 py-3 text-base",
-                  isPathActive("/how-it-works") && "bg-accent text-primary",
-                )}
-              >
-                How it Works
-              </MobileLink>
-              <MobileLink
-                href={buildPreservedPath("/pricing")}
-                setIsOpen={setIsOpen}
-                className={cn(
-                  "px-2 py-3 text-base",
-                  isPathActive("/pricing") && "bg-accent text-primary",
-                )}
-              >
-                Pricing
-              </MobileLink>
-              <MobileLink
+              <Link
+                to="/download"
                 href={buildPreservedPath("/download")}
-                setIsOpen={setIsOpen}
+                onClick={() => setIsOpen(false)}
                 className={cn(
-                  "px-2 py-3 text-base",
-                  isPathActive("/download") && "bg-accent text-primary",
+                  "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 mx-2 mt-4 flex items-center justify-center rounded-xl border px-4 py-3 text-base font-semibold transition-colors",
+                  isPathActive("/download") && "bg-primary/20",
                 )}
               >
-                Download
-              </MobileLink>
+                Get Moneko
+              </Link>
 
               <div className="mt-6 space-y-3 px-2">
                 {isLoading ? (

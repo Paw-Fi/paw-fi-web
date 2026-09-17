@@ -1,18 +1,24 @@
-"use client"
+"use client";
 
-import { useState, ReactNode } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useAuth } from "@/contexts/auth-context"
-import { useAvatar } from "@/hooks/use-avatar"
-import { useNavigate } from "@tanstack/react-router"
+import { useState, ReactNode } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useAuth } from "@/contexts/auth-context";
+import { useAvatar } from "@/hooks/use-avatar";
+import { useNavigate } from "@tanstack/react-router";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import {
   Form,
   FormControl,
@@ -20,10 +26,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { GoogleLoginButton } from "@/components/auth/google-login-button"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { faEye, faEyeSlash, faEnvelope, faLock, faSpinner } from "@fortawesome/free-solid-svg-icons"
+} from "@/components/ui/form";
+import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { AppleLoginButton } from "@/components/auth/apple-login-button";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faEye,
+  faEyeSlash,
+  faEnvelope,
+  faLock,
+  faSpinner,
+} from "@fortawesome/free-solid-svg-icons";
 
 const signInSchema = z.object({
   email: z
@@ -34,17 +47,17 @@ const signInSchema = z.object({
     .string()
     .min(1, "Password is required")
     .min(6, "Password must be at least 6 characters long"),
-})
+});
 
-type SignInForm = z.infer<typeof signInSchema>
+type SignInForm = z.infer<typeof signInSchema>;
 
 interface ShadcnSignInFormProps {
-  redirectUrl?: string
-  variant?: 'card' | 'plain'
-  hideHeader?: boolean
-  submitLabel?: string
-  submitClassName?: string
-  children?: ReactNode
+  redirectUrl?: string;
+  variant?: "card" | "plain";
+  hideHeader?: boolean;
+  submitLabel?: string;
+  submitClassName?: string;
+  children?: ReactNode;
 }
 
 // Helper function to parse redirect URLs with query parameters
@@ -71,17 +84,17 @@ const parseRedirectUrl = (url: string | undefined) => {
 
 export function ShadcnSignInForm({
   redirectUrl,
-  variant = 'card',
+  variant = "card",
   hideHeader = false,
-  submitLabel = 'Sign In',
+  submitLabel = "Sign In",
   submitClassName,
   children,
 }: ShadcnSignInFormProps) {
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const { signIn, isLoading } = useAuth()
-  const { shouldPromptForAvatar } = useAvatar()
-  const navigate = useNavigate()
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { signIn, isLoading } = useAuth();
+  const { shouldPromptForAvatar } = useAvatar();
+  const navigate = useNavigate();
 
   const form = useForm<SignInForm>({
     resolver: zodResolver(signInSchema),
@@ -89,54 +102,57 @@ export function ShadcnSignInForm({
       email: "",
       password: "",
     },
-  })
+  });
 
   const onSubmit = async (data: SignInForm) => {
-    setError(null)
-    
+    setError(null);
+
     try {
-      const result = await signIn(data.email, data.password)
-      if (result.success) {    
-          const redirectParams = parseRedirectUrl(redirectUrl);
-          navigate(redirectParams);
+      const result = await signIn(data.email, data.password);
+      if (result.success) {
+        const redirectParams = parseRedirectUrl(redirectUrl);
+        navigate(redirectParams);
       }
     } catch (error: any) {
-      setError(error.message || "Invalid email or password")
+      setError(error.message || "Invalid email or password");
     }
-  }
+  };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {variant === 'card' ? (
+    <div className="mx-auto w-full max-w-md">
+      {variant === "card" ? (
         <Card className="w-full">
           {hideHeader ? null : (
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center text-moneko-foreground">Sign in</CardTitle>
+              <CardTitle className="text-moneko-foreground text-center text-2xl">
+                Sign in
+              </CardTitle>
               <CardDescription className="text-center">
                 Enter your email and password to access your account
               </CardDescription>
             </CardHeader>
           )}
           <CardContent className="space-y-4">
-            {/* Google Login Button */}
-            <GoogleLoginButton 
-              redirectUrl={redirectUrl}
-              disabled={isLoading}
-            />
+            {/* Social sign-in buttons */}
+            <GoogleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
+            <AppleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <Separator />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-moneko-background px-2 text-muted-foreground">
+                <span className="bg-moneko-background text-muted-foreground px-2">
                   Or continue with
                 </span>
               </div>
             </div>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
                   name="email"
@@ -145,7 +161,10 @@ export function ShadcnSignInForm({
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <FontAwesomeIcon icon={faEnvelope} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                          <FontAwesomeIcon
+                            icon={faEnvelope}
+                            className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                          />
                           <Input
                             placeholder="name@example.com"
                             className="pl-10"
@@ -170,11 +189,14 @@ export function ShadcnSignInForm({
                       <FormLabel>Password</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <FontAwesomeIcon icon={faLock} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                          <FontAwesomeIcon
+                            icon={faLock}
+                            className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                          />
                           <Input
                             type={showPassword ? "text" : "password"}
                             placeholder="Enter your password"
-                            className="pl-10 pr-10"
+                            className="pr-10 pl-10"
                             autoComplete="current-password"
                             disabled={isLoading}
                             {...field}
@@ -183,14 +205,20 @@ export function ShadcnSignInForm({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8"
+                            className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2 transform"
                             onClick={() => setShowPassword(!showPassword)}
                             disabled={isLoading}
                           >
                             {showPassword ? (
-                              <FontAwesomeIcon icon={faEyeSlash} className="h-4 w-4" />
+                              <FontAwesomeIcon
+                                icon={faEyeSlash}
+                                className="h-4 w-4"
+                              />
                             ) : (
-                              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                              <FontAwesomeIcon
+                                icon={faEye}
+                                className="h-4 w-4"
+                              />
                             )}
                           </Button>
                         </div>
@@ -210,12 +238,15 @@ export function ShadcnSignInForm({
 
                 <Button
                   type="submit"
-                  className={`w-full ${submitClassName ? submitClassName : ''}`}
+                  className={`w-full ${submitClassName ? submitClassName : ""}`}
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <FontAwesomeIcon icon={faSpinner} className="mr-2 h-4 w-4 animate-spin" />
+                      <FontAwesomeIcon
+                        icon={faSpinner}
+                        className="mr-2 h-4 w-4 animate-spin"
+                      />
                       Signing in...
                     </>
                   ) : (
@@ -230,23 +261,25 @@ export function ShadcnSignInForm({
         <div className="space-y-4">
           {!hideHeader && (
             <div className="space-y-1 text-center">
-              <h2 className="text-2xl font-semibold text-moneko-foreground">Sign in</h2>
-              <p className="text-sm text-muted-foreground">Enter your email and password to access your account</p>
+              <h2 className="text-moneko-foreground text-2xl font-semibold">
+                Sign in
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Enter your email and password to access your account
+              </p>
             </div>
           )}
-          
-          {/* Google Login Button */}
-          <GoogleLoginButton 
-            redirectUrl={redirectUrl}
-            disabled={isLoading}
-          />
+
+          {/* Social sign-in buttons */}
+          <GoogleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
+          <AppleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <Separator />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-moneko-background px-2 text-muted-foreground">
+              <span className="bg-moneko-background text-muted-foreground px-2">
                 Or continue with
               </span>
             </div>
@@ -262,7 +295,10 @@ export function ShadcnSignInForm({
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <FontAwesomeIcon icon={faEnvelope} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <FontAwesomeIcon
+                          icon={faEnvelope}
+                          className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                        />
                         <Input
                           placeholder="name@example.com"
                           className="pl-10"
@@ -287,11 +323,14 @@ export function ShadcnSignInForm({
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <FontAwesomeIcon icon={faLock} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <FontAwesomeIcon
+                          icon={faLock}
+                          className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                        />
                         <Input
                           type={showPassword ? "text" : "password"}
                           placeholder="Enter your password"
-                          className="pl-10 pr-10"
+                          className="pr-10 pl-10"
                           autoComplete="current-password"
                           disabled={isLoading}
                           {...field}
@@ -300,12 +339,15 @@ export function ShadcnSignInForm({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8"
+                          className="absolute top-1/2 right-1 h-8 w-8 -translate-y-1/2 transform"
                           onClick={() => setShowPassword(!showPassword)}
                           disabled={isLoading}
                         >
                           {showPassword ? (
-                            <FontAwesomeIcon icon={faEyeSlash} className="h-4 w-4" />
+                            <FontAwesomeIcon
+                              icon={faEyeSlash}
+                              className="h-4 w-4"
+                            />
                           ) : (
                             <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                           )}
@@ -327,12 +369,15 @@ export function ShadcnSignInForm({
 
               <Button
                 type="submit"
-                className={`w-full ${submitClassName ? submitClassName : ''}`}
+                className={`w-full ${submitClassName ? submitClassName : ""}`}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <FontAwesomeIcon icon={faSpinner} className="mr-2 h-4 w-4 animate-spin" />
+                    <FontAwesomeIcon
+                      icon={faSpinner}
+                      className="mr-2 h-4 w-4 animate-spin"
+                    />
                     Signing in...
                   </>
                 ) : (
@@ -344,5 +389,5 @@ export function ShadcnSignInForm({
         </div>
       )}
     </div>
-  )
+  );
 }

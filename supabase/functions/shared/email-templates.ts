@@ -962,9 +962,17 @@ export const notificationTemplate = (data: {
   message: string;
   actionUrl?: string;
   actionText?: string;
+  supportingMessage?: string;
+  subject?: string;
+  preheader?: string;
   priority?: "low" | "medium" | "high";
 }) => {
   const content = `
+    ${
+    data.preheader
+      ? `<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${escapeHtml(data.preheader)}</span>`
+      : ""
+  }
     <h1 class="title">${escapeHtml(data.title)}</h1>
     <p class="subtitle">${renderGreeting(data.name)}</p>
     <p>${escapeHtml(data.message)}</p>
@@ -973,13 +981,18 @@ export const notificationTemplate = (data: {
       ? renderButton(escapeHtml(data.actionText), sanitizeUrl(data.actionUrl))
       : ""
   }
+    ${
+    data.supportingMessage
+      ? `<p>${escapeHtml(data.supportingMessage)}</p>`
+      : ""
+  }
     <p>The Moneko Team</p>
   `;
 
   return {
     html: baseTemplate(content, renderFooter()),
     text: htmlToText(content),
-    subject: sanitizeSubject(data.title),
+    subject: sanitizeSubject(data.subject || data.title),
   };
 };
 

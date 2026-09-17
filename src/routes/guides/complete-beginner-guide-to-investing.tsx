@@ -159,7 +159,7 @@ function CompleteInvestingGuide() {
             "@type": "Person",
             name: "Sabina Shao",
             jobTitle: "CEO & Financial Education Expert",
-            url: "https://moneko.io/team",
+            url: "https://moneko.io/about#team",
           },
           publisher: {
             "@type": "Organization",

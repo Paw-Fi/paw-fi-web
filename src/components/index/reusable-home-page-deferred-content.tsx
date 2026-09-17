@@ -124,7 +124,7 @@ function FeatureCard({
   return (
     <Card className="group border-border bg-card hover:bg-accent/50 h-full touch-manipulation transition-all duration-200 ease-out active:scale-[0.98]">
       <Link to={route} className="flex h-full flex-col">
-        <CardHeader className="flex-grow space-y-4 p-4 sm:space-y-6 sm:p-6 md:p-8">
+        <CardHeader className="grow space-y-4 p-4 sm:space-y-6 sm:p-6 md:p-8">
           <div className="bg-primary text-primary-foreground flex h-12 w-12 items-center justify-center rounded-lg sm:h-14 sm:w-14 sm:rounded-xl">
             <span className="text-lg sm:text-xl md:text-2xl">{icon}</span>
           </div>
@@ -163,7 +163,7 @@ function LessonCard({
 }) {
   return (
     <Card className="group border-border bg-card hover:bg-accent/50 h-full touch-manipulation transition-all duration-200 ease-out active:scale-[0.98]">
-      <CardHeader className="flex-grow space-y-4 p-4 sm:space-y-6 sm:p-6 md:p-8">
+      <CardHeader className="grow space-y-4 p-4 sm:space-y-6 sm:p-6 md:p-8">
         <div className="bg-primary text-primary-foreground flex h-12 w-12 items-center justify-center rounded-lg sm:h-14 sm:w-14 sm:rounded-xl">
           <span className="text-lg sm:text-xl md:text-2xl">{icon}</span>
         </div>
@@ -232,7 +232,7 @@ export function ReusableHomePageDeferredContent({
                     loading="lazy"
                     decoding="async"
                   />
-                  <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 via-black/30 to-transparent">
+                  <div className="absolute inset-0 flex items-center bg-linear-to-r from-black/60 via-black/30 to-transparent">
                     <div className="max-w-2xl p-4 text-white sm:p-6 md:p-8 lg:p-12">
                       <h3 className="mb-3 text-lg leading-tight font-bold sm:mb-4 sm:text-xl md:text-2xl lg:text-3xl">
                         Personalized Financial Education & Planning
@@ -318,7 +318,7 @@ export function ReusableHomePageDeferredContent({
             >
               <Card className="group border-border bg-card hover:border-primary/50 h-full touch-manipulation overflow-hidden transition-all duration-200 active:scale-[0.98]">
                 <CardContent className="p-0">
-                  <div className="from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 flex aspect-square items-center justify-center bg-gradient-to-br">
+                  <div className="from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 flex aspect-square items-center justify-center bg-linear-to-br">
                     <LazyLottieAnimation
                       path="/animations/ai-chat.json"
                       className="h-3/4 w-3/4"
@@ -345,7 +345,7 @@ export function ReusableHomePageDeferredContent({
             >
               <Card className="group border-border bg-card hover:border-primary/50 h-full touch-manipulation overflow-hidden transition-all duration-200 active:scale-[0.98]">
                 <CardContent className="p-0">
-                  <div className="from-accent/20 to-secondary/20 dark:from-accent/10 dark:to-secondary/10 flex aspect-square items-center justify-center bg-gradient-to-br">
+                  <div className="from-accent/20 to-secondary/20 dark:from-accent/10 dark:to-secondary/10 flex aspect-square items-center justify-center bg-linear-to-br">
                     <LazyLottieAnimation
                       path="/animations/badge-unlock.json"
                       className="h-3/4 w-3/4"
@@ -543,7 +543,8 @@ export function ReusableHomePageDeferredContent({
                 </li>
                 <li>
                   <Link
-                    to="/team"
+                    to="/about"
+                    hash="team"
                     className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                   >
                     Meet the Team

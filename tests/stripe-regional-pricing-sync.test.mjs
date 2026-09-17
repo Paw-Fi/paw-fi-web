@@ -54,7 +54,7 @@ test("workspace catalog can produce exactly three multi-currency Prices", async 
       label: "Plus yearly paid upfront",
       amountKey: "yearly",
     },
-    { id: "lifetime", label: "Lifetime", amountKey: "lifetime" },
+    { id: "lifetime", label: "Lifetime", amountKey: "lifetimePromo" },
   ];
   const prices = targets.map((target) =>
     buildMultiCurrencyPlanPricing(catalogPricing, target)
@@ -62,6 +62,33 @@ test("workspace catalog can produce exactly three multi-currency Prices", async 
 
   assert.equal(prices.length, 3);
   assert.equal(Object.keys(prices[0].currencyAmounts).length, 43);
+});
+
+test("lifetime v3 Price uses the catalog promotional IDR amount", async () => {
+  const workspaceCatalog = JSON.parse(
+    await readFile(new URL("../config/regional-pricing.json", import.meta.url)),
+  );
+  const lifetimeTarget = resolvePriceTargets({
+    STRIPE_PLUS_MONTHLY_PRODUCT_ID: "prod_monthly",
+    STRIPE_PLUS_YEARLY_PRODUCT_ID: "prod_yearly",
+    STRIPE_LIFETIME_PRODUCT_ID: "prod_lifetime",
+  }).find((target) => target.id === "lifetime");
+  const pricing = buildMultiCurrencyPlanPricing(
+    buildCatalogMarkets(workspaceCatalog),
+    lifetimeTarget,
+  );
+  const parameters = createPriceParameters({
+    target: lifetimeTarget,
+    pricing,
+    configuration: { productId: "prod_lifetime" },
+    lookupKey: buildRegionalPriceLookupKey(
+      workspaceCatalog.catalogVersion,
+      lifetimeTarget.id,
+    ),
+  });
+
+  assert.equal(parameters.lookup_key, "moneko_lifetime_v3");
+  assert.equal(parameters.currency_options.idr.unit_amount, 1049000);
 });
 
 test("yearly pricing charges the annual catalog price upfront", () => {
@@ -101,6 +128,7 @@ test("same-currency regional amount conflicts are rejected", () => {
     monthly: 399,
     yearly: 2499,
     lifetime: 8999,
+    lifetimePromo: 6299,
   };
   assert.throws(
     () =>

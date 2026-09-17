@@ -2,6 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
+import { completeRecurringOccurrenceSplitMembers } from "../shared/recurring-occurrence-splits.ts";
 
 interface RequestBody {
   userId?: string;
@@ -60,8 +61,9 @@ Deno.serve(async (req) => {
     const body: RequestBody = await req.json();
     const recurringId = validUuid(body.recurringId);
     const accountId = body.accountId == null ? null : validUuid(body.accountId);
-    const clientRecordId =
-      body.clientRecordId == null ? null : validUuid(body.clientRecordId);
+    const clientRecordId = body.clientRecordId == null
+      ? null
+      : validUuid(body.clientRecordId);
     const scheduledDate = normalizeCalendarDateString(
       body.scheduledOccurrenceDate ?? "",
     );
@@ -112,6 +114,47 @@ Deno.serve(async (req) => {
         400,
       );
     }
+    let customSplits: unknown = body.customSplits ?? null;
+    if (customSplits != null) {
+      const { data: recurring, error: recurringError } = await supabase
+        .from("expenses")
+        .select("household_id")
+        .eq("id", recurringId)
+        .maybeSingle();
+      if (recurringError) {
+        return response(
+          {
+            success: false,
+            code: "OCCURRENCE_FAILED",
+            error: recurringError.message,
+          },
+          400,
+        );
+      }
+      const householdId = recurring?.household_id;
+      if (typeof householdId === "string" && householdId.length > 0) {
+        const { data: members, error: membersError } = await supabase
+          .from("household_members")
+          .select("user_id")
+          .eq("household_id", householdId)
+          .order("joined_at", { ascending: true });
+        if (membersError) {
+          return response(
+            {
+              success: false,
+              code: "OCCURRENCE_FAILED",
+              error: membersError.message,
+            },
+            400,
+          );
+        }
+        customSplits = completeRecurringOccurrenceSplitMembers(
+          customSplits,
+          (members ?? []).map((member) => String(member.user_id)),
+          amountCents,
+        );
+      }
+    }
     const { data, error } = await supabase.rpc(
       "confirm_recurring_occurrence_v1",
       {
@@ -123,19 +166,18 @@ Deno.serve(async (req) => {
         p_account_id: accountId,
         p_merchant: body.merchant ?? null,
         p_description: body.description ?? null,
-        p_custom_splits: body.customSplits ?? null,
+        p_custom_splits: customSplits,
         p_payer_user_id: validUuid(body.payerUserId),
         p_update_future_amount: body.updateFutureAmount === true,
         p_client_record_id: clientRecordId,
-        p_idempotency_key:
-          body.idempotencyKey?.trim() || body.clientMutationId?.trim() || null,
+        p_idempotency_key: body.idempotencyKey?.trim() ||
+          body.clientMutationId?.trim() || null,
       },
     );
     if (error) {
-      const code =
-        String(error.message ?? "OCCURRENCE_FAILED").match(
-          /OCCURRENCE_[A-Z_]+/,
-        )?.[0] ?? "OCCURRENCE_FAILED";
+      const code = String(error.message ?? "OCCURRENCE_FAILED").match(
+        /OCCURRENCE_[A-Z_]+/,
+      )?.[0] ?? "OCCURRENCE_FAILED";
       return response(
         { success: false, code, error: error.message },
         code === "OCCURRENCE_UNAUTHORIZED" ? 403 : 400,

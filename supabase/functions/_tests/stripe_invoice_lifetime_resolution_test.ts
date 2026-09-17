@@ -6,6 +6,7 @@ import {
   isPositiveStripeAmount,
 } from "../shared/lifetime-grant-policy.ts";
 import {
+  getLifetimeStripePriceLookupKey,
   resolveInvoicePlanFromLinePrices,
   resolveSubscriptionPlanFromPrice,
 } from "../shared/stripe-subscription-prices.ts";
@@ -77,20 +78,29 @@ Deno.test(
 );
 
 Deno.test(
-  "invoice plan resolution: accepts the configured Lifetime lookup key",
+  "lifetime checkout lookup key ignores the removed environment override",
   () =>
     withEnv(() => {
       Deno.env.set(
         "STRIPE_LIFETIME_PRICE_LOOKUP_KEY",
         "moneko_lifetime_promo_v2",
       );
+
+      assertEquals(getLifetimeStripePriceLookupKey(), "moneko_lifetime_v3");
+    }),
+);
+
+Deno.test(
+  "invoice plan resolution: accepts the generated Lifetime lookup key",
+  () =>
+    withEnv(() => {
       const resolved = resolveInvoicePlanFromLinePrices({
         lines: {
           data: [
             {
               price: {
                 id: "price_regional_lifetime",
-                lookup_key: "moneko_lifetime_promo_v2",
+                lookup_key: "moneko_lifetime_v3",
               },
             },
           ],
@@ -105,10 +115,6 @@ Deno.test(
   "invoice plan resolution: accepts the legacy generated Lifetime lookup key",
   () =>
     withEnv(() => {
-      Deno.env.set(
-        "STRIPE_LIFETIME_PRICE_LOOKUP_KEY",
-        "moneko_lifetime_promo_v2",
-      );
       const resolved = resolveInvoicePlanFromLinePrices({
         lines: {
           data: [
@@ -116,6 +122,27 @@ Deno.test(
               price: {
                 id: "price_legacy_regional_lifetime",
                 lookup_key: "moneko_lifetime_v1",
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(resolved, { plan: "lifetime", interval: null });
+    }),
+);
+
+Deno.test(
+  "invoice plan resolution: accepts the legacy promotional Lifetime lookup key",
+  () =>
+    withEnv(() => {
+      const resolved = resolveInvoicePlanFromLinePrices({
+        lines: {
+          data: [
+            {
+              price: {
+                id: "price_legacy_promotional_lifetime",
+                lookup_key: "moneko_lifetime_promo_v2",
               },
             },
           ],
@@ -169,11 +196,13 @@ Deno.test("lifetime grants: zero-amount access is disabled by default", () =>
     assertEquals(allowZeroAmountLifetimeGrants(), false);
     assertEquals(isPositiveStripeAmount(0), false);
     assertEquals(isPositiveStripeAmount(1), true);
-  }));
+  }),
+);
 
 Deno.test("lifetime grants: zero-amount access requires explicit opt-in", () =>
   withEnv(() => {
     Deno.env.set("ALLOW_ZERO_AMOUNT_LIFETIME_GRANTS", "true");
 
     assertEquals(allowZeroAmountLifetimeGrants(), true);
-  }));
+  }),
+);

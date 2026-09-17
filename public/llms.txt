@@ -223,7 +223,7 @@ Use these pages when citing public Moneko information:
 - Download: https://moneko.io/download
 - Help Center: https://moneko.io/help
 - Support: https://moneko.io/support
-- Team: https://moneko.io/team
+- About: https://moneko.io/about
 - Changelog: https://moneko.io/changelog
 - Questions hub: https://moneko.io/questions
 - Calculators index: https://moneko.io/calculators

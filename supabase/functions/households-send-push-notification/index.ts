@@ -5,8 +5,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
+import { sendUserEmail } from "../shared/email-service.ts";
+import { notificationTemplate } from "../shared/email-templates.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
+import { resolveUserDisplayName as resolveEmailDisplayName } from "../shared/user-display-name.ts";
 import {
   isServiceRoleRequest,
   shouldSkipPushEvent,
@@ -43,6 +46,63 @@ function getServiceAccountMeta() {
   } catch {
     return null;
   }
+}
+
+async function sendPocketsMonthReviewEmail({
+  userId,
+  notificationEventId,
+  cycleLabel,
+}: {
+  userId: string;
+  notificationEventId: string;
+  cycleLabel: string;
+}): Promise<boolean> {
+  const { data: user, error } = await supabase
+    .from("users")
+    .select("email, full_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const email = typeof user?.email === "string" ? user.email.trim() : "";
+  if (error || !email) {
+    console.warn("[send-push] Pocket review email skipped: no recipient", {
+      notificationEventId,
+      userId,
+      error: error?.message,
+    });
+    return false;
+  }
+
+  const displayName = resolveEmailDisplayName(user?.full_name, email, "");
+  const pocketsLink = "moneko://pockets";
+  const template = notificationTemplate({
+    name: displayName,
+    subject: "Your new budget cycle starts today ✨",
+    preheader: "See how last cycle went and let Moneko AI plan your next one.",
+    title: `A fresh start for ${cycleLabel} ✨`,
+    message:
+      "Your new budget cycle is here! Moneko AI can review how you did last cycle, spot where your money went, and help you build personalized Pockets and budgets for the weeks ahead.",
+    actionUrl: pocketsLink,
+    actionText: "Build My New Plan",
+    supportingMessage:
+      "Start with what worked, adjust what didn’t, and make this cycle even better.",
+    priority: "medium",
+  });
+  const result = await sendUserEmail(
+    email,
+    displayName,
+    template,
+    `pockets-month-review:${notificationEventId}`,
+  );
+
+  if (!result.success) {
+    console.error("[send-push] Pocket review email failed", {
+      notificationEventId,
+      userId,
+      error: result.error,
+    });
+  }
+  return result.success;
 }
 
 interface NotificationPayload {
@@ -881,6 +941,18 @@ serve(async (req: Request) => {
       );
     }
 
+    // This reminder has an email counterpart. Send it after claiming the event
+    // so retries share the event-scoped idempotency key, even when no device is
+    // registered or Firebase delivery needs the fallback worker.
+    const pocketReviewEmailSent =
+      event_type === "pockets_month_review"
+        ? await sendPocketsMonthReviewEmail({
+            userId: user_id,
+            notificationEventId: notification_event_id,
+            cycleLabel: String(payload.financial_cycle_label || "this cycle"),
+          })
+        : false;
+
     // Check if FCM is configured
     if (!firebaseServiceAccount || !firebaseProjectId) {
       console.warn(
@@ -897,7 +969,11 @@ serve(async (req: Request) => {
         .eq("id", notification_event_id);
 
       return new Response(
-        JSON.stringify({ success: false, error: "Firebase not configured" }),
+          JSON.stringify({
+            success: false,
+            error: "Firebase not configured",
+            pocket_review_email_sent: pocketReviewEmailSent,
+          }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -931,7 +1007,11 @@ serve(async (req: Request) => {
         .eq("id", notification_event_id);
 
       return new Response(
-        JSON.stringify({ success: false, error: "Authentication failed" }),
+        JSON.stringify({
+          success: false,
+          error: "Authentication failed",
+          pocket_review_email_sent: pocketReviewEmailSent,
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1104,7 +1184,11 @@ serve(async (req: Request) => {
         .eq("id", notification_event_id);
 
       return new Response(
-        JSON.stringify({ success: false, error: "No active devices" }),
+        JSON.stringify({
+          success: false,
+          error: "No active devices",
+          pocket_review_email_sent: pocketReviewEmailSent,
+        }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1210,6 +1294,7 @@ serve(async (req: Request) => {
         sent_count: sentCount,
         failed_count: failedCount,
         total_devices: devices.length,
+        pocket_review_email_sent: pocketReviewEmailSent,
       }),
       {
         status: 200,

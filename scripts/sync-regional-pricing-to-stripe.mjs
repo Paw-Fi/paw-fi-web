@@ -45,7 +45,7 @@ const PRICE_TARGETS = [
   {
     id: "lifetime",
     label: "Lifetime",
-    amountKey: "lifetime",
+    amountKey: "lifetimePromo",
     expectedType: "one_time",
     expectedInterval: null,
     productEnvironmentNames: ["STRIPE_LIFETIME_PRODUCT_ID"],
@@ -102,6 +102,10 @@ export function buildCatalogMarkets(catalog) {
           monthly: positiveInteger(market.monthly, `${id}.monthly`),
           yearly: positiveInteger(market.yearly, `${id}.yearly`),
           lifetime: positiveInteger(market.lifetime, `${id}.lifetime`),
+          lifetimePromo: positiveInteger(
+            market.lifetimePromo,
+            `${id}.lifetimePromo`,
+          ),
         },
       };
     })
