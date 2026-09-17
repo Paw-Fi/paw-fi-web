@@ -42,6 +42,11 @@ Deno.test(
     assertStringIncludes(functionSource, "normalizeCalendarDateString");
     assertStringIncludes(functionSource, "confirm_recurring_occurrence_v1");
     assertStringIncludes(functionSource, "Math.round");
+    assertStringIncludes(
+      functionSource,
+      "completeRecurringOccurrenceSplitMembers",
+    );
+    assertStringIncludes(functionSource, '.from("household_members")');
   },
 );
 
