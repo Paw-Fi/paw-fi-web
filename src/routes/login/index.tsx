@@ -1,4 +1,6 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toast } from "react-toastify";
 import { ShadcnSignInForm } from "@/components/auth/shadcn-sign-in-form";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -14,9 +16,12 @@ import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 export const Route = createFileRoute("/login/")({
   component: Login,
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { redirect?: string; error?: string } => {
     return {
       redirect: (search.redirect as string) || undefined,
+      error: (search.error as string) || undefined,
     };
   },
   head: () => {
@@ -81,7 +86,23 @@ export const Route = createFileRoute("/login/")({
 });
 
 function Login() {
-  const { redirect } = Route.useSearch();
+  const { redirect, error } = Route.useSearch();
+  const navigate = useNavigate();
+  const hasShownErrorRef = useRef(false);
+
+  useEffect(() => {
+    if (!error || hasShownErrorRef.current) {
+      return;
+    }
+
+    hasShownErrorRef.current = true;
+    toast.error(error);
+    navigate({
+      to: "/login",
+      search: (prev) => ({ ...prev, error: undefined }),
+      replace: true,
+    });
+  }, [error, navigate]);
 
   return (
     <>
