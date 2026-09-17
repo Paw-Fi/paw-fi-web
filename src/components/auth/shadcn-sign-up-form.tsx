@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/input-otp";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
+import { AppleLoginButton } from "@/components/auth/apple-login-button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faEye,
@@ -610,8 +611,9 @@ export function ShadcnSignUpForm({
             </CardHeader>
           )}
           <CardContent className="space-y-4">
-            {/* Google Login Button */}
+            {/* Social sign-in buttons */}
             <GoogleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
+            <AppleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -786,8 +788,9 @@ export function ShadcnSignUpForm({
             </div>
           )}
 
-          {/* Google Login Button */}
+          {/* Social sign-in buttons */}
           <GoogleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
+          <AppleLoginButton redirectUrl={redirectUrl} disabled={isLoading} />
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
