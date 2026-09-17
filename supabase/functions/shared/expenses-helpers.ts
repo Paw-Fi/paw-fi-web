@@ -124,6 +124,7 @@ export interface SaveExpenseParams {
   date?: string;
   currency: string;
   description?: string;
+  merchant?: string;
   householdId?: string | null;
   isPortfolio?: boolean;
   isRecurring?: boolean;
@@ -153,10 +154,12 @@ export async function saveExpenseDirect(
 ) {
   const amount_cents = Math.round((params.amount || 0) * 100);
   const date = params.date || new Date().toISOString().split("T")[0];
-  const category = sanitizeCategoryName(params.category || "") ??
+  const category =
+    sanitizeCategoryName(params.category || "") ??
     normalizeCategoryForStorage(params.category || "other");
   const isPortfolioExpense = params.isPortfolio === true;
-  const isHouseholdExpense = !!params.householdId &&
+  const isHouseholdExpense =
+    !!params.householdId &&
     !isPortfolioExpense &&
     (params.type || "expense") === "expense";
   const payload: Record<string, unknown> = {
@@ -169,6 +172,7 @@ export async function saveExpenseDirect(
     category,
     date,
     raw_text: params.description || null,
+    merchant: params.merchant || null,
     is_recurring: params.isRecurring || false,
     recurrence_rule: params.recurrence_rule || null,
   };
@@ -316,7 +320,8 @@ export async function deleteExpenseDirect(
     | undefined;
 
   if (!expenseHouseholdId) {
-    const canDeletePersonal = (expenseUserId && expenseUserId === userId) ||
+    const canDeletePersonal =
+      (expenseUserId && expenseUserId === userId) ||
       (expenseContactId && expenseContactId === contactId);
     if (!canDeletePersonal) {
       return {

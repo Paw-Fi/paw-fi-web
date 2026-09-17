@@ -2,8 +2,10 @@
 
 import {
   assert,
+  assertEquals,
   assertStringIncludes,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { enrichAnalyzedMerchantItems } from "../shared/analyzed-merchant-enrichment.ts";
 
 const backgroundSources = await Promise.all(
   [
@@ -39,6 +41,9 @@ const migration = await Deno.readTextFile(
 const analyze = await Deno.readTextFile(
   new URL("../analyze-expense/index.ts", import.meta.url),
 );
+const analyzedMerchantEnrichment = await Deno.readTextFile(
+  new URL("../shared/analyzed-merchant-enrichment.ts", import.meta.url),
+);
 
 Deno.test("background transaction paths cannot call Logo.dev Search", () => {
   for (const { path, source } of backgroundSources) {
@@ -51,25 +56,109 @@ Deno.test("background transaction paths cannot call Logo.dev Search", () => {
 });
 
 Deno.test("stream and non-stream Analyze share merchant enrichment", () => {
-  assertStringIncludes(analyze, "enrichAnalyzedMerchantItems");
+  assertStringIncludes(
+    analyze,
+    'import { enrichAnalyzedMerchantItems } from "../shared/analyzed-merchant-enrichment.ts"',
+  );
   assertStringIncludes(analyze, "await enrichAnalyzedMerchantItems");
-  assertStringIncludes(analyze, "merchantDomain: evidencedDomain");
+  assert(!analyze.includes("async function enrichAnalyzedMerchantItems"));
   assertStringIncludes(analyze, 'from("user_contacts")');
   assertStringIncludes(analyze, '.select("preferred_timezone")');
   assertStringIncludes(analyze, "body.preferredTimezone");
-  assertStringIncludes(analyze, "selectMerchantCandidateByRegionalContext");
-  assertStringIncludes(analyze, "persistCanonicalMerchant");
-  assertStringIncludes(analyze, 'resolutionSource: "logo_dev_search"');
   assertStringIncludes(
-    analyze,
-    "searchLogoDevCandidates(merchant, params.logoDevSecretKey)",
+    analyzedMerchantEnrichment,
+    "merchantDomain: evidencedDomain",
+  );
+  assertStringIncludes(
+    analyzedMerchantEnrichment,
+    "selectMerchantCandidateByRegionalContext",
+  );
+  assertStringIncludes(analyzedMerchantEnrichment, "persistCanonicalMerchant");
+  assertStringIncludes(
+    analyzedMerchantEnrichment,
+    'resolutionSource: "logo_dev_search"',
+  );
+  assertStringIncludes(
+    analyzedMerchantEnrichment,
+    "searchLogoDevCandidates(merchant, params.logoDevSecretKey!)",
   );
   assert(
-    !analyze.includes(
+    !analyzedMerchantEnrichment.includes(
       "if (evidencedDomain) {\n          const automaticMerchant",
     ),
   );
 });
+
+Deno.test(
+  "internal merchant hits return canonical domain for optimistic rows",
+  async () => {
+    assertStringIncludes(
+      analyzedMerchantEnrichment,
+      '.select("id, canonical_name, domain")',
+    );
+    assertStringIncludes(
+      analyzedMerchantEnrichment,
+      "resolution.merchantId",
+    );
+    assertStringIncludes(
+      analyzedMerchantEnrichment,
+      "merchant_domain: canonicalMerchant.domain",
+    );
+    assertStringIncludes(
+      analyzedMerchantEnrichment,
+      "merchant_structured_name: canonicalMerchant.canonical_name",
+    );
+
+    const supabase = {
+      rpc: async (name: string) => {
+        assertEquals(name, "merchant_resolution_descriptor_key");
+        return { data: "tesco", error: null };
+      },
+      from: (table: string) => {
+        const query = {
+          select: (_columns: string) => query,
+          eq: (_column: string, _value: unknown) => query,
+          maybeSingle: async () => {
+            if (table === "merchant_user_overrides") {
+              return {
+                data: {
+                  merchant_id: "4d055fac-88b0-4750-b606-92f37c008975",
+                  action: "map",
+                },
+                error: null,
+              };
+            }
+            assertEquals(table, "merchants");
+            return {
+              data: {
+                id: "4d055fac-88b0-4750-b606-92f37c008975",
+                canonical_name: "Tesco",
+                domain: "tesco.com",
+              },
+              error: null,
+            };
+          },
+        };
+        return query;
+      },
+    };
+
+    const result = await enrichAnalyzedMerchantItems({
+      items: [{ merchant: "tesco", description: "groceries" }],
+      supabase,
+      userId: "4f42e85a-4637-41fb-8fc5-f81933c83861",
+    });
+
+    assertEquals(result, [{
+      merchant: "tesco",
+      description: "groceries",
+      merchant_id: "4d055fac-88b0-4750-b606-92f37c008975",
+      merchant_domain: "tesco.com",
+      merchant_structured_name: "Tesco",
+      merchant_resolution_source: "user_exact",
+    }]);
+  },
+);
 
 Deno.test(
   "only explicit merchant search owns the Logo.dev Search endpoint",

@@ -50,5 +50,35 @@ Deno.test("Telegram and WhatsApp share the media analysis helper", async () => {
 
   for (const source of sources) {
     assert(source.includes("runAnalyzeExpenseWithTimeout"));
+    assert(source.includes("preferredTimezone: userTimezone"));
+    assert(source.includes("merchantEnrichment: { supabase }"));
   }
 });
+
+Deno.test(
+  "all direct transaction analyzers apply shared merchant enrichment",
+  async () => {
+    const [mediaUtilsSource, analyzeSource, emailSource] = await Promise.all([
+      Deno.readTextFile(
+        new URL("../shared/bot/media-utils.ts", import.meta.url),
+      ),
+      Deno.readTextFile(
+        new URL("../analyze-expense/index.ts", import.meta.url),
+      ),
+      Deno.readTextFile(
+        new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+      ),
+    ]);
+
+    assert(mediaUtilsSource.includes("enrichAnalyzedMerchantItems"));
+    assert(analyzeSource.includes("enrichAnalyzedMerchantItems"));
+    assert(emailSource.includes("enrichAnalyzedMerchantItems"));
+    assert(emailSource.includes("preferredTimezone: owner.preferredTimezone"));
+    assert(emailSource.includes("merchantId: item.merchant_id"));
+    assert(
+      emailSource.includes(
+        "merchantStructuredName: item.merchant_structured_name",
+      ),
+    );
+  },
+);
