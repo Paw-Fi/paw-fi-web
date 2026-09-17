@@ -173,7 +173,7 @@ function BlogDetailPage() {
             author: {
               "@type": "Person",
               name: blog.author.name,
-              url: `https://moneko.io/team#${blog.author.id}`,
+              url: `https://moneko.io/about#${blog.author.id}`,
               jobTitle: blog.author.title,
               image: blog.author.avatar,
               knowsAbout: [
@@ -252,12 +252,12 @@ function BlogDetailPage() {
           type="person"
           data={{
             "@type": "Person",
-            "@id": `https://moneko.io/team#${blog.author.id}`,
+            "@id": `https://moneko.io/about#${blog.author.id}`,
             name: blog.author.name,
             jobTitle: blog.author.title,
             description: blog.author.bio,
             image: blog.author.avatar,
-            url: `https://moneko.io/team#${blog.author.id}`,
+            url: `https://moneko.io/about#${blog.author.id}`,
             worksFor: {
               "@type": "Organization",
               name: "Moneko",

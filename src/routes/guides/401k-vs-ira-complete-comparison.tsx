@@ -114,7 +114,7 @@ function Comparison401kVsIRA() {
             "@type": "Person",
             name: "Yifan Lim",
             jobTitle: "CTO & Financial Systems Expert",
-            url: "https://moneko.io/team",
+            url: "https://moneko.io/about#team",
           },
           publisher: {
             "@type": "Organization",

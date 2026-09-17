@@ -114,7 +114,8 @@ export const Footer = () => {
               </li>
               <li>
                 <Link
-                  to="/team"
+                  to="/about"
+                  hash="team"
                   className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                 >
                   Meet the Team
@@ -230,9 +231,19 @@ export const Footer = () => {
 
         {/* Bottom Section */}
         <div className="border-border mt-12 flex flex-col border-t pt-6 sm:mt-14 sm:pt-8 md:mt-16 md:flex-row md:items-center md:justify-between">
-          <p className="text-muted-foreground mb-3 text-xs sm:mb-4 sm:text-sm md:mb-0">
-            © 2026 Moneko. All rights reserved.
-          </p>
+          <div className="mb-3 flex flex-col gap-1 sm:mb-4 md:mb-0">
+            <p className="text-muted-foreground text-xs sm:text-sm">
+              © 2026 Moneko. All rights reserved.
+            </p>
+            <a
+              href="https://logo.dev"
+              target="_blank"
+              rel="noopener"
+              className="text-muted-foreground hover:text-primary touch-manipulation text-xs transition-colors sm:text-sm"
+            >
+              Logos provided by Logo.dev
+            </a>
+          </div>
 
           {/* Social Icons */}
           <div className="flex space-x-4 sm:space-x-6">

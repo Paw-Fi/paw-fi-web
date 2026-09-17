@@ -73,7 +73,7 @@ const staticRoutes: StaticRoute[] = [
     changefreq: "weekly",
     lastmod: "2025-06-19",
   },
-  { path: "/team", priority: 0.8, changefreq: "yearly", lastmod: "2025-06-19" },
+  { path: "/about", priority: 0.8, changefreq: "yearly", lastmod: "2026-09-17" },
   {
     path: "/calculators",
     priority: 0.7,
@@ -210,7 +210,7 @@ Sitemap: https://pbopcsmrcykdzbilpilf.supabase.co/functions/v1/sitemap-generator
 }
 
 // Main handler for all routes
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle OPTIONS request for CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

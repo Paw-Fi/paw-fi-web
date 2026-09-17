@@ -115,7 +115,7 @@ function FinancialGlossary() {
             "@type": "Person",
             name: "Moneko Education Team",
             jobTitle: "Financial Education Specialists",
-            url: "https://moneko.io/team",
+            url: "https://moneko.io/about#team",
           },
           publisher: {
             "@type": "Organization",

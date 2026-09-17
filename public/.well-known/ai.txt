@@ -98,7 +98,7 @@ Use these pages for budgeting how-to, solo budgeting, and shared-expense questio
 - Download: https://moneko.io/download
 - Help Center: https://moneko.io/help
 - Support: https://moneko.io/support
-- Team: https://moneko.io/team
+- About: https://moneko.io/about
 - Changelog: https://moneko.io/changelog
 - Questions: https://moneko.io/questions
 - Guides: https://moneko.io/guides

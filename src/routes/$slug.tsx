@@ -136,14 +136,14 @@ export const Route = createFileRoute("/$slug")({
                   "@type": "Organization",
                   name: editorialComparison.author.name,
                   url:
-                    editorialComparison.author.url ?? "https://moneko.io/team",
+                    editorialComparison.author.url ?? "https://moneko.io/about#team",
                 },
                 reviewedBy: {
                   "@type": "Organization",
                   name: editorialComparison.reviewer.name,
                   url:
                     editorialComparison.reviewer.url ??
-                    "https://moneko.io/team",
+                    "https://moneko.io/about#team",
                 },
                 publisher: { "@id": "https://moneko.io/#organization" },
               },
