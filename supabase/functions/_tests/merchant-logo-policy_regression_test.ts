@@ -54,6 +54,16 @@ Deno.test("stream and non-stream Analyze share merchant enrichment", () => {
   assertStringIncludes(analyze, "enrichAnalyzedMerchantItems");
   assertStringIncludes(analyze, "await enrichAnalyzedMerchantItems");
   assertStringIncludes(analyze, "merchantDomain: evidencedDomain");
+  assertStringIncludes(analyze, 'from("user_contacts")');
+  assertStringIncludes(analyze, '.select("preferred_timezone")');
+  assertStringIncludes(analyze, "body.preferredTimezone");
+  assertStringIncludes(analyze, "selectMerchantCandidateByRegionalContext");
+  assertStringIncludes(analyze, "persistCanonicalMerchant");
+  assertStringIncludes(analyze, 'resolutionSource: "logo_dev_search"');
+  assertStringIncludes(
+    analyze,
+    "searchLogoDevCandidates(merchant, params.logoDevSecretKey)",
+  );
   assert(
     !analyze.includes(
       "if (evidencedDomain) {\n          const automaticMerchant",

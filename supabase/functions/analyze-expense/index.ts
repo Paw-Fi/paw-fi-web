@@ -6,9 +6,11 @@
 import { corsHeaders } from "../shared/cors.ts";
 import {
   AnalyzeRequestBody,
+  normalizePreferredTimezone,
   ProgressCallback,
   ProgressEvent,
   runAnalyzeExpense,
+  selectMerchantCandidateByRegionalContext,
 } from "../shared/analyze-core.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import {
@@ -29,6 +31,7 @@ import {
 import { loadLatestUserPreferredCurrency } from "../shared/user-preferred-currency.ts";
 import {
   canonicalMerchantDomain,
+  persistCanonicalMerchant,
   resolveMerchant,
 } from "../shared/merchant-resolver.ts";
 import { searchLogoDevCandidates } from "../shared/logo-dev-discovery.ts";
@@ -291,6 +294,13 @@ function collapseReceiptItems(
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
       description,
       ...(merchant ? { merchant } : {}),
+      ...(typeof primary?.merchantUrl === "string" && primary.merchantUrl
+        ? { merchantUrl: primary.merchantUrl }
+        : {}),
+      ...(typeof primary?.merchantCountry === "string" &&
+          primary.merchantCountry
+        ? { merchantCountry: primary.merchantCountry }
+        : {}),
       breakdown,
       ...(splitSource?.payerUserId
         ? { payerUserId: splitSource.payerUserId }
@@ -533,6 +543,7 @@ function createSSEStream(
     supabase: any;
     userId: string;
     logoDevSecretKey: string;
+    preferredTimezone?: string;
   },
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -639,13 +650,15 @@ async function enrichAnalyzedMerchantItems(params: {
   supabase: any;
   userId: string;
   logoDevSecretKey: string;
+  preferredTimezone?: string;
 }): Promise<any[]> {
   return await Promise.all(
-    params.items.map(async (item: any) => {
+    params.items.map(async (item: any, itemIndex: number) => {
+      const { merchantCountry, ...publicItem } = item;
       const merchant = typeof item?.merchant === "string"
         ? item.merchant.trim()
         : "";
-      if (!merchant) return item;
+      if (!merchant) return publicItem;
       const { data: key, error: keyError } = await params.supabase.rpc(
         "merchant_resolution_descriptor_key",
         {
@@ -654,7 +667,7 @@ async function enrichAnalyzedMerchantItems(params: {
           p_raw_text_is_merchant_descriptor: false,
         },
       );
-      if (keyError || typeof key !== "string" || !key) return item;
+      if (keyError || typeof key !== "string" || !key) return publicItem;
       const evidencedDomain = canonicalMerchantDomain(
         typeof item?.merchantUrl === "string" ? item.merchantUrl : null,
       );
@@ -684,6 +697,57 @@ async function enrichAnalyzedMerchantItems(params: {
           ? () => searchLogoDevCandidates(merchant, params.logoDevSecretKey)
           : undefined,
       });
+      let regionalMerchant: {
+        id: string;
+        canonical_name: string;
+        domain: string;
+      } | null = null;
+      if (
+        !evidencedDomain &&
+        itemIndex < 5 &&
+        resolution.candidates.length > 1 &&
+        (params.preferredTimezone || merchantCountry)
+      ) {
+        try {
+          const selected = await selectMerchantCandidateByRegionalContext({
+            merchant,
+            candidates: resolution.candidates,
+            preferredTimezone: params.preferredTimezone,
+            merchantCountry,
+            transactionCurrency: typeof item?.currency === "string"
+              ? item.currency
+              : null,
+          });
+          if (selected) {
+            const { data: normalizedName, error: normalizedNameError } =
+              await params.supabase.rpc("merchant_resolution_descriptor_key", {
+                p_merchant: selected.name,
+                p_raw_text: null,
+                p_raw_text_is_merchant_descriptor: false,
+              });
+            if (
+              !normalizedNameError &&
+              typeof normalizedName === "string" &&
+              normalizedName
+            ) {
+              regionalMerchant = await persistCanonicalMerchant({
+                supabase: params.supabase,
+                canonicalName: selected.name,
+                normalizedName,
+                canonicalDomain: selected.domain,
+                verificationStatus: "automatic",
+                resolutionSource: "logo_dev_search",
+                confidence: 0.75,
+              });
+            }
+          }
+        } catch (error) {
+          console.warn(
+            "[merchant-resolution] Regional candidate selection failed",
+            error,
+          );
+        }
+      }
       console.log(
         "[merchant-resolution]",
         JSON.stringify({
@@ -701,17 +765,23 @@ async function enrichAnalyzedMerchantItems(params: {
         }),
       );
       return {
-        ...item,
-        ...(resolution.merchantId
-          ? { merchant_id: resolution.merchantId }
+        ...publicItem,
+        ...(regionalMerchant?.id || resolution.merchantId
+          ? { merchant_id: regionalMerchant?.id ?? resolution.merchantId }
           : {}),
-        ...(resolution.merchantId && evidencedDomain
+        ...(regionalMerchant
+          ? {
+            merchant_domain: regionalMerchant.domain,
+            merchant_structured_name: regionalMerchant.canonical_name,
+            merchant_resolution_source: "timezone_regional_ai",
+          }
+          : resolution.merchantId && evidencedDomain
           ? {
             merchant_domain: evidencedDomain,
             merchant_resolution_source: "evidenced_domain",
           }
           : {}),
-        ...(resolution.candidates.length
+        ...(!regionalMerchant && resolution.candidates.length
           ? { merchant_candidates: resolution.candidates }
           : {}),
       };
@@ -777,6 +847,7 @@ Deno.serve(async (req: Request) => {
       return errorResponse("userId mismatch", 401, "UNAUTHORIZED");
     }
     body.userId = callerId;
+    body.preferredTimezone = undefined;
     const preferredCurrencyReader = SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
         auth: {
@@ -800,6 +871,24 @@ Deno.serve(async (req: Request) => {
           error,
         ),
     });
+    const { data: contact, error: timezoneError } =
+      await preferredCurrencyReader
+        .from("user_contacts")
+        .select("preferred_timezone")
+        .eq("user_id", callerId)
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    if (timezoneError) {
+      console.warn(
+        "[analyze-expense] Preferred timezone lookup failed",
+        timezoneError,
+      );
+    } else {
+      body.preferredTimezone = normalizePreferredTimezone(
+        contact?.preferred_timezone,
+      );
+    }
 
     // Load per-user custom categories + learned preferences for category assignment
     try {
@@ -908,6 +997,7 @@ Deno.serve(async (req: Request) => {
         supabase: preferredCurrencyReader,
         userId: callerId,
         logoDevSecretKey,
+        preferredTimezone: body.preferredTimezone,
       });
       return new Response(stream, {
         status: 200,
@@ -983,6 +1073,7 @@ Deno.serve(async (req: Request) => {
       supabase: preferredCurrencyReader,
       userId: callerId,
       logoDevSecretKey,
+      preferredTimezone: body.preferredTimezone,
     });
     logStage("total", requestStartedAt);
 
