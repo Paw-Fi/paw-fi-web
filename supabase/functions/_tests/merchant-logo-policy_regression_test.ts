@@ -5,7 +5,10 @@ import {
   assertEquals,
   assertStringIncludes,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { enrichAnalyzedMerchantItems } from "../shared/analyzed-merchant-enrichment.ts";
+import {
+  enrichAnalyzedMerchantItems,
+  preserveAnalyzedMerchantIdentity,
+} from "../shared/analyzed-merchant-enrichment.ts";
 
 const backgroundSources = await Promise.all(
   [
@@ -56,11 +59,11 @@ Deno.test("background transaction paths cannot call Logo.dev Search", () => {
 });
 
 Deno.test("stream and non-stream Analyze share merchant enrichment", () => {
+  assertStringIncludes(analyze, "runEnrichedTransactionAnalysis");
   assertStringIncludes(
-    analyze,
-    'import { enrichAnalyzedMerchantItems } from "../shared/analyzed-merchant-enrichment.ts"',
+    analyzedMerchantEnrichment,
+    "await enrichAnalyzedMerchantItems",
   );
-  assertStringIncludes(analyze, "await enrichAnalyzedMerchantItems");
   assert(!analyze.includes("async function enrichAnalyzedMerchantItems"));
   assertStringIncludes(analyze, 'from("user_contacts")');
   assertStringIncludes(analyze, '.select("preferred_timezone")');
@@ -96,10 +99,7 @@ Deno.test(
       analyzedMerchantEnrichment,
       '.select("id, canonical_name, domain")',
     );
-    assertStringIncludes(
-      analyzedMerchantEnrichment,
-      "resolution.merchantId",
-    );
+    assertStringIncludes(analyzedMerchantEnrichment, "resolution.merchantId");
     assertStringIncludes(
       analyzedMerchantEnrichment,
       "merchant_domain: canonicalMerchant.domain",
@@ -149,16 +149,47 @@ Deno.test(
       userId: "4f42e85a-4637-41fb-8fc5-f81933c83861",
     });
 
-    assertEquals(result, [{
-      merchant: "tesco",
-      description: "groceries",
-      merchant_id: "4d055fac-88b0-4750-b606-92f37c008975",
-      merchant_domain: "tesco.com",
-      merchant_structured_name: "Tesco",
-      merchant_resolution_source: "user_exact",
-    }]);
+    assertEquals(result, [
+      {
+        merchant: "tesco",
+        description: "groceries",
+        merchant_id: "4d055fac-88b0-4750-b606-92f37c008975",
+        merchant_domain: "tesco.com",
+        merchant_structured_name: "Tesco",
+        merchant_resolution_source: "user_exact",
+      },
+    ]);
   },
 );
+
+Deno.test("email currency repair preserves canonical merchant identity", () => {
+  const merchantId = "4d055fac-88b0-4750-b606-92f37c008975";
+  const result = preserveAnalyzedMerchantIdentity({
+    analyzedItems: [
+      {
+        type: "expense",
+        date: "2026-09-17",
+        amount: 18.5,
+        currency: "USD",
+        merchant: "Tesco",
+        merchant_id: merchantId,
+        merchant_structured_name: "Tesco",
+      },
+    ],
+    items: [
+      {
+        type: "expense",
+        date: "2026-09-17",
+        amount: 18.5,
+        currency: "GBP",
+        merchant: "Tesco",
+      },
+    ],
+  });
+
+  assertEquals(result[0].merchant_id, merchantId);
+  assertEquals(result[0].merchant_structured_name, "Tesco");
+});
 
 Deno.test(
   "only explicit merchant search owns the Logo.dev Search endpoint",

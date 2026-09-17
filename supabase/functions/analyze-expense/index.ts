@@ -9,9 +9,11 @@ import {
   normalizePreferredTimezone,
   ProgressCallback,
   ProgressEvent,
-  runAnalyzeExpense,
 } from "../shared/analyze-core.ts";
-import { enrichAnalyzedMerchantItems } from "../shared/analyzed-merchant-enrichment.ts";
+import {
+  type MerchantAnalysisContext,
+  runEnrichedTransactionAnalysis,
+} from "../shared/analyzed-merchant-enrichment.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import {
   type CategoryContext,
@@ -533,12 +535,7 @@ function applyFinalUserCategoryMapping(params: {
 function createSSEStream(
   body: AnalyzeRequestBody,
   geminiApiKey: string,
-  merchantContext: {
-    supabase: any;
-    userId: string;
-    logoDevSecretKey: string;
-    preferredTimezone?: string;
-  },
+  merchantContext: MerchantAnalysisContext,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
@@ -554,33 +551,32 @@ function createSSEStream(
 
         // Run analysis with progress callback and a hard timeout.
         const result = await awaitWithHardTimeout(
-          runAnalyzeExpense(body, geminiApiKey, onProgress),
+          runEnrichedTransactionAnalysis({
+            body,
+            apiKey: geminiApiKey,
+            merchantContext,
+            onProgress,
+            transformItems: (items) => {
+              const finalItems = applyFinalUserCategoryMapping({
+                items,
+                allowedExpenseCategories: body.allowedExpenseCategories ?? [],
+                allowedIncomeCategories: body.allowedIncomeCategories ?? [],
+                preferences: body.categoryPreferences ?? [],
+                remaps: body.categoryRemaps ?? [],
+              });
+              return collapseReceiptItems(finalItems, body) ?? finalItems;
+            },
+          }),
           180000,
           "Analysis timed out after 180 seconds",
         );
 
         // Send final result as complete event
         if (result.success) {
-          const finalItems = Array.isArray(result.items)
-            ? applyFinalUserCategoryMapping({
-              items: result.items,
-              allowedExpenseCategories: body.allowedExpenseCategories ?? [],
-              allowedIncomeCategories: body.allowedIncomeCategories ?? [],
-              preferences: body.categoryPreferences ?? [],
-              remaps: body.categoryRemaps ?? [],
-            })
-            : result.items;
-          const collapsedItems = collapseReceiptItems(finalItems, body);
-          const merchantEnrichedItems = await enrichAnalyzedMerchantItems({
-            items: Array.isArray(collapsedItems ?? finalItems)
-              ? ((collapsedItems ?? finalItems) as any[])
-              : [],
-            ...merchantContext,
-          });
           const completeData = {
             success: true,
             data: {
-              items: merchantEnrichedItems,
+              items: result.items,
               isAnalyzed: true,
               language: result.language,
               diagnostics: result.diagnostics,
@@ -863,26 +859,31 @@ Deno.serve(async (req: Request) => {
     let result: any;
     try {
       result = await awaitWithHardTimeout(
-        runAnalyzeExpense(body, GEMINI_API_KEY),
+        runEnrichedTransactionAnalysis({
+          body,
+          apiKey: GEMINI_API_KEY,
+          merchantContext: {
+            supabase: preferredCurrencyReader,
+            userId: callerId,
+            logoDevSecretKey,
+            preferredTimezone: body.preferredTimezone,
+          },
+          transformItems: (items) => {
+            const mappedItems = applyFinalUserCategoryMapping({
+              items,
+              allowedExpenseCategories: body.allowedExpenseCategories ?? [],
+              allowedIncomeCategories: body.allowedIncomeCategories ?? [],
+              preferences: body.categoryPreferences ?? [],
+              remaps: body.categoryRemaps ?? [],
+            });
+            logStage("final_category_mapping", requestStartedAt);
+            return collapseReceiptItems(mappedItems, body) ?? mappedItems;
+          },
+        }),
         140000,
         "Analysis timed out after 140 seconds",
       );
       logStage("analyze_core", requestStartedAt);
-
-      if (
-        result?.success &&
-        Array.isArray(result?.items) &&
-        result.items.length > 0
-      ) {
-        result.items = applyFinalUserCategoryMapping({
-          items: result.items,
-          allowedExpenseCategories: body.allowedExpenseCategories ?? [],
-          allowedIncomeCategories: body.allowedIncomeCategories ?? [],
-          preferences: body.categoryPreferences ?? [],
-          remaps: body.categoryRemaps ?? [],
-        });
-        logStage("final_category_mapping", requestStartedAt);
-      }
     } catch (error) {
       await reportVertexAiFailure({
         functionName: "analyze-expense",
@@ -913,25 +914,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // This is an explicit user action: resolve internal knowledge first, then
-    // cached/interactive discovery. Ambiguous candidates are returned for user
-    // confirmation; analysis never silently invents a domain.
-    const analyzedItems = collapseReceiptItems(result.items, body) ??
-      result.items;
-    const merchantEnrichedItems = await enrichAnalyzedMerchantItems({
-      items: analyzedItems,
-      supabase: preferredCurrencyReader,
-      userId: callerId,
-      logoDevSecretKey,
-      preferredTimezone: body.preferredTimezone,
-    });
     logStage("total", requestStartedAt);
 
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          items: merchantEnrichedItems,
+          items: result.items,
           isAnalyzed: true,
           language: result.language,
           diagnostics: result.diagnostics,

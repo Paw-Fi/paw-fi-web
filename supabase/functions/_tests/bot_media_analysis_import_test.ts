@@ -12,11 +12,7 @@ Deno.test(
       new URL("../shared/bot/media-utils.ts", import.meta.url),
     );
 
-    assert(
-      mediaUtilsSource.includes(
-        'import { runAnalyzeExpense } from "../analyze-core.ts";',
-      ),
-    );
+    assert(mediaUtilsSource.includes("runEnrichedTransactionAnalysis"));
     assertEquals(
       mediaUtilsSource.includes('await import("../analyze-core.ts")'),
       false,
@@ -70,9 +66,9 @@ Deno.test(
       ),
     ]);
 
-    assert(mediaUtilsSource.includes("enrichAnalyzedMerchantItems"));
-    assert(analyzeSource.includes("enrichAnalyzedMerchantItems"));
-    assert(emailSource.includes("enrichAnalyzedMerchantItems"));
+    assert(mediaUtilsSource.includes("runEnrichedTransactionAnalysis"));
+    assert(analyzeSource.includes("runEnrichedTransactionAnalysis"));
+    assert(emailSource.includes("runEnrichedTransactionAnalysis"));
     assert(emailSource.includes("preferredTimezone: owner.preferredTimezone"));
     assert(emailSource.includes("merchantId: item.merchant_id"));
     assert(
