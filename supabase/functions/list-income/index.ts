@@ -243,6 +243,10 @@ Deno.serve(async (req: Request) => {
         date,
         category,
         raw_text,
+        merchant,
+        merchant_id,
+        merchant_structured_name,
+        merchants(domain),
         amount_cents,
         currency,
         source,
@@ -421,6 +425,12 @@ Deno.serve(async (req: Request) => {
             normalizeCategoryForStorage(record.category)),
         description: privacyRedacted ? null : record.raw_text,
         source: privacyRedacted ? null : record.source,
+        merchant: privacyRedacted ? null : record.merchant,
+        merchantId: privacyRedacted ? null : record.merchant_id,
+        merchantDomain: privacyRedacted ? null : record.merchants?.domain,
+        merchantStructuredName: privacyRedacted
+          ? null
+          : record.merchant_structured_name,
         amountMajor: (Number(record.amount_cents) || 0) / 100,
         currency: record.currency,
         ownerType: privacyRedacted ? null : record.owner_type,

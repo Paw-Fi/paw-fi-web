@@ -50,6 +50,9 @@ export interface PremiumDashboardSummary {
     category: string;
     description: string | null;
     merchant: string | null;
+    merchantId: string | null;
+    merchantDomain: string | null;
+    merchantStructuredName: string | null;
     accountId: string | null;
     accountName: string | null;
     receiptImageUrl: string | null;

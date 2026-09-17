@@ -9,6 +9,36 @@ const migration = await Deno.readTextFile(
   ),
 );
 
+const analyticsReadMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260916130005_include_merchant_identity_in_user_analytics.sql",
+    import.meta.url,
+  ),
+);
+
+const remainingExpenseReadsMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260916130006_complete_merchant_identity_expense_reads.sql",
+    import.meta.url,
+  ),
+);
+
+const listIncome = await Deno.readTextFile(
+  new URL("../list-income/index.ts", import.meta.url),
+);
+
+const listExpenses = await Deno.readTextFile(
+  new URL("../list-expenses/index.ts", import.meta.url),
+);
+
+const creatorUserLookup = await Deno.readTextFile(
+  new URL("../creator-user-lookup/index.ts", import.meta.url),
+);
+
+const premiumDashboardSummary = await Deno.readTextFile(
+  new URL("../premium-dashboard-summary/index.ts", import.meta.url),
+);
+
 Deno.test(
   "merchant identity migration preserves raw merchant text and adds nullable IDs",
   () => {
@@ -248,3 +278,64 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "analytics reads cannot erase canonical merchant identity from the mobile cache",
+  () => {
+    assertStringIncludes(
+      analyticsReadMigration,
+      "e.merchant, e.merchant_id, merchant.domain as merchant_domain",
+    );
+    assertStringIncludes(
+      analyticsReadMigration,
+      "e.merchant_structured_name",
+    );
+    assertStringIncludes(
+      analyticsReadMigration,
+      "left join public.merchants merchant on merchant.id = e.merchant_id",
+    );
+  },
+);
+
+Deno.test(
+  "month-over-month transaction reads preserve raw and canonical merchant identity",
+  () => {
+    assertStringIncludes(
+      remainingExpenseReadsMigration,
+      "get_home_mom_transactions_v4",
+    );
+    assertStringIncludes(remainingExpenseReadsMigration, "expense.merchant,");
+    assertStringIncludes(remainingExpenseReadsMigration, "expense.merchant_id,");
+    assertStringIncludes(
+      remainingExpenseReadsMigration,
+      "expense.merchant_structured_name,",
+    );
+    assertStringIncludes(remainingExpenseReadsMigration, "merchant.domain");
+  },
+);
+
+Deno.test("legacy expense list endpoints preserve merchant identity", () => {
+  for (const source of [listIncome, listExpenses, creatorUserLookup]) {
+    assertStringIncludes(source, "merchant_id");
+    assertStringIncludes(source, "merchant_structured_name");
+    assertStringIncludes(source, "merchants(domain)");
+  }
+  assertStringIncludes(listIncome, "merchantDomain:");
+  assertStringIncludes(listExpenses, "merchant_domain:");
+});
+
+Deno.test("premium dashboard transaction rows preserve merchant identity", () => {
+  assertStringIncludes(premiumDashboardSummary, "merchant_id");
+  assertStringIncludes(premiumDashboardSummary, "merchant_structured_name");
+  assertStringIncludes(premiumDashboardSummary, "merchants(domain)");
+  assertStringIncludes(premiumDashboardSummary, "merchant: row.merchant");
+  assertStringIncludes(premiumDashboardSummary, "merchantId: row.merchant_id");
+  assertStringIncludes(
+    premiumDashboardSummary,
+    "merchantDomain: row.merchants?.domain ?? null",
+  );
+  assertStringIncludes(
+    premiumDashboardSummary,
+    "merchantStructuredName: row.merchant_structured_name",
+  );
+});

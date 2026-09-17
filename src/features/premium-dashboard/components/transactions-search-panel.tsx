@@ -39,7 +39,7 @@ export function TransactionsSearchPanel({ transactions }: TransactionsSearchPane
                 <div className="flex items-center gap-4 overflow-hidden">
                   <div className="overflow-hidden">
                     <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {tx.merchant || tx.description || "Unknown"}
+                      {tx.merchantStructuredName || tx.merchant || tx.description || "Unknown"}
                     </h4>
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 truncate">
                       <span>{formatDate(tx.date)}</span>

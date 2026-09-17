@@ -630,7 +630,7 @@ async function fetchTransactionsSection(
       client
         .from("expenses")
         .select(
-          "id,date,amount_cents,currency,category,source,type,account_id,created_at,updated_at",
+          "id,date,amount_cents,currency,category,raw_text,source,merchant,merchant_id,merchant_structured_name,type,account_id,created_at,updated_at,merchants(domain)",
         )
         .eq("user_id", userId)
         .order("date", { ascending: false })
@@ -762,7 +762,7 @@ async function fetchRecurringSection(
       client
         .from("expenses")
         .select(
-          "id,date,amount_cents,currency,category,source,type,recurrence_rule,is_recurring,created_at,updated_at",
+          "id,date,amount_cents,currency,category,raw_text,source,merchant,merchant_id,merchant_structured_name,type,recurrence_rule,is_recurring,created_at,updated_at,merchants(domain)",
         )
         .eq("user_id", userId)
         .eq("is_recurring", true)

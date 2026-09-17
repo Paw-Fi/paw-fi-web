@@ -30,6 +30,9 @@ interface TransactionRow {
   account_id: string | null;
   type: string | null;
   merchant: string | null;
+  merchant_id: string | null;
+  merchant_structured_name: string | null;
+  merchants: { domain: string | null } | null;
   analytics_is_final: boolean;
   analytics_spending_multiplier: number;
   analytics_counts_toward_income: boolean;
@@ -271,6 +274,9 @@ Deno.serve(async (req: Request) => {
           category: row.category || "uncategorized",
           description: row.raw_text,
           merchant: row.merchant,
+          merchantId: row.merchant_id,
+          merchantDomain: row.merchants?.domain ?? null,
+          merchantStructuredName: row.merchant_structured_name,
           accountId: row.account_id,
           accountName: row.account_id
             ? (accountNameById.get(row.account_id) ?? null)
@@ -365,7 +371,7 @@ async function fetchTransactions(
   let query = supabase
     .from("expenses")
     .select(
-      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
+      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, merchant_id, merchant_structured_name, merchants(domain), analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", false)
     .is("deleted_at", null)
@@ -399,7 +405,7 @@ async function fetchRecurring(
   let query = supabase
     .from("expenses")
     .select(
-      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
+      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, merchant_id, merchant_structured_name, merchants(domain), analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", true)
     .is("deleted_at", null)
