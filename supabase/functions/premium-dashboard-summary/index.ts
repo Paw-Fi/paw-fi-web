@@ -32,7 +32,7 @@ interface TransactionRow {
   merchant: string | null;
   merchant_id: string | null;
   merchant_structured_name: string | null;
-  merchants: { domain: string | null } | null;
+  merchants: { domain: string | null; logo_identifier: string | null } | null;
   analytics_is_final: boolean;
   analytics_spending_multiplier: number;
   analytics_counts_toward_income: boolean;
@@ -216,7 +216,7 @@ Deno.serve(async (req: Request) => {
       (row) => !hasReceiptOrAttachment(row),
     ).length;
     const uncategorizedCount = purchaseRows.filter((row) =>
-      isUncategorized(row.category),
+      isUncategorized(row.category)
     ).length;
 
     const payload = {
@@ -232,14 +232,13 @@ Deno.serve(async (req: Request) => {
         expenseCents,
         netCashflowCents: incomeCents - expenseCents,
         profitLossCents: incomeCents - expenseCents,
-        receiptCoveragePercent:
-          detailExpenseRows.length === 0
-            ? 100
-            : Math.round(
-                ((detailExpenseRows.length - missingReceiptCount) /
-                  detailExpenseRows.length) *
-                  100,
-              ),
+        receiptCoveragePercent: detailExpenseRows.length === 0
+          ? 100
+          : Math.round(
+            ((detailExpenseRows.length - missingReceiptCount) /
+              detailExpenseRows.length) *
+              100,
+          ),
       },
       trends: buildTrends(detailTransactions),
       actionItems: buildActionItems({
@@ -276,6 +275,7 @@ Deno.serve(async (req: Request) => {
           merchant: row.merchant,
           merchantId: row.merchant_id,
           merchantDomain: row.merchants?.domain ?? null,
+          merchantLogoUrl: row.merchants?.logo_identifier ?? null,
           merchantStructuredName: row.merchant_structured_name,
           accountId: row.account_id,
           accountName: row.account_id
@@ -333,11 +333,13 @@ function validateFilters(
     return { error: "Invalid selectedCurrencies" };
   }
 
-  const accountId =
-    body.accountId == null ? null : sanitizeUuid(body.accountId);
+  const accountId = body.accountId == null
+    ? null
+    : sanitizeUuid(body.accountId);
   if (body.accountId && !accountId) return { error: "Invalid accountId" };
-  const householdId =
-    body.householdId == null ? null : sanitizeUuid(body.householdId);
+  const householdId = body.householdId == null
+    ? null
+    : sanitizeUuid(body.householdId);
   if (body.householdId && !householdId) return { error: "Invalid householdId" };
 
   return {
@@ -371,7 +373,7 @@ async function fetchTransactions(
   let query = supabase
     .from("expenses")
     .select(
-      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, merchant_id, merchant_structured_name, merchants(domain), analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
+      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, merchant_id, merchant_structured_name, merchants(domain, logo_identifier), analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", false)
     .is("deleted_at", null)
@@ -386,9 +388,11 @@ async function fetchTransactions(
   if (filters.category) query = query.ilike("category", filters.category);
   if (filters.search) {
     query = query.or(
-      `raw_text.ilike.%${escapeIlike(filters.search)}%,merchant.ilike.%${escapeIlike(
-        filters.search,
-      )}%,category.ilike.%${escapeIlike(filters.search)}%`,
+      `raw_text.ilike.%${escapeIlike(filters.search)}%,merchant.ilike.%${
+        escapeIlike(
+          filters.search,
+        )
+      }%,category.ilike.%${escapeIlike(filters.search)}%`,
     );
   }
 
@@ -405,7 +409,7 @@ async function fetchRecurring(
   let query = supabase
     .from("expenses")
     .select(
-      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, merchant_id, merchant_structured_name, merchants(domain), analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
+      "id, user_id, privacy_scope, date, amount_cents, currency, category, raw_text, receipt_image_url, attachments, account_id, type, merchant, merchant_id, merchant_structured_name, merchants(domain, logo_identifier), analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income",
     )
     .eq("is_recurring", true)
     .is("deleted_at", null)
@@ -511,7 +515,7 @@ function computeCashOnHand(
   const accountIds = new Set(displayAccounts.map((account) => account.id));
   const opening = sumAbs(
     displayAccounts.map((account) =>
-      Number(account.opening_balance_cents ?? 0),
+      Number(account.opening_balance_cents ?? 0)
     ),
   );
   let transactionNet = 0;
@@ -522,8 +526,9 @@ function computeCashOnHand(
     }
     if (!transaction.analytics_is_final) continue;
     const amount = Math.abs(Number(transaction.amount_cents ?? 0));
-    transactionNet +=
-      normalizeType(transaction.type) === "income" ? amount : -amount;
+    transactionNet += normalizeType(transaction.type) === "income"
+      ? amount
+      : -amount;
   }
   return opening + transactionNet;
 }
@@ -617,8 +622,7 @@ function buildBudgetProgress(params: {
     .slice(0, 12)
     .map((envelope) => {
       const budget = budgetById.get(envelope.budget_id);
-      const allocated =
-        Number(envelope.budget_amount_cents ?? 0) ||
+      const allocated = Number(envelope.budget_amount_cents ?? 0) ||
         Math.round(
           (Number(budget?.total_budget_cents ?? 0) *
             Number(envelope.budget_percentage ?? 0)) /
@@ -628,7 +632,7 @@ function buildBudgetProgress(params: {
         .filter(
           (row) =>
             normalizeCategory(row.category) ===
-            normalizeCategory(envelope.name),
+              normalizeCategory(envelope.name),
         )
         .reduce((sum, row) => sum + canonicalSpendingCents(row), 0);
       return {

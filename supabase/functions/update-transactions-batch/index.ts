@@ -32,28 +32,41 @@ async function enrichMerchantDomains(
 
   const { data, error } = await supabase
     .from("merchants")
-    .select("id, domain")
+    .select("id, domain, logo_identifier")
     .in("id", merchantIds);
   if (error) throw error;
-  const domainsById = new Map(
-    (data ?? []).map((merchant) => [merchant.id, merchant.domain ?? null]),
+  const merchantsById = new Map<
+    string,
+    { domain: string | null; logo_identifier: string | null }
+  >(
+    (data ?? []).map((merchant) => [
+      merchant.id,
+      {
+        domain: merchant.domain ?? null,
+        logo_identifier: merchant.logo_identifier ?? null,
+      },
+    ]),
   );
 
   return transactions.map((row) => {
     if (!row || typeof row !== "object") return row;
     const transaction = row as Record<string, unknown>;
     const merchantId = transaction.merchant_id;
+    const merchant = typeof merchantId === "string"
+      ? merchantsById.get(merchantId)
+      : null;
     return {
       ...transaction,
-      merchant_domain:
-        typeof merchantId === "string" ? domainsById.get(merchantId) ?? null : null,
+      merchant_domain: merchant?.domain ?? null,
+      merchant_logo_url: merchant?.logo_identifier ?? null,
     };
   });
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -62,32 +75,36 @@ Deno.serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const auth = await authenticateUser(req, supabase);
-  if (!auth.success || !auth.userId)
+  if (!auth.success || !auth.userId) {
     return json({ error: "Unauthorized" }, 401);
-  const body = (await req.json().catch(() => null)) as Record<
-    string,
-    unknown
-  > | null;
+  }
+  const body = (await req.json().catch(() => null)) as
+    | Record<
+      string,
+      unknown
+    >
+    | null;
   const ids = Array.isArray(body?.transactionIds)
     ? [
-        ...new Set(
-          body!.transactionIds.filter(
-            (id): id is string => typeof id === "string" && UUID.test(id),
-          ),
+      ...new Set(
+        body!.transactionIds.filter(
+          (id): id is string => typeof id === "string" && UUID.test(id),
         ),
-      ]
+      ),
+    ]
     : [];
-  if (ids.length === 0 || ids.length > 500)
+  if (ids.length === 0 || ids.length > 500) {
     return json({ error: "transactionIds must contain 1 to 500 UUIDs" }, 400);
+  }
   const householdId =
     typeof body?.householdId === "string" && UUID.test(body.householdId)
       ? body.householdId
       : null;
   const currencies = Array.isArray(body?.currencies)
     ? body!.currencies
-        .filter((currency): currency is string => typeof currency === "string")
-        .map((currency) => currency.trim().toUpperCase())
-        .filter(Boolean)
+      .filter((currency): currency is string => typeof currency === "string")
+      .map((currency) => currency.trim().toUpperCase())
+      .filter(Boolean)
     : [];
   if (
     !body?.updates ||
@@ -128,7 +145,10 @@ Deno.serve(async (req) => {
       data: await enrichMerchantDomains(supabase, data),
     });
   } catch (enrichmentError) {
-    console.error("[update-transactions-batch] Merchant enrichment failed", enrichmentError);
+    console.error(
+      "[update-transactions-batch] Merchant enrichment failed",
+      enrichmentError,
+    );
     return json({ success: true, data: data ?? [] });
   }
 });

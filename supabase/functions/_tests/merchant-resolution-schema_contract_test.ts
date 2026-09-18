@@ -23,6 +23,13 @@ const remainingExpenseReadsMigration = await Deno.readTextFile(
   ),
 );
 
+const plaidMerchantMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260918120000_plaid_merchant_identity_enrichment.sql",
+    import.meta.url,
+  ),
+);
+
 const listIncome = await Deno.readTextFile(
   new URL("../list-income/index.ts", import.meta.url),
 );
@@ -298,19 +305,20 @@ Deno.test(
 );
 
 Deno.test(
-  "month-over-month transaction reads preserve raw and canonical merchant identity",
+  "month-over-month transaction reads preserve raw merchant identity and direct logos",
   () => {
     assertStringIncludes(
-      remainingExpenseReadsMigration,
-      "get_home_mom_transactions_v4",
+      plaidMerchantMigration,
+      "get_home_mom_transactions_v5",
     );
-    assertStringIncludes(remainingExpenseReadsMigration, "expense.merchant,");
-    assertStringIncludes(remainingExpenseReadsMigration, "expense.merchant_id,");
+    assertStringIncludes(plaidMerchantMigration, "item.merchant,");
+    assertStringIncludes(plaidMerchantMigration, "item.merchant_id,");
     assertStringIncludes(
-      remainingExpenseReadsMigration,
-      "expense.merchant_structured_name,",
+      plaidMerchantMigration,
+      "item.merchant_structured_name",
     );
-    assertStringIncludes(remainingExpenseReadsMigration, "merchant.domain");
+    assertStringIncludes(plaidMerchantMigration, "item.merchant_domain,");
+    assertStringIncludes(plaidMerchantMigration, "merchant.logo_identifier");
   },
 );
 
@@ -318,16 +326,21 @@ Deno.test("legacy expense list endpoints preserve merchant identity", () => {
   for (const source of [listIncome, listExpenses, creatorUserLookup]) {
     assertStringIncludes(source, "merchant_id");
     assertStringIncludes(source, "merchant_structured_name");
-    assertStringIncludes(source, "merchants(domain)");
+    assertStringIncludes(source, "merchants(domain, logo_identifier)");
   }
   assertStringIncludes(listIncome, "merchantDomain:");
+  assertStringIncludes(listIncome, "merchantLogoUrl:");
   assertStringIncludes(listExpenses, "merchant_domain:");
+  assertStringIncludes(listExpenses, "merchant_logo_url:");
 });
 
 Deno.test("premium dashboard transaction rows preserve merchant identity", () => {
   assertStringIncludes(premiumDashboardSummary, "merchant_id");
   assertStringIncludes(premiumDashboardSummary, "merchant_structured_name");
-  assertStringIncludes(premiumDashboardSummary, "merchants(domain)");
+  assertStringIncludes(
+    premiumDashboardSummary,
+    "merchants(domain, logo_identifier)",
+  );
   assertStringIncludes(premiumDashboardSummary, "merchant: row.merchant");
   assertStringIncludes(premiumDashboardSummary, "merchantId: row.merchant_id");
   assertStringIncludes(
@@ -336,6 +349,29 @@ Deno.test("premium dashboard transaction rows preserve merchant identity", () =>
   );
   assertStringIncludes(
     premiumDashboardSummary,
+    "merchantLogoUrl: row.merchants?.logo_identifier ?? null",
+  );
+  assertStringIncludes(
+    premiumDashboardSummary,
     "merchantStructuredName: row.merchant_structured_name",
+  );
+});
+
+Deno.test("Plaid enrichment reuses the existing merchant logo contract", () => {
+  assertStringIncludes(
+    plaidMerchantMigration,
+    "extract_plaid_merchant_enrichment",
+  );
+  assertStringIncludes(plaidMerchantMigration, "logo_identifier = v_logo_url");
+  assertStringIncludes(plaidMerchantMigration, "'merchant_logo_url'");
+  assertStringIncludes(
+    plaidMerchantMigration,
+    "expense_merchant_logo_url(merchant.logo_identifier)",
+  );
+  assertStringIncludes(plaidMerchantMigration, "get_user_analytics_v2");
+  assertStringIncludes(plaidMerchantMigration, "get_home_mom_transactions_v5");
+  assertStringIncludes(
+    plaidMerchantMigration,
+    "backfill_plaid_merchant_enrichment_batch",
   );
 });

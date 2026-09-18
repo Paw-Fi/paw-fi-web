@@ -315,11 +315,23 @@ export interface PlaidPersonalFinanceCategory {
   version?: string | null;
 }
 
+export interface PlaidCounterparty {
+  name?: string | null;
+  type?: string | null;
+  logo_url?: string | null;
+  website?: string | null;
+  entity_id?: string | null;
+  confidence_level?: string | null;
+}
+
 export interface PlaidTransaction {
   transaction_id: string;
   account_id: string;
   name: string;
   merchant_name?: string | null;
+  merchant_entity_id?: string | null;
+  logo_url?: string | null;
+  website?: string | null;
   amount: number;
   iso_currency_code?: string | null;
   unofficial_currency_code?: string | null;
@@ -337,7 +349,7 @@ export interface PlaidTransaction {
     payee?: string | null;
     payer?: string | null;
   };
-  counterparties?: Array<{ type?: string | null }>;
+  counterparties?: PlaidCounterparty[] | null;
 }
 
 export interface PlaidSyncResponse {
@@ -487,6 +499,77 @@ export interface MapPlaidTransactionInput {
   transaction: PlaidTransaction;
 }
 
+function sanitizePlaidLogoUrl(value?: string | null): string | null {
+  const input = value?.trim();
+  if (!input) return null;
+  try {
+    const url = new URL(input);
+    if (url.protocol !== "https:") return null;
+    if (
+      url.hostname !== "plaid-merchant-logos.plaid.com" &&
+      url.hostname !== "plaid-counterparty-logos.plaid.com"
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function canonicalPlaidMerchantDomain(value?: string | null): string | null {
+  const input = value?.trim();
+  if (!input) return null;
+  try {
+    const url = new URL(input.includes("://") ? input : `https://${input}`);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    let hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+    if (hostname.startsWith("www.")) hostname = hostname.slice(4);
+    return hostname.includes(".") &&
+        /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/
+          .test(
+            hostname,
+          )
+      ? hostname
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildPlaidMerchantEnrichment(
+  transaction: PlaidTransaction,
+): Record<string, unknown> | null {
+  const merchantCounterparty = transaction.counterparties?.find(
+    (counterparty) => counterparty.type?.trim().toLowerCase() === "merchant",
+  );
+  const name = transaction.merchant_name?.trim() ||
+    merchantCounterparty?.name?.trim() ||
+    null;
+  const externalEntityId = transaction.merchant_entity_id?.trim() ||
+    merchantCounterparty?.entity_id?.trim() ||
+    null;
+  const website = transaction.website?.trim() ||
+    merchantCounterparty?.website?.trim() ||
+    null;
+  const domain = canonicalPlaidMerchantDomain(website);
+  const logoUrl = sanitizePlaidLogoUrl(transaction.logo_url) ??
+    sanitizePlaidLogoUrl(merchantCounterparty?.logo_url);
+  if (!name || (!externalEntityId && !domain)) return null;
+
+  return {
+    name,
+    domain,
+    website,
+    logo_url: logoUrl,
+    external_entity_id: externalEntityId,
+    confidence_level: transaction.merchant_entity_id
+      ? "VERY_HIGH"
+      : merchantCounterparty?.confidence_level?.trim().toUpperCase() || null,
+    source: transaction.merchant_name ? "transaction" : "merchant_counterparty",
+  };
+}
+
 export function mapPlaidTransactionToExpense(
   params: MapPlaidTransactionInput,
 ): ExpenseUpsertInput {
@@ -512,6 +595,7 @@ export function mapPlaidTransactionToExpense(
     txn.payment_meta?.payer ||
     null;
   const description = txn.name || txn.merchant_name || null;
+  const merchantEnrichment = buildPlaidMerchantEnrichment(txn);
   const counterpartyTypes = (txn.counterparties || [])
     .map((counterparty) => counterparty.type?.trim().toLowerCase())
     .filter((type): type is string => Boolean(type));
@@ -579,6 +663,12 @@ export function mapPlaidTransactionToExpense(
       transaction_code: txn.transaction_code ?? null,
       personal_finance_category: txn.personal_finance_category ?? null,
       counterparty_types: counterpartyTypes,
+      merchant_name: txn.merchant_name ?? null,
+      merchant_entity_id: txn.merchant_entity_id ?? null,
+      logo_url: txn.logo_url ?? null,
+      website: txn.website ?? null,
+      counterparties: txn.counterparties ?? [],
+      merchant_enrichment: merchantEnrichment,
     },
     is_recurring: false,
     recurrence_rule: null,

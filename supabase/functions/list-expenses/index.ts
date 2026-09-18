@@ -260,7 +260,7 @@ Deno.serve(async (req: Request) => {
     let query = supabase
       .from("expenses")
       .select(
-        "id, type, date, category, raw_text, merchant, merchant_id, merchant_structured_name, amount_cents, currency, receipt_image_url, split_group_id, household_id, account_id, is_recurring, recurrence_rule, attachments, created_at, contact_id, user_id, accounts(name, icon, color), merchants(domain)",
+        "id, type, date, category, raw_text, merchant, merchant_id, merchant_structured_name, amount_cents, currency, receipt_image_url, split_group_id, household_id, account_id, is_recurring, recurrence_rule, attachments, created_at, contact_id, user_id, accounts(name, icon, color), merchants(domain, logo_identifier)",
         { count: "exact" },
       )
       .eq("type", "expense") // CRITICAL: Only fetch expenses (not income)
@@ -391,6 +391,7 @@ Deno.serve(async (req: Request) => {
         merchant: expense.merchant,
         merchant_id: expense.merchant_id,
         merchant_domain: (expense as any).merchants?.domain ?? null,
+        merchant_logo_url: (expense as any).merchants?.logo_identifier ?? null,
         merchant_structured_name: expense.merchant_structured_name,
         amount_cents: expense.amount_cents, // Keep as cents, mobile divides by 100
         currency: validateCurrency(expense.currency || "USD"),
