@@ -13,7 +13,10 @@
  */
 
 import { BillingInterval, PlanType } from "./subscription-constants.ts";
-import { getRegionalStripePriceLookupKey } from "./regional-pricing.generated.ts";
+import {
+  getRegionalStripePriceLookupKey,
+  REGIONAL_PRICING_CATALOG_VERSION,
+} from "./regional-pricing.generated.ts";
 
 interface PriceConfig {
   monthly: string;
@@ -34,29 +37,36 @@ function arePremiumPriceIdsConfigured(prices: SubscriptionPrices): boolean {
 type StripeSubscriptionPriceSource = {
   metadata?: Record<string, string | null | undefined> | null;
   items?: {
-    data?: Array<{
-      price?: {
-        id?: string | null;
-        lookup_key?: string | null;
-      } | null;
-    } | null>;
+    data?: Array<
+      {
+        price?: {
+          id?: string | null;
+          lookup_key?: string | null;
+          recurring?: {
+            interval?: string | null;
+          } | null;
+        } | null;
+      } | null
+    >;
   } | null;
 };
 
 type StripeInvoicePriceSource = {
   metadata?: Record<string, string | null | undefined> | null;
   lines?: {
-    data?: Array<{
-      price?: {
-        id?: string | null;
-        lookup_key?: string | null;
-      } | null;
-      pricing?: {
-        price_details?: {
-          price?: string | null;
+    data?: Array<
+      {
+        price?: {
+          id?: string | null;
+          lookup_key?: string | null;
         } | null;
-      } | null;
-    } | null>;
+        pricing?: {
+          price_details?: {
+            price?: string | null;
+          } | null;
+        } | null;
+      } | null
+    >;
   } | null;
 };
 
@@ -68,12 +78,10 @@ export function getSubscriptionPrices(): SubscriptionPrices {
   return {
     free: null,
     plus: {
-      monthly:
-        Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
+      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_MONTHLY_PRICE_ID") ||
         "",
-      yearly:
-        Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
+      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_YEARLY_PRICE_ID") ||
         "",
     },
@@ -168,8 +176,11 @@ export function getPriceId(plan: PlanType, interval?: BillingInterval): string {
     }
   }
 
-  const recurringPrices =
-    plan === "plus" ? prices.plus : plan === "premium" ? prices.premium : null;
+  const recurringPrices = plan === "plus"
+    ? prices.plus
+    : plan === "premium"
+    ? prices.premium
+    : null;
 
   const priceId = recurringPrices?.[interval] || "";
 
@@ -279,11 +290,65 @@ export function getPlanFromPriceId(
   return null;
 }
 
+function getPlusPlanFromRegionalLookupKey(
+  lookupKey: string | null | undefined,
+  stripeInterval: string | null | undefined,
+): { plan: "plus"; interval: BillingInterval } | null {
+  if (!lookupKey) return null;
+
+  const candidates: Array<{
+    planTarget: "plus_monthly" | "plus_yearly";
+    interval: BillingInterval;
+    stripeInterval: "month" | "year";
+  }> = [
+    {
+      planTarget: "plus_monthly",
+      interval: "monthly",
+      stripeInterval: "month",
+    },
+    {
+      planTarget: "plus_yearly",
+      interval: "yearly",
+      stripeInterval: "year",
+    },
+  ];
+
+  for (const candidate of candidates) {
+    if (stripeInterval && stripeInterval !== candidate.stripeInterval) {
+      continue;
+    }
+
+    for (
+      let version = 1;
+      version <= REGIONAL_PRICING_CATALOG_VERSION;
+      version++
+    ) {
+      if (
+        lookupKey ===
+          getRegionalStripePriceLookupKey(candidate.planTarget, version)
+      ) {
+        return { plan: "plus", interval: candidate.interval };
+      }
+    }
+  }
+
+  return null;
+}
+
 export function resolveSubscriptionPlanFromPrice(
   subscription: StripeSubscriptionPriceSource,
 ): { plan: PlanType; interval: BillingInterval | null } | null {
+  // Configured Price IDs remain authoritative if Stripe returns multiple items.
   for (const item of subscription.items?.data ?? []) {
     const planInfo = getPlanFromPriceId(item?.price?.id);
+    if (planInfo) return planInfo;
+  }
+
+  for (const item of subscription.items?.data ?? []) {
+    const planInfo = getPlusPlanFromRegionalLookupKey(
+      item?.price?.lookup_key,
+      item?.price?.recurring?.interval,
+    );
     if (planInfo) return planInfo;
   }
 
