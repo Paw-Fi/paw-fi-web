@@ -1,6 +1,10 @@
 /// <reference lib="deno.ns" />
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
+import {
+  getRegionalStripePriceLookupKey,
+  REGIONAL_PRICING_CATALOG_VERSION,
+} from "../shared/regional-pricing.generated.ts";
 import { resolveSubscriptionPlanFromPrice } from "../shared/stripe-subscription-prices.ts";
 
 const managedEnvKeys = [
@@ -80,5 +84,133 @@ Deno.test(
       });
 
       assertEquals(resolved, null);
+    }),
+);
+
+Deno.test(
+  "subscription resolution: current regional Plus lookup keys resolve unknown price IDs",
+  () =>
+    withEnv(() => {
+      const monthly = resolveSubscriptionPlanFromPrice({
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_regional_monthly",
+                lookup_key: getRegionalStripePriceLookupKey("plus_monthly"),
+                recurring: { interval: "month" },
+              },
+            },
+          ],
+        },
+      });
+      const yearly = resolveSubscriptionPlanFromPrice({
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_regional_yearly",
+                lookup_key: getRegionalStripePriceLookupKey("plus_yearly"),
+                recurring: { interval: "year" },
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(monthly, { plan: "plus", interval: "monthly" });
+      assertEquals(yearly, { plan: "plus", interval: "yearly" });
+    }),
+);
+
+Deno.test(
+  "subscription resolution: historical regional Plus lookup keys remain valid",
+  () =>
+    withEnv(() => {
+      const resolved = resolveSubscriptionPlanFromPrice({
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_historical",
+                lookup_key: getRegionalStripePriceLookupKey(
+                  "plus_yearly",
+                  1,
+                ),
+                recurring: { interval: "year" },
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(resolved, { plan: "plus", interval: "yearly" });
+    }),
+);
+
+Deno.test(
+  "subscription resolution: rejects future keys and conflicting intervals",
+  () =>
+    withEnv(() => {
+      const future = resolveSubscriptionPlanFromPrice({
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_future",
+                lookup_key: getRegionalStripePriceLookupKey(
+                  "plus_monthly",
+                  REGIONAL_PRICING_CATALOG_VERSION + 1,
+                ),
+                recurring: { interval: "month" },
+              },
+            },
+          ],
+        },
+      });
+      const conflicting = resolveSubscriptionPlanFromPrice({
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_conflicting",
+                lookup_key: getRegionalStripePriceLookupKey("plus_yearly"),
+                recurring: { interval: "month" },
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(future, null);
+      assertEquals(conflicting, null);
+    }),
+);
+
+Deno.test(
+  "subscription resolution: configured Price ID wins over an earlier lookup key",
+  () =>
+    withEnv(() => {
+      const resolved = resolveSubscriptionPlanFromPrice({
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_regional_monthly",
+                lookup_key: getRegionalStripePriceLookupKey("plus_monthly"),
+                recurring: { interval: "month" },
+              },
+            },
+            {
+              price: {
+                id: "price_plus_yearly",
+                recurring: { interval: "year" },
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(resolved, { plan: "plus", interval: "yearly" });
     }),
 );

@@ -5,6 +5,7 @@ import {
   buildPaymentVerificationResult,
   resolveRecurringPaymentEntitlement,
 } from "../shared/verify-payment-entitlement.ts";
+import { getRegionalStripePriceLookupKey } from "../shared/regional-pricing.generated.ts";
 
 const managedEnvKeys = [
   "STRIPE_MONTHLY_PLUS_PLAN_ID",
@@ -152,6 +153,32 @@ Deno.test(
       assertEquals(result, {
         verified: false,
         message: "Subscription price could not be verified",
+      });
+    }),
+);
+
+Deno.test(
+  "verify payment entitlement: recurring regional lookup key verifies entitlement",
+  () =>
+    withEnv(() => {
+      const result = resolveRecurringPaymentEntitlement({
+        items: {
+          data: [
+            {
+              price: {
+                id: "price_regional_yearly",
+                lookup_key: getRegionalStripePriceLookupKey("plus_yearly"),
+                recurring: { interval: "year" },
+              },
+            },
+          ],
+        },
+      });
+
+      assertEquals(result, {
+        verified: true,
+        plan: "plus",
+        billingInterval: "yearly",
       });
     }),
 );

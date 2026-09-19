@@ -40,6 +40,7 @@ interface StripeSubscriptionPriceSource {
       {
         price?: {
           id?: string | null;
+          lookup_key?: string | null;
           recurring?: {
             interval?: string | null;
           } | null;
