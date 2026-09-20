@@ -45,6 +45,7 @@ import {
   isPositiveStripeAmount,
 } from "../shared/lifetime-grant-policy.ts";
 import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
+import { reconcileHouseholdSubscriptionLifecycle } from "../shared/household-subscription-lifecycle.ts";
 
 interface EmailTemplate {
   html: string;
@@ -2910,6 +2911,13 @@ async function handleInvoicePaymentSucceeded(
           }
         }
 
+        await reconcileHouseholdSubscriptionLifecycle({
+          supabase,
+          ownerUserId: userId,
+          plan: "lifetime",
+          status: "active",
+        });
+
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("email, full_name")
@@ -3805,6 +3813,13 @@ async function handleCheckoutSessionCompleted(
           });
           throw upsertError;
         }
+
+        await reconcileHouseholdSubscriptionLifecycle({
+          supabase,
+          ownerUserId: lifetimeUserId,
+          plan: "lifetime",
+          status: "active",
+        });
 
         console.log(
           "✅ Lifetime subscription created successfully for user:",

@@ -18,6 +18,7 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
+import * as readline from 'readline'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -254,13 +255,13 @@ async function downgradeToFree() {
 
 function askYesNo(question) {
   return new Promise((resolve) => {
-    const readline = require('readline').createInterface({
+    const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
     })
 
-    readline.question(`${question} (y/n): `, (answer) => {
-      readline.close()
+    rl.question(`${question} (y/n): `, (answer) => {
+      rl.close()
       resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes')
     })
   })
