@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(25);
+select plan(30);
 
 do $$
 declare
@@ -198,15 +198,15 @@ begin
         (
             v_stripe_owner_id,
             'plus',
-            'active',
+            'trialing',
             'stripe',
             'yearly',
-            now() + interval '1 year',
+            now() + interval '7 days',
             false,
+            now(),
+            now() + interval '7 days',
             null,
             null,
-            'sub_household_binding_owner',
-            'cus_household_binding_owner',
             null,
             null,
             null
@@ -377,8 +377,8 @@ select is(
         from public.subscriptions
         where user_id = current_setting('test.stripe_auto_trial_user_id')::uuid
     ),
-    'active',
-    'borrowed row replaces the automatic trial with the owner lifecycle'
+    'trialing',
+    'borrowed row follows the owner trial lifecycle'
 );
 
 select ok(
@@ -409,6 +409,69 @@ select is(
     ),
     current_setting('test.stripe_owner_id')::uuid,
     'existing dependent grant is flattened to the new root owner'
+);
+
+update public.subscriptions
+set
+    plan = 'plus',
+    status = 'active',
+    provider = 'stripe',
+    billing_interval = 'yearly',
+    current_period_end = now() + interval '1 year',
+    trial_start = null,
+    trial_end = null,
+    stripe_subscription_id = 'sub_household_binding_owner',
+    stripe_customer_id = 'cus_household_binding_owner',
+    updated_at = now()
+where user_id = current_setting('test.stripe_owner_id')::uuid;
+
+select is(
+    public.cascade_subscription_upgrade(
+        current_setting('test.stripe_owner_id')::uuid,
+        'plus',
+        'active'
+    ),
+    2,
+    'owner paid upgrade cascades to every bound household member'
+);
+
+select is(
+    (
+        select status
+        from public.subscriptions
+        where user_id = current_setting('test.stripe_auto_trial_user_id')::uuid
+    ),
+    'active',
+    'member entitlement upgrades from the shared trial to active'
+);
+
+select ok(
+    (
+        select current_period_end > now() + interval '11 months'
+        from public.subscriptions
+        where user_id = current_setting('test.stripe_auto_trial_user_id')::uuid
+    ),
+    'member receives the owner paid entitlement period'
+);
+
+select ok(
+    (
+        select stripe_subscription_id is null
+           and stripe_customer_id is null
+        from public.subscriptions
+        where user_id = current_setting('test.stripe_auto_trial_user_id')::uuid
+    ),
+    'paid cascade does not copy owner billing identifiers to the member'
+);
+
+select is(
+    (
+        select status
+        from public.subscriptions
+        where user_id = current_setting('test.stripe_descendant_user_id')::uuid
+    ),
+    'active',
+    'paid upgrade also reaches a flattened downstream household member'
 );
 
 select is(

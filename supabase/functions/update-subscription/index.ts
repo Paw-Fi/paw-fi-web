@@ -10,6 +10,7 @@ import type {
 } from "../shared/subscription-constants.ts";
 import { buildCheckoutPageUrl } from "../shared/checkout-redirect.ts";
 import { getSubscriptionChangePolicy } from "../shared/subscription-change-policy.ts";
+import { reconcileHouseholdSubscriptionLifecycle } from "../shared/household-subscription-lifecycle.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -387,7 +388,7 @@ serve(async (req) => {
             updateParams,
           );
 
-          await supabase
+          const { error: localUpdateError } = await supabase
             .from("subscriptions")
             .update({
               plan,
@@ -403,6 +404,19 @@ serve(async (req) => {
               updated_at: new Date().toISOString(),
             })
             .eq("id", subscription.id);
+
+          if (localUpdateError) {
+            throw new Error(
+              `Failed to persist immediate subscription change: ${localUpdateError.message}`,
+            );
+          }
+
+          await reconcileHouseholdSubscriptionLifecycle({
+            supabase,
+            ownerUserId: userId,
+            plan,
+            status: updatedSubscription.status,
+          });
 
           return new Response(
             JSON.stringify({
@@ -605,7 +619,7 @@ serve(async (req) => {
         );
 
         // Update the subscription in the database
-        await supabase
+        const { error: localCancellationError } = await supabase
           .from("subscriptions")
           .update({
             status: "canceled",
@@ -613,6 +627,19 @@ serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", subscription.id);
+
+        if (localCancellationError) {
+          throw new Error(
+            `Failed to persist immediate subscription cancellation: ${localCancellationError.message}`,
+          );
+        }
+
+        await reconcileHouseholdSubscriptionLifecycle({
+          supabase,
+          ownerUserId: userId,
+          plan: subscription.plan,
+          status: "canceled",
+        });
 
         return new Response(
           JSON.stringify({

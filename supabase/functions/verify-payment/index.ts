@@ -14,6 +14,7 @@ import {
   buildPaymentVerificationResult,
   resolveRecurringPaymentEntitlement,
 } from "../shared/verify-payment-entitlement.ts";
+import { reconcileHouseholdSubscriptionLifecycle } from "../shared/household-subscription-lifecycle.ts";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -31,6 +32,43 @@ const stripe = new Stripe(stripeSecretKey, {
 });
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function cascadeHouseholdSubscriptionUpgrade(params: {
+  userId: string;
+  plan: string;
+  status: string;
+  sessionId: string;
+  subscriptionId?: string | null;
+}): Promise<void> {
+  try {
+    const affectedCount = await reconcileHouseholdSubscriptionLifecycle({
+      supabase,
+      ownerUserId: params.userId,
+      plan: params.plan,
+      status: params.status,
+    });
+
+    if (affectedCount > 0) {
+      console.log(
+        `Cascaded verified subscription to ${affectedCount} household members`,
+      );
+    }
+  } catch (cascadeError) {
+    await reportEdgeFunctionError({
+      functionName: "verify-payment",
+      error: cascadeError,
+      context: {
+        phase: "cascade_verified_household_entitlement",
+        userId: params.userId,
+        sessionId: params.sessionId,
+        subscriptionId: params.subscriptionId ?? null,
+        plan: params.plan,
+        status: params.status,
+      },
+    });
+    throw cascadeError;
+  }
+}
 
 function reportVerifyPaymentError(
   phase: string,
@@ -450,6 +488,27 @@ serve(async (req: Request) => {
             },
           });
         }
+        try {
+          await cascadeHouseholdSubscriptionUpgrade({
+            userId,
+            plan: "lifetime",
+            status: "active",
+            sessionId,
+          });
+        } catch {
+          return new Response(
+            JSON.stringify(
+              {
+                verified: false,
+                message: "Failed to share the verified entitlement",
+              } satisfies VerifyPaymentResponse,
+            ),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
         return new Response(
           JSON.stringify(
             {
@@ -520,6 +579,12 @@ serve(async (req: Request) => {
           });
           console.error("Failed to upsert lifetime subscription:", upsertError);
         } else {
+          await cascadeHouseholdSubscriptionUpgrade({
+            userId,
+            plan,
+            status: "active",
+            sessionId,
+          });
           console.log("Lifetime subscription upserted for user:", userId);
         }
       } catch (dbError) {
@@ -726,6 +791,14 @@ serve(async (req: Request) => {
           },
         });
         console.error("Error upserting subscription:", upsertError);
+      } else {
+        await cascadeHouseholdSubscriptionUpgrade({
+          userId,
+          plan,
+          status,
+          sessionId,
+          subscriptionId,
+        });
       }
     } catch (dbError) {
       persistenceError = dbError;

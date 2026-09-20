@@ -28,6 +28,7 @@ import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscr
 import { resolveAnnualCommitmentSnapshot } from "../shared/subscription-commitment.ts";
 import { decideSubscriptionEntitlementMutation } from "../shared/subscription-entitlement-policy.ts";
 import { decideAppStorePurchaseTransition } from "../shared/app-store-purchase-transition-policy.ts";
+import { reconcileHouseholdSubscriptionLifecycle } from "../shared/household-subscription-lifecycle.ts";
 import {
   ensureAppStoreOwnership,
   getAppStoreOwnershipBinding,
@@ -2203,6 +2204,14 @@ serve(async (req: Request) => {
             incomingStatus: status,
           },
         );
+        if (existingSub?.plan && existingSub?.status) {
+          await reconcileHouseholdSubscriptionLifecycle({
+            supabase,
+            ownerUserId: userId,
+            plan: String(existingSub.plan),
+            status: String(existingSub.status),
+          });
+        }
         return new Response(
           JSON.stringify({ verified: true, subscription: existingSub }),
           {
@@ -2435,6 +2444,13 @@ serve(async (req: Request) => {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      await reconcileHouseholdSubscriptionLifecycle({
+        supabase,
+        ownerUserId: userId,
+        plan,
+        status,
+      });
 
       return new Response(
         JSON.stringify({ verified: true, subscription: finalSub }),
@@ -2714,6 +2730,14 @@ serve(async (req: Request) => {
         incomingPlan: plan,
         incomingStatus: status,
       });
+      if (existingSub?.plan && existingSub?.status) {
+        await reconcileHouseholdSubscriptionLifecycle({
+          supabase,
+          ownerUserId: userId,
+          plan: String(existingSub.plan),
+          status: String(existingSub.status),
+        });
+      }
       return new Response(
         JSON.stringify({ verified: true, subscription: existingSub }),
         {
@@ -2797,6 +2821,13 @@ serve(async (req: Request) => {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    await reconcileHouseholdSubscriptionLifecycle({
+      supabase,
+      ownerUserId: userId,
+      plan,
+      status,
+    });
 
     return new Response(
       JSON.stringify({ verified: true, subscription: finalSub }),

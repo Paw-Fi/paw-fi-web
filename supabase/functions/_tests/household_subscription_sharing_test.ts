@@ -96,6 +96,88 @@ Deno.test("trial household-sharing emails explain automatic paid-plan sharing", 
 });
 
 Deno.test(
+  "verified Stripe upgrades cascade to already-bound household members",
+  async () => {
+    const [source, lifecycleSource] = await Promise.all([
+      Deno.readTextFile(
+        new URL("../verify-payment/index.ts", import.meta.url),
+      ),
+      Deno.readTextFile(
+        new URL(
+          "../shared/household-subscription-lifecycle.ts",
+          import.meta.url,
+        ),
+      ),
+    ]);
+
+    assertStringIncludes(lifecycleSource, '"cascade_subscription_upgrade"');
+    assertStringIncludes(
+      source,
+      'phase: "cascade_verified_household_entitlement"',
+    );
+    assertStringIncludes(
+      source,
+      "await cascadeHouseholdSubscriptionUpgrade({",
+    );
+    assertEquals(
+      source.match(/await cascadeHouseholdSubscriptionUpgrade\(\{/g)?.length,
+      3,
+    );
+  },
+);
+
+Deno.test(
+  "Stripe Lifetime webhook fulfillment cascades to household members",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../stripe-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, "reconcileHouseholdSubscriptionLifecycle");
+    assertEquals(
+      source.match(/await reconcileHouseholdSubscriptionLifecycle\(\{/g)
+        ?.length,
+      2,
+    );
+    assertStringIncludes(source, "ownerUserId: userId");
+    assertStringIncludes(source, "ownerUserId: lifetimeUserId");
+  },
+);
+
+Deno.test(
+  "verified App Store and Play upgrades cascade to household members",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../verify-iap-purchase/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, "reconcileHouseholdSubscriptionLifecycle");
+    assertStringIncludes(source, "ownerUserId: userId");
+    assertEquals(
+      source.match(/await reconcileHouseholdSubscriptionLifecycle\(\{/g)
+        ?.length,
+      4,
+    );
+  },
+);
+
+Deno.test(
+  "direct Stripe plan changes and cancellations reconcile household access",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../update-subscription/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, "reconcileHouseholdSubscriptionLifecycle");
+    assertEquals(
+      source.match(/await reconcileHouseholdSubscriptionLifecycle\(\{/g)
+        ?.length,
+      2,
+    );
+  },
+);
+
+Deno.test(
   "household subscription sharing allows already-bound users at the limit",
   () => {
     assertEquals(hasReachedHouseholdSubscriptionGrantLimit(5, true), false);
