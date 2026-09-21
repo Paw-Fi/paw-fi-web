@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(12);
+SELECT plan(21);
 
 SELECT is(
   public.calculate_next_occurrence(
@@ -114,6 +114,93 @@ SELECT is(
   ),
   DATE '2026-07-17',
   'daily reminders target tomorrow instead of sending late for today'
+);
+
+SELECT is(
+  public.calculate_recurring_reminder_occurrence(
+    DATE '2026-01-01',
+    'daily',
+    25,
+    NULL,
+    1,
+    'days',
+    TIMESTAMPTZ '2026-01-25 09:00:00+00'
+  ),
+  DATE '2026-01-26',
+  'reminders preserve an every 25 days custom cadence'
+);
+
+SELECT is(
+  public.calculate_recurring_reminder_occurrence(
+    DATE '2026-01-01',
+    'weekly',
+    3,
+    NULL,
+    1,
+    'days',
+    TIMESTAMPTZ '2026-01-21 09:00:00+00'
+  ),
+  DATE '2026-01-22',
+  'reminders preserve an every 3 weeks custom cadence'
+);
+
+SELECT is(
+  public.calculate_recurring_reminder_occurrence(
+    DATE '2026-01-01',
+    'yearly',
+    2,
+    NULL,
+    7,
+    'days',
+    TIMESTAMPTZ '2027-12-25 09:00:00+00'
+  ),
+  DATE '2028-01-01',
+  'reminders preserve an every 2 years custom cadence'
+);
+
+SELECT ok(
+  public.is_recurring_daily_reminder_due(
+    DATE '2026-10-15', 7, DATE '2026-10-08', TIME '09:00'
+  ),
+  'daily reminders begin at 9 AM on the configured lead day'
+);
+
+SELECT ok(
+  public.is_recurring_daily_reminder_due(
+    DATE '2026-10-15', 7, DATE '2026-10-12', TIME '14:00'
+  ),
+  'daily reminders remain eligible throughout each lead-window day'
+);
+
+SELECT ok(
+  public.is_recurring_daily_reminder_due(
+    DATE '2026-10-15', 7, DATE '2026-10-15', TIME '09:00'
+  ),
+  'daily reminders include the due date'
+);
+
+SELECT is(
+  public.is_recurring_daily_reminder_due(
+    DATE '2026-10-15', 7, DATE '2026-10-07', TIME '12:00'
+  ),
+  FALSE,
+  'daily reminders do not start before the configured lead window'
+);
+
+SELECT is(
+  public.is_recurring_daily_reminder_due(
+    DATE '2026-10-15', 7, DATE '2026-10-08', TIME '08:59'
+  ),
+  FALSE,
+  'daily reminders wait until 9 AM local time'
+);
+
+SELECT is(
+  public.is_recurring_daily_reminder_due(
+    DATE '2026-10-15', 7, DATE '2026-10-16', TIME '09:00'
+  ),
+  FALSE,
+  'daily reminders stop after the due date'
 );
 
 SELECT is(

@@ -884,7 +884,8 @@ serve(async (req: Request) => {
     }
 
     const expiresAt =
-      event_type === "pockets_month_review" &&
+      (event_type === "pockets_month_review" ||
+        event_type === "recurring_reminder") &&
       typeof payload.expires_at === "string"
         ? Date.parse(payload.expires_at)
         : Number.NaN;
@@ -894,7 +895,10 @@ serve(async (req: Request) => {
         .update({
           is_sent: true,
           sent_at: new Date().toISOString(),
-          delivery_error: "Pocket month review expired before delivery",
+          delivery_error:
+            event_type === "recurring_reminder"
+              ? "Recurring reminder expired before delivery"
+              : "Pocket month review expired before delivery",
         })
         .eq("id", notification_event_id);
       return new Response(
@@ -969,11 +973,11 @@ serve(async (req: Request) => {
         .eq("id", notification_event_id);
 
       return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Firebase not configured",
-            pocket_review_email_sent: pocketReviewEmailSent,
-          }),
+        JSON.stringify({
+          success: false,
+          error: "Firebase not configured",
+          pocket_review_email_sent: pocketReviewEmailSent,
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1718,9 +1722,14 @@ function buildNotificationMessage(
 
       // Calculate time until due
       const now = new Date();
-      const daysUntil = Math.ceil(
-        (occurrenceDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      const scheduledDaysUntil = Number(payload.days_until_due);
+      const daysUntil =
+        Number.isInteger(scheduledDaysUntil) && scheduledDaysUntil >= 0
+          ? scheduledDaysUntil
+          : Math.ceil(
+              (occurrenceDate.getTime() - now.getTime()) /
+                (1000 * 60 * 60 * 24),
+            );
 
       let timeframe = "";
       if (daysUntil === 0) {

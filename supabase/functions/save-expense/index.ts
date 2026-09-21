@@ -39,6 +39,7 @@ import {
   normalizeClientCreatedAt,
   normalizeReceiptImageUrl,
 } from "../shared/transaction-request-validation.ts";
+import { validateRecurringReminder } from "../shared/recurring-reminder.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -119,6 +120,7 @@ interface RequestBody {
       enabled: boolean;
       value: number; // How many days/hours before
       unit: "days" | "hours";
+      mode?: "once" | "daily_until_due";
     };
   };
   payerUserId?: string; // Optional explicit payer for household split
@@ -201,6 +203,10 @@ Deno.serve(async (req: Request) => {
     body.date = normalizedDate;
 
     if (body.recurrence_rule) {
+      const reminderError = validateRecurringReminder(body.recurrence_rule);
+      if (reminderError) {
+        return errorResponse(reminderError, 400);
+      }
       const normalizedAnchorDate = normalizeCalendarDateString(
         body.recurrence_rule.anchor_date,
       );
