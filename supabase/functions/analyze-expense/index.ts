@@ -288,6 +288,9 @@ function collapseReceiptItems(
         "USD",
       currencySymbol: primary.currencySymbol || "$",
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
+      ...(primary.transactionTime
+        ? { transactionTime: primary.transactionTime }
+        : {}),
       description,
       ...(merchant ? { merchant } : {}),
       ...(typeof primary?.merchantUrl === "string" && primary.merchantUrl
