@@ -280,6 +280,38 @@ function summarizeAttachmentFailures(
   return uniqueErrors.join(" | ").slice(0, 500);
 }
 
+function summarizeMerchantEnrichment(items: unknown): Array<{
+  index: number;
+  merchantDetected: boolean;
+  merchantId: string | null;
+  merchantDomain: string | null;
+  structuredMerchantDetected: boolean;
+  resolutionSource: string | null;
+  candidateCount: number;
+}> {
+  if (!Array.isArray(items)) return [];
+  return items.map((item: any, index: number) => ({
+    index,
+    merchantDetected: typeof item?.merchant === "string" &&
+      item.merchant.trim().length > 0,
+    merchantId: typeof item?.merchant_id === "string"
+      ? item.merchant_id
+      : null,
+    merchantDomain: typeof item?.merchant_domain === "string"
+      ? item.merchant_domain
+      : null,
+    structuredMerchantDetected:
+      typeof item?.merchant_structured_name === "string" &&
+      item.merchant_structured_name.trim().length > 0,
+    resolutionSource: typeof item?.merchant_resolution_source === "string"
+      ? item.merchant_resolution_source
+      : null,
+    candidateCount: Array.isArray(item?.merchant_candidates)
+      ? item.merchant_candidates.length
+      : 0,
+  }));
+}
+
 function scheduleBackgroundTask(
   promise: Promise<unknown>,
   label: string,
@@ -1364,6 +1396,7 @@ export async function handleResendInboundWebhook(
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
   const RESEND_WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET");
+  const LOGO_DEV_SECRET_KEY = Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "";
 
   const missingConfig = [
     !SUPABASE_URL ? "SUPABASE_URL" : null,
@@ -1512,6 +1545,10 @@ export async function handleResendInboundWebhook(
       emailId: emailData.email_id,
       recovered: claim.recovered,
       attemptCount: leaseOwner.attemptCount,
+      merchantEnrichment: {
+        logoDevConfigured: LOGO_DEV_SECRET_KEY.length > 0,
+        autoResolveCandidates: true,
+      },
     });
 
     try {
@@ -1938,8 +1975,9 @@ export async function handleResendInboundWebhook(
             merchantContext: {
               supabase,
               userId: owner.userId,
-              logoDevSecretKey: Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "",
+              logoDevSecretKey: LOGO_DEV_SECRET_KEY,
               preferredTimezone: owner.preferredTimezone ?? undefined,
+              autoResolveCandidates: true,
             },
             onProgress: (progress) => {
               console.log("[resend-inbound-webhook] analyze progress", {
@@ -1983,6 +2021,7 @@ export async function handleResendInboundWebhook(
             status: result.status ?? null,
             code: result.code ?? null,
             error: result.success ? null : (result.error ?? null),
+            merchantEnrichment: summarizeMerchantEnrichment(result.items),
           });
           if (!result.success && isRetryableAnalyzeFailure(result)) {
             throw new Error(
@@ -2109,8 +2148,9 @@ export async function handleResendInboundWebhook(
             merchantContext: {
               supabase,
               userId: owner.userId,
-              logoDevSecretKey: Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "",
+              logoDevSecretKey: LOGO_DEV_SECRET_KEY,
               preferredTimezone: owner.preferredTimezone ?? undefined,
+              autoResolveCandidates: true,
             },
           });
           if (!result.success && isRetryableAnalyzeFailure(result)) {
@@ -2135,6 +2175,10 @@ export async function handleResendInboundWebhook(
           const analyzedBodyItems: any[] = Array.isArray(result.items)
             ? result.items
             : [];
+          console.log("[resend-inbound-webhook] email body merchant enrichment", {
+            emailId: emailData.email_id,
+            merchantEnrichment: summarizeMerchantEnrichment(result.items),
+          });
           let bodyItems = analyzedBodyItems;
           if (bodyItems.length > 0) {
             // The extractor only proposes candidates. The multilingual AI

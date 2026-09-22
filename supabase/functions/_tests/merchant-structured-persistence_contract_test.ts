@@ -42,6 +42,11 @@ Deno.test(
     );
     // These semantic sources route their saves through the tested writers.
     assertStringIncludes(email, "saveTransactionsBatchInternal");
+    assertStringIncludes(batch, "merchantStructuredName?: string;");
+    assertStringIncludes(
+      batch,
+      "tx.merchantStructuredName.trim().slice(0, 255)",
+    );
     assertStringIncludes(whatsapp, "save-transactions-batch");
     assertStringIncludes(telegram, "save-transactions-batch");
     assertStringIncludes(notification, "save-wallet-transaction");

@@ -362,6 +362,16 @@ Deno.test("transaction analyzers converge on shared merchant enrichment", () => 
   assertStringIncludes(notificationCapture, "save-wallet-transaction");
 });
 
+Deno.test(
+  "headless email attachment and body analysis resolve Logo.dev candidates",
+  () => {
+    assertEquals(
+      resendInbound.match(/autoResolveCandidates: true/g)?.length ?? 0,
+      2,
+    );
+  },
+);
+
 Deno.test("email currency repair preserves canonical merchant identity", () => {
   const merchantId = "4d055fac-88b0-4750-b606-92f37c008975";
   const result = preserveAnalyzedMerchantIdentity({

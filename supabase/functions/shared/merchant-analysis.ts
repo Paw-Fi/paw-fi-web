@@ -18,6 +18,7 @@ export interface MerchantAnalysisContext {
   userId: string;
   logoDevSecretKey?: string;
   preferredTimezone?: string;
+  autoResolveCandidates?: boolean;
 }
 
 interface MerchantAnalysisDependencies {

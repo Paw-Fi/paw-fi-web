@@ -43,6 +43,8 @@ function buildFollowupEmail(
     config.appTransactionsUrl;
   const didFail = params.savedCount === 0 && params.duplicateCount === 0 &&
     params.failedCount > 0;
+  const didSkipDuplicatesOnly = params.savedCount === 0 &&
+    params.duplicateCount > 0 && params.failedCount === 0;
   const attachmentLines = renderAttachmentLines(params.attachmentResults);
   const transactionLines = renderTransactionLines(params.transactions);
   const content = renderContent(
@@ -51,6 +53,7 @@ function buildFollowupEmail(
     attachmentLines,
     transactionLines,
     didFail,
+    didSkipDuplicatesOnly,
   );
   const footerReason =
     "Moneko does not store forwarded attachments or email content on our servers. We process them temporarily only to extract transactions. Replies are not monitored.";
@@ -60,11 +63,14 @@ function buildFollowupEmail(
     appTransactionsUrl,
     footerReason,
     didFail,
+    didSkipDuplicatesOnly,
   );
 
   return {
     subject: sanitizeSubject(
-      didFail
+      didSkipDuplicatesOnly
+        ? "This Moneko import was already logged"
+        : didFail
         ? "Moneko could not complete your import"
         : "Your Moneko import is complete",
     ),
@@ -84,18 +90,27 @@ function renderContent(
   attachmentLines: string,
   transactionLines: string,
   didFail: boolean,
+  didSkipDuplicatesOnly: boolean,
 ): string {
   return `
     <h1 class="title">${
-    didFail
+    didSkipDuplicatesOnly
+      ? "This import was already logged"
+      : didFail
       ? "Moneko could not complete your import"
       : "Your Moneko import is complete"
   }</h1>
     <p class="subtitle">${
-    didFail
+    didSkipDuplicatesOnly
+      ? "We found transaction content in the import forwarded from"
+      : didFail
       ? "We could not extract a transaction from the import content forwarded from"
       : "We finished processing the import content forwarded from"
-  } ${escapeHtml(params.senderEmail)}.</p>
+  } ${escapeHtml(params.senderEmail)}${
+    didSkipDuplicatesOnly
+      ? ", but it matched a transaction already logged in Moneko, so nothing new was saved."
+      : "."
+  }</p>
     ${renderOpenTransactionsButton(appTransactionsUrl)}
     ${renderImportSummary(params)}
     <p><strong>Import source summary</strong></p>
@@ -228,6 +243,7 @@ function buildTextEmail(
   appTransactionsUrl: string,
   footerReason: string,
   didFail: boolean,
+  didSkipDuplicatesOnly: boolean,
 ): string {
   const failureReasons = Array.from(
     new Set(
@@ -242,7 +258,9 @@ function buildTextEmail(
     }.`
     : "";
 
-  const statusText = didFail
+  const statusText = didSkipDuplicatesOnly
+    ? "Moneko skipped this duplicate import"
+    : didFail
     ? "Moneko could not complete the import"
     : "Moneko completed the import";
   return `${statusText} from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} Open transactions in Moneko: ${appTransactionsUrl}. ${footerReason} Contact ${config.supportEmail} if you need help.`;

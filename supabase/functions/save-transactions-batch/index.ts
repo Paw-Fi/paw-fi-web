@@ -75,6 +75,7 @@ interface TransactionItem {
   description?: string;
   merchant?: string;
   merchantId?: string;
+  merchantStructuredName?: string;
   breakdown?: string[];
   receiptImageUrl?: string;
   customSplits?: CustomSplits;
@@ -707,7 +708,10 @@ export async function saveTransactionsBatchInternal(
         ? tx.merchant.trim()
         : null,
       merchant_structured_name:
-        typeof tx.merchant === "string" && tx.merchant.trim().length > 0
+        typeof tx.merchantStructuredName === "string" &&
+          tx.merchantStructuredName.trim().length > 0
+          ? tx.merchantStructuredName.trim().slice(0, 255)
+          : typeof tx.merchant === "string" && tx.merchant.trim().length > 0
           ? tx.merchant.trim()
           : null,
       merchant_id: sanitizeUuid(tx.merchantId),
