@@ -102,7 +102,7 @@ export async function selectMerchantCandidateByRegionalContext(params: {
     merchantCountry,
     preferredTimezone,
   });
-  const candidates = params.candidates.slice(0, 20).flatMap((candidate) => {
+  const candidates = params.candidates.flatMap((candidate) => {
     const name = String(candidate.name ?? "").trim();
     const domain = canonicalCandidateDomain(candidate.domain);
     return name && domain ? [{ name, domain }] : [];
@@ -134,7 +134,8 @@ export async function selectMerchantCandidateByRegionalContext(params: {
     "When source country is absent, treat the caller's current timezone as the strongest regional reference.",
     "Compare full candidate names and domains semantically. Country-specific domains, regional brand labels, and whether a domain represents the retailer rather than an unrelated service are relevant.",
     "Do not use transaction currency as proof because currencies span countries; it is supporting context only.",
-    "When regional context is absent, select a candidate only when its full name and domain are a clear semantic match for the merchant text.",
+    "The merchant name itself is valid semantic evidence even when no domain was printed in the source.",
+    "When regional context is absent, select a candidate when its full name and domain are a clear semantic match for the merchant text.",
     "Never invent or rewrite a domain. Select exactly one supplied domain only when it clearly matches the merchant, using regional context when available.",
     "If the merchant text and supplied context cannot identify a candidate confidently, set hasConfidentMatch=false.",
     "Respond only by calling choose_merchant_candidate.",
@@ -180,5 +181,15 @@ export async function selectMerchantCandidateByRegionalContext(params: {
   const call = getGeminiFunctionCalls(response).find(
     (candidate: any) => candidate?.name === "choose_merchant_candidate",
   );
-  return resolveSelectedMerchantCandidate(candidates, call?.args);
+  const selection = call?.args;
+  console.log("[merchant-selection] model_result", {
+    merchant: params.merchant,
+    candidateCount: candidates.length,
+    hasFunctionCall: call != null,
+    hasConfidentMatch: selection?.hasConfidentMatch === true,
+    selectedDomain: typeof selection?.selectedDomain === "string"
+      ? selection.selectedDomain
+      : null,
+  });
+  return resolveSelectedMerchantCandidate(candidates, selection);
 }

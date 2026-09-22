@@ -90,7 +90,7 @@ interface RequestBody {
   description?: string; // Optional description/note
   merchant?: string; // Optional merchant/payee
   merchantId?: string;
-  merchantStructuredName?: string;
+  merchantStructuredName?: string | null;
   merchantEvidenceDescriptor?: string;
   merchantEvidenceAllowStructured?: boolean;
   breakdown?: string[]; // Optional receipt line items
@@ -188,8 +188,10 @@ Deno.serve(async (req: Request) => {
         ? body.merchant.trim()
         : null;
     const normalizedMerchantStructuredName =
-      typeof body.merchantStructuredName === "string" &&
-      body.merchantStructuredName.trim().length > 0
+      body.merchantStructuredName === null
+        ? null
+        : typeof body.merchantStructuredName === "string" &&
+            body.merchantStructuredName.trim().length > 0
         ? body.merchantStructuredName.trim().slice(0, 255)
         : normalizedMerchant;
     const normalizedIdempotencyKey = normalizeClientMutationKey(body);

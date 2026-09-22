@@ -277,12 +277,33 @@ export async function cachedLogoDevCandidates(params: {
     }
     return { candidates, cacheHit: false };
   } catch (error) {
-    await params.supabase.rpc("release_merchant_search_refresh", {
-      p_normalized_query: params.normalizedQuery,
-      p_provider: "logo_dev",
-      p_lease_token: leaseToken,
-    });
-    throw error;
+    try {
+      await params.supabase.rpc("release_merchant_search_refresh", {
+        p_normalized_query: params.normalizedQuery,
+        p_provider: "logo_dev",
+        p_lease_token: leaseToken,
+      });
+    } catch (releaseError) {
+      console.error(
+        "[merchant-resolution] failed to release Logo.dev search lease",
+        {
+          errorName: releaseError instanceof Error
+            ? releaseError.name
+            : "UnknownError",
+        },
+      );
+    }
+    console.warn(
+      "[merchant-resolution] Logo.dev search unavailable; continuing unresolved",
+      {
+        mode: params.mode,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        errorCode: typeof (error as { code?: unknown })?.code === "string"
+          ? (error as { code: string }).code
+          : null,
+      },
+    );
+    return { candidates: [], cacheHit: false };
   }
 }
 
@@ -438,18 +459,36 @@ export async function resolveMerchant(params: {
   ) {
     return { ...internal, candidates: [], cacheHit: false };
   }
-  const discovery = await cachedLogoDevCandidates({
-    supabase: params.supabase,
-    normalizedQuery: params.safeDiscoveryQuery,
-    mode: params.input.mode,
-    beforeExternalFetch: params.beforeExternalFetch,
-    fetchCandidates: params.discover,
-  });
-  return {
-    ...internal,
-    candidates: discovery.candidates,
-    cacheHit: discovery.cacheHit,
-  };
+  try {
+    const discovery = await cachedLogoDevCandidates({
+      supabase: params.supabase,
+      normalizedQuery: params.safeDiscoveryQuery,
+      mode: params.input.mode,
+      beforeExternalFetch: params.beforeExternalFetch,
+      fetchCandidates: params.discover,
+    });
+    return {
+      ...internal,
+      candidates: discovery.candidates,
+      cacheHit: discovery.cacheHit,
+    };
+  } catch (error) {
+    console.warn(
+      "[merchant-resolution] Logo.dev discovery unavailable; continuing unresolved",
+      {
+        mode: params.input.mode,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+        errorCode: typeof (error as { code?: unknown })?.code === "string"
+          ? (error as { code: string }).code
+          : null,
+      },
+    );
+    return {
+      ...internal,
+      candidates: [],
+      cacheHit: false,
+    };
+  }
 }
 
 /** Idempotent canonical-domain writer. Callers own evidence provenance. */

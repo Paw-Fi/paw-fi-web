@@ -124,7 +124,6 @@ export async function enrichAnalyzedMerchantItems(params: {
       if (
         !canonicalMerchant &&
         !evidencedDomain &&
-        itemIndex < 5 &&
         resolution.candidates.length > 0 &&
         (params.autoResolveCandidates === true ||
           (resolution.candidates.length > 1 &&
@@ -144,6 +143,13 @@ export async function enrichAnalyzedMerchantItems(params: {
             ...(params.autoResolveCandidates === true
               ? { timeoutMs: 5_000 }
               : {}),
+          });
+          console.log("[merchant-enrichment] candidate_selection_result", {
+            itemIndex,
+            merchant,
+            candidateCount: resolution.candidates.length,
+            selected: selected != null,
+            selectedDomain: selected?.domain ?? null,
           });
           if (selected) {
             const { data: normalizedName, error: normalizedNameError } =
@@ -166,6 +172,18 @@ export async function enrichAnalyzedMerchantItems(params: {
                 resolutionSource: "logo_dev_search",
                 confidence: 0.75,
               });
+            } else {
+              console.warn(
+                "[merchant-enrichment] candidate_normalization_failed",
+                {
+                  itemIndex,
+                  merchant,
+                  selectedDomain: selected.domain,
+                  hasNormalizedName: typeof normalizedName === "string" &&
+                    normalizedName.length > 0,
+                  hasError: Boolean(normalizedNameError),
+                },
+              );
             }
           }
         } catch (error) {
