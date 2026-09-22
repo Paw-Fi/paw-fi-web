@@ -8,13 +8,14 @@
  * Responsibilities:
  *   1. Authenticate caller (JWT or internal secret)
  *   2. Validate + normalize payload
- *   3. Categorize via Gemini AI (same approach as analyze-expense)
- *   4. Resolve category using the SAME pipeline as analyze-expense
- *   5. Deduplicate (fingerprint-based, recent window)
- *   6. Save expense row
- *   7. Handle household splits when applicable
- *   8. Learn category preference for future captures
- *   9. Return saved row or duplicate result
+ *   3. Deduplicate (fingerprint-based, recent window)
+ *   4. Categorize via Gemini AI (same approach as analyze-expense)
+ *   5. Resolve category using the SAME pipeline as analyze-expense
+ *   6. Resolve merchant identity using the SAME pipeline as analyze-expense
+ *   7. Save expense row
+ *   8. Handle household splits when applicable
+ *   9. Learn category preference for future captures
+ *  10. Return saved row or duplicate result
  */
 
 import { corsHeaders } from "../shared/cors.ts";
@@ -69,12 +70,18 @@ import {
 } from "../shared/vertex-ai-chat.ts";
 import { normalizePreferredCurrency } from "../shared/user-preferred-currency.ts";
 import {
+  type AnalyzedMerchantIdentity,
+  resolveAnalyzedMerchantIdentity,
+} from "../shared/merchant-analysis.ts";
+import {
   hasPlusEntitlement,
   jsonSubscriptionRequired,
   loadLatestSubscriptionForUser,
 } from "../shared/plus-entitlement.ts";
 import { resolveFinancialPeriodRangeForUser } from "../shared/budgets-helpers.ts";
 import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
+import { getGeminiFunctionCalls } from "../shared/gemini-function-calls.ts";
+import { runWithTimeout } from "../shared/async-timeout.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -94,6 +101,7 @@ const CATEGORIZE_FUNCTION_CALLING_CONFIG = {
 const IDEMPOTENCY_PROCESSING_TTL_MS = 10 * 60 * 1000;
 const IDEMPOTENCY_KEY_TTL_HOURS = 24;
 const GEMINI_CATEGORIZATION_MODELS = GEMINI_MODEL_FALLBACKS;
+const WALLET_CATEGORIZATION_TIMEOUT_MS = 6_000;
 
 type GenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
 const GEMINI_RETRY_DELAYS_MS = [300] as const;
@@ -1558,36 +1566,6 @@ function requireWalletCaptureClaimId(claimId: string | null): string {
 // ─── Gemini AI helpers (adapted from analyze-core.ts) ───────────────────────
 
 /**
- * Extract function calls from a Gemini response.
- * Mirrors the getFunctionCalls pattern in analyze-core.ts (line 1489).
- */
-function getFunctionCalls(response: any): any[] {
-  const direct = response?.response?.functionCalls?.();
-  const calls: any[] = Array.isArray(direct) ? [...direct] : [];
-  const candidates = response?.response?.candidates;
-  if (Array.isArray(candidates)) {
-    for (const candidate of candidates) {
-      const parts = candidate?.content?.parts || [];
-      for (const part of parts) {
-        if (part?.functionCall) calls.push(part.functionCall);
-      }
-    }
-  }
-
-  if (calls.length <= 1) return calls;
-
-  const deduped: any[] = [];
-  const seen = new Set<string>();
-  for (const call of calls) {
-    const key = `${call?.name ?? ""}:${JSON.stringify(call?.args ?? {})}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    deduped.push(call);
-  }
-  return deduped;
-}
-
-/**
  * Use Gemini AI to categorize a single wallet transaction.
  * Adapted from `resolveCandidateCategories` in analyze-core.ts (line 1119).
  *
@@ -1605,6 +1583,7 @@ async function categorizeWithAI(params: {
   incomeCategories: string[];
   redactFailureContext?: boolean;
 }): Promise<string> {
+  const deadline = Date.now() + WALLET_CATEGORIZATION_TIMEOUT_MS;
   try {
     const {
       genAI,
@@ -1687,7 +1666,15 @@ Transactions:
           attempt++
         ) {
           try {
-            response = await model.generateContent(request);
+            const remainingMs = deadline - Date.now();
+            if (remainingMs <= 0) {
+              throw new Error("Wallet categorization timed out");
+            }
+            response = await runWithTimeout({
+              operation: () => model.generateContent(request),
+              timeoutMs: remainingMs,
+              timeoutMessage: "Wallet categorization timed out",
+            });
             break;
           } catch (error) {
             const retryable = isRetryableGeminiError(error);
@@ -1705,7 +1692,7 @@ Transactions:
           }
         }
 
-        const toolCalls = getFunctionCalls(response).filter(
+        const toolCalls = getGeminiFunctionCalls(response).filter(
           (call: any) => call && call.name === "categorize_transactions",
         );
 
@@ -2595,6 +2582,37 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Deduplication claims have already succeeded above, so retries and known
+    // duplicates do not consume merchant-search quota. Resolve only the
+    // explicit semantic merchant. Notification/statement text
+    // remains raw evidence and must never be sent to merchant discovery as a
+    // guessed business name. Failures are non-blocking so optional logo
+    // enrichment can never prevent an otherwise valid capture from saving.
+    let resolvedMerchantIdentity: AnalyzedMerchantIdentity | null = null;
+    if (structuredMerchantForStorage) {
+      try {
+        const candidateIdentity = await resolveAnalyzedMerchantIdentity({
+          merchant: structuredMerchantForStorage,
+          currency,
+          supabase,
+          userId,
+          logoDevSecretKey: readRuntimeEnv("LOGO_DEV_SECRET_KEY") ?? "",
+          preferredTimezone: preferredTimezone ?? undefined,
+        });
+        const merchantId = sanitizeUuid(candidateIdentity?.merchantId);
+        resolvedMerchantIdentity = candidateIdentity && merchantId
+          ? { ...candidateIdentity, merchantId }
+          : null;
+      } catch (_) {
+        console.warn(
+          "[save-wallet-transaction] Optional merchant enrichment failed; continuing without canonical identity",
+          captureSource === "android_notification_listener"
+            ? { captureSource, redacted: true }
+            : { captureSource },
+        );
+      }
+    }
+
     // ── Save transaction ──────────────────────────────────────────────
     // Build the complete split before the parent exists. A required split is
     // committed by one database RPC, so no observer can see a parent-only row.
@@ -2609,7 +2627,12 @@ Deno.serve(async (req: Request) => {
       date: normalizedDate,
       raw_text: description,
       merchant: merchantForStorage,
-      merchant_structured_name: structuredMerchantForStorage,
+      merchant_structured_name:
+        resolvedMerchantIdentity?.merchantStructuredName ??
+          structuredMerchantForStorage,
+      ...(resolvedMerchantIdentity
+        ? { merchant_id: resolvedMerchantIdentity.merchantId }
+        : {}),
       currency,
       breakdown: null,
       receipt_image_url: null,
@@ -2675,7 +2698,7 @@ Deno.serve(async (req: Request) => {
         .insert(transactionRecord)
         .select()
         .single();
-    const expense = atomicResult == null
+    let expense = atomicResult == null
       ? insertedTransaction
       : (insertedTransaction as Record<string, unknown>)?.expense;
 
@@ -2740,6 +2763,45 @@ Deno.serve(async (req: Request) => {
       );
       await releaseWalletCaptureIdempotencyClaim(supabase, idempotencyClaimId);
       return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
+    }
+
+    // The established household RPC predates canonical merchant fields and may
+    // omit them from its explicit insert payload. Enrich the already committed
+    // parent best-effort; split creation remains unchanged and authoritative.
+    if (
+      atomicResult != null &&
+      (resolvedMerchantIdentity || structuredMerchantForStorage) &&
+      (expense?.merchant_id !== resolvedMerchantIdentity?.merchantId ||
+        expense?.merchant_structured_name !==
+          (resolvedMerchantIdentity?.merchantStructuredName ??
+            structuredMerchantForStorage))
+    ) {
+      const identityPatch = {
+        merchant_structured_name:
+          resolvedMerchantIdentity?.merchantStructuredName ??
+            structuredMerchantForStorage,
+        ...(resolvedMerchantIdentity
+          ? { merchant_id: resolvedMerchantIdentity.merchantId }
+          : {}),
+      };
+      const { data: enrichedExpense, error: identityUpdateError } =
+        await supabase
+          .from("expenses")
+          .update(identityPatch)
+          .eq("id", transactionId)
+          .eq("user_id", userId)
+          .select()
+          .maybeSingle();
+      if (identityUpdateError) {
+        console.warn(
+          "[save-wallet-transaction] Optional household merchant identity update failed; capture remains saved",
+          captureSource === "android_notification_listener"
+            ? { captureSource, redacted: true }
+            : { captureSource },
+        );
+      } else if (enrichedExpense) {
+        expense = enrichedExpense;
+      }
     }
 
     if (captureSource !== "android_notification_listener") {

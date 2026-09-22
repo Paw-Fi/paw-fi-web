@@ -7,12 +7,14 @@ import { type LogoDevCandidate } from "./merchant-resolution.ts";
 export async function searchLogoDevCandidates(
   query: string,
   secretKey: string,
+  timeoutMs = 8_000,
 ): Promise<LogoDevCandidate[]> {
   const url = new URL("https://api.logo.dev/search");
   url.searchParams.set("q", query);
   url.searchParams.set("strategy", "match");
   const result = await fetch(url, {
     headers: { Authorization: `Bearer ${secretKey}` },
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!result.ok) throw new Error(`LOGO_DEV_${result.status}`);
   const payload = await result.json();

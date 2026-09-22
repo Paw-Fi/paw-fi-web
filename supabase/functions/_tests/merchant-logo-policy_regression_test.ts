@@ -8,6 +8,7 @@ import {
 import {
   enrichAnalyzedMerchantItems,
   preserveAnalyzedMerchantIdentity,
+  resolveAnalyzedMerchantIdentity,
 } from "../shared/analyzed-merchant-enrichment.ts";
 
 const backgroundSources = await Promise.all(
@@ -47,6 +48,21 @@ const analyze = await Deno.readTextFile(
 const analyzedMerchantEnrichment = await Deno.readTextFile(
   new URL("../shared/analyzed-merchant-enrichment.ts", import.meta.url),
 );
+const merchantAnalysis = await Deno.readTextFile(
+  new URL("../shared/merchant-analysis.ts", import.meta.url),
+);
+const walletCapture = await Deno.readTextFile(
+  new URL("../save-wallet-transaction/index.ts", import.meta.url),
+);
+const resendInbound = await Deno.readTextFile(
+  new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+);
+const notificationCapture = await Deno.readTextFile(
+  new URL("../classify-notification-capture/index.ts", import.meta.url),
+);
+const botMedia = await Deno.readTextFile(
+  new URL("../shared/bot/media-utils.ts", import.meta.url),
+);
 
 Deno.test("background transaction paths cannot call Logo.dev Search", () => {
   for (const { path, source } of backgroundSources) {
@@ -69,24 +85,25 @@ Deno.test("stream and non-stream Analyze share merchant enrichment", () => {
   assertStringIncludes(analyze, '.select("preferred_timezone")');
   assertStringIncludes(analyze, "body.preferredTimezone");
   assertStringIncludes(
-    analyzedMerchantEnrichment,
+    merchantAnalysis,
     "merchantDomain: evidencedDomain",
   );
   assertStringIncludes(
-    analyzedMerchantEnrichment,
+    merchantAnalysis,
     "selectMerchantCandidateByRegionalContext",
   );
-  assertStringIncludes(analyzedMerchantEnrichment, "persistCanonicalMerchant");
+  assertStringIncludes(merchantAnalysis, "persistCanonicalMerchant");
   assertStringIncludes(
-    analyzedMerchantEnrichment,
+    merchantAnalysis,
     'resolutionSource: "logo_dev_search"',
   );
   assertStringIncludes(
-    analyzedMerchantEnrichment,
-    "searchLogoDevCandidates(merchant, params.logoDevSecretKey!)",
+    merchantAnalysis,
+    "params.autoResolveCandidates === true ? 4_000 : 8_000",
   );
+  assertStringIncludes(discovery, "signal: AbortSignal.timeout(timeoutMs)");
   assert(
-    !analyzedMerchantEnrichment.includes(
+    !merchantAnalysis.includes(
       "if (evidencedDomain) {\n          const automaticMerchant",
     ),
   );
@@ -96,21 +113,21 @@ Deno.test(
   "internal merchant hits return canonical domain for optimistic rows",
   async () => {
     assertStringIncludes(
-      analyzedMerchantEnrichment,
+      merchantAnalysis,
       '.select("id, canonical_name, domain")',
     );
-    assertStringIncludes(analyzedMerchantEnrichment, "resolution.merchantId");
+    assertStringIncludes(merchantAnalysis, "resolution.merchantId");
     assertStringIncludes(
-      analyzedMerchantEnrichment,
+      merchantAnalysis,
       "merchant_domain: canonicalMerchant.domain",
     );
     assertStringIncludes(
-      analyzedMerchantEnrichment,
+      merchantAnalysis,
       "merchant_structured_name: canonicalMerchant.canonical_name",
     );
 
     const supabase = {
-      rpc: async (name: string) => {
+      rpc: (name: string) => {
         assertEquals(name, "merchant_resolution_descriptor_key");
         return { data: "tesco", error: null };
       },
@@ -118,7 +135,7 @@ Deno.test(
         const query = {
           select: (_columns: string) => query,
           eq: (_column: string, _value: unknown) => query,
-          maybeSingle: async () => {
+          maybeSingle: () => {
             if (table === "merchant_user_overrides") {
               return {
                 data: {
@@ -161,6 +178,189 @@ Deno.test(
     ]);
   },
 );
+
+Deno.test(
+  "single semantic merchant resolution reuses Analyze Expense enrichment",
+  async () => {
+    const supabase = {
+      rpc: (name: string) => {
+        assertEquals(name, "merchant_resolution_descriptor_key");
+        return { data: "tesco", error: null };
+      },
+      from: (table: string) => {
+        const query = {
+          select: (_columns: string) => query,
+          eq: (_column: string, _value: unknown) => query,
+          maybeSingle: () => {
+            if (table === "merchant_user_overrides") {
+              return {
+                data: {
+                  merchant_id: "4d055fac-88b0-4750-b606-92f37c008975",
+                  action: "map",
+                },
+                error: null,
+              };
+            }
+            assertEquals(table, "merchants");
+            return {
+              data: {
+                id: "4d055fac-88b0-4750-b606-92f37c008975",
+                canonical_name: "Tesco",
+                domain: "tesco.com",
+              },
+              error: null,
+            };
+          },
+        };
+        return query;
+      },
+    };
+
+    const result = await resolveAnalyzedMerchantIdentity({
+      merchant: " tesco ",
+      currency: "EUR",
+      supabase,
+      userId: "4f42e85a-4637-41fb-8fc5-f81933c83861",
+    });
+
+    assertEquals(result, {
+      merchantId: "4d055fac-88b0-4750-b606-92f37c008975",
+      merchantDomain: "tesco.com",
+      merchantStructuredName: "Tesco",
+      merchantResolutionSource: "user_exact",
+    });
+  },
+);
+
+Deno.test(
+  "headless wallet enrichment AI-verifies and persists a single cached Logo.dev candidate",
+  async () => {
+    const merchantId = "4d055fac-88b0-4750-b606-92f37c008975";
+    const candidate = { name: "Tesco Ireland", domain: "tesco.ie" };
+    const supabase = {
+      rpc: (
+        name: string,
+        args: Record<string, unknown>,
+      ) => {
+        assertEquals(name, "merchant_resolution_descriptor_key");
+        return {
+          data: args.p_merchant === candidate.name ? "tesco ireland" : "tesco",
+          error: null,
+        };
+      },
+      from: (table: string) => {
+        let inserted = false;
+        const query = {
+          select: (_columns: string) => query,
+          eq: (_column: string, _value: unknown) => query,
+          gt: (_column: string, _value: unknown) => query,
+          limit: (_count: number) => ({ data: [], error: null }),
+          insert: (_value: unknown) => {
+            inserted = true;
+            return query;
+          },
+          maybeSingle: () => {
+            if (table === "merchant_search_cache") {
+              return { data: { candidates: [candidate] }, error: null };
+            }
+            if (table === "merchants" && inserted) {
+              return {
+                data: {
+                  id: merchantId,
+                  canonical_name: candidate.name,
+                  domain: candidate.domain,
+                },
+                error: null,
+              };
+            }
+            return { data: null, error: null };
+          },
+        };
+        return query;
+      },
+    };
+
+    const result = await resolveAnalyzedMerchantIdentity({
+      merchant: "Tesco",
+      currency: "EUR",
+      supabase,
+      userId: "4f42e85a-4637-41fb-8fc5-f81933c83861",
+      logoDevSecretKey: "test-key",
+      dependencies: {
+        selectCandidate: async (params) => {
+          assertEquals(params.merchant, "Tesco");
+          assertEquals(params.candidates, [candidate]);
+          assertEquals(params.timeoutMs, 5_000);
+          return candidate;
+        },
+      },
+    });
+
+    assertEquals(result, {
+      merchantId,
+      merchantDomain: candidate.domain,
+      merchantStructuredName: candidate.name,
+      merchantResolutionSource: "headless_ai_candidate",
+    });
+  },
+);
+
+Deno.test(
+  "wallet captures share merchant enrichment without risking transaction save",
+  () => {
+    assertStringIncludes(
+      walletCapture,
+      '"../shared/merchant-analysis.ts"',
+    );
+    assert(!merchantAnalysis.includes('from("./analyze-core.ts")'));
+    assertStringIncludes(
+      walletCapture,
+      "await resolveAnalyzedMerchantIdentity({",
+    );
+    assertStringIncludes(merchantAnalysis, "autoResolveCandidates: true");
+    assertStringIncludes(
+      walletCapture,
+      'logoDevSecretKey: readRuntimeEnv("LOGO_DEV_SECRET_KEY") ?? ""',
+    );
+    assertStringIncludes(
+      walletCapture,
+      "merchant: structuredMerchantForStorage",
+    );
+    assertStringIncludes(
+      walletCapture,
+      "merchant: merchantForStorage,",
+    );
+    assertStringIncludes(
+      walletCapture,
+      "Optional merchant enrichment failed; continuing without canonical identity",
+    );
+    assertStringIncludes(
+      walletCapture,
+      "WALLET_CATEGORIZATION_TIMEOUT_MS = 6_000",
+    );
+    assertStringIncludes(walletCapture, "await runWithTimeout({");
+    assertStringIncludes(
+      walletCapture,
+      "capture remains saved",
+    );
+    assertStringIncludes(
+      walletCapture,
+      "merchant_id: resolvedMerchantIdentity.merchantId",
+    );
+    assertStringIncludes(
+      walletCapture,
+      "resolvedMerchantIdentity || structuredMerchantForStorage",
+    );
+  },
+);
+
+Deno.test("transaction analyzers converge on shared merchant enrichment", () => {
+  assertStringIncludes(analyze, "runEnrichedTransactionAnalysis");
+  assertStringIncludes(resendInbound, "runEnrichedTransactionAnalysis");
+  assertStringIncludes(botMedia, "runEnrichedTransactionAnalysis");
+  assertStringIncludes(walletCapture, "resolveAnalyzedMerchantIdentity");
+  assertStringIncludes(notificationCapture, "save-wallet-transaction");
+});
 
 Deno.test("email currency repair preserves canonical merchant identity", () => {
   const merchantId = "4d055fac-88b0-4750-b606-92f37c008975";
