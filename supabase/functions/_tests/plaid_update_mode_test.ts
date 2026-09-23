@@ -6,15 +6,19 @@ import {
   findMissingPlaidSelectedAccountIds,
   normalizePlaidSelectedAccountIds,
   PLAID_NEW_ACCOUNTS_RELINK_STATE,
+  PLAID_NO_ACCOUNTS_RELINK_STATE,
   PLAID_REQUIRED_RELINK_STATE,
+  requiresPlaidAccountSelectionForRelinkState,
   requiresPlaidPublicTokenExchange,
+  requiresPlaidRelinkForError,
+  resolvePlaidRelinkStateForError,
   resolvePlaidAccountsToDisableAfterUpdate,
   shouldEnablePlaidAccountSelection,
   shouldRunPlaidNewLinkDuplicateChecks,
 } from "../shared/plaid-update-mode.ts";
 
 Deno.test(
-  "plaid update mode enables account selection only for US/CA new-account prompts",
+  "plaid update mode enables account selection only for supported account-selection repairs",
   () => {
     assertEquals(
       shouldEnablePlaidAccountSelection({
@@ -37,8 +41,43 @@ Deno.test(
       }),
       false,
     );
+    assertEquals(
+      shouldEnablePlaidAccountSelection({
+        countryCode: "CA",
+        relinkState: PLAID_NO_ACCOUNTS_RELINK_STATE,
+      }),
+      true,
+    );
+    assertEquals(
+      shouldEnablePlaidAccountSelection({
+        countryCode: "GB",
+        relinkState: PLAID_NO_ACCOUNTS_RELINK_STATE,
+      }),
+      false,
+    );
   },
 );
+
+Deno.test("Plaid NO_ACCOUNTS requires account-selection repair", () => {
+  assertEquals(requiresPlaidRelinkForError("NO_ACCOUNTS"), true);
+  assertEquals(
+    requiresPlaidAccountSelectionForRelinkState(PLAID_NO_ACCOUNTS_RELINK_STATE),
+    true,
+  );
+  assertEquals(
+    requiresPlaidAccountSelectionForRelinkState(PLAID_REQUIRED_RELINK_STATE),
+    false,
+  );
+  assertEquals(
+    resolvePlaidRelinkStateForError("NO_ACCOUNTS"),
+    PLAID_NO_ACCOUNTS_RELINK_STATE,
+  );
+  assertEquals(
+    resolvePlaidRelinkStateForError("ITEM_LOGIN_REQUIRED"),
+    PLAID_REQUIRED_RELINK_STATE,
+  );
+  assertEquals(resolvePlaidRelinkStateForError("INVALID_CURSOR"), null);
+});
 
 Deno.test("plaid update mode classifies missing webhook handlers", () => {
   assertEquals(
@@ -68,6 +107,19 @@ Deno.test("plaid update mode classifies missing webhook handlers", () => {
       itemStatus: "active",
       itemHealthState: "healthy",
       relinkState: PLAID_NEW_ACCOUNTS_RELINK_STATE,
+    },
+  );
+  assertEquals(
+    classifyPlaidItemWebhook({
+      webhookCode: "ERROR",
+      errorCode: "NO_ACCOUNTS",
+    }),
+    {
+      shouldEnqueueSync: false,
+      status: "needs_reauth",
+      itemStatus: "pending_relink",
+      itemHealthState: "unhealthy",
+      relinkState: PLAID_NO_ACCOUNTS_RELINK_STATE,
     },
   );
 });

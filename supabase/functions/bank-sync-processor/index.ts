@@ -305,6 +305,8 @@ Deno.serve(async (req) => {
           connection.removed_at != null ||
           connection.status === "disabled" ||
           connection.status === "disconnected" ||
+          connection.status === "needs_reauth" ||
+          connection.item_status === "pending_relink" ||
           connection.item_status === "pending_removal"
         ) {
           console.log(

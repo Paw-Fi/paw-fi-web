@@ -18,6 +18,18 @@ const processorSourceUrl = new URL(
   "../bank-sync-processor/index.ts",
   import.meta.url,
 );
+const createLinkTokenSourceUrl = new URL(
+  "../plaid-create-link-token/index.ts",
+  import.meta.url,
+);
+const itemControlSourceUrl = new URL(
+  "../plaid-item-control/index.ts",
+  import.meta.url,
+);
+const noAccountsMigrationUrl = new URL(
+  "../../migrations/20260923130000_classify_plaid_no_accounts_for_repair.sql",
+  import.meta.url,
+);
 
 Deno.test(
   "disabled Plaid accounts consume deltas without new inserts",
@@ -97,3 +109,40 @@ Deno.test("Plaid processor backfills missed webhook syncs", async () => {
   assertStringIncludes(source, "last_successful_sync_at");
   assertStringIncludes(source, 'status: "completed"');
 });
+
+Deno.test(
+  "Plaid NO_ACCOUNTS hands off to account selection without retries",
+  async () => {
+    const syncSource = await Deno.readTextFile(syncSourceUrl);
+    const processorSource = await Deno.readTextFile(processorSourceUrl);
+    const createLinkTokenSource = await Deno.readTextFile(
+      createLinkTokenSourceUrl,
+    );
+    const itemControlSource = await Deno.readTextFile(itemControlSourceUrl);
+    const migrationSource = await Deno.readTextFile(noAccountsMigrationUrl);
+
+    assertStringIncludes(syncSource, "resolvePlaidRelinkStateForError");
+    assertStringIncludes(syncSource, "PLAID_NO_ACCOUNTS_RELINK_STATE");
+    assertStringIncludes(syncSource, "if (relinkUpdateError) throw");
+    assertStringIncludes(processorSource, "isPlaidSyncTerminalHandoffError");
+    assertStringIncludes(processorSource, "requiresPlaidRelinkForError");
+    assertStringIncludes(
+      processorSource,
+      'connection.status === "needs_reauth"',
+    );
+    assertStringIncludes(
+      processorSource,
+      'connection.item_status === "pending_relink"',
+    );
+    assertStringIncludes(
+      createLinkTokenSource,
+      "shouldEnablePlaidAccountSelection",
+    );
+    assertStringIncludes(
+      itemControlSource,
+      "requiresPlaidAccountSelectionForRelinkState",
+    );
+    assertStringIncludes(migrationSource, "upper(coalesce(error_code, ''))");
+    assertStringIncludes(migrationSource, "relink_state = 'no_accounts'");
+  },
+);

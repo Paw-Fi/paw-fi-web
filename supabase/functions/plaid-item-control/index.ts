@@ -21,6 +21,7 @@ import { removePlaidConnection } from "../shared/plaid-remove.ts";
 import {
   findMissingPlaidSelectedAccountIds,
   normalizePlaidSelectedAccountIds,
+  requiresPlaidAccountSelectionForRelinkState,
   resolvePlaidAccountsToDisableAfterUpdate,
 } from "../shared/plaid-update-mode.ts";
 import {
@@ -244,8 +245,8 @@ Deno.serve(async (req) => {
               retryable: true,
               debugId,
               scheduledRemovalAt: removalState.scheduled_removal_at ?? null,
-              errorCode: removalState.error_code ??
-                "PLAID_REMOVE_RETRY_PENDING",
+              errorCode:
+                removalState.error_code ?? "PLAID_REMOVE_RETRY_PENDING",
               message:
                 "Bank disconnect is queued. Plaid removal is usually immediate once accepted; if cleanup is still pending, Moneko retries about every 15 minutes.",
             }),
@@ -348,7 +349,7 @@ Deno.serve(async (req) => {
         body.selectedAccounts,
       );
       const requiresAccountSelection =
-        connection.relink_state === "new_accounts_available";
+        requiresPlaidAccountSelectionForRelinkState(connection.relink_state);
       if (requiresAccountSelection && selectedAccountIds.length === 0) {
         return new Response(
           JSON.stringify({ error: "selectedAccounts is required" }),
@@ -390,18 +391,20 @@ Deno.serve(async (req) => {
         connection.metadata && typeof connection.metadata === "object"
           ? (connection.metadata as Record<string, unknown>)
           : {};
-      let institutionLogoUrl = typeof metadata.institution_logo_url === "string"
-        ? metadata.institution_logo_url.trim() || null
-        : null;
+      let institutionLogoUrl =
+        typeof metadata.institution_logo_url === "string"
+          ? metadata.institution_logo_url.trim() || null
+          : null;
       let institutionPrimaryColor =
         typeof metadata.institution_primary_color === "string"
           ? metadata.institution_primary_color.trim() || null
           : null;
-      const metadataInstitutionId = typeof metadata.institution_id === "string"
-        ? metadata.institution_id.trim() || null
-        : null;
-      const resolvedInstitutionId = body.institutionId?.trim() ||
-        metadataInstitutionId;
+      const metadataInstitutionId =
+        typeof metadata.institution_id === "string"
+          ? metadata.institution_id.trim() || null
+          : null;
+      const resolvedInstitutionId =
+        body.institutionId?.trim() || metadataInstitutionId;
       if (
         (!institutionLogoUrl || !institutionPrimaryColor) &&
         resolvedInstitutionId
@@ -414,17 +417,18 @@ Deno.serve(async (req) => {
             countryCode: connection.country_code,
           });
           institutionLogoUrl = storedLogo?.publicUrl ?? null;
-          institutionPrimaryColor = storedLogo?.primaryColor ??
-            institutionPrimaryColor;
+          institutionPrimaryColor =
+            storedLogo?.primaryColor ?? institutionPrimaryColor;
         } catch (logoError) {
           console.warn(
             "[plaid-item-control] Failed to fetch/store institution logo",
             JSON.stringify({
               connectionId: connection.id,
               institutionId: resolvedInstitutionId,
-              error: logoError instanceof Error
-                ? logoError.message
-                : String(logoError),
+              error:
+                logoError instanceof Error
+                  ? logoError.message
+                  : String(logoError),
             }),
           );
           await reportEdgeFunctionError({
@@ -449,11 +453,11 @@ Deno.serve(async (req) => {
         effectiveSelectedAccountIds.length === 0
       ) {
         const metadataAccountIds = Array.isArray(
-            metadata.plaid_selected_account_ids,
-          )
+          metadata.plaid_selected_account_ids,
+        )
           ? metadata.plaid_selected_account_ids
-            .map((value) => String(value || "").trim())
-            .filter(Boolean)
+              .map((value) => String(value || "").trim())
+              .filter(Boolean)
           : [];
         if (metadataAccountIds.length > 0) {
           effectiveSelectedAccountIds = Array.from(
@@ -479,7 +483,7 @@ Deno.serve(async (req) => {
                     account.provider_account_id ||
                       account.plaid_account_id ||
                       "",
-                  ).trim()
+                  ).trim(),
                 )
                 .filter(Boolean),
             ),
@@ -487,7 +491,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      const encryptedToken = connection.access_token_encrypted ||
+      const encryptedToken =
+        connection.access_token_encrypted ||
         connection.plaid_access_token_encrypted;
       if (!encryptedToken) {
         return new Response(
@@ -517,23 +522,24 @@ Deno.serve(async (req) => {
         .map((account) =>
           String(
             account.provider_account_id || account.plaid_account_id || "",
-          ).trim()
+          ).trim(),
         )
         .filter(Boolean);
       const accounts = await getPlaidAccounts(accessToken);
-      const accountsToUpsert = effectiveSelectedAccountIds.length > 0
-        ? accounts.filter((account) =>
-          effectiveSelectedAccountIds.includes(account.account_id)
-        )
-        : accounts;
+      const accountsToUpsert =
+        effectiveSelectedAccountIds.length > 0
+          ? accounts.filter((account) =>
+              effectiveSelectedAccountIds.includes(account.account_id),
+            )
+          : accounts;
       const returnedAccountIds = accountsToUpsert
         .map((account) => account.account_id?.trim())
         .filter((accountId): accountId is string => Boolean(accountId));
       const missingSelectedAccountIds = requiresAccountSelection
         ? findMissingPlaidSelectedAccountIds({
-          selectedAccountIds: effectiveSelectedAccountIds,
-          returnedAccountIds,
-        })
+            selectedAccountIds: effectiveSelectedAccountIds,
+            returnedAccountIds,
+          })
         : [];
 
       if (missingSelectedAccountIds.length > 0) {
@@ -582,8 +588,8 @@ Deno.serve(async (req) => {
         plaid_selected_account_ids: effectiveSelectedAccountIds,
         plaid_disabled_account_ids: accountIdsToDisable,
         institution_id: resolvedInstitutionId,
-        institution_name: body.institutionName || metadata.institution_name ||
-          null,
+        institution_name:
+          body.institutionName || metadata.institution_name || null,
         ...(institutionLogoUrl
           ? { institution_logo_url: institutionLogoUrl }
           : {}),
@@ -597,8 +603,8 @@ Deno.serve(async (req) => {
         targetHouseholdId: connectionHouseholdId,
         bankAccountIds: preparedAccounts.records.map((record) => record.id),
       });
-      const { data: completionResult, error: completionError } = await supabase
-        .rpc("complete_plaid_update_mode_v2", {
+      const { data: completionResult, error: completionError } =
+        await supabase.rpc("complete_plaid_update_mode_v2", {
           p_actor_user_id: authResult.userId,
           p_connection_id: connection.id,
           p_link_session_id: updateSession.id,
@@ -708,7 +714,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const encryptedToken = connection.access_token_encrypted ||
+    const encryptedToken =
+      connection.access_token_encrypted ||
       connection.plaid_access_token_encrypted;
     if (!encryptedToken) {
       const { error: releaseError } = await supabase.rpc(

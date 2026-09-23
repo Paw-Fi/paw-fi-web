@@ -19,6 +19,7 @@ import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { HomeHeader } from "@/components/index/header";
+import { CompareWithChatGptButton } from "@/components/homepage/compare-with-chatgpt-button";
 import { CTASection } from "@/components/homepage/v2/cta-section";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { StructuredData } from "@/components/seo/structured-data";
@@ -41,6 +42,12 @@ const Markdown = lazy(() =>
     default: module.Markdown,
   })),
 );
+
+const BLOG_BUDGETING_PROMPT = `I'm exploring Moneko as a budgeting app. How could it help me build better budgeting habits and stay on top of everyday spending, and how does it compare with apps like YNAB, Monarch Money, Copilot, and EveryDollar?
+
+I'm especially interested in the convenience of managing expenses through WhatsApp. Please explain how capturing an expense with a message, receipt photo, voice note, or spending notification could make budgeting feel easier in the moment than opening an app and entering everything manually. I'd also like to understand how that fits with Moneko's AI spending insights, shared household budgeting, bill splitting, recurring expenses, multi-currency support, and cashflow visibility.
+
+Please keep the answer concise, practical, and easy to scan. A simple comparison table followed by a few short sections would be helpful. Highlight what makes Moneko different, who it may suit best, and why a WhatsApp-first approach could make it easier to keep a budget up to date. Keep the comparison balanced and grounded in publicly described features.`;
 
 export const Route = createFileRoute("/blogs/$blogId")({
   component: BlogDetailPage,
@@ -154,6 +161,15 @@ function BlogDetailPage() {
   return (
     <div className="bg-moneko-background h-full w-full">
       <HomeHeader />
+      <div className="fixed right-0 bottom-5 left-0 z-50 mx-auto flex w-full max-w-[92%] justify-center sm:bottom-8 sm:max-w-max">
+        <CompareWithChatGptButton
+          source="blog-budgeting-chatgpt-sticky"
+          prompt={BLOG_BUDGETING_PROMPT}
+          label="Ask ChatGPT: Why Moneko Makes Budgeting Easier"
+          labelClassName="truncate"
+          className="border-primary/20 bg-background/90 hover:bg-background text-foreground group w-full rounded-full px-4 shadow-[0_8px_30px_rgba(var(--primary),0.2)] backdrop-blur-md transition-all duration-300 sm:w-auto sm:px-6"
+        />
+      </div>
       <div className="mx-auto max-w-4xl px-4 pt-28 pb-12 sm:px-6 lg:px-8">
         {/* Enhanced Article Schema with Financial Expert Knowledge */}
         <StructuredData

@@ -1,12 +1,18 @@
 export const PLAID_REQUIRED_RELINK_STATE = "required";
 export const PLAID_NEW_ACCOUNTS_RELINK_STATE = "new_accounts_available";
+export const PLAID_NO_ACCOUNTS_RELINK_STATE = "no_accounts";
 
 const PLAID_ACCOUNT_SELECTION_COUNTRY_CODES = new Set(["US", "CA"]);
+const PLAID_ACCOUNT_SELECTION_RELINK_STATES = new Set([
+  PLAID_NEW_ACCOUNTS_RELINK_STATE,
+  PLAID_NO_ACCOUNTS_RELINK_STATE,
+]);
 const PLAID_RELINK_ERROR_CODES = new Set([
   "ITEM_LOGIN_REQUIRED",
   "ACCESS_NOT_GRANTED",
   "ADDITIONAL_CONSENT_REQUIRED",
   "ITEM_LOCKED",
+  "NO_ACCOUNTS",
   "USER_SETUP_REQUIRED",
 ]);
 
@@ -139,8 +145,7 @@ export function shouldEnablePlaidAccountSelection(params: {
   countryCode?: string | null;
   relinkState?: string | null;
 }): boolean {
-  const relinkState = normalizeOptionalString(params.relinkState);
-  if (relinkState !== PLAID_NEW_ACCOUNTS_RELINK_STATE) {
+  if (!requiresPlaidAccountSelectionForRelinkState(params.relinkState)) {
     return false;
   }
 
@@ -153,20 +158,29 @@ export function shouldEnablePlaidAccountSelection(params: {
   );
 }
 
+export function requiresPlaidAccountSelectionForRelinkState(
+  relinkState?: string | null,
+): boolean {
+  return PLAID_ACCOUNT_SELECTION_RELINK_STATES.has(
+    normalizeOptionalString(relinkState) || "",
+  );
+}
+
 export function classifyPlaidItemWebhook(params: {
   webhookCode?: string | null;
   errorCode?: string | null;
 }): PlaidItemWebhookAction | null {
   const webhookCode = normalizeOptionalString(params.webhookCode);
   const errorCode = normalizeOptionalString(params.errorCode);
+  const errorRelinkState = resolvePlaidRelinkStateForError(errorCode);
 
-  if (webhookCode === "ERROR" && requiresPlaidRelinkForError(errorCode)) {
+  if (webhookCode === "ERROR" && errorRelinkState) {
     return {
       shouldEnqueueSync: false,
       status: "needs_reauth",
       itemStatus: "pending_relink",
       itemHealthState: "unhealthy",
-      relinkState: PLAID_REQUIRED_RELINK_STATE,
+      relinkState: errorRelinkState,
     };
   }
 
@@ -210,9 +224,20 @@ export function classifyPlaidItemWebhook(params: {
 export function requiresPlaidRelinkForError(
   errorCode?: string | null,
 ): boolean {
-  return PLAID_RELINK_ERROR_CODES.has(
-    normalizeOptionalString(errorCode)?.toUpperCase() || "",
-  );
+  return resolvePlaidRelinkStateForError(errorCode) != null;
+}
+
+export function resolvePlaidRelinkStateForError(
+  errorCode?: string | null,
+): string | null {
+  const normalizedErrorCode =
+    normalizeOptionalString(errorCode)?.toUpperCase() || "";
+  if (!PLAID_RELINK_ERROR_CODES.has(normalizedErrorCode)) {
+    return null;
+  }
+  return normalizedErrorCode === "NO_ACCOUNTS"
+    ? PLAID_NO_ACCOUNTS_RELINK_STATE
+    : PLAID_REQUIRED_RELINK_STATE;
 }
 
 function normalizeOptionalString(value: unknown): string | null {

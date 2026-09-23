@@ -34,7 +34,11 @@ import {
 import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
 import type { BankExpenseMutationRecord } from "../shared/bank-expense-projection.ts";
 import { refreshPlaidRecurringTemplates } from "../shared/plaid-recurring.ts";
-import { requiresPlaidRelinkForError } from "../shared/plaid-update-mode.ts";
+import {
+  PLAID_NO_ACCOUNTS_RELINK_STATE,
+  requiresPlaidRelinkForError,
+  resolvePlaidRelinkStateForError,
+} from "../shared/plaid-update-mode.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -1123,23 +1127,28 @@ async function syncConnection(params: {
 
     // Handle specific Plaid error codes
     if (error instanceof PlaidError) {
-      if (requiresPlaidRelinkForError(errorCode)) {
+      const relinkState = resolvePlaidRelinkStateForError(errorCode);
+      if (relinkState) {
+        summary.error =
+          relinkState === PLAID_NO_ACCOUNTS_RELINK_STATE
+            ? "No eligible bank accounts are shared. Please reconnect and select an account."
+            : "Bank re-authentication is required";
         console.log("[plaid-sync] Bank connection requires re-authentication");
-        await params.supabase
+        const { error: relinkUpdateError } = await params.supabase
           .from("bank_connections")
           .update({
             status: "needs_reauth",
             item_status: "pending_relink",
             item_health_state: "unhealthy",
-            relink_state: "required",
+            relink_state: relinkState,
             error_code: errorCode,
-            error_message:
-              "Bank requires re-authentication. Please reconnect your account.",
+            error_message: summary.error,
           })
           .eq("id", params.connection.id);
+        if (relinkUpdateError) throw relinkUpdateError;
         await auditUpdate({
           status: "failed",
-          error_message: "Bank requires re-authentication",
+          error_message: summary.error,
           error_code: errorCode,
           finished_at: new Date().toISOString(),
         });
