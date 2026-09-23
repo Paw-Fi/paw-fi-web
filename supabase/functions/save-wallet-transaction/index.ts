@@ -223,6 +223,14 @@ function truncateForLog(
   return `${trimmed.slice(0, maxLength)}...`;
 }
 
+function trimmedLength(value: unknown): number | null {
+  return typeof value === "string" ? value.trim().length : null;
+}
+
+function hasTrimmedText(value: unknown): boolean {
+  return (trimmedLength(value) ?? 0) > 0;
+}
+
 function buildWalletCaptureRequestLogContext(
   req: Request,
   body: RequestBody,
@@ -247,17 +255,42 @@ function buildWalletCaptureRequestLogContext(
 
   const captureSource = normalizeWalletCaptureSource(body?.captureSource);
   if (isNotificationCaptureSource(captureSource)) {
+    const bodyRecord = body as unknown as Record<string, unknown>;
+    const transactionRecord = tx as unknown as Record<string, unknown> | null;
     return {
       captureSource,
       redacted: true,
+      bodyKeys: Object.keys(bodyRecord).sort(),
+      transactionKeys: transactionRecord
+        ? Object.keys(transactionRecord).sort()
+        : [],
+      hasUserId: hasTrimmedText(body.userId),
+      hasHouseholdId: hasTrimmedText(body.householdId),
+      hasAccountId: hasTrimmedText(body.accountId),
+      hasIdempotencyKey: hasTrimmedText(body.idempotencyKey),
+      hasClientCreatedAt: hasTrimmedText(body.clientCreatedAt),
       isPortfolio: body?.isPortfolio === true,
       headers: safeHeaders,
       transaction: tx
         ? {
             type: truncateForLog(tx.type ?? null, 16),
+            amountType: typeof tx.amount,
+            amountIsFinite:
+              typeof tx.amount === "number" && Number.isFinite(tx.amount),
             currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
             currencyAmbiguous: tx.currencyAmbiguous === true,
             hasAccountSelection: Boolean(body.accountId),
+            merchantNameLength: trimmedLength(tx.merchantName),
+            rawMerchantLength: trimmedLength(tx.rawMerchant),
+            noteLength: trimmedLength(tx.note),
+            hasPackageName: hasTrimmedText(
+              resolveWalletTransactionPackageName(tx),
+            ),
+            hasNotificationKey: hasTrimmedText(tx.notificationKey),
+            hasNotificationPostTime: hasTrimmedText(tx.notificationPostTime),
+            hasSourceAppLabel: hasTrimmedText(tx.sourceAppLabel),
+            hasCategoryHint: hasTrimmedText(tx.categoryHint),
+            hasRecurrenceRule: tx.recurrenceRule != null,
           }
         : null,
     };

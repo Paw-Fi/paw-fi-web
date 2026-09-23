@@ -103,3 +103,26 @@ Deno.test(
     assertEquals(firstNotification > duplicateReturn, true);
   },
 );
+
+Deno.test(
+  "notification capture request logging exposes shape without sensitive values",
+  () => {
+    for (const diagnosticField of [
+      "bodyKeys",
+      "transactionKeys",
+      "hasUserId",
+      "hasHouseholdId",
+      "hasAccountId",
+      "hasIdempotencyKey",
+      "amountType",
+      "amountIsFinite",
+      "merchantNameLength",
+      "rawMerchantLength",
+      "noteLength",
+    ]) {
+      assertStringIncludes(walletCaptureSource, diagnosticField);
+    }
+    assertStringIncludes(walletCaptureSource, "redacted: true");
+    assertFalse(walletCaptureSource.includes("rawBodyText,"));
+  },
+);

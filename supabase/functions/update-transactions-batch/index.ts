@@ -23,7 +23,7 @@ async function enrichMerchantDomains(
         .map((row) =>
           row && typeof row === "object" && "merchant_id" in row
             ? (row as Record<string, unknown>).merchant_id
-            : null
+            : null,
         )
         .filter((id): id is string => typeof id === "string" && UUID.test(id)),
     ),
@@ -52,9 +52,8 @@ async function enrichMerchantDomains(
     if (!row || typeof row !== "object") return row;
     const transaction = row as Record<string, unknown>;
     const merchantId = transaction.merchant_id;
-    const merchant = typeof merchantId === "string"
-      ? merchantsById.get(merchantId)
-      : null;
+    const merchant =
+      typeof merchantId === "string" ? merchantsById.get(merchantId) : null;
     return {
       ...transaction,
       merchant_domain: merchant?.domain ?? null,
@@ -78,23 +77,21 @@ Deno.serve(async (req) => {
   if (!auth.success || !auth.userId) {
     return json({ error: "Unauthorized" }, 401);
   }
-  const body = (await req.json().catch(() => null)) as
-    | Record<
-      string,
-      unknown
-    >
-    | null;
-  const ids = Array.isArray(body?.transactionIds)
-    ? [
-      ...new Set(
-        body!.transactionIds.filter(
-          (id): id is string => typeof id === "string" && UUID.test(id),
-        ),
-      ),
-    ]
-    : [];
-  if (ids.length === 0 || ids.length > 500) {
+  const body = (await req.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  const rawIds = Array.isArray(body?.transactionIds) ? body.transactionIds : [];
+  if (
+    rawIds.length === 0 ||
+    rawIds.length > 500 ||
+    rawIds.some((id) => typeof id !== "string" || !UUID.test(id))
+  ) {
     return json({ error: "transactionIds must contain 1 to 500 UUIDs" }, 400);
+  }
+  const ids = [...new Set(rawIds as string[])];
+  if (ids.length !== rawIds.length) {
+    return json({ error: "transactionIds must not contain duplicates" }, 400);
   }
   const householdId =
     typeof body?.householdId === "string" && UUID.test(body.householdId)
@@ -102,9 +99,9 @@ Deno.serve(async (req) => {
       : null;
   const currencies = Array.isArray(body?.currencies)
     ? body!.currencies
-      .filter((currency): currency is string => typeof currency === "string")
-      .map((currency) => currency.trim().toUpperCase())
-      .filter(Boolean)
+        .filter((currency): currency is string => typeof currency === "string")
+        .map((currency) => currency.trim().toUpperCase())
+        .filter(Boolean)
     : [];
   if (
     !body?.updates ||
@@ -127,17 +124,14 @@ Deno.serve(async (req) => {
     body?.descriptorsById && typeof body.descriptorsById === "object"
       ? body.descriptorsById
       : {};
-  const { data, error } = await supabase.rpc(
-    "bulk_update_transactions",
-    {
-      p_actor_user_id: auth.userId,
-      p_transaction_ids: ids,
-      p_household_id: householdId,
-      p_currencies: currencies,
-      p_updates: updates,
-      p_descriptors_by_id: descriptors,
-    },
-  );
+  const { data, error } = await supabase.rpc("bulk_update_transactions", {
+    p_actor_user_id: auth.userId,
+    p_transaction_ids: ids,
+    p_household_id: householdId,
+    p_currencies: currencies,
+    p_updates: updates,
+    p_descriptors_by_id: descriptors,
+  });
   if (error) return json({ error: error.message }, 400);
   try {
     return json({
