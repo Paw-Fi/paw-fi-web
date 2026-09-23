@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(26);
+select plan(29);
 
 select has_function(
   'public',
@@ -301,6 +301,52 @@ select ok(
       limit 1)
   ) -> 'occurrence' ->> 'id') is not null,
   'individual occurrence detail returns the occurrence payload on demand'
+);
+
+select isnt(
+  public.recurring_next_available_occurrence_v1(
+    gen_random_uuid(),
+    jsonb_build_object(
+      'frequency', 'monthly',
+      'anchor_date', (current_date + 30)::text,
+      'projection_enabled', false
+    ),
+    current_date
+  ),
+  null::date,
+  'projection-disabled recurring series still has a next occurrence'
+);
+
+select isnt(
+  public.recurring_latest_actionable_occurrence_v1(
+    (select (payload ->> 'member_id')::uuid
+      from test_recurring_occurrence_migration.snapshots
+      where snapshot_key = 'fixture'),
+    gen_random_uuid(),
+    jsonb_build_object(
+      'frequency', 'monthly',
+      'anchor_date', (current_date + 30)::text,
+      'projection_enabled', false
+    )
+  ),
+  null::date,
+  'projection-disabled recurring series still has a confirmable occurrence'
+);
+
+select is(
+  public.recurring_actionable_occurrence_count_v1(
+    (select (payload ->> 'member_id')::uuid
+      from test_recurring_occurrence_migration.snapshots
+      where snapshot_key = 'fixture'),
+    gen_random_uuid(),
+    jsonb_build_object(
+      'frequency', 'monthly',
+      'anchor_date', (current_date + 30)::text,
+      'projection_enabled', false
+    )
+  ),
+  0,
+  'future confirmable occurrence does not activate the due-now badge count'
 );
 
 select * from finish();
