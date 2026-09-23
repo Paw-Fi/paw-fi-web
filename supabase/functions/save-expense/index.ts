@@ -89,6 +89,10 @@ interface RequestBody {
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
   description?: string; // Optional description/note
   merchant?: string; // Optional merchant/payee
+  merchantId?: string;
+  merchantStructuredName?: string | null;
+  merchantEvidenceDescriptor?: string;
+  merchantEvidenceAllowStructured?: boolean;
   breakdown?: string[]; // Optional receipt line items
   receiptImageUrl?: string; // Optional receipt image URL
   householdId?: string; // If provided, share with this household
@@ -183,6 +187,13 @@ Deno.serve(async (req: Request) => {
       typeof body.merchant === "string" && body.merchant.trim().length > 0
         ? body.merchant.trim()
         : null;
+    const normalizedMerchantStructuredName =
+      body.merchantStructuredName === null
+        ? null
+        : typeof body.merchantStructuredName === "string" &&
+            body.merchantStructuredName.trim().length > 0
+        ? body.merchantStructuredName.trim().slice(0, 255)
+        : normalizedMerchant;
     const normalizedIdempotencyKey = normalizeClientMutationKey(body);
 
     const normalizedDate = normalizeCalendarDateString(body.date);
@@ -202,9 +213,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -273,8 +285,8 @@ Deno.serve(async (req: Request) => {
     if (!detection.isGpt && !sanitizedCategory) {
       return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
     }
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -447,12 +459,13 @@ Deno.serve(async (req: Request) => {
     const requestedAccountIdRaw = hasCamelAccountId
       ? bodyRecord.accountId
       : hasSnakeAccountId
-      ? bodyRecord.account_id
-      : undefined;
-    const requestedAccountId = requestedAccountIdRaw == null ||
-        String(requestedAccountIdRaw).trim().length === 0
-      ? null
-      : sanitizeUuid(String(requestedAccountIdRaw));
+        ? bodyRecord.account_id
+        : undefined;
+    const requestedAccountId =
+      requestedAccountIdRaw == null ||
+      String(requestedAccountIdRaw).trim().length === 0
+        ? null
+        : sanitizeUuid(String(requestedAccountIdRaw));
 
     async function resolveScopedAccountId(
       scopeHouseholdId: string | null,
@@ -556,6 +569,8 @@ Deno.serve(async (req: Request) => {
       date: body.date,
       raw_text: body.description || "",
       merchant: normalizedMerchant,
+      merchant_structured_name: normalizedMerchantStructuredName,
+      merchant_id: sanitizeUuid(body.merchantId),
       currency: currency,
       breakdown: body.breakdown ?? null,
       receipt_image_url: normalizedReceiptImageUrl,
@@ -567,9 +582,10 @@ Deno.serve(async (req: Request) => {
       idempotency_key: normalizedIdempotencyKey,
     };
 
-    let preparedHouseholdSplit:
-      | { group: SplitGroupRecord; lines: SplitLineRecord[] }
-      | null = null;
+    let preparedHouseholdSplit: {
+      group: SplitGroupRecord;
+      lines: SplitLineRecord[];
+    } | null = null;
     if (resolvedSharedHouseholdId != null) {
       const { data: members, error: membersError } = await supabase
         .from("household_members")
@@ -607,11 +623,7 @@ Deno.serve(async (req: Request) => {
           reconcileMemberChanges: effectiveSplit.source === "default",
         });
         if (!buildResult.ok) {
-          return errorResponse(
-            buildResult.error,
-            400,
-            "VALIDATION_ERROR",
-          );
+          return errorResponse(buildResult.error, 400, "VALIDATION_ERROR");
         }
         preparedHouseholdSplit = buildResult;
       }
@@ -679,32 +691,53 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!expense) {
-      const atomicResult = preparedHouseholdSplit == null
-        ? null
-        : await createHouseholdTransactionWithSplit({
-          supabase,
-          actorUserId: userId,
-          transaction: expenseRecord,
-          group: preparedHouseholdSplit.group,
-          lines: preparedHouseholdSplit.lines,
-          targetAccountId: preliminaryAccountId,
-          isRecurringTemplate: body.isRecurring === true,
-        });
-      const { data: insertedExpense, error: expenseError } = atomicResult ??
-        await supabase
+      const atomicResult =
+        preparedHouseholdSplit == null
+          ? null
+          : await createHouseholdTransactionWithSplit({
+              supabase,
+              actorUserId: userId,
+              transaction: expenseRecord,
+              group: preparedHouseholdSplit.group,
+              lines: preparedHouseholdSplit.lines,
+              targetAccountId: preliminaryAccountId,
+              isRecurringTemplate: body.isRecurring === true,
+            });
+      const { data: insertedExpense, error: expenseError } =
+        atomicResult ??
+        (await supabase
           .from("expenses")
           .insert(expenseRecord)
           .select()
-          .single();
+          .single());
 
       if (expenseError) {
         console.error("[save-expense] Error saving expense:", expenseError);
         return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
       }
-      expense = atomicResult == null
-        ? insertedExpense
-        : (insertedExpense as Record<string, unknown>).expense;
+      expense =
+        atomicResult == null
+          ? insertedExpense
+          : (insertedExpense as Record<string, unknown>).expense;
       console.log("[save-expense] Expense saved:", expense.id);
+    }
+
+    if (
+      typeof body.merchantEvidenceDescriptor === "string" &&
+      body.merchantEvidenceDescriptor.trim().length > 0 &&
+      expense.merchant_id
+    ) {
+      const { error } = await supabase.rpc(
+        "record_confirmed_merchant_descriptor",
+        {
+          p_user_id: userId,
+          p_merchant_id: expense.merchant_id,
+          p_descriptor: body.merchantEvidenceDescriptor.trim(),
+          p_allow_structured_learning:
+            body.merchantEvidenceAllowStructured === true,
+        },
+      );
+      if (error) throw error;
     }
 
     // Learn/ensure custom category + preference mapping for future AI categorization
@@ -979,21 +1012,17 @@ Deno.serve(async (req: Request) => {
           code: buildResult.code,
           error: buildResult.error,
         });
-        return errorResponse(
-          buildResult.error,
-          400,
-          "VALIDATION_ERROR",
-        );
+        return errorResponse(buildResult.error, 400, "VALIDATION_ERROR");
       }
       const splitType = buildResult.group.split_type;
 
       let sharedScopeAccountId: string | null = hasRequestedAccountId
         ? null
         : await resolveDefaultAccountId(supabase, {
-          userId,
-          householdId: body.householdId,
-          currency,
-        });
+            userId,
+            householdId: body.householdId,
+            currency,
+          });
 
       if (requestedAccountId) {
         const isInSharedScope = await assertAccountInScope(
@@ -1016,9 +1045,10 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const commitSplit = body.isRecurring === true
-        ? commitRecurringTemplateSplitRecords
-        : commitHouseholdSplitRecords;
+      const commitSplit =
+        body.isRecurring === true
+          ? commitRecurringTemplateSplitRecords
+          : commitHouseholdSplitRecords;
       const { error: commitSplitError } = await commitSplit({
         supabase,
         actorUserId: userId,

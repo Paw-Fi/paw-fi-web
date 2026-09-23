@@ -33,6 +33,11 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     "د.ج": "DZD",
     "DA": "DZD",
 
+    // Dirham (Morocco)
+    "د.م.": "MAD",
+    "DH": "MAD",
+    "DHS": "MAD",
+
     // Pound, Euro, Yen signs
     "£": "GBP",
     "€": "EUR",

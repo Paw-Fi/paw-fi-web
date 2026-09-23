@@ -67,6 +67,8 @@ interface UpdateExpenseRequest {
     category?: string;
     raw_text?: string;
     merchant?: string | null;
+    merchant_id?: string | null;
+    merchant_structured_name?: string | null;
     date?: string;
     created_at?: string;
     currency?: string;
@@ -107,6 +109,8 @@ interface UpdateExpenseRequest {
   clientRecordId?: string;
   clientMutationId?: string;
   idempotencyKey?: string;
+  merchantEvidenceDescriptor?: string;
+  merchantEvidenceAllowStructured?: boolean;
 
   // Optional user-confirmed category remap preference (mapping-only mode supported)
   categoryRemap?: {
@@ -503,6 +507,8 @@ Deno.serve(async (req: Request) => {
       "category",
       "raw_text",
       "merchant",
+      "merchant_structured_name",
+      "merchant_id",
       "date",
       "created_at",
       "currency",
@@ -614,6 +620,54 @@ Deno.serve(async (req: Request) => {
           updates.merchant = trimmedMerchant;
         }
       }
+      // An explicit user edit is stronger than a prior extracted value. Keep
+      // display and structured evidence aligned so an old identity cannot
+      // return after changing Starbucks to Tesco.
+      if (updates.merchant_structured_name === undefined) {
+        updates.merchant_structured_name = updates.merchant;
+      }
+    }
+
+    if (updates.merchant_structured_name !== undefined) {
+      if (
+        updates.merchant_structured_name !== null &&
+        typeof updates.merchant_structured_name !== "string"
+      ) {
+        return errorResponse(
+          "merchant_structured_name must be a string or null",
+          "VALIDATION_ERROR",
+        );
+      }
+      if (typeof updates.merchant_structured_name === "string") {
+        const structuredName = updates.merchant_structured_name.trim();
+        if (structuredName.length > 255) {
+          return errorResponse(
+            "merchant_structured_name must be less than 256 characters",
+            "VALIDATION_ERROR",
+          );
+        }
+        updates.merchant_structured_name = structuredName || null;
+      }
+    }
+
+    if (updates.merchant_id !== undefined) {
+      if (
+        updates.merchant_id !== null &&
+        typeof updates.merchant_id !== "string"
+      ) {
+        return errorResponse(
+          "merchant_id must be a UUID or null",
+          "VALIDATION_ERROR",
+        );
+      }
+      const merchantId = sanitizeUuid(updates.merchant_id);
+      if (updates.merchant_id !== null && !merchantId) {
+        return errorResponse(
+          "merchant_id must be a UUID or null",
+          "VALIDATION_ERROR",
+        );
+      }
+      updates.merchant_id = merchantId;
     }
 
     if (updates.date !== undefined) {
@@ -2114,6 +2168,8 @@ Deno.serve(async (req: Request) => {
       "category",
       "raw_text",
       "merchant",
+      "merchant_id",
+      "merchant_structured_name",
       "date",
       "created_at",
       "currency",
@@ -2197,23 +2253,22 @@ Deno.serve(async (req: Request) => {
     let updatedExpense: unknown = null;
     if (splitWriteNeedsFinalization && pendingSplitCommit) {
       const splitCommit = pendingSplitCommit;
-      const isRecurringTemplate = (
-        updates.is_recurring ?? expenseRecord["is_recurring"] ?? false
-      ) === true;
+      const isRecurringTemplate =
+        (updates.is_recurring ?? expenseRecord["is_recurring"] ?? false) ===
+          true;
       const commitSplit = isRecurringTemplate
         ? commitRecurringTemplateSplitRecordsWithPatch
         : commitHouseholdSplitRecordsWithPatch;
-      const { error: commitSplitError } =
-        await commitSplit({
-          supabase,
-          actorUserId: userId,
-          group: splitCommit.group,
-          lines: splitCommit.lines,
-          expectedParent: expectedSplitParentFromTransaction(expenseRecord),
-          previousSplitGroupId: splitCommit.previousSplitGroupId,
-          targetAccountId: targetAccountIdForAtomicWrite ?? null,
-          expensePatch: updatePayload,
-        });
+      const { error: commitSplitError } = await commitSplit({
+        supabase,
+        actorUserId: userId,
+        group: splitCommit.group,
+        lines: splitCommit.lines,
+        expectedParent: expectedSplitParentFromTransaction(expenseRecord),
+        previousSplitGroupId: splitCommit.previousSplitGroupId,
+        targetAccountId: targetAccountIdForAtomicWrite ?? null,
+        expensePatch: updatePayload,
+      });
       if (commitSplitError) {
         console.error(
           "[update-expense] Failed to commit split write:",
@@ -2434,6 +2489,39 @@ Deno.serve(async (req: Request) => {
           "[update-expense] Notifications created for household members",
         );
       }
+    }
+
+    if (
+      typeof body.merchantEvidenceDescriptor === "string" &&
+      body.merchantEvidenceDescriptor.trim().length > 0 &&
+      (updatedExpense as any)?.merchant_id
+    ) {
+      const { error } = await supabase.rpc(
+        "record_confirmed_merchant_descriptor",
+        {
+          p_user_id: userId,
+          p_merchant_id: (updatedExpense as any).merchant_id,
+          p_descriptor: body.merchantEvidenceDescriptor.trim(),
+          p_allow_structured_learning:
+            body.merchantEvidenceAllowStructured === true,
+        },
+      );
+      if (error) throw error;
+    }
+
+    if ((updatedExpense as any)?.merchant_id) {
+      const { data: merchant, error: merchantError } = await supabase
+        .from("merchants")
+        .select("domain, logo_identifier")
+        .eq("id", (updatedExpense as any).merchant_id)
+        .maybeSingle();
+      if (merchantError) throw merchantError;
+      (updatedExpense as any).merchant_domain = merchant?.domain ?? null;
+      (updatedExpense as any).merchant_logo_url = merchant?.logo_identifier ??
+        null;
+    } else {
+      (updatedExpense as any).merchant_domain = null;
+      (updatedExpense as any).merchant_logo_url = null;
     }
 
     const responseData: any = {

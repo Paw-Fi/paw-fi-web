@@ -51,6 +51,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'LBP': 'ل.ل',
   'LRD': 'L\$',
   'LKR': 'Rs',
+  'MAD': 'د.م.',
   'MDL': 'L',
   'MOP': 'MOP$',
   'MMK': 'Ks',

@@ -128,6 +128,26 @@ Deno.test(
 );
 
 Deno.test(
+  "notification source is preserved outside the legacy dedup RPC boundary",
+  () => {
+    assertStringIncludes(
+      classificationSource,
+      "captureSource: resolveNotificationCaptureSource(",
+    );
+    assertStringIncludes(classificationSource, "params.body.captureSource,");
+    assertStringIncludes(saveSource, '"ios_notification_shortcut",');
+    assertStringIncludes(
+      saveSource,
+      'p_capture_source: "android_notification_listener"',
+    );
+    assertStringIncludes(
+      saveSource,
+      "buildAndroidLogicalDuplicateResponse(result, params.captureSource)",
+    );
+  },
+);
+
+Deno.test(
   "notification classification persists bounded field provenance",
   () => {
     assertStringIncludes(

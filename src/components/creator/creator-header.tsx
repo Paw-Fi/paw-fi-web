@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   Activity,
+  BellRing,
   MousePointerClick,
   Ticket,
   UserSearch,
@@ -31,12 +32,17 @@ export function CreatorHeader() {
       label: "User Lookup",
       icon: <UserSearch className="h-4 w-4" />,
     },
+    {
+      href: "/creator/notification-health" as const,
+      label: "Notifications",
+      icon: <BellRing className="h-4 w-4" />,
+    },
   ];
 
   return (
     <div className="sticky top-0 z-50 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 w-full max-w-7xl items-center px-4">
-        <div className="flex items-center gap-6 text-sm font-medium">
+      <div className="mx-auto flex h-14 w-full max-w-7xl items-center overflow-x-auto px-4">
+        <div className="flex shrink-0 items-center gap-6 text-sm font-medium">
           <div className="text-white/90">Admin Console</div>
           <div className="h-4 w-px bg-white/10" />
           <nav className="flex items-center gap-4">

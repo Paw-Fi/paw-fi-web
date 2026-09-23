@@ -71,6 +71,8 @@ const LOCALIZED_SYMBOL_TO_CURRENCY: Record<string, string> = {
   FJD$: "FJD",
   J$: "JMD",
   RD$: "DOP",
+  DH: "MAD",
+  DHS: "MAD",
   "E£": "EGP",
   "£S": "SYP",
   "S£": "SYP",
@@ -123,6 +125,7 @@ const UNIQUE_SYMBOL_TO_CURRENCY: Record<string, string> = {
   "ر.س": "SAR",
   "د.ج": "DZD",
   "د.أ": "JOD",
+  "د.م.": "MAD",
 };
 
 const EXPLICIT_CURRENCY_NAME_TO_CODE: Record<string, string> = {
@@ -183,6 +186,7 @@ const EXPLICIT_CURRENCY_NAME_TO_CODE: Record<string, string> = {
   "MALAYSIAN RINGGIT": "MYR",
   "MALAWIAN KWACHA": "MWK",
   "MAURITIAN RUPEE": "MUR",
+  "MOROCCAN DIRHAM": "MAD",
   "NAMIBIAN DOLLAR": "NAD",
   "NIGERIAN NAIRA": "NGN",
   "NORWEGIAN KRONE": "NOK",

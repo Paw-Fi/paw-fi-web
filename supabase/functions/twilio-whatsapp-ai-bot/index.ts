@@ -90,6 +90,7 @@ import { executeManageRecurringTool } from "../shared/bot/recurring-tool.ts";
 import {
   invokeTransactionDelete,
   invokeTransactionSave,
+  merchantIdentitySaveFields,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
 import {
@@ -186,12 +187,12 @@ import {
   normalizeLastListedTransactionFromRow,
   normalizeSessionState,
   type PendingBudgetDraft,
-  readLastListedTransactions,
   readActiveTransactionContext,
+  readLastListedTransactions,
   saveSessionState,
+  type SessionState,
   setActiveRecurringContext,
   setActiveTransactionContext,
-  type SessionState,
   setLastListedTransactions,
 } from "../shared/bot/session-state.ts";
 import {
@@ -1263,6 +1264,10 @@ Deno.serve(async (req: Request) => {
                 GEMINI_API_KEY,
                 30000,
                 "Analysis is taking longer than expected. Please try again.",
+                {
+                  preferredTimezone: userTimezone,
+                  merchantEnrichment: { supabase },
+                },
               );
             }
           } else if (executionToolName === "list_expenses") {
@@ -1272,7 +1277,10 @@ Deno.serve(async (req: Request) => {
             );
             const normalizedScope = String(
               call.args.space_scope || call.args.scope || "",
-            ).trim().toLowerCase().replace(/[\s-]+/g, "_");
+            )
+              .trim()
+              .toLowerCase()
+              .replace(/[\s-]+/g, "_");
             const { data, error } = await fetchExpensesDirect(
               supabase,
               contactId,
@@ -1283,17 +1291,15 @@ Deno.serve(async (req: Request) => {
                 householdId,
                 isPortfolio: spaceMeta?.isPortfolio === true ||
                   normalizedScope === "private_space",
-                portfolioHouseholdIds:
-                  householdId
-                    ? undefined
-                    : portfolioSpaceIds,
+                portfolioHouseholdIds: householdId
+                  ? undefined
+                  : portfolioSpaceIds,
                 sharedHouseholdIds: householdId
                   ? undefined
                   : listBotSpaceIds(spaceMap, "shared"),
-                accessibleHouseholdIds:
-                  householdId
-                    ? undefined
-                    : listBotSpaceIds(spaceMap),
+                accessibleHouseholdIds: householdId
+                  ? undefined
+                  : listBotSpaceIds(spaceMap),
                 personalOnly: ["personal", "personal_account"].includes(
                   normalizedScope,
                 ),
@@ -1318,15 +1324,18 @@ Deno.serve(async (req: Request) => {
                 WHATSAPP_DEBUG,
               );
               state = setLastListedTransactions(state, memoryItems);
-              
+
               // If there's exactly one transaction, set it as the active context
               // This helps with follow-up questions like "delete it" or "change the amount"
               if (memoryItems.length === 1) {
                 const single = memoryItems[0];
-                console.log("[twilio-whatsapp-ai-bot] auto-setting active transaction context (single result)", {
-                  transaction_id: single.id.slice(0, 8),
-                  description: single.description,
-                });
+                console.log(
+                  "[twilio-whatsapp-ai-bot] auto-setting active transaction context (single result)",
+                  {
+                    transaction_id: single.id.slice(0, 8),
+                    description: single.description,
+                  },
+                );
                 state = setActiveTransactionContext(state, {
                   transaction_id: single.id,
                   description: single.description,
@@ -1338,7 +1347,7 @@ Deno.serve(async (req: Request) => {
                   household_id: single.household_id,
                 });
               }
-              
+
               await saveSessionState(
                 supabase,
                 String(session.id),
@@ -1854,6 +1863,7 @@ Deno.serve(async (req: Request) => {
                 currency: currencyResult.currency,
                 description: transaction.description,
                 merchant: transaction.merchant,
+                ...merchantIdentitySaveFields(transaction),
                 householdId,
                 isPortfolio: spaceMeta?.isPortfolio ??
                   (call.args.space_type === "private_space" ||
@@ -1983,6 +1993,7 @@ Deno.serve(async (req: Request) => {
                   date: transaction.date!,
                   description: transaction.description,
                   merchant: transaction.merchant,
+                  ...merchantIdentitySaveFields(transaction),
                   source: tx.source,
                   ownerType: tx.owner_type === "space"
                     ? "household"
@@ -2274,10 +2285,13 @@ Deno.serve(async (req: Request) => {
       writeMutationSucceededAny,
       emptyFallbackText: buildProcessingFailureMessage(userLang),
       onMutationClaimBlocked: (kind, context) => {
-        console.log("[twilio-whatsapp-ai-bot] app final-response mutation-claim blocked", {
-          kind,
-          ...context,
-        });
+        console.log(
+          "[twilio-whatsapp-ai-bot] app final-response mutation-claim blocked",
+          {
+            kind,
+            ...context,
+          },
+        );
       },
     });
     finalResponseText = sanitizeBotUserFacingText(finalResponseText);
@@ -2502,18 +2516,18 @@ Deno.serve(async (req: Request) => {
             .eq("id", userContact.id);
           if (updateUserContactError) throw updateUserContactError;
         } else {
-          const { error: upsertContactError } = await supabase.from(
-            "user_contacts",
-          ).upsert(
-            {
-              phone_e164: from,
-              whatsapp_user_id: from,
-              user_id: verifiedUserId,
-              verified: true,
-              updated_at: nowIso,
-            },
-            { onConflict: "user_id" },
-          );
+          const { error: upsertContactError } = await supabase
+            .from("user_contacts")
+            .upsert(
+              {
+                phone_e164: from,
+                whatsapp_user_id: from,
+                user_id: verifiedUserId,
+                verified: true,
+                updated_at: nowIso,
+              },
+              { onConflict: "user_id" },
+            );
           if (upsertContactError) throw upsertContactError;
         }
 
@@ -3071,18 +3085,16 @@ Deno.serve(async (req: Request) => {
 
     const historyParts = await loadGeminiChatHistory({ supabase, sessionId });
 
-    const whatsappSystemInstruction = SYSTEM_INSTRUCTION.replace(
-      "{{DATE}}",
-      formatDateInTimeZone(userTimezone),
-    )
-      .replace("{{CURRENCY}}", userCurrency)
-      .replace("{{HOUSEHOLDS}}", householdContext)
-      .replace(
-        "{{WALLETS}}",
-        "Available on request for the selected space only",
-      )
-      .replace("{{CATEGORIES}}", categoryGuideForUser)
-      .replace("{{LANGUAGE}}", userLangLabel) +
+    const whatsappSystemInstruction =
+      SYSTEM_INSTRUCTION.replace("{{DATE}}", formatDateInTimeZone(userTimezone))
+        .replace("{{CURRENCY}}", userCurrency)
+        .replace("{{HOUSEHOLDS}}", householdContext)
+        .replace(
+          "{{WALLETS}}",
+          "Available on request for the selected space only",
+        )
+        .replace("{{CATEGORIES}}", categoryGuideForUser)
+        .replace("{{LANGUAGE}}", userLangLabel) +
       buildLanguageOverride(userLang);
     // Define Tools
     const tools = [
@@ -3440,6 +3452,10 @@ Deno.serve(async (req: Request) => {
                 GEMINI_API_KEY,
                 30000,
                 "Analysis is taking longer than expected. Please try again.",
+                {
+                  preferredTimezone: userTimezone,
+                  merchantEnrichment: { supabase },
+                },
               );
             } else {
               const mediaUrl = formData.get(`MediaUrl${index}`)?.toString();
@@ -3525,6 +3541,10 @@ Deno.serve(async (req: Request) => {
                           GEMINI_API_KEY,
                           30000,
                           "The image is taking longer than expected to process. Please try again with a clearer photo.",
+                          {
+                            preferredTimezone: userTimezone,
+                            merchantEnrichment: { supabase },
+                          },
                         );
                       } else if (kind === "audio") {
                         toolResult = await runAnalyzeExpenseWithTimeout(
@@ -3545,6 +3565,10 @@ Deno.serve(async (req: Request) => {
                           GEMINI_API_KEY,
                           30000,
                           "The audio is taking longer than expected to process. Please try again by speaking clearly.",
+                          {
+                            preferredTimezone: userTimezone,
+                            merchantEnrichment: { supabase },
+                          },
                         );
                       } else {
                         const ext = guessExtension(cleanContentType);
@@ -3569,6 +3593,10 @@ Deno.serve(async (req: Request) => {
                           GEMINI_API_KEY,
                           30000,
                           "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
+                          {
+                            preferredTimezone: userTimezone,
+                            merchantEnrichment: { supabase },
+                          },
                         );
                       }
                     }
@@ -3735,6 +3763,7 @@ Deno.serve(async (req: Request) => {
                 date: transaction.date!,
                 description: transaction.description,
                 merchant: transaction.merchant,
+                ...merchantIdentitySaveFields(transaction),
                 type,
                 householdId,
                 isPortfolio: spaceMeta?.isPortfolio ?? false,
@@ -3756,7 +3785,7 @@ Deno.serve(async (req: Request) => {
             toolResult = success
               ? { success: true, data: data?.data ?? data }
               : { error: formatted };
-            
+
             // If this was a recurring transaction, set active recurring context
             // so follow-up operations like "remind me 4 days before" work
             if (success && call.args.is_recurring) {
@@ -3778,7 +3807,7 @@ Deno.serve(async (req: Request) => {
                 );
               }
             }
-            
+
             if (!success) {
               if (WHATSAPP_DEBUG) {
                 debugNotes.push(`add-transaction error: ${formatted}`);
@@ -3912,6 +3941,7 @@ Deno.serve(async (req: Request) => {
                 date: transaction.date!,
                 description: transaction.description,
                 merchant: transaction.merchant,
+                ...merchantIdentitySaveFields(transaction),
                 source: tx.source,
                 ownerType: tx.owner_type === "space"
                   ? "household"
@@ -4521,7 +4551,10 @@ Deno.serve(async (req: Request) => {
             const type = call.args.type || "expense";
             const normalizedScope = String(
               call.args.space_scope || call.args.scope || "",
-            ).trim().toLowerCase().replace(/[\s-]+/g, "_");
+            )
+              .trim()
+              .toLowerCase()
+              .replace(/[\s-]+/g, "_");
             const listPayload = {
               limit: call.args.limit || 10,
               startDate: call.args.start_date,
@@ -4541,9 +4574,7 @@ Deno.serve(async (req: Request) => {
               personalOnly: ["personal", "personal_account"].includes(
                 normalizedScope,
               ),
-              sharedOnly: ["shared", "shared_space"].includes(
-                normalizedScope,
-              ),
+              sharedOnly: ["shared", "shared_space"].includes(normalizedScope),
               currency: call.args.currency,
               type,
             };

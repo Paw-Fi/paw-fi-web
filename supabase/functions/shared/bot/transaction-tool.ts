@@ -32,6 +32,8 @@ export type NormalizedTransactionToolArgs = {
   currency?: string;
   description?: string;
   merchant?: string;
+  merchantId?: string;
+  merchantStructuredName?: string;
 };
 
 export type TransactionSaveParams = {
@@ -42,6 +44,8 @@ export type TransactionSaveParams = {
   date: string;
   description?: string;
   merchant?: string;
+  merchantId?: string;
+  merchantStructuredName?: string;
   householdId?: string | null;
   isPortfolio?: boolean;
   payerUserId?: string;
@@ -69,6 +73,20 @@ function normalizeDateInput(value: unknown, fallback: string): string {
 
 function normalizeOptionalString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+export function merchantIdentitySaveFields(
+  transaction: Pick<
+    NormalizedTransactionToolArgs,
+    "merchantId" | "merchantStructuredName"
+  >,
+): { merchantId?: string; merchantStructuredName?: string } {
+  return {
+    ...(transaction.merchantId ? { merchantId: transaction.merchantId } : {}),
+    ...(transaction.merchantStructuredName
+      ? { merchantStructuredName: transaction.merchantStructuredName }
+      : {}),
+  };
 }
 
 function collectCurrencyEvidenceText(
@@ -204,6 +222,38 @@ export function normalizeTransactionToolArgs(
     merchant = trimmedMerchant || undefined;
   }
 
+  const rawMerchantId = input.merchant_id ?? input.merchantId;
+  let merchantId: string | undefined;
+  if (rawMerchantId !== undefined && rawMerchantId !== null) {
+    if (typeof rawMerchantId !== "string" || !UUID_REGEX.test(rawMerchantId)) {
+      return { ok: false, error: "merchant_id must be a UUID." };
+    }
+    merchantId = rawMerchantId;
+  }
+
+  const rawMerchantStructuredName = input.merchant_structured_name ??
+    input.merchantStructuredName;
+  let merchantStructuredName: string | undefined;
+  if (
+    rawMerchantStructuredName !== undefined &&
+    rawMerchantStructuredName !== null
+  ) {
+    if (typeof rawMerchantStructuredName !== "string") {
+      return {
+        ok: false,
+        error: "merchant_structured_name must be a string.",
+      };
+    }
+    const value = rawMerchantStructuredName.trim();
+    if (value.length > 255) {
+      return {
+        ok: false,
+        error: "merchant_structured_name must be less than 256 characters.",
+      };
+    }
+    merchantStructuredName = value || undefined;
+  }
+
   const rawCurrency = normalizeOptionalString(input.currency);
   const normalizedRawCurrency = normalizeCurrencyCode(rawCurrency);
   if (
@@ -232,6 +282,7 @@ export function normalizeTransactionToolArgs(
       ...(currency ? { currency } : {}),
       ...(description ? { description } : {}),
       ...(merchant ? { merchant } : {}),
+      ...merchantIdentitySaveFields({ merchantId, merchantStructuredName }),
     },
   };
 }
@@ -303,6 +354,7 @@ export async function invokeTransactionSave(
     date: normalizedDate,
     description,
     merchant,
+    ...merchantIdentitySaveFields(params),
     accountId: params.accountId,
     householdId: normalizedHouseholdId,
     isPortfolio: params.isPortfolio === true,

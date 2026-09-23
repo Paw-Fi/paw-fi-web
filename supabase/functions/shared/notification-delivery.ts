@@ -59,12 +59,70 @@ export function isServiceRoleRequest(
   if (!apiKey) return false;
 
   return parseSecretKeys(secretKeysJson).some((secretKey) =>
-    constantTimeEqual(apiKey, secretKey)
+    constantTimeEqual(apiKey, secretKey),
   );
 }
 
 export function shouldSkipPushEvent(eventType: string) {
   return noPushEventTypes.has(eventType);
+}
+
+export function buildNotificationDeepLink(
+  eventType: string,
+  data: Record<string, string>,
+): string {
+  const appScheme = "moneko://";
+
+  switch (eventType) {
+    case "expense_added":
+    case "expense_edited":
+    case "income_added":
+    case "income_edited":
+    case "income_acknowledged":
+      if (data.expense_id) return `${appScheme}expense/${data.expense_id}`;
+      if (data.household_id) {
+        return `${appScheme}household/${data.household_id}`;
+      }
+      break;
+    case "expense_deleted":
+    case "member_joined":
+    case "invite_accepted":
+    case "member_reminded":
+    case "settlement_completed":
+    case "split_settled":
+      if (data.household_id) {
+        return `${appScheme}household/${data.household_id}`;
+      }
+      break;
+    case "budget_warn":
+    case "budget_alert":
+      if (data.budget_id) return `${appScheme}budget/${data.budget_id}`;
+      break;
+    case "split_created":
+      if (data.split_group_id || data.split_id) {
+        return `${appScheme}split/${data.split_group_id || data.split_id}`;
+      }
+      if (data.household_id) {
+        return `${appScheme}household/${data.household_id}/splits`;
+      }
+      break;
+    case "invite_reminder_inviter":
+      if (data.household_id) {
+        return `${appScheme}household/${data.household_id}/settings?tab=2`;
+      }
+      break;
+    case "invite_reminder_invitee":
+      if (data.invite_token) {
+        return `${appScheme}households/join?token=${encodeURIComponent(
+          data.invite_token,
+        )}`;
+      }
+      break;
+    case "pockets_month_review":
+      return `${appScheme}pockets`;
+  }
+
+  return `${appScheme}home`;
 }
 
 export function buildBudgetNudgeData(

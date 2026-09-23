@@ -6,10 +6,14 @@
 import { corsHeaders } from "../shared/cors.ts";
 import {
   AnalyzeRequestBody,
+  normalizePreferredTimezone,
   ProgressCallback,
   ProgressEvent,
-  runAnalyzeExpense,
 } from "../shared/analyze-core.ts";
+import {
+  type MerchantAnalysisContext,
+  runEnrichedTransactionAnalysis,
+} from "../shared/analyzed-merchant-enrichment.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import {
   type CategoryContext,
@@ -115,8 +119,8 @@ function mapProgressEvent(
 
 function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
   const hasImage = Boolean(body.image);
-  const hasAttachments =
-    Array.isArray(body.attachments) && body.attachments.length > 0;
+  const hasAttachments = Array.isArray(body.attachments) &&
+    body.attachments.length > 0;
   return hasImage && !hasAttachments;
 }
 
@@ -124,11 +128,10 @@ function formatBreakdownAmount(item: any): string {
   const amount = Number(item?.amount);
   if (!Number.isFinite(amount)) return "";
   const formatted = amount.toFixed(2);
-  const symbol =
-    typeof item?.currencySymbol === "string" &&
-    item.currencySymbol.trim().length > 0
-      ? item.currencySymbol.trim()
-      : "";
+  const symbol = typeof item?.currencySymbol === "string" &&
+      item.currencySymbol.trim().length > 0
+    ? item.currencySymbol.trim()
+    : "";
   const currency =
     typeof item?.currency === "string" && item.currency.trim().length > 0
       ? item.currency.trim()
@@ -141,8 +144,9 @@ function formatBreakdownAmount(item: any): string {
 function buildReceiptBreakdown(items: any[]): string[] {
   return items
     .map((item) => {
-      const desc =
-        typeof item?.description === "string" ? item.description.trim() : "";
+      const desc = typeof item?.description === "string"
+        ? item.description.trim()
+        : "";
       const amountText = formatBreakdownAmount(item);
       if (!amountText && !desc) return "";
       if (!amountText) return desc;
@@ -155,7 +159,7 @@ function buildReceiptBreakdown(items: any[]): string[] {
 function pickReceiptDescription(items: any[]): string {
   const candidates = items
     .map((item) =>
-      typeof item?.description === "string" ? item.description.trim() : "",
+      typeof item?.description === "string" ? item.description.trim() : ""
     )
     .filter((value) => value.length > 0);
   if (candidates.length === 0) return "Receipt";
@@ -236,10 +240,9 @@ function collapseReceiptItems(
   // into a single expense instead of returning one item per transaction row.
   if (!hasExplicitReceiptSignals(items)) return items;
 
-  const filteredItems =
-    items.length > 1
-      ? items.filter((item) => !isTotalLike(item?.description))
-      : items;
+  const filteredItems = items.length > 1
+    ? items.filter((item) => !isTotalLike(item?.description))
+    : items;
   const workingItems = filteredItems.length > 0 ? filteredItems : items;
 
   const totalAmount = workingItems.reduce((sum, item) => {
@@ -255,15 +258,15 @@ function collapseReceiptItems(
       .map((item) =>
         typeof item?.currency === "string"
           ? item.currency.trim().toUpperCase()
-          : "",
+          : ""
       )
       .filter((currency) => currency.length > 0),
   );
   if (resolvedCurrencies.size > 1) return items;
 
   const breakdown = buildReceiptBreakdown(workingItems);
-  const category =
-    resolveReceiptCategory(workingItems) || primary.category || "other";
+  const category = resolveReceiptCategory(workingItems) || primary.category ||
+    "other";
   const description = pickReceiptDescription(workingItems);
   const merchant =
     typeof primary?.merchant === "string" && primary.merchant.trim().length > 0
@@ -281,12 +284,22 @@ function collapseReceiptItems(
       type,
       amount: Number(totalAmount.toFixed(2)),
       category,
-      currency:
-        resolvedCurrencies.values().next().value || body.currency || "USD",
+      currency: resolvedCurrencies.values().next().value || body.currency ||
+        "USD",
       currencySymbol: primary.currencySymbol || "$",
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
+      ...(primary.transactionTime
+        ? { transactionTime: primary.transactionTime }
+        : {}),
       description,
       ...(merchant ? { merchant } : {}),
+      ...(typeof primary?.merchantUrl === "string" && primary.merchantUrl
+        ? { merchantUrl: primary.merchantUrl }
+        : {}),
+      ...(typeof primary?.merchantCountry === "string" &&
+          primary.merchantCountry
+        ? { merchantCountry: primary.merchantCountry }
+        : {}),
       breakdown,
       ...(splitSource?.payerUserId
         ? { payerUserId: splitSource.payerUserId }
@@ -349,9 +362,11 @@ function getElapsedMs(startedAt: number): number {
 
 function logStage(stage: string, startedAt: number) {
   console.log(
-    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(
-      startedAt,
-    )}`,
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${
+      getElapsedMs(
+        startedAt,
+      )
+    }`,
   );
 }
 
@@ -477,7 +492,7 @@ function applyFinalUserCategoryMapping(params: {
   const ctx: CategoryContext = {
     allowedExpenseSet: new Set(
       params.allowedExpenseCategories.map((c) =>
-        normalizeStoredUserCategory(c),
+        normalizeStoredUserCategory(c)
       ),
     ),
     allowedIncomeSet: new Set(
@@ -495,8 +510,9 @@ function applyFinalUserCategoryMapping(params: {
         typeof item?.category === "string" && item.category.trim().length > 0
           ? item.category
           : "other",
-      description:
-        typeof item?.description === "string" ? item.description : null,
+      description: typeof item?.description === "string"
+        ? item.description
+        : null,
       transactionType,
       ctx,
     });
@@ -522,6 +538,7 @@ function applyFinalUserCategoryMapping(params: {
 function createSSEStream(
   body: AnalyzeRequestBody,
   geminiApiKey: string,
+  merchantContext: MerchantAnalysisContext,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
@@ -537,27 +554,32 @@ function createSSEStream(
 
         // Run analysis with progress callback and a hard timeout.
         const result = await awaitWithHardTimeout(
-          runAnalyzeExpense(body, geminiApiKey, onProgress),
+          runEnrichedTransactionAnalysis({
+            body,
+            apiKey: geminiApiKey,
+            merchantContext,
+            onProgress,
+            transformItems: (items) => {
+              const finalItems = applyFinalUserCategoryMapping({
+                items,
+                allowedExpenseCategories: body.allowedExpenseCategories ?? [],
+                allowedIncomeCategories: body.allowedIncomeCategories ?? [],
+                preferences: body.categoryPreferences ?? [],
+                remaps: body.categoryRemaps ?? [],
+              });
+              return collapseReceiptItems(finalItems, body) ?? finalItems;
+            },
+          }),
           180000,
           "Analysis timed out after 180 seconds",
         );
 
         // Send final result as complete event
         if (result.success) {
-          const finalItems = Array.isArray(result.items)
-            ? applyFinalUserCategoryMapping({
-                items: result.items,
-                allowedExpenseCategories: body.allowedExpenseCategories ?? [],
-                allowedIncomeCategories: body.allowedIncomeCategories ?? [],
-                preferences: body.categoryPreferences ?? [],
-                remaps: body.categoryRemaps ?? [],
-              })
-            : result.items;
-          const collapsedItems = collapseReceiptItems(finalItems, body);
           const completeData = {
             success: true,
             data: {
-              items: collapsedItems ?? finalItems,
+              items: result.items,
               isAnalyzed: true,
               language: result.language,
               diagnostics: result.diagnostics,
@@ -592,10 +614,10 @@ function createSSEStream(
             stream: true,
             hasImage: !!body.image,
             hasAudio: !!body.audio,
-            hasAttachments:
-              Array.isArray(body.attachments) && body.attachments.length > 0,
-            hasText:
-              typeof body.text === "string" && body.text.trim().length > 0,
+            hasAttachments: Array.isArray(body.attachments) &&
+              body.attachments.length > 0,
+            hasText: typeof body.text === "string" &&
+              body.text.trim().length > 0,
           },
         });
         const message = error instanceof Error ? error.message : String(error);
@@ -662,8 +684,8 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } =
-      await supabaseAuthed.auth.getUser();
+    const { data: userData, error: userErr } = await supabaseAuthed.auth
+      .getUser();
     logStage("auth_get_user", requestStartedAt);
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
@@ -674,18 +696,20 @@ Deno.serve(async (req: Request) => {
       return errorResponse("userId mismatch", 401, "UNAUTHORIZED");
     }
     body.userId = callerId;
+    body.preferredTimezone = undefined;
     const preferredCurrencyReader = SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false,
-          },
-          global: {
-            headers: { "X-Client-Info": "moneko-analyze-expense" },
-          },
-        })
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+        global: {
+          headers: { "X-Client-Info": "moneko-analyze-expense" },
+        },
+      })
       : supabaseAuthed;
+    const logoDevSecretKey = Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "";
     body.currency = await loadLatestUserPreferredCurrency({
       supabase: preferredCurrencyReader,
       userId: callerId,
@@ -696,6 +720,24 @@ Deno.serve(async (req: Request) => {
           error,
         ),
     });
+    const { data: contact, error: timezoneError } =
+      await preferredCurrencyReader
+        .from("user_contacts")
+        .select("preferred_timezone")
+        .eq("user_id", callerId)
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    if (timezoneError) {
+      console.warn(
+        "[analyze-expense] Preferred timezone lookup failed",
+        timezoneError,
+      );
+    } else {
+      body.preferredTimezone = normalizePreferredTimezone(
+        contact?.preferred_timezone,
+      );
+    }
 
     // Load per-user custom categories + learned preferences for category assignment
     try {
@@ -771,15 +813,15 @@ Deno.serve(async (req: Request) => {
         const canAdminRead = !!SUPABASE_SERVICE_ROLE_KEY;
         const reader = canAdminRead
           ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!, {
-              auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-                detectSessionInUrl: false,
-              },
-              global: {
-                headers: { "X-Client-Info": "moneko-analyze-expense" },
-              },
-            })
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+              detectSessionInUrl: false,
+            },
+            global: {
+              headers: { "X-Client-Info": "moneko-analyze-expense" },
+            },
+          })
           : supabaseAuthed;
 
         const { data: members, error: membersError } = await reader
@@ -800,7 +842,12 @@ Deno.serve(async (req: Request) => {
     if (isStreamMode) {
       console.log("[analyze-expense] Starting SSE streaming mode");
 
-      const stream = createSSEStream(body, GEMINI_API_KEY);
+      const stream = createSSEStream(body, GEMINI_API_KEY, {
+        supabase: preferredCurrencyReader,
+        userId: callerId,
+        logoDevSecretKey,
+        preferredTimezone: body.preferredTimezone,
+      });
       return new Response(stream, {
         status: 200,
         headers: {
@@ -815,26 +862,31 @@ Deno.serve(async (req: Request) => {
     let result: any;
     try {
       result = await awaitWithHardTimeout(
-        runAnalyzeExpense(body, GEMINI_API_KEY),
+        runEnrichedTransactionAnalysis({
+          body,
+          apiKey: GEMINI_API_KEY,
+          merchantContext: {
+            supabase: preferredCurrencyReader,
+            userId: callerId,
+            logoDevSecretKey,
+            preferredTimezone: body.preferredTimezone,
+          },
+          transformItems: (items) => {
+            const mappedItems = applyFinalUserCategoryMapping({
+              items,
+              allowedExpenseCategories: body.allowedExpenseCategories ?? [],
+              allowedIncomeCategories: body.allowedIncomeCategories ?? [],
+              preferences: body.categoryPreferences ?? [],
+              remaps: body.categoryRemaps ?? [],
+            });
+            logStage("final_category_mapping", requestStartedAt);
+            return collapseReceiptItems(mappedItems, body) ?? mappedItems;
+          },
+        }),
         140000,
         "Analysis timed out after 140 seconds",
       );
       logStage("analyze_core", requestStartedAt);
-
-      if (
-        result?.success &&
-        Array.isArray(result?.items) &&
-        result.items.length > 0
-      ) {
-        result.items = applyFinalUserCategoryMapping({
-          items: result.items,
-          allowedExpenseCategories: body.allowedExpenseCategories ?? [],
-          allowedIncomeCategories: body.allowedIncomeCategories ?? [],
-          preferences: body.categoryPreferences ?? [],
-          remaps: body.categoryRemaps ?? [],
-        });
-        logStage("final_category_mapping", requestStartedAt);
-      }
     } catch (error) {
       await reportVertexAiFailure({
         functionName: "analyze-expense",
@@ -846,8 +898,8 @@ Deno.serve(async (req: Request) => {
           stream: false,
           hasImage: !!body.image,
           hasAudio: !!body.audio,
-          hasAttachments:
-            Array.isArray(body.attachments) && body.attachments.length > 0,
+          hasAttachments: Array.isArray(body.attachments) &&
+            body.attachments.length > 0,
           hasText: typeof body.text === "string" && body.text.trim().length > 0,
         },
       });
@@ -871,7 +923,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         data: {
-          items: collapseReceiptItems(result.items, body) ?? result.items,
+          items: result.items,
           isAnalyzed: true,
           language: result.language,
           diagnostics: result.diagnostics,

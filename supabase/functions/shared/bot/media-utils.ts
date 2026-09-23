@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 
-import { runAnalyzeExpense } from "../analyze-core.ts";
+import { runEnrichedTransactionAnalysis } from "../analyzed-merchant-enrichment.ts";
 import { reportEdgeFunctionError } from "../edge-error-alert.ts";
 
 export function buildGeminiHighDemandMessage(language?: string | null): string {
@@ -170,10 +170,31 @@ export async function runAnalyzeExpenseWithTimeout(
   apiKey: string | undefined,
   timeoutMs: number,
   timeoutError: string,
-  logPrefix = "ai-bot",
+  options: {
+    logPrefix?: string;
+    preferredTimezone?: string;
+    merchantEnrichment?: { supabase: any };
+  } = {},
 ): Promise<any> {
+  const logPrefix = options.logPrefix ?? "ai-bot";
   try {
-    const analysisPromise = runAnalyzeExpense(payload, apiKey || "");
+    const analysisPromise = options.merchantEnrichment?.supabase &&
+        typeof payload?.userId === "string"
+      ? runEnrichedTransactionAnalysis({
+        body: payload,
+        apiKey: apiKey || "",
+        merchantContext: {
+          supabase: options.merchantEnrichment.supabase,
+          userId: payload.userId,
+          logoDevSecretKey: Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "",
+          preferredTimezone: options.preferredTimezone,
+        },
+      })
+      : Promise.resolve({
+        success: false,
+        error: "Merchant enrichment context is required.",
+        language: "en",
+      });
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error("timeout")), timeoutMs);
     });

@@ -158,6 +158,45 @@ Deno.test(
 );
 
 Deno.test(
+  "mapPlaidTransactionToExpense preserves Plaid merchant enrichment",
+  () => {
+    const expense = mapPlaidTransactionToExpense({
+      userId: "user-1",
+      bankAccountId: "bank-account-1",
+      defaultCurrency: "USD",
+      transaction: makePlaidTransaction({
+        merchant_name: "Burger King",
+        merchant_entity_id: "merchant-entity-1",
+        logo_url: "https://plaid-merchant-logos.plaid.com/burger_king_155.png",
+        website: "https://www.burgerking.com/menu",
+        counterparties: [{
+          name: "DoorDash",
+          type: "marketplace",
+          entity_id: "marketplace-entity-1",
+        }],
+      }),
+    });
+
+    const payload = expense.raw_provider_payload as Record<string, unknown>;
+    assertEquals(payload.merchant_entity_id, "merchant-entity-1");
+    assertEquals(
+      payload.logo_url,
+      "https://plaid-merchant-logos.plaid.com/burger_king_155.png",
+    );
+    assertEquals(payload.website, "https://www.burgerking.com/menu");
+    assertEquals(payload.merchant_enrichment, {
+      name: "Burger King",
+      domain: "burgerking.com",
+      website: "https://www.burgerking.com/menu",
+      logo_url: "https://plaid-merchant-logos.plaid.com/burger_king_155.png",
+      external_entity_id: "merchant-entity-1",
+      confidence_level: "VERY_HIGH",
+      source: "transaction",
+    });
+  },
+);
+
+Deno.test(
   "mapPlaidTransactionToExpense persists provider-authoritative analytics classification",
   () => {
     const expense = mapPlaidTransactionToExpense({

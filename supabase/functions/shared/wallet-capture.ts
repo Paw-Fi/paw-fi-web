@@ -34,6 +34,7 @@ export interface WalletCaptureScopeResolution {
 
 const VALID_CAPTURE_SOURCES = new Set([
   "ios_wallet_shortcut",
+  "ios_notification_shortcut",
   "android_notification_listener",
 ]);
 const AI_EXPLICIT_CURRENCY_EVIDENCE = "ai_notification_explicit";
@@ -61,6 +62,25 @@ export function normalizeWalletCaptureSource(
     return "android_notification_listener";
   }
   return VALID_CAPTURE_SOURCES.has(normalized) ? normalized : null;
+}
+
+export function isNotificationCaptureSource(
+  rawValue: string | null | undefined,
+): boolean {
+  const normalized = normalizeWalletCaptureSource(rawValue);
+  return (
+    normalized === "android_notification_listener" ||
+    normalized === "ios_notification_shortcut"
+  );
+}
+
+export function resolveNotificationCaptureSource(
+  rawValue: string | null | undefined,
+): string {
+  const normalized = normalizeWalletCaptureSource(rawValue);
+  return normalized === "ios_notification_shortcut"
+    ? normalized
+    : "android_notification_listener";
 }
 
 export function resolveWalletTransactionCurrency(
@@ -128,7 +148,7 @@ export function resolveWalletCaptureCurrency(params: {
     (params.accountCurrency || params.tx.accountCurrency || "").trim() || null;
   const captureSource = normalizeWalletCaptureSource(params.captureSource);
 
-  if (captureSource !== "android_notification_listener") {
+  if (!isNotificationCaptureSource(captureSource)) {
     return payloadCurrency || preferredCurrency;
   }
   if (

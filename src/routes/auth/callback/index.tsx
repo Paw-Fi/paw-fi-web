@@ -37,6 +37,21 @@ function AuthCallback() {
         const type = hashParams.get("type") || queryParams.get("type");
         const authCode = queryParams.get("code");
 
+        // Keep the OAuth session exchange inside Electron for desktop sign-in.
+        if (next.startsWith("moneko-desktop://")) {
+          const desktopCallback = new URL(next);
+          const accessToken = hashParams.get("access_token");
+          const refreshToken = hashParams.get("refresh_token");
+          const callbackError = queryParams.get("error");
+          if (authCode) desktopCallback.searchParams.set("code", authCode);
+          if (accessToken) desktopCallback.searchParams.set("access_token", accessToken);
+          if (refreshToken) desktopCallback.searchParams.set("refresh_token", refreshToken);
+          if (type) desktopCallback.searchParams.set("type", type);
+          if (callbackError) desktopCallback.searchParams.set("error", callbackError);
+          window.location.assign(desktopCallback.toString());
+          return;
+        }
+
         if (type === "recovery") {
           navigate({ to: "/reset-password" });
           return;

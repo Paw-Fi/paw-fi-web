@@ -52,6 +52,29 @@ function itemProperties(tool: BotToolDeclaration): Record<string, any> {
   return properties(tool).transactions?.items?.properties ?? {};
 }
 
+Deno.test(
+  "merchant-aware save tools accept canonical analysis identity",
+  () => {
+    const single = properties(
+      buildAddTransactionTool({ includeMerchant: true }),
+    );
+    const batch = itemProperties(
+      buildAddTransactionsBatchTool({ includeMerchant: true }),
+    );
+
+    for (const toolProperties of [single, batch]) {
+      assert(
+        toolProperties.merchant_id != null,
+        "Expected merchant_id passthrough field",
+      );
+      assert(
+        toolProperties.merchant_structured_name != null,
+        "Expected merchant_structured_name passthrough field",
+      );
+    }
+  },
+);
+
 function twilioAppTools(): BotToolDeclaration[] {
   return [
     { name: "analyze_expense" },

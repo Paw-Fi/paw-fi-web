@@ -128,6 +128,7 @@ interface RecurrenceCandidateRow {
   date: string;
   type: "expense" | "income";
   merchant: string | null;
+  merchant_structured_name?: string | null;
   raw_text: string | null;
   is_recurring?: boolean | null;
   recurrence_rule?: Record<string, unknown> | null;
@@ -162,6 +163,7 @@ export interface PlaidRecurringTemplateCandidate {
   category: string | null;
   rawText: string | null;
   merchant: string | null;
+  structuredMerchant: string | null;
   recurrenceRule: Record<string, unknown>;
   providerFields: Record<string, unknown>;
 }
@@ -191,10 +193,9 @@ export async function upsertBankConnection(params: {
   metadata?: Record<string, unknown> | null;
   actorUserId?: string;
 }): Promise<{ connectionId: string; isNewConnection: boolean }> {
-  const normalizedCountryCode =
-    resolvePlaidCountryCode({
-      requestedCountryCode: params.countryCode,
-    }) ?? null;
+  const normalizedCountryCode = resolvePlaidCountryCode({
+    requestedCountryCode: params.countryCode,
+  }) ?? null;
 
   const selectExisting = async () => {
     const { data, error } = await params.supabase
@@ -256,17 +257,16 @@ export async function upsertBankConnection(params: {
       .update({
         access_token_encrypted: params.accessTokenEncrypted,
         plaid_access_token_encrypted: params.accessTokenEncrypted,
-        refresh_token_encrypted:
-          params.refreshTokenEncrypted === undefined
-            ? undefined
-            : params.refreshTokenEncrypted,
-        expires_at:
-          params.expiresAt === undefined ? undefined : params.expiresAt,
-        country_code:
-          resolvePlaidCountryCode({
-            requestedCountryCode: normalizedCountryCode,
-            connectionCountryCode: existing.country_code,
-          }) ?? null,
+        refresh_token_encrypted: params.refreshTokenEncrypted === undefined
+          ? undefined
+          : params.refreshTokenEncrypted,
+        expires_at: params.expiresAt === undefined
+          ? undefined
+          : params.expiresAt,
+        country_code: resolvePlaidCountryCode({
+          requestedCountryCode: normalizedCountryCode,
+          connectionCountryCode: existing.country_code,
+        }) ?? null,
         duplicate_group_key: params.duplicateGroupKey || undefined,
         idempotency_key: params.idempotencyKey || undefined,
         status: "active",
@@ -357,16 +357,14 @@ export async function upsertBankConnection(params: {
     .update({
       access_token_encrypted: params.accessTokenEncrypted,
       plaid_access_token_encrypted: params.accessTokenEncrypted,
-      refresh_token_encrypted:
-        params.refreshTokenEncrypted === undefined
-          ? undefined
-          : params.refreshTokenEncrypted,
+      refresh_token_encrypted: params.refreshTokenEncrypted === undefined
+        ? undefined
+        : params.refreshTokenEncrypted,
       expires_at: params.expiresAt === undefined ? undefined : params.expiresAt,
-      country_code:
-        resolvePlaidCountryCode({
-          requestedCountryCode: normalizedCountryCode,
-          connectionCountryCode: retry.country_code,
-        }) ?? null,
+      country_code: resolvePlaidCountryCode({
+        requestedCountryCode: normalizedCountryCode,
+        connectionCountryCode: retry.country_code,
+      }) ?? null,
       duplicate_group_key: params.duplicateGroupKey || undefined,
       idempotency_key: params.idempotencyKey || undefined,
       status: "active",
@@ -398,21 +396,23 @@ export async function loadLinkedWalletsForBankAccounts(params: {
     return new Map<string, LinkedWalletRecord>();
   }
 
-  const { data: bankAccountRows, error: bankAccountError } =
-    await params.supabase
-      .from("bank_accounts")
-      .select("id, currency")
-      .in("id", bankAccountIds);
+  const { data: bankAccountRows, error: bankAccountError } = await params
+    .supabase
+    .from("bank_accounts")
+    .select("id, currency")
+    .in("id", bankAccountIds);
 
   if (bankAccountError) {
     throw bankAccountError;
   }
 
   const bankCurrencyById = new Map<string, string>();
-  for (const row of (bankAccountRows || []) as Array<{
-    id?: string | null;
-    currency?: string | null;
-  }>) {
+  for (
+    const row of (bankAccountRows || []) as Array<{
+      id?: string | null;
+      currency?: string | null;
+    }>
+  ) {
     const id = row.id?.trim();
     const currency = row.currency?.trim().toUpperCase();
     if (id && currency) {
@@ -508,6 +508,7 @@ function inferPlaidRecurringRules(params: {
       date: record.date,
       type: record.type,
       merchant: record.merchant,
+      merchant_structured_name: record.merchant_structured_name ?? null,
       raw_text: record.raw_text,
       is_recurring: record.is_recurring,
       recurrence_rule: record.recurrence_rule,
@@ -545,7 +546,7 @@ function inferPlaidRecurringRules(params: {
   const rules = new Map<string, Record<string, unknown>>();
   for (const group of groups) {
     const currentRows = group.rows.filter((row) =>
-      currentTransactionById.has(row.provider_transaction_id),
+      currentTransactionById.has(row.provider_transaction_id)
     );
     if (!currentRows.length) continue;
 
@@ -615,10 +616,9 @@ function buildPlaidRecurringTemplateCandidates(params: {
     if (!frequency) continue;
 
     const intervalValue = Number(recurrence.interval || 1);
-    const interval =
-      Number.isFinite(intervalValue) && intervalValue > 1
-        ? Math.round(intervalValue)
-        : 1;
+    const interval = Number.isFinite(intervalValue) && intervalValue > 1
+      ? Math.round(intervalValue)
+      : 1;
     const providerHint =
       recurrence.provider_hint && typeof recurrence.provider_hint === "object"
         ? (recurrence.provider_hint as Record<string, unknown>)
@@ -659,8 +659,9 @@ function buildPlaidRecurringTemplateCandidates(params: {
     };
     const existing = byTemplateKey.get(idempotencyKey);
     const shouldReplace = !existing || record.date > existing.date;
-    const date =
-      existing && existing.date < anchorDate ? existing.date : anchorDate;
+    const date = existing && existing.date < anchorDate
+      ? existing.date
+      : anchorDate;
     const candidate: PlaidRecurringTemplateCandidate = {
       idempotencyKey,
       userId: params.userId,
@@ -674,6 +675,9 @@ function buildPlaidRecurringTemplateCandidates(params: {
       category: shouldReplace ? record.category : existing!.category,
       rawText: shouldReplace ? record.raw_text : existing!.rawText,
       merchant: shouldReplace ? record.merchant : existing!.merchant,
+      structuredMerchant: shouldReplace
+        ? (record.merchant_structured_name ?? null)
+        : existing!.structuredMerchant,
       recurrenceRule: {
         ...(shouldReplace ? recurrenceRule : existing!.recurrenceRule),
         anchor_date: date,
@@ -759,6 +763,7 @@ async function upsertPlaidRecurringTemplates(params: {
       date,
       raw_text: candidate.rawText,
       merchant: candidate.merchant,
+      merchant_structured_name: candidate.structuredMerchant,
       source: candidate.merchant || candidate.rawText,
       type: candidate.type,
       is_recurring: true,
@@ -780,6 +785,7 @@ async function upsertPlaidRecurringTemplates(params: {
           date,
           raw_text: candidate.rawText,
           merchant: candidate.merchant,
+          merchant_structured_name: candidate.structuredMerchant,
           source: candidate.merchant || candidate.rawText,
           type: candidate.type,
           is_recurring: true,
@@ -861,14 +867,14 @@ const PLAID_RECURRING_TEMPLATE_PERSISTED_FIELDS = [
 function sameJsonValue(left: unknown, right: unknown): boolean {
   return (
     JSON.stringify(normalizeJsonValue(left)) ===
-    JSON.stringify(normalizeJsonValue(right))
+      JSON.stringify(normalizeJsonValue(right))
   );
 }
 
 function normalizeJsonValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((nestedValue) =>
-      nestedValue === undefined ? null : normalizeJsonValue(nestedValue),
+      nestedValue === undefined ? null : normalizeJsonValue(nestedValue)
     );
   }
   if (value && typeof value === "object") {
@@ -898,11 +904,10 @@ export function mergePlaidRecurringTemplatePayload(
   }
 
   const previousProviderFields = existing.provider_fields || {};
-  const previousTemplateFields =
-    previousProviderFields.template_fields &&
-    typeof previousProviderFields.template_fields === "object"
-      ? (previousProviderFields.template_fields as Record<string, unknown>)
-      : null;
+  const previousTemplateFields = previousProviderFields.template_fields &&
+      typeof previousProviderFields.template_fields === "object"
+    ? (previousProviderFields.template_fields as Record<string, unknown>)
+    : null;
   const userOverrides = existing.user_overrides || {};
   const merged = { ...providerPayload };
 
@@ -911,8 +916,7 @@ export function mergePlaidRecurringTemplatePayload(
       userOverrides,
       field,
     );
-    const matchedPreviousProviderValue =
-      previousTemplateFields != null &&
+    const matchedPreviousProviderValue = previousTemplateFields != null &&
       sameJsonValue(existing[field], previousTemplateFields[field]);
     if (hasExplicitOverride || !matchedPreviousProviderValue) {
       merged[field] = existing[field] ?? null;
@@ -920,8 +924,8 @@ export function mergePlaidRecurringTemplatePayload(
   }
 
   return PLAID_RECURRING_TEMPLATE_PERSISTED_FIELDS.some(
-    (field) => !sameJsonValue(existing[field], merged[field]),
-  )
+      (field) => !sameJsonValue(existing[field], merged[field]),
+    )
     ? merged
     : null;
 }
@@ -959,7 +963,7 @@ export async function preparePlaidTransactionMutations(
       account_id: params.accountId ?? null,
     }));
   const normalized = mapped.map((record) =>
-    normalizeCurrency(record, params.accountCurrency),
+    normalizeCurrency(record, params.accountCurrency)
   );
   const currencyMismatches = normalized.filter(
     (entry) => entry.mismatch,
@@ -996,7 +1000,7 @@ export async function preparePlaidTransactionMutations(
     const { data, error } = await params.supabase
       .from("expenses")
       .select(
-        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, merchant_structured_name, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
       )
       .eq("user_id", params.userId)
       .eq("provider", PLAID_PROVIDER)
@@ -1029,10 +1033,10 @@ export async function preparePlaidTransactionMutations(
   });
   const inserts = params.hideNewTransactions
     ? mutationPlan.inserts.map((record) => ({
-        ...record,
-        deleted_at: new Date().toISOString(),
-        deleted_reason: "bank_account_inactive",
-      }))
+      ...record,
+      deleted_at: new Date().toISOString(),
+      deleted_reason: "bank_account_inactive",
+    }))
     : mutationPlan.inserts;
   return {
     inserts,
@@ -1052,8 +1056,9 @@ export async function persistPreparedPlaidRecurringTemplates(params: {
 function normalizeExistingRecurrenceCandidate(
   row: ExistingExpenseProjectionRow,
 ): RecurrenceCandidateRow | null {
-  const record = row as ExistingExpenseProjectionRow &
-    Partial<RecurrenceCandidateRow>;
+  const record = row as
+    & ExistingExpenseProjectionRow
+    & Partial<RecurrenceCandidateRow>;
   if (!record.provider_transaction_id || !record.date || !record.amount_cents) {
     return null;
   }
@@ -1066,6 +1071,7 @@ function normalizeExistingRecurrenceCandidate(
     date: String(record.date).slice(0, 10),
     type,
     merchant: record.merchant || null,
+    merchant_structured_name: record.merchant_structured_name ?? null,
     raw_text: record.raw_text || null,
     is_recurring: record.is_recurring,
     recurrence_rule: record.recurrence_rule,
@@ -1082,7 +1088,7 @@ function largestAmountCluster(
 
   for (const seed of sorted) {
     const cluster = sorted.filter((row) =>
-      amountsCloseEnough(row.amount_cents, seed.amount_cents),
+      amountsCloseEnough(row.amount_cents, seed.amount_cents)
     );
     if (cluster.length > best.length) {
       best = cluster;
@@ -1168,8 +1174,8 @@ function buildPlaidRecurringProviderHint(
 ): Record<string, unknown> | null {
   if (!transaction) return null;
   const raw = transaction as PlaidTransaction & Record<string, unknown>;
-  const streamId =
-    raw.recurring_stream_id || raw.stream_id || raw.recurring_transaction_id;
+  const streamId = raw.recurring_stream_id || raw.stream_id ||
+    raw.recurring_transaction_id;
   if (!streamId) return null;
   return {
     plaid_stream_id: streamId,
@@ -1181,8 +1187,8 @@ function buildPlaidRecurringRuleFromProviderHint(
   transaction: PlaidTransaction,
 ): Record<string, unknown> | null {
   const raw = transaction as PlaidTransaction & Record<string, unknown>;
-  const streamId =
-    raw.recurring_stream_id || raw.stream_id || raw.recurring_transaction_id;
+  const streamId = raw.recurring_stream_id || raw.stream_id ||
+    raw.recurring_transaction_id;
   if (!streamId) return null;
   const frequency = mapPlaidFrequencyToRecurrence(raw.frequency);
   if (!frequency) return null;
@@ -1302,8 +1308,7 @@ export async function preparePlaidAccounts(
 
   const nowIso = new Date().toISOString();
   const payload = params.accounts.map((account) => {
-    const existing =
-      existingByProviderId.get(account.account_id) ||
+    const existing = existingByProviderId.get(account.account_id) ||
       (account.persistent_account_id
         ? existingByPersistentId.get(account.persistent_account_id)
         : null);
@@ -1315,14 +1320,12 @@ export async function preparePlaidAccounts(
       plaid_account_id: account.account_id,
       provider_account_id: account.account_id,
       provider_persistent_account_id: account.persistent_account_id || null,
-      name:
-        account.name ||
+      name: account.name ||
         account.official_name ||
         `Account ${account.account_id}`,
       official_name: account.official_name || null,
       mask: account.mask || null,
-      currency:
-        account.balances?.iso_currency_code ||
+      currency: account.balances?.iso_currency_code ||
         account.balances?.unofficial_currency_code ||
         "USD",
       type: account.type || null,
@@ -1442,7 +1445,7 @@ export async function persistPlaidTransactions(
     }));
 
   const normalized = mapped.map((record) =>
-    normalizeCurrency(record, params.accountCurrency),
+    normalizeCurrency(record, params.accountCurrency)
   );
   const currencyMismatches = normalized.filter(
     (entry) => entry.mismatch,
@@ -1484,7 +1487,7 @@ export async function persistPlaidTransactions(
     const { data, error: selectError } = await params.supabase
       .from("expenses")
       .select(
-        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
+        "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, merchant_structured_name, raw_text, bank_account_id, account_id, household_id, split_group_id, is_recurring, recurrence_rule, analytics_class, classification_source",
       )
       .eq("user_id", params.userId)
       .eq("provider", PLAID_PROVIDER)

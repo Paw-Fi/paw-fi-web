@@ -5,11 +5,11 @@ import { Environment } from "https://esm.sh/@apple/app-store-server-library@2.0.
 
 import { authenticateUser } from "../shared/auth.ts";
 import {
+  type AppStoreApiConfig,
   fetchAppStoreTransactionHistoryByOriginalId,
   findAppStoreSubscriptionStatusWithEnvironmentFallback,
   getValidatedAppStorePrivateKey,
   isAppStoreServerApiConfigured,
-  type AppStoreApiConfig,
 } from "../shared/app-store-api.ts";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { normalizeLookupEmail } from "../shared/creator-user-lookup.ts";
@@ -298,13 +298,25 @@ async function fetchSectionData(
 
   switch (section) {
     case "transactions":
-      return await fetchTransactionsSection(client, userId, page, pageSize, offset);
+      return await fetchTransactionsSection(
+        client,
+        userId,
+        page,
+        pageSize,
+        offset,
+      );
     case "accounts":
       return await fetchAccountsSection(client, userId);
     case "budgets":
       return await fetchBudgetsSection(client, userId);
     case "recurring":
-      return await fetchRecurringSection(client, userId, page, pageSize, offset);
+      return await fetchRecurringSection(
+        client,
+        userId,
+        page,
+        pageSize,
+        offset,
+      );
     case "devices":
       return await fetchDevicesSection(client, userId);
     case "households":
@@ -312,7 +324,13 @@ async function fetchSectionData(
     case "bank-connections":
       return await fetchBankConnectionsSection(client, userId);
     case "chat-sessions":
-      return await fetchChatSessionsSection(client, userId, page, pageSize, offset);
+      return await fetchChatSessionsSection(
+        client,
+        userId,
+        page,
+        pageSize,
+        offset,
+      );
     case "email-import":
       return await fetchEmailImportSection(client, userId);
     default:
@@ -369,8 +387,9 @@ async function fetchStripeDetails(
       charges: charges.data.map(sanitizeStripeCharge),
     };
   } catch (error) {
-    errors.stripe =
-      error instanceof Error ? error.message : "Stripe lookup failed";
+    errors.stripe = error instanceof Error
+      ? error.message
+      : "Stripe lookup failed";
     return null;
   }
 }
@@ -403,12 +422,12 @@ async function fetchAppStoreDetails(
     const latestTransaction = transactions[0] ?? null;
     const status = latestTransaction?.transactionId
       ? await findAppStoreSubscriptionStatusWithEnvironmentFallback({
-          config,
-          environmentHint: historyLookup.environment,
-          transactionId: latestTransaction.transactionId,
-          originalTransactionId,
-          productId: latestTransaction.productId,
-        })
+        config,
+        environmentHint: historyLookup.environment,
+        transactionId: latestTransaction.transactionId,
+        originalTransactionId,
+        productId: latestTransaction.productId,
+      })
       : null;
     const backlog = await fetchAppStoreBacklog(
       client,
@@ -425,8 +444,9 @@ async function fetchAppStoreDetails(
       backlog: backlog?.backlog ?? [],
     };
   } catch (error) {
-    errors.appStore =
-      error instanceof Error ? error.message : "App Store lookup failed";
+    errors.appStore = error instanceof Error
+      ? error.message
+      : "App Store lookup failed";
     return await fetchAppStoreBacklog(
       client,
       originalTransactionId,
@@ -451,10 +471,9 @@ async function fetchAppStoreHistoryWithFallback(
       }),
     };
   } catch (firstError) {
-    const fallbackEnvironment =
-      environmentHint === Environment.SANDBOX
-        ? Environment.PRODUCTION
-        : Environment.SANDBOX;
+    const fallbackEnvironment = environmentHint === Environment.SANDBOX
+      ? Environment.PRODUCTION
+      : Environment.SANDBOX;
     try {
       return {
         environment: fallbackEnvironment,
@@ -487,10 +506,9 @@ function getAppStoreConfig(errors: ProviderErrors): AppStoreApiConfig | null {
       privateKey: getValidatedAppStorePrivateKey(config.privateKey),
     };
   } catch (error) {
-    errors.appStore =
-      error instanceof Error
-        ? error.message
-        : "App Store private key is invalid";
+    errors.appStore = error instanceof Error
+      ? error.message
+      : "App Store private key is invalid";
     return null;
   }
 }
@@ -559,8 +577,9 @@ function sanitizeStripeInvoice(invoice: Stripe.Invoice) {
     created: toIsoFromStripeSeconds(invoice.created),
     hostedInvoiceUrl: invoice.hosted_invoice_url,
     invoicePdf: invoice.invoice_pdf,
-    subscription:
-      typeof invoice.subscription === "string" ? invoice.subscription : null,
+    subscription: typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : null,
   };
 }
 
@@ -571,13 +590,13 @@ function sanitizePaymentMethod(paymentMethod: Stripe.PaymentMethod) {
     created: toIsoFromStripeSeconds(paymentMethod.created),
     card: paymentMethod.card
       ? {
-          brand: paymentMethod.card.brand,
-          last4: paymentMethod.card.last4,
-          expMonth: paymentMethod.card.exp_month,
-          expYear: paymentMethod.card.exp_year,
-          funding: paymentMethod.card.funding,
-          country: paymentMethod.card.country,
-        }
+        brand: paymentMethod.card.brand,
+        last4: paymentMethod.card.last4,
+        expMonth: paymentMethod.card.exp_month,
+        expYear: paymentMethod.card.exp_year,
+        funding: paymentMethod.card.funding,
+        country: paymentMethod.card.country,
+      }
       : null,
   };
 }
@@ -595,8 +614,9 @@ function sanitizeStripeCharge(charge: Stripe.Charge) {
     currency: charge.currency,
     created: toIsoFromStripeSeconds(charge.created),
     receiptUrl: charge.receipt_url,
-    paymentMethod:
-      typeof charge.payment_method === "string" ? charge.payment_method : null,
+    paymentMethod: typeof charge.payment_method === "string"
+      ? charge.payment_method
+      : null,
   };
 }
 
@@ -630,7 +650,7 @@ async function fetchTransactionsSection(
       client
         .from("expenses")
         .select(
-          "id,date,amount_cents,currency,category,source,type,account_id,created_at,updated_at",
+          "id,date,amount_cents,currency,category,raw_text,source,merchant,merchant_id,merchant_structured_name,type,account_id,created_at,updated_at,merchants(domain, logo_identifier)",
         )
         .eq("user_id", userId)
         .order("date", { ascending: false })
@@ -649,7 +669,12 @@ async function fetchTransactionsSection(
 
     const totalsMap = new Map<
       string,
-      { expense: number; income: number; expenseCount: number; incomeCount: number }
+      {
+        expense: number;
+        income: number;
+        expenseCount: number;
+        incomeCount: number;
+      }
     >();
     for (const rec of totalsResult.data ?? []) {
       const key = rec.currency ?? "UNKNOWN";
@@ -762,7 +787,7 @@ async function fetchRecurringSection(
       client
         .from("expenses")
         .select(
-          "id,date,amount_cents,currency,category,source,type,recurrence_rule,is_recurring,created_at,updated_at",
+          "id,date,amount_cents,currency,category,raw_text,source,merchant,merchant_id,merchant_structured_name,type,recurrence_rule,is_recurring,created_at,updated_at,merchants(domain, logo_identifier)",
         )
         .eq("user_id", userId)
         .eq("is_recurring", true)

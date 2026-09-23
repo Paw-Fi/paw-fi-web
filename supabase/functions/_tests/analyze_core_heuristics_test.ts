@@ -6,7 +6,11 @@ import {
 } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
+  buildAmbiguousCategoryRefinementCandidates,
+  buildCallerAnalysisContext,
   buildCategoryPreferenceGuidance,
+  buildMerchantRegionalContext,
+  buildRegionalMerchantGuidance,
   extractExplicitTransactionTime,
   extractLabeledTransactionFallback,
   inferAttachmentFallbackCurrency,
@@ -15,11 +19,214 @@ import {
   normalizeCustomSplits,
   normalizeTransactionDateAndDescription,
   parseTransactionsJsonToItems,
+  refineAmbiguousTextCategories,
   resolveHouseholdContext,
+  resolveSelectedMerchantCandidate,
   sanitizeTransactionSourceGrounding,
   shouldTryNextGeminiFallbackModel,
   validateTransactionSourceGrounding,
 } from "../shared/analyze-core.ts";
+
+Deno.test(
+  "analyze-core: unresolved categories retain multilingual semantic context for AI refinement",
+  () => {
+    const candidates = buildAmbiguousCategoryRefinementCandidates(
+      [
+        {
+          type: "expense",
+          amount: 35,
+          category: "other",
+          currency: "USD",
+          currencySymbol: "$",
+          date: "2026-09-18",
+          description: "وجبة سريعة",
+          merchant: "KFC",
+        },
+        {
+          type: "expense",
+          amount: 12,
+          category: "restaurants",
+          currency: "EUR",
+          currencySymbol: "€",
+          date: "2026-09-18",
+          description: "déjeuner",
+          merchant: "Café Local",
+        },
+      ],
+      "٣٥ لمطعم KFC",
+    );
+
+    assertEquals(candidates, [
+      {
+        itemIndex: 0,
+        type: "expense",
+        amount: 35,
+        currency: "USD",
+        date: "2026-09-18",
+        description: "وجبة سريعة",
+        merchant: "KFC",
+        sourceText: "٣٥ لمطعم KFC",
+      },
+    ]);
+  },
+);
+
+Deno.test(
+  "analyze-core: explicit user remaps are excluded from AI category refinement",
+  () => {
+    const candidates = buildAmbiguousCategoryRefinementCandidates(
+      [
+        {
+          type: "expense",
+          amount: 35,
+          category: "other",
+          currency: "USD",
+          currencySymbol: "$",
+          date: "2026-09-18",
+          merchant: "McD",
+        },
+      ],
+      "35 for mcd",
+      new Set([0]),
+    );
+
+    assertEquals(candidates, []);
+  },
+);
+
+Deno.test(
+  "analyze-core: AI refinement replaces a generic category using merchant and original text",
+  async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    const items = await refineAmbiguousTextCategories({
+      genAI: {
+        getGenerativeModel: () => ({
+          generateContent: (request: Record<string, unknown>) => {
+            requests.push(request);
+            return Promise.resolve({
+              response: {
+                functionCalls: () => [{
+                  name: "categorize_transactions",
+                  args: { categories: ["restaurants"] },
+                }],
+              },
+            });
+          },
+        }),
+      } as any,
+      items: [
+        {
+          type: "expense",
+          amount: 35,
+          category: "other",
+          currency: "USD",
+          currencySymbol: "$",
+          date: "2026-09-18",
+          description: "وجبة سريعة",
+          merchant: "KFC",
+        },
+      ],
+      sourceText: "٣٥ لمطعم KFC",
+      expenseCategories: ["restaurants", "other", "uncategorized"],
+      incomeCategories: ["salary", "other"],
+      language: "ar",
+    });
+
+    assertEquals(items[0].category, "restaurants");
+    assertEquals(items[0].categorySource, "ambiguous_text_ai_refinement");
+    const requestText = String(
+      (requests[0] as any).contents?.[0]?.parts?.[0]?.text ?? "",
+    );
+    assertStringIncludes(requestText, "Merchant/source: KFC");
+    assertStringIncludes(requestText, "Original user text: ٣٥ لمطعم KFC");
+  },
+);
+
+Deno.test(
+  "analyze-core: preferred timezone is trusted regional context",
+  () => {
+    const context = buildCallerAnalysisContext({
+      callerCurrency: "GBP",
+      callerDate: "2026-09-17",
+      preferredTimezone: "Europe/London",
+    });
+    assertStringIncludes(context, "Caller Currency: GBP");
+    assertStringIncludes(context, "Caller Date: 2026-09-17");
+    assertStringIncludes(context, "Caller Timezone: Europe/London");
+
+    const guidance = buildRegionalMerchantGuidance("Europe/London").join("\n");
+    assertStringIncludes(guidance, "explicit merchant location or domain");
+    assertStringIncludes(guidance, "timezone");
+    assertStringIncludes(guidance, "Never invent a merchant domain");
+  },
+);
+
+Deno.test("analyze-core: invalid timezone is omitted from AI context", () => {
+  const context = buildCallerAnalysisContext({
+    callerCurrency: "USD",
+    callerDate: "2026-09-17",
+    preferredTimezone: "not/a-timezone",
+  });
+  assertEquals(context.includes("Caller Timezone:"), false);
+  assertEquals(buildRegionalMerchantGuidance("not/a-timezone"), []);
+});
+
+Deno.test(
+  "analyze-core: explicit merchant country removes timezone fallback",
+  () => {
+    assertEquals(
+      buildMerchantRegionalContext({
+        merchantCountry: "GB",
+        preferredTimezone: "America/New_York",
+      }),
+      { explicitMerchantCountry: "GB", callerTimezone: null },
+    );
+    assertEquals(
+      buildMerchantRegionalContext({
+        preferredTimezone: "Europe/London",
+      }),
+      { explicitMerchantCountry: null, callerTimezone: "Europe/London" },
+    );
+  },
+);
+
+Deno.test(
+  "analyze-core: regional AI choice must match an exact candidate",
+  () => {
+    const candidates = [
+      { name: "ABC US", domain: "abc.com" },
+      { name: "ABC UK", domain: "abc.co.uk" },
+    ];
+    assertEquals(
+      resolveSelectedMerchantCandidate(candidates, {
+        hasConfidentMatch: true,
+        selectedDomain: "https://www.abc.co.uk/path",
+      }),
+      null,
+    );
+    assertEquals(
+      resolveSelectedMerchantCandidate(candidates, {
+        hasConfidentMatch: true,
+        selectedDomain: "abc.co.uk",
+      }),
+      candidates[1],
+    );
+    assertEquals(
+      resolveSelectedMerchantCandidate(candidates, {
+        hasConfidentMatch: false,
+        selectedDomain: "abc.co.uk",
+      }),
+      null,
+    );
+    assertEquals(
+      resolveSelectedMerchantCandidate(candidates, {
+        hasConfidentMatch: true,
+        selectedDomain: "invented.co.uk",
+      }),
+      null,
+    );
+  },
+);
 
 Deno.test(
   "analyze-core: Gemini INVALID_ARGUMENT tries the next fallback model",

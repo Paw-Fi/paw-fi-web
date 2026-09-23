@@ -20,6 +20,12 @@ const optionalWalletMigration = await Deno.readTextFile(
     import.meta.url,
   ),
 );
+const preconfirmationMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260923120000_allow_next_recurring_occurrence_preconfirmation.sql",
+    import.meta.url,
+  ),
+);
 
 Deno.test("recurring confirmation remains a service-only atomic RPC", () => {
   assertStringIncludes(migration, "security definer");
@@ -77,5 +83,36 @@ Deno.test(
       optionalWalletMigration,
       "Expected recurring update account requirement was not found",
     );
+  },
+);
+
+Deno.test(
+  "preconfirmation is limited to the server-calculated next future occurrence",
+  () => {
+    assertStringIncludes(
+      preconfirmationMigration,
+      "public.recurring_next_available_occurrence_v1",
+    );
+    assertStringIncludes(
+      preconfirmationMigration,
+      "p_scheduled_occurrence_date > v_user_wall_now::date",
+    );
+    assertStringIncludes(
+      preconfirmationMigration,
+      "p_scheduled_occurrence_date = v_next_available_occurrence",
+    );
+    assertStringIncludes(
+      preconfirmationMigration,
+      "and not v_is_next_preconfirmation",
+    );
+    assertStringIncludes(
+      preconfirmationMigration,
+      "occurrence.scheduled_occurrence_date <> p_scheduled_occurrence_date",
+    );
+    assertStringIncludes(
+      preconfirmationMigration,
+      "OCCURRENCE_PAID_DATE_IN_FUTURE",
+    );
+    assertStringIncludes(preconfirmationMigration, "OCCURRENCE_NOT_DUE");
   },
 );

@@ -3,6 +3,7 @@
 import {
   assertEquals,
   assertRejects,
+  assertStringIncludes,
 } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
@@ -27,8 +28,8 @@ Deno.test(
   () => {
     assertEquals(ANDROID_NOTIFICATION_MODELS, [
       "gemini-3.1-flash-lite",
-      "gemini-3.6-flash",
-      "gemini-3.1-pro-preview",
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
     ]);
   },
 );
@@ -177,6 +178,82 @@ function classification(
     ...overrides,
   };
 }
+
+Deno.test(
+  "completed external person-to-person receipts are classified as income in any language",
+  async () => {
+    const capturedRequests: Array<{
+      model: string;
+      request: Record<string, unknown>;
+    }> = [];
+    const notificationText = "Camille vous a envoyé 1,00 €";
+    const result = await classifyAndroidNotification({
+      genAI: fakeGenAIResponses(
+        [
+          {
+            text: () =>
+              JSON.stringify(
+                saveArgs({
+                  transactionType: "income",
+                  subtype: "deposit",
+                  amount: 1,
+                  amountEvidenceRaw: "1,00 €",
+                  currency: "EUR",
+                  currencyEvidenceRaw: "€",
+                  merchant: "Camille",
+                  merchantEvidenceRaw: "Camille",
+                  completionEvidenceRaw: "vous a envoyé",
+                  transactionEvidenceRaw: notificationText,
+                  category: "other income",
+                  reasonCode: "completed_external_income",
+                }),
+              ),
+          },
+          { text: () => "APPROVE" },
+        ],
+        [],
+        capturedRequests,
+      ),
+      notification: {
+        packageName: "com.payment.app",
+        sourceAppLabel: "Paiements",
+        title: "Camille",
+        text: notificationText,
+      },
+      fallbackDate,
+      accountCurrency: "EUR",
+      expenseCategories: ["other"],
+      incomeCategories: ["other income"],
+    });
+
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.transactionType, "income");
+    assertEquals(result.subtype, "deposit");
+
+    const classifierPrompt = String(
+      (
+        (
+          capturedRequests[0].request.contents as Array<Record<string, unknown>>
+        )[0].parts as Array<Record<string, unknown>>
+      )[0].text,
+    );
+    const verifierPrompt = String(
+      (
+        (
+          capturedRequests[1].request.contents as Array<Record<string, unknown>>
+        )[0].parts as Array<Record<string, unknown>>
+      )[0].text,
+    );
+    assertStringIncludes(
+      classifierPrompt,
+      "Completed money received from another person or external source is income",
+    );
+    assertStringIncludes(
+      verifierPrompt,
+      "Completed money received from another person or external source is income",
+    );
+  },
+);
 
 Deno.test("Android notification classifier rejects promotions", () => {
   const result = normalizeAndroidNotificationClassification(
@@ -638,8 +715,8 @@ Deno.test(
     assertEquals(result.currency, "AED");
     assertEquals(result.amount, 125.5);
     assertEquals(result.model, "gemini-3.1-flash-lite");
-    assertEquals(result.verificationModel, "gemini-3.6-flash");
-    assertEquals(capturedModels, ["gemini-3.1-flash-lite", "gemini-3.6-flash"]);
+    assertEquals(result.verificationModel, "gemini-3.5-flash-lite");
+    assertEquals(capturedModels, ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"]);
   },
 );
 
@@ -679,7 +756,7 @@ Deno.test(
 
     assertEquals(result.action, "save_transaction");
     assertEquals(result.model, "gemini-3.1-flash-lite");
-    assertEquals(result.verificationModel, "gemini-3.6-flash");
+    assertEquals(result.verificationModel, "gemini-3.5-flash-lite");
   },
 );
 
@@ -727,8 +804,8 @@ Deno.test(
 
     assertEquals(capturedModels, [
       "gemini-3.1-flash-lite",
-      "gemini-3.6-flash",
-      "gemini-3.1-pro-preview",
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
     ]);
   },
 );
@@ -817,7 +894,7 @@ Deno.test(
         },
         {
           phase: "classification",
-          model: "gemini-3.6-flash",
+          model: "gemini-3.5-flash-lite",
           responseId: "vertex-response-2",
           modelVersion: "gemini-version-2",
           candidateCount: 1,
@@ -830,7 +907,7 @@ Deno.test(
         },
         {
           phase: "classification",
-          model: "gemini-3.1-pro-preview",
+          model: "gemini-3.8-flash",
           responseId: "vertex-response-3",
           modelVersion: "gemini-version-3",
           candidateCount: 1,
@@ -888,7 +965,7 @@ Deno.test(
       error: "Classification failed",
       diagnosticCode: "INVALID_CLASSIFICATION_RESPONSE",
       retryable: false,
-      pipelineVersion: "android_notification_classifier_v8",
+      pipelineVersion: "android_notification_classifier_v9",
       diagnostics: [
         {
           phase: "classification",
@@ -911,7 +988,7 @@ Deno.test(
       error: "Classification failed",
       diagnosticCode: "unknown_error",
       retryable: true,
-      pipelineVersion: "android_notification_classifier_v8",
+      pipelineVersion: "android_notification_classifier_v9",
       diagnostics: [],
     });
     assertEquals(
@@ -992,10 +1069,10 @@ Deno.test(
     });
 
     assertEquals(result.action, "save_transaction");
-    assertEquals(result.verificationModel, "gemini-3.6-flash");
+    assertEquals(result.verificationModel, "gemini-3.5-flash-lite");
     assertEquals(
       modelOptions.map(({ model }) => model),
-      ["gemini-3.1-flash-lite", "gemini-3.6-flash"],
+      ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"],
     );
     assertEquals(modelOptions[0].tools, undefined);
     assertEquals("toolConfig" in requests[0], false);
@@ -1052,15 +1129,15 @@ Deno.test(
       incomeCategories: ["other income"],
     });
 
-    assertEquals(result.model, "gemini-3.1-pro-preview");
+    assertEquals(result.model, "gemini-3.8-flash");
     assertEquals(result.verificationModel, "gemini-3.1-flash-lite");
     assertEquals(capturedModels, [
       "gemini-3.1-flash-lite",
-      "gemini-3.6-flash",
-      "gemini-3.1-pro-preview",
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
       "gemini-3.1-flash-lite",
     ]);
-    assertEquals(capturedRequests[1].model, "gemini-3.6-flash");
+    assertEquals(capturedRequests[1].model, "gemini-3.5-flash-lite");
     assertEquals(capturedRequests[1].request.generationConfig, {
       maxOutputTokens: 2048,
       temperature: 0,
@@ -1286,11 +1363,11 @@ Deno.test(
     });
 
     assertEquals(result.action, "save_transaction");
-    assertEquals(result.verificationModel, "gemini-3.1-pro-preview");
+    assertEquals(result.verificationModel, "gemini-3.8-flash");
     assertEquals(capturedModels, [
       "gemini-3.1-flash-lite",
-      "gemini-3.6-flash",
-      "gemini-3.1-pro-preview",
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
     ]);
   },
 );
@@ -1404,8 +1481,8 @@ Deno.test(
     assertEquals(buildAndroidNotificationFailureResult(error).retryable, true);
     assertEquals(capturedModels, [
       "gemini-3.1-flash-lite",
-      "gemini-3.6-flash",
-      "gemini-3.1-pro-preview",
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
     ]);
   },
 );
@@ -1489,8 +1566,8 @@ Deno.test("promotion is ignored only after independent agreement", async () => {
   assertEquals(result.action, "ignore");
   assertEquals(result.reasonCode, "promotion");
   assertEquals(result.model, "gemini-3.1-flash-lite");
-  assertEquals(result.verificationModel, "gemini-3.6-flash");
-  assertEquals(capturedModels, ["gemini-3.1-flash-lite", "gemini-3.6-flash"]);
+  assertEquals(result.verificationModel, "gemini-3.5-flash-lite");
+  assertEquals(capturedModels, ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"]);
 });
 
 Deno.test(
@@ -1597,7 +1674,7 @@ Deno.test(
 
     assertEquals(result.action, "save_transaction");
     assertEquals(result.currency, "JPY");
-    assertEquals(result.model, "gemini-3.6-flash");
+    assertEquals(result.model, "gemini-3.5-flash-lite");
     assertEquals(result.verificationModel, "gemini-3.1-flash-lite");
   },
 );

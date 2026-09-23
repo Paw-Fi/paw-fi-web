@@ -36,6 +36,18 @@ function AuthConfirm() {
         const code = url.searchParams.get('code');
         const error = url.searchParams.get('error');
 
+        // Desktop confirmation must finish inside Electron so the session is
+        // persisted in the desktop app rather than in the browser.
+        if (next.startsWith('moneko-desktop://')) {
+          const desktopCallback = new URL(next);
+          if (code) desktopCallback.searchParams.set('code', code);
+          if (tokenHash) desktopCallback.searchParams.set('token_hash', tokenHash);
+          if (type) desktopCallback.searchParams.set('type', type);
+          if (error) desktopCallback.searchParams.set('error', error);
+          window.location.assign(desktopCallback.toString());
+          return;
+        }
+
         if (error) {
           navigate({ to: '/auth/error' });
           return;

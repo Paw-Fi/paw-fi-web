@@ -96,6 +96,51 @@ Deno.test(
 );
 
 Deno.test(
+  "transaction tools preserve canonical merchant identity from analysis",
+  async () => {
+    const merchantId = "44444444-4444-4444-8444-444444444444";
+    const normalized = normalizeTransactionToolArgs({
+      type: "expense",
+      amount: 18.5,
+      category: "food",
+      currency: "GBP",
+      merchant: "Tesco",
+      merchant_id: merchantId,
+      merchant_structured_name: "Tesco",
+    });
+
+    assertEquals(normalized, {
+      ok: true,
+      transaction: {
+        type: "expense",
+        amount: 18.5,
+        category: "food",
+        currency: "GBP",
+        merchant: "Tesco",
+        merchantId,
+        merchantStructuredName: "Tesco",
+      },
+    });
+    if (!normalized.ok) throw new Error(normalized.error);
+
+    const mock = createMockInvoker();
+    await invokeTransactionSave(
+      mock.invoker,
+      "internal-key",
+      "00000000-0000-4000-8000-000000000000",
+      {
+        ...normalized.transaction,
+        date: "2026-09-17",
+        currency: normalized.transaction.currency!,
+      },
+    );
+
+    assertEquals(mock.calls[0].options.body.merchantId, merchantId);
+    assertEquals(mock.calls[0].options.body.merchantStructuredName, "Tesco");
+  },
+);
+
+Deno.test(
   "normalizeTransactionToolArgs preserves an explicit transaction currency",
   () => {
     const result = normalizeTransactionToolArgs(
@@ -239,27 +284,33 @@ Deno.test(
   },
 );
 
-Deno.test("an empty wallet hint is rejected instead of clearing account_id", async () => {
-  const result = await resolveWalletForTransactionToolCall(
-    {
-      from: () => {
-        throw new Error("A malformed wallet hint must not query accounts.");
+Deno.test(
+  "an empty wallet hint is rejected instead of clearing account_id",
+  async () => {
+    const result = await resolveWalletForTransactionToolCall(
+      {
+        from: () => {
+          throw new Error("A malformed wallet hint must not query accounts.");
+        },
       },
-    },
-    "00000000-0000-4000-8000-000000000000",
-    null,
-    { wallet_id: null },
-  );
+      "00000000-0000-4000-8000-000000000000",
+      null,
+      { wallet_id: null },
+    );
 
-  assertEquals(result, { error: "Wallet id must be a non-empty UUID." });
-});
+    assertEquals(result, { error: "Wallet id must be a non-empty UUID." });
+  },
+);
 
-Deno.test("object-form recurring rules default an omitted frequency to monthly", () => {
-  assertEquals(
-    buildRecurrenceRule(
-      { recurrence_rule: { anchor_date: "2026-08-04" } },
-      "2026-08-04",
-    ),
-    { anchor_date: "2026-08-04", frequency: "monthly" },
-  );
-});
+Deno.test(
+  "object-form recurring rules default an omitted frequency to monthly",
+  () => {
+    assertEquals(
+      buildRecurrenceRule(
+        { recurrence_rule: { anchor_date: "2026-08-04" } },
+        "2026-08-04",
+      ),
+      { anchor_date: "2026-08-04", frequency: "monthly" },
+    );
+  },
+);

@@ -241,6 +241,34 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   });
 }
 
+function errorLogDetails(error: unknown): Record<string, string> {
+  if (error instanceof Error) {
+    return {
+      error_name: error.name,
+      error_message: error.message.slice(0, 300),
+    };
+  }
+  return {
+    error_name: "UnknownError",
+    error_message: String(error).slice(0, 300),
+  };
+}
+
+function logReviewEvent(
+  requestId: string,
+  event: string,
+  details: Record<string, unknown> = {},
+): void {
+  console.info(
+    JSON.stringify({
+      function: "generate-pocket-month-review",
+      request_id: requestId,
+      event,
+      ...details,
+    }),
+  );
+}
+
 function parseRequest(value: unknown): PocketReviewRequest | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
@@ -738,9 +766,19 @@ function normalize(
   value: unknown,
   context: SuggestionContext,
   locale: string | null,
+  onReject?: (reason: string, details?: Record<string, unknown>) => void,
 ) {
+  const reject = (reason: string, details: Record<string, unknown> = {}) => {
+    onReject?.(reason, details);
+    return null;
+  };
   const parsed = aiPocketMonthReviewSchema.safeParse(value);
-  if (!parsed.success) return null;
+  if (!parsed.success) {
+    return reject("response_schema_parse_failed", {
+      issue_count: parsed.error.issues.length,
+      issue_codes: [...new Set(parsed.error.issues.map((issue) => issue.code))],
+    });
+  }
   const raw = parsed.data;
   const validIds = new Set(context.pockets.map((pocket) => pocket.id));
   const pocketMap = new Map(
@@ -748,19 +786,31 @@ function normalize(
   );
   const rawSuggestions = raw.suggestions;
   if (rawSuggestions.length !== validIds.size) {
-    return null;
+    return reject("suggestion_count_mismatch", {
+      returned_count: rawSuggestions.length,
+      expected_count: validIds.size,
+    });
   }
-  if (validIds.size > 0 && rawSuggestions.length === 0) return null;
+  if (validIds.size > 0 && rawSuggestions.length === 0) {
+    return reject("suggestions_empty", { expected_count: validIds.size });
+  }
   const rawTotal = rawSuggestions.reduce(
     (sum, item) => sum + item.suggested_amount_cents,
     0,
   );
-  if (raw.suggested_total_budget_cents !== rawTotal) return null;
+  if (raw.suggested_total_budget_cents !== rawTotal) {
+    return reject("suggested_total_mismatch", {
+      declared_total_is_zero: raw.suggested_total_budget_cents === 0,
+      calculated_total_is_zero: rawTotal === 0,
+    });
+  }
   if (
     context.total_budget_cents > 0 &&
     raw.suggested_total_budget_cents > context.total_budget_cents
   ) {
-    return null;
+    return reject("suggested_total_exceeds_budget", {
+      budget_is_zero: context.total_budget_cents === 0,
+    });
   }
   const roundedPlan = roundPocketReviewPlan({
     amounts: rawSuggestions.map((item) => ({
@@ -795,7 +845,14 @@ function normalize(
       (item.tip != null && !tip) ||
       reason.length > 350
     ) {
-      return null;
+      return reject("suggestion_item_invalid", {
+        has_amount: amount != null,
+        has_valid_pocket_id: validIds.has(id),
+        is_duplicate_pocket_id: seen.has(id),
+        has_reason: Boolean(reason),
+        has_valid_tip: item.tip == null || Boolean(tip),
+        reason_length: reason.length,
+      });
     }
     seen.add(id);
     const pocket = pocketMap.get(id);
@@ -832,18 +889,27 @@ function normalize(
     context.currency,
     locale,
   );
-  if (!summary || summary.length > 500) return null;
+  if (!summary || summary.length > 500) {
+    return reject("summary_invalid", { summary_length: summary.length });
+  }
   const headline = formatPocketReviewMoneyTokens(
     raw.headline.trim().replace(/\s+/g, " "),
     context.currency,
     locale,
   );
-  if (!headline || headline.length > 140) return null;
+  if (!headline || headline.length > 140) {
+    return reject("headline_invalid", { headline_length: headline.length });
+  }
   if (
     raw.income_coverage_status !== context.cash_flow.income_coverage_status ||
     raw.month_funding_status !== context.cash_flow.month_funding_status
   ) {
-    return null;
+    return reject("cash_flow_status_mismatch", {
+      response_income_coverage_status: raw.income_coverage_status,
+      expected_income_coverage_status: context.cash_flow.income_coverage_status,
+      response_month_funding_status: raw.month_funding_status,
+      expected_month_funding_status: context.cash_flow.month_funding_status,
+    });
   }
   const insightTitles = new Set<string>();
   const impactCeiling = Math.max(
@@ -872,7 +938,11 @@ function normalize(
             locale,
           );
     if (!title || !insightSummary || (item.action != null && !action)) {
-      return null;
+      return reject("insight_text_invalid", {
+        has_title: Boolean(title),
+        has_summary: Boolean(insightSummary),
+        has_valid_action: item.action == null || Boolean(action),
+      });
     }
     const normalizedTitle = title.toLowerCase();
     if (
@@ -881,7 +951,14 @@ function normalize(
       (item.estimated_impact_cents != null &&
         item.estimated_impact_cents > impactCeiling)
     ) {
-      return null;
+      return reject("insight_constraints_invalid", {
+        is_duplicate_title: insightTitles.has(normalizedTitle),
+        has_valid_pocket_id:
+          item.envelope_id == null || validIds.has(item.envelope_id),
+        has_valid_impact:
+          item.estimated_impact_cents == null ||
+          item.estimated_impact_cents <= impactCeiling,
+      });
     }
     insightTitles.add(normalizedTitle);
     insights.push({
@@ -1162,19 +1239,35 @@ function previousMonthKey(value: string): string {
 }
 
 Deno.serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  let stage = "request_received";
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "POST") {
+    logReviewEvent(requestId, "method_rejected", { method: req.method });
     return jsonResponse({ success: false, error: "Method not allowed" }, 405);
   }
   try {
     const rawBody = await req.text();
+    stage = "body_read";
+    logReviewEvent(requestId, "request_received", {
+      method: req.method,
+      body_bytes: new TextEncoder().encode(rawBody).length,
+    });
     if (new TextEncoder().encode(rawBody).length > MAX_REQUEST_BYTES) {
+      logReviewEvent(requestId, "payload_rejected", {
+        reason: "payload_too_large",
+      });
       return jsonResponse({ success: false, error: "Payload too large" }, 413);
     }
+    stage = "request_parsed";
     const input = parseRequest(JSON.parse(rawBody));
     if (!input) {
+      logReviewEvent(requestId, "request_rejected", {
+        reason: "invalid_request",
+      });
       return jsonResponse(
         {
           success: false,
@@ -1183,10 +1276,18 @@ Deno.serve(async (req) => {
         400,
       );
     }
+    logReviewEvent(requestId, "request_validated", {
+      scope: input.scope,
+      currency: input.currency,
+      cycle_start: input.cycleStart,
+      locale: input.locale,
+      has_household_id: input.householdId !== null,
+    });
     const url = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const authorization = req.headers.get("Authorization");
     if (!url || !serviceKey) {
+      logReviewEvent(requestId, "configuration_error");
       return jsonResponse(
         {
           success: false,
@@ -1196,6 +1297,7 @@ Deno.serve(async (req) => {
       );
     }
     if (!authorization) {
+      logReviewEvent(requestId, "authorization_missing");
       return jsonResponse({ success: false, error: "Unauthorized" }, 401);
     }
     const supabase = createClient(url, serviceKey, {
@@ -1205,8 +1307,13 @@ Deno.serve(async (req) => {
         detectSessionInUrl: false,
       },
     });
+    stage = "authenticate_user";
     const auth = await authenticateUser(req, supabase);
     if (!auth.success || !auth.userId) {
+      logReviewEvent(requestId, "authentication_failed", {
+        status_code: auth.statusCode || 401,
+        error: auth.error || "Unauthorized",
+      });
       return jsonResponse(
         {
           success: false,
@@ -1215,16 +1322,22 @@ Deno.serve(async (req) => {
         auth.statusCode || 401,
       );
     }
+    logReviewEvent(requestId, "authenticated");
+    stage = "check_entitlement";
     if (
       !hasPlusEntitlement(
         await loadLatestSubscriptionForUser(supabase, auth.userId),
       )
     ) {
+      logReviewEvent(requestId, "entitlement_denied", {
+        code: "SUBSCRIPTION_REQUIRED",
+      });
       return jsonResponse(
         jsonSubscriptionRequired("AI pocket budget suggestions"),
         403,
       );
     }
+    logReviewEvent(requestId, "entitlement_granted");
     const userScopedSupabase = createClient(url, serviceKey, {
       auth: {
         autoRefreshToken: false,
@@ -1233,6 +1346,7 @@ Deno.serve(async (req) => {
       },
       global: { headers: { Authorization: authorization } },
     });
+    stage = "load_current_month";
     const { data: month, error: monthError } = await userScopedSupabase.rpc(
       "get_pockets_month_v3",
       {
@@ -1246,6 +1360,10 @@ Deno.serve(async (req) => {
       },
     );
     if (monthError?.code === "42501") {
+      logReviewEvent(requestId, "current_month_forbidden", {
+        error_code: monthError.code,
+        error_message: monthError.message?.slice(0, 300),
+      });
       return jsonResponse(
         {
           success: false,
@@ -1261,16 +1379,33 @@ Deno.serve(async (req) => {
       typeof month !== "object" ||
       Array.isArray(month)
     ) {
+      logReviewEvent(requestId, "current_month_invalid", {
+        has_data: month != null,
+        error: monthError ? errorLogDetails(monthError) : undefined,
+      });
       throw monthError || new Error("INVALID_POCKETS_MONTH_CONTEXT");
     }
     const currentContext = buildContext(
       month as Record<string, unknown>,
       "current",
     );
+    logReviewEvent(requestId, "current_month_loaded", {
+      pocket_count: currentContext.pockets.length,
+      envelope_value_count: Array.isArray(
+        (month as Record<string, unknown>).envelopes,
+      )
+        ? ((month as Record<string, unknown>).envelopes as unknown[]).length
+        : 0,
+      selected_currency: (month as Record<string, unknown>).selected_currency,
+      period_month: (month as Record<string, unknown>).period_month,
+      budget_month: (month as Record<string, unknown>).budget_month,
+      has_budget: (month as Record<string, unknown>).budget != null,
+    });
     const historicalCycles: PocketMonthContext[] = [];
     let previousMonthError: unknown = null;
     let historicalCycleStart = previousMonthKey(input.cycleStart);
     for (let index = 0; index < 3; index++) {
+      stage = `load_historical_month_${index + 1}`;
       const { data: historicalMonth, error: historicalMonthError } =
         await userScopedSupabase.rpc("get_pockets_month_v3", {
           p_user_id: auth.userId,
@@ -1282,6 +1417,11 @@ Deno.serve(async (req) => {
           p_allow_currency_fallback: false,
         });
       if (historicalMonthError?.code === "42501") {
+        logReviewEvent(requestId, "historical_month_forbidden", {
+          history_index: index,
+          error_code: historicalMonthError.code,
+          error_message: historicalMonthError.message?.slice(0, 300),
+        });
         return jsonResponse(
           {
             success: false,
@@ -1291,6 +1431,12 @@ Deno.serve(async (req) => {
           403,
         );
       }
+      if (historicalMonthError) {
+        logReviewEvent(requestId, "historical_month_failed", {
+          history_index: index,
+          error: errorLogDetails(historicalMonthError),
+        });
+      }
       if (index === 0) previousMonthError = historicalMonthError;
       if (
         !historicalMonthError &&
@@ -1298,9 +1444,19 @@ Deno.serve(async (req) => {
         typeof historicalMonth === "object" &&
         !Array.isArray(historicalMonth)
       ) {
-        historicalCycles.push(
-          buildContext(historicalMonth as Record<string, unknown>, "previous"),
-        );
+        const historicalRecord = historicalMonth as Record<string, unknown>;
+        const historicalEnvelopes = Array.isArray(historicalRecord.envelopes)
+          ? historicalRecord.envelopes
+          : [];
+        historicalCycles.push(buildContext(historicalRecord, "previous"));
+        logReviewEvent(requestId, "historical_month_loaded", {
+          history_index: index,
+          pocket_count: historicalEnvelopes.length,
+          selected_currency: historicalRecord.selected_currency,
+          period_month: historicalRecord.period_month,
+          budget_month: historicalRecord.budget_month,
+          has_budget: historicalRecord.budget != null,
+        });
       }
       historicalCycleStart = previousMonthKey(historicalCycleStart);
     }
@@ -1309,11 +1465,19 @@ Deno.serve(async (req) => {
     const usesPreviousMonthPockets = currentContext.pockets.length === 0;
     if (usesPreviousMonthPockets) {
       if (!previousContext) {
+        logReviewEvent(requestId, "previous_pockets_unavailable", {
+          error: previousMonthError
+            ? errorLogDetails(previousMonthError)
+            : undefined,
+        });
         throw (
           previousMonthError || new Error("INVALID_PREVIOUS_POCKETS_CONTEXT")
         );
       }
       if (previousContext.pockets.length === 0) {
+        logReviewEvent(requestId, "pockets_required", {
+          history_count: historicalCycles.length,
+        });
         return jsonResponse(
           {
             success: false,
@@ -1330,6 +1494,7 @@ Deno.serve(async (req) => {
     if (!planContext) {
       throw previousMonthError || new Error("INVALID_PREVIOUS_POCKETS_CONTEXT");
     }
+    stage = "load_income";
     const income = await loadKnownIncome(
       userScopedSupabase,
       auth.userId,
@@ -1362,7 +1527,17 @@ Deno.serve(async (req) => {
       upcomingRecurringExpenses,
       income.upcomingRecurringIncome,
     );
+    logReviewEvent(requestId, "context_ready", {
+      uses_previous_month_pockets: usesPreviousMonthPockets,
+      pocket_count: context.pockets.length,
+      historical_cycle_count: historicalCycles.length,
+      income_data_status: income.dataStatus,
+    });
     if (context.pockets.length > MAX_SUGGESTIONS) {
+      logReviewEvent(requestId, "pocket_limit_rejected", {
+        pocket_count: context.pockets.length,
+        maximum_pockets: MAX_SUGGESTIONS,
+      });
       return jsonResponse(
         {
           success: false,
@@ -1385,9 +1560,31 @@ Deno.serve(async (req) => {
         (typeof contact?.preferred_language === "string"
           ? contact.preferred_language
           : "en");
+      stage = "generate_ai_review";
       const generated = await generate(context, locale);
-      const suggestions = normalize(generated.value, context, locale);
+      logReviewEvent(requestId, "ai_review_generated", {
+        model: generated.model,
+      });
+      let normalizationFailure: {
+        reason: string;
+        details: Record<string, unknown>;
+      } | null = null;
+      const suggestions = normalize(
+        generated.value,
+        context,
+        locale,
+        (reason, details = {}) => {
+          normalizationFailure = { reason, details };
+        },
+      );
       if (!suggestions) {
+        const failure = normalizationFailure;
+        logReviewEvent(requestId, "ai_review_schema_invalid", {
+          model: generated.model,
+          pocket_count: context.pockets.length,
+          rejection_reason: failure?.reason ?? "unknown",
+          ...(failure?.details ?? {}),
+        });
         return jsonResponse(
           {
             success: false,
@@ -1396,6 +1593,11 @@ Deno.serve(async (req) => {
           502,
         );
       }
+      logReviewEvent(requestId, "review_completed", {
+        model: generated.model,
+        suggestion_count: suggestions.suggestions.length,
+        insight_count: suggestions.insights.length,
+      });
       return jsonResponse({
         success: true,
         modelVersion: generated.model,
@@ -1403,6 +1605,10 @@ Deno.serve(async (req) => {
         usesPreviousMonthPockets,
       });
     } catch (error) {
+      logReviewEvent(requestId, "ai_review_failed", {
+        stage,
+        ...errorLogDetails(error),
+      });
       if (!(error instanceof SyntaxError) && !isRetryableGeminiError(error)) {
         throw error;
       }
@@ -1418,10 +1624,10 @@ Deno.serve(async (req) => {
       );
     }
   } catch (error) {
-    console.error(
-      "[generate-pocket-month-review] failed",
-      error instanceof Error ? error.message : String(error),
-    );
+    logReviewEvent(requestId, "request_failed", {
+      stage,
+      ...errorLogDetails(error),
+    });
     return jsonResponse(
       {
         success: false,

@@ -104,8 +104,8 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } =
-      await supabaseAuthed.auth.getUser();
+    const { data: userData, error: userErr } = await supabaseAuthed.auth
+      .getUser();
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -153,14 +153,14 @@ Deno.serve(async (req: Request) => {
 
     const memberHouseholdIds = Array.isArray(memberRows.data)
       ? (memberRows.data as any[])
-          .map((r) => String(r?.household_id || ""))
-          .filter((id) => sanitizeUuid(id))
+        .map((r) => String(r?.household_id || ""))
+        .filter((id) => sanitizeUuid(id))
       : [];
 
     const ownedHouseholdIds = Array.isArray(ownedRows.data)
       ? (ownedRows.data as any[])
-          .map((r) => String(r?.id || ""))
-          .filter((id) => sanitizeUuid(id))
+        .map((r) => String(r?.id || ""))
+        .filter((id) => sanitizeUuid(id))
       : [];
 
     const accessibleHouseholdIds = Array.from(
@@ -169,9 +169,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: householdRows } = accessibleHouseholdIds.length
       ? await supabaseAdmin
-          .from("households")
-          .select("id, is_portfolio")
-          .in("id", accessibleHouseholdIds)
+        .from("households")
+        .select("id, is_portfolio")
+        .in("id", accessibleHouseholdIds)
       : { data: [] as any[] };
 
     const portfolioHouseholdIds = (householdRows || [])
@@ -243,6 +243,10 @@ Deno.serve(async (req: Request) => {
         date,
         category,
         raw_text,
+        merchant,
+        merchant_id,
+        merchant_structured_name,
+        merchants(domain, logo_identifier),
         amount_cents,
         currency,
         source,
@@ -297,7 +301,9 @@ Deno.serve(async (req: Request) => {
         query = query
           .eq("user_id", callerId)
           .or(
-            `household_id.is.null,household_id.in.(${portfolioHouseholdIds.join(",")})`,
+            `household_id.is.null,household_id.in.(${
+              portfolioHouseholdIds.join(",")
+            })`,
           );
       } else {
         query = query.eq("user_id", callerId).is("household_id", null);
@@ -362,7 +368,9 @@ Deno.serve(async (req: Request) => {
       summaryQuery = summaryQuery
         .eq("user_id", callerId)
         .or(
-          `household_id.is.null,household_id.in.(${portfolioHouseholdIds.join(",")})`,
+          `household_id.is.null,household_id.in.(${
+            portfolioHouseholdIds.join(",")
+          })`,
         );
     } else {
       summaryQuery = summaryQuery
@@ -377,8 +385,9 @@ Deno.serve(async (req: Request) => {
         validateCurrency(body.currency),
       );
     }
-    if (body.ownerType)
+    if (body.ownerType) {
       summaryQuery = summaryQuery.eq("owner_type", body.ownerType);
+    }
     const { data: summaryRecordsRaw, error: summaryError } = await summaryQuery;
     if (summaryError) throw summaryError;
     const summaryRecords = summaryRecordsRaw || [];
@@ -390,8 +399,8 @@ Deno.serve(async (req: Request) => {
         : false;
 
       const isOwner = record.user_id === callerId;
-      const privacyRedacted =
-        !isOwner && record.privacy_scope === "balances_only";
+      const privacyRedacted = !isOwner &&
+        record.privacy_scope === "balances_only";
 
       let recurrenceRule = record.recurrence_rule;
       if (typeof recurrenceRule === "string") {
@@ -421,6 +430,15 @@ Deno.serve(async (req: Request) => {
             normalizeCategoryForStorage(record.category)),
         description: privacyRedacted ? null : record.raw_text,
         source: privacyRedacted ? null : record.source,
+        merchant: privacyRedacted ? null : record.merchant,
+        merchantId: privacyRedacted ? null : record.merchant_id,
+        merchantDomain: privacyRedacted ? null : record.merchants?.domain,
+        merchantLogoUrl: privacyRedacted
+          ? null
+          : record.merchants?.logo_identifier,
+        merchantStructuredName: privacyRedacted
+          ? null
+          : record.merchant_structured_name,
         amountMajor: (Number(record.amount_cents) || 0) / 100,
         currency: record.currency,
         ownerType: privacyRedacted ? null : record.owner_type,
@@ -449,12 +467,11 @@ Deno.serve(async (req: Request) => {
     });
 
     const totalIncome = summaryRecords.reduce((sum, record) => {
-      const amount =
-        Number(
-          body.currency
-            ? record.amount_cents
-            : (record.normalized_amount_cents ?? record.amount_cents),
-        ) / 100;
+      const amount = Number(
+        body.currency
+          ? record.amount_cents
+          : (record.normalized_amount_cents ?? record.amount_cents),
+      ) / 100;
       return sum + amount;
     }, 0);
 
@@ -473,21 +490,19 @@ Deno.serve(async (req: Request) => {
 
     const categoryBreakdown = summaryRecords.reduce(
       (acc, record) => {
-        const cat =
-          record.user_id !== callerId &&
-          record.privacy_scope === "balances_only"
-            ? "other"
-            : record.category;
+        const cat = record.user_id !== callerId &&
+            record.privacy_scope === "balances_only"
+          ? "other"
+          : record.category;
         if (!acc[cat]) {
           acc[cat] = { count: 0, total: 0 };
         }
         acc[cat].count += 1;
-        acc[cat].total +=
-          Number(
-            body.currency
-              ? record.amount_cents
-              : (record.normalized_amount_cents ?? record.amount_cents),
-          ) / 100;
+        acc[cat].total += Number(
+          body.currency
+            ? record.amount_cents
+            : (record.normalized_amount_cents ?? record.amount_cents),
+        ) / 100;
         return acc;
       },
       {} as Record<string, { count: number; total: number }>,

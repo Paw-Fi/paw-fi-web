@@ -64,6 +64,7 @@ const CURRENCY_LANGUAGE_FALLBACKS: Record<string, string> = {
   KES: "en",
   KRW: "kr",
   LKR: "en",
+  MAD: "fr",
   MDL: "en",
   MMK: "en",
   MWK: "en",
