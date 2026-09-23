@@ -132,11 +132,11 @@ async function claimClassificationEvent(params: {
   contextHash: string;
 }): Promise<
   | {
-    status: "claimed";
-    id: string;
-    processingToken: string;
-    attemptNumber: number;
-  }
+      status: "claimed";
+      id: string;
+      processingToken: string;
+      attemptNumber: number;
+    }
   | { status: "cached"; result: Record<string, unknown> }
   | { status: "processing" }
   | { status: "rate_limited" }
@@ -155,9 +155,8 @@ async function claimClassificationEvent(params: {
     },
   );
   if (error) throw error;
-  const result = data && typeof data === "object"
-    ? (data as Record<string, unknown>)
-    : {};
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   if (result.status === "cached" && result.result) {
     return {
       status: "cached",
@@ -258,11 +257,9 @@ async function invokeWalletCapture(params: {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const internalKey = resolveAnyInternalFunctionKey();
-  const url = `${
-    Deno.env.get(
-      "SUPABASE_URL",
-    )
-  }/functions/v1/save-wallet-transaction`;
+  const url = `${Deno.env.get(
+    "SUPABASE_URL",
+  )}/functions/v1/save-wallet-transaction`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -281,7 +278,6 @@ async function invokeWalletCapture(params: {
       householdId: params.body.householdId,
       isPortfolio: params.body.isPortfolio === true,
       ...(params.accountId ? { accountId: params.accountId } : {}),
-      suppressNotification: params.classification.isRecurring,
       transaction: {
         merchantName: params.classification.merchant,
         type: params.classification.transactionType,
@@ -292,8 +288,8 @@ async function invokeWalletCapture(params: {
           params.classification.currencySource === "account_context"
             ? "ai_account_context"
             : params.classification.currencySource === "user_preference"
-            ? "ai_user_preference"
-            : "ai_notification_explicit",
+              ? "ai_user_preference"
+              : "ai_notification_explicit",
         currencyAmbiguous: params.classification.currencyAmbiguous,
         accountCurrency: params.accountCurrency,
         date: params.classification.date,
@@ -434,7 +430,8 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
-    const accountId = requestedAccountId ??
+    const accountId =
+      requestedAccountId ??
       (await resolveDefaultAccountIdStrict(supabase, { userId, householdId }));
     let accountCurrency: string | null = null;
     if (accountId) {
@@ -452,9 +449,10 @@ Deno.serve(async (req: Request) => {
         );
       }
       const account = await getAccountOrNull(supabase, accountId);
-      accountCurrency = typeof account?.currency === "string"
-        ? account.currency.trim().toUpperCase()
-        : null;
+      accountCurrency =
+        typeof account?.currency === "string"
+          ? account.currency.trim().toUpperCase()
+          : null;
       if (!accountCurrency) {
         return jsonResponse(
           { success: false, error: "Selected account has no currency" },
@@ -464,9 +462,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    const preferredTimezone = typeof contact?.preferred_timezone === "string"
-      ? contact.preferred_timezone
-      : null;
+    const preferredTimezone =
+      typeof contact?.preferred_timezone === "string"
+        ? contact.preferred_timezone
+        : null;
     const clientDate = body.clientCreatedAt
       ? new Date(body.clientCreatedAt)
       : new Date();
@@ -479,12 +478,14 @@ Deno.serve(async (req: Request) => {
         householdId,
         accountId,
         accountCurrency,
-        preferredCurrency: typeof contact?.preferred_currency === "string"
-          ? contact.preferred_currency
-          : null,
-        preferredLanguage: typeof contact?.preferred_language === "string"
-          ? contact.preferred_language
-          : null,
+        preferredCurrency:
+          typeof contact?.preferred_currency === "string"
+            ? contact.preferred_currency
+            : null,
+        preferredLanguage:
+          typeof contact?.preferred_language === "string"
+            ? contact.preferred_language
+            : null,
         expenseCategories: Array.from(categoryContext.allowedExpenseSet),
         incomeCategories: Array.from(categoryContext.allowedIncomeSet),
       },
@@ -565,8 +566,8 @@ Deno.serve(async (req: Request) => {
         pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
         classifierModel: classification.model ?? null,
         verificationModel: classification.verificationModel ?? null,
-        normalizationDiagnostics: classification.normalizationDiagnostics ??
-          null,
+        normalizationDiagnostics:
+          classification.normalizationDiagnostics ?? null,
       };
       await finalizeClassificationEvent({
         supabase,
@@ -785,9 +786,8 @@ Deno.serve(async (req: Request) => {
         result: failureResult,
       }).catch(() => undefined);
     }
-    const failureStatus = httpStatusForAndroidNotificationFailure(
-      failureResult,
-    );
+    const failureStatus =
+      httpStatusForAndroidNotificationFailure(failureResult);
     return jsonResponse(
       {
         success: false,

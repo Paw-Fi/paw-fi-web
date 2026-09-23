@@ -11,6 +11,7 @@ import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.t
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
 import { resolveUserDisplayName as resolveEmailDisplayName } from "../shared/user-display-name.ts";
 import {
+  buildNotificationDeepLink,
   isServiceRoleRequest,
   shouldSkipPushEvent,
 } from "../shared/notification-delivery.ts";
@@ -468,113 +469,6 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 /**
- * Build deep link URL based on notification type and data
- * Follows moneko:// custom scheme for in-app navigation
- */
-function buildDeepLink(
-  eventType: string,
-  data: Record<string, string>,
-): string | undefined {
-  const appScheme = "moneko://";
-
-  // IMPORTANT: Mobile deep link parsing expects the scheme + host pattern:
-  // - moneko://household/<householdId>
-  // - moneko://households/join?token=<inviteToken>
-  // Do not return path-only links like "/household/...".
-
-  switch (eventType) {
-    case "expense_added":
-    case "expense_edited":
-    case "income_added":
-    case "income_edited":
-    case "income_acknowledged":
-      // Navigate to expense detail sheet
-      if (data.expense_id) {
-        return `${appScheme}expense/${data.expense_id}`;
-      }
-      // Fallback to household view if expense_id missing
-      if (data.household_id) {
-        return `${appScheme}household/${data.household_id}`;
-      }
-      break;
-
-    case "expense_deleted":
-      if (data.household_id) {
-        return `${appScheme}household/${data.household_id}`;
-      }
-      break;
-
-    case "budget_warn":
-    case "budget_alert":
-      // Navigate to budget detail
-      if (data.budget_id) {
-        return `${appScheme}budget/${data.budget_id}`;
-      }
-      break;
-
-    case "split_created":
-      // Navigate to splits view
-      if (data.split_group_id || data.split_id) {
-        return `${appScheme}split/${data.split_group_id || data.split_id}`;
-      }
-      if (data.household_id) {
-        // Not implemented on mobile yet, but keep a stable link shape.
-        return `${appScheme}household/${data.household_id}/splits`;
-      }
-      break;
-
-    case "member_joined":
-    case "invite_accepted":
-      // Navigate to household view
-      if (data.household_id) {
-        return `${appScheme}household/${data.household_id}`;
-      }
-      break;
-
-    case "member_reminded":
-      // Navigate to household view
-      if (data.household_id) {
-        return `${appScheme}household/${data.household_id}`;
-      }
-      break;
-
-    case "settlement_completed":
-    case "split_settled":
-      // Navigate to household overview for settlement context
-      if (data.household_id) {
-        return `${appScheme}household/${data.household_id}`;
-      }
-      break;
-
-    case "invite_reminder_inviter":
-      // Navigate to household settings invitations tab
-      if (data.household_id) {
-        return `${appScheme}household/${data.household_id}/settings?tab=2`;
-      }
-      break;
-
-    case "invite_reminder_invitee":
-      // Navigate directly to invitation acceptance
-      // Mobile expects: moneko://households/join?token=...
-      if (data.invite_token) {
-        return `${appScheme}households/join?token=${encodeURIComponent(
-          data.invite_token,
-        )}`;
-      }
-      break;
-
-    case "pockets_month_review":
-      return `${appScheme}pockets`;
-
-    default:
-      // Default to home
-      return `${appScheme}home`;
-  }
-
-  return `${appScheme}home`;
-}
-
-/**
  * Send push notification using Firebase Cloud Messaging API V1
  * Modern API endpoint: https://fcm.googleapis.com/v1/projects/{project_id}/messages:send
  * Includes deep linking for direct navigation to specific screens
@@ -596,7 +490,8 @@ async function sendFCMv1Notification(
 
   try {
     // Build deep link for navigation
-    const deepLink = data.deep_link || buildDeepLink(data.event_type, data);
+    const deepLink =
+      data.deep_link || buildNotificationDeepLink(data.event_type, data);
     const isWeb =
       typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
@@ -969,11 +864,11 @@ serve(async (req: Request) => {
         .eq("id", notification_event_id);
 
       return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Firebase not configured",
-            pocket_review_email_sent: pocketReviewEmailSent,
-          }),
+        JSON.stringify({
+          success: false,
+          error: "Firebase not configured",
+          pocket_review_email_sent: pocketReviewEmailSent,
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

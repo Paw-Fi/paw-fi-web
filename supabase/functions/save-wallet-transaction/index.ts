@@ -70,6 +70,7 @@ import {
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
 import { normalizePreferredCurrency } from "../shared/user-preferred-currency.ts";
+import { buildNotificationDeepLink } from "../shared/notification-delivery.ts";
 import {
   type AnalyzedMerchantIdentity,
   resolveAnalyzedMerchantIdentity,
@@ -226,9 +227,10 @@ function buildWalletCaptureRequestLogContext(
   req: Request,
   body: RequestBody,
 ): Record<string, unknown> {
-  const tx = body?.transaction && typeof body.transaction === "object"
-    ? body.transaction
-    : null;
+  const tx =
+    body?.transaction && typeof body.transaction === "object"
+      ? body.transaction
+      : null;
 
   const safeHeaders = Object.fromEntries(
     [
@@ -252,11 +254,11 @@ function buildWalletCaptureRequestLogContext(
       headers: safeHeaders,
       transaction: tx
         ? {
-          type: truncateForLog(tx.type ?? null, 16),
-          currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
-          currencyAmbiguous: tx.currencyAmbiguous === true,
-          hasAccountSelection: Boolean(body.accountId),
-        }
+            type: truncateForLog(tx.type ?? null, 16),
+            currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
+            currencyAmbiguous: tx.currencyAmbiguous === true,
+            hasAccountSelection: Boolean(body.accountId),
+          }
         : null,
     };
   }
@@ -271,36 +273,36 @@ function buildWalletCaptureRequestLogContext(
     headers: safeHeaders,
     transaction: tx
       ? {
-        type: truncateForLog(tx.type ?? null, 16),
-        amount: typeof tx.amount === "number" ? tx.amount : null,
-        currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
-        accountCurrency: truncateForLog(tx.accountCurrency ?? null, 12),
-        currencyEvidenceRaw: truncateForLog(
-          tx.currencyEvidenceRaw ?? null,
-          32,
-        ),
-        currencyEvidenceType: truncateForLog(
-          tx.currencyEvidenceType ?? null,
-          32,
-        ),
-        currencyAmbiguous: tx.currencyAmbiguous === true,
-        date: truncateForLog(resolveWalletTransactionDate(tx), 32),
-        merchantName: truncateForLog(tx.merchantName ?? null, 120),
-        rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
-        note: truncateForLog(tx.note ?? null, 200),
-        cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
-        packageName: truncateForLog(
-          resolveWalletTransactionPackageName(tx),
-          160,
-        ),
-        externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
-        notificationKey: truncateForLog(tx.notificationKey ?? null, 160),
-        notificationPostTime: truncateForLog(
-          tx.notificationPostTime ?? null,
-          80,
-        ),
-        sourceAppLabel: truncateForLog(tx.sourceAppLabel ?? null, 120),
-      }
+          type: truncateForLog(tx.type ?? null, 16),
+          amount: typeof tx.amount === "number" ? tx.amount : null,
+          currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
+          accountCurrency: truncateForLog(tx.accountCurrency ?? null, 12),
+          currencyEvidenceRaw: truncateForLog(
+            tx.currencyEvidenceRaw ?? null,
+            32,
+          ),
+          currencyEvidenceType: truncateForLog(
+            tx.currencyEvidenceType ?? null,
+            32,
+          ),
+          currencyAmbiguous: tx.currencyAmbiguous === true,
+          date: truncateForLog(resolveWalletTransactionDate(tx), 32),
+          merchantName: truncateForLog(tx.merchantName ?? null, 120),
+          rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
+          note: truncateForLog(tx.note ?? null, 200),
+          cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
+          packageName: truncateForLog(
+            resolveWalletTransactionPackageName(tx),
+            160,
+          ),
+          externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
+          notificationKey: truncateForLog(tx.notificationKey ?? null, 160),
+          notificationPostTime: truncateForLog(
+            tx.notificationPostTime ?? null,
+            80,
+          ),
+          sourceAppLabel: truncateForLog(tx.sourceAppLabel ?? null, 120),
+        }
       : null,
   };
 }
@@ -537,7 +539,8 @@ async function sendFcmV1Notification(params: {
 
   try {
     const deepLink = data.deep_link || "";
-    const isWeb = typeof platform === "string" &&
+    const isWeb =
+      typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
     const message = {
       message: {
@@ -574,16 +577,16 @@ async function sendFcmV1Notification(params: {
         },
         ...(isWeb
           ? {
-            webpush: {
-              data: {
-                ...data,
-                deep_link: deepLink,
+              webpush: {
+                data: {
+                  ...data,
+                  deep_link: deepLink,
+                },
+                fcm_options: {
+                  link: "https://moneko.io/dashboard",
+                },
               },
-              fcm_options: {
-                link: "https://moneko.io/dashboard",
-              },
-            },
-          }
+            }
           : {}),
       },
     };
@@ -642,7 +645,7 @@ async function fetchActiveDevices(
     .from("devices")
     .select("push_token, platform")
     .eq("user_id", userId)
-    .eq("is_active", true)
+    .or("is_active.is.true,is_active.is.null")
     .not("push_token", "is", null);
 
   if (error || !Array.isArray(data)) {
@@ -697,8 +700,8 @@ async function buildWalletPocketInsight(params: {
     householdId,
   });
 
-  const { data: matchedBudget, error: matchedBudgetError } = await budgetQuery
-    .maybeSingle();
+  const { data: matchedBudget, error: matchedBudgetError } =
+    await budgetQuery.maybeSingle();
   if (matchedBudgetError) {
     console.error(
       "[save-wallet-transaction] Failed to load scoped budget by currency:",
@@ -775,9 +778,8 @@ async function buildWalletPocketInsight(params: {
   ) as Array<any>;
   const allocationByEnvelopeId = new Map<string, number>();
   for (const row of allocationRows) {
-    const envelopeId = typeof row?.envelope_id === "string"
-      ? row.envelope_id
-      : "";
+    const envelopeId =
+      typeof row?.envelope_id === "string" ? row.envelope_id : "";
     if (!envelopeId) continue;
     const amountCents = Number(row?.amount_cents ?? 0);
     if (Number.isFinite(amountCents) && amountCents > 0) {
@@ -800,9 +802,8 @@ async function buildWalletPocketInsight(params: {
   ) as Array<any>;
   const categoriesByEnvelopeId = new Map<string, string[]>();
   for (const row of categoryLinks) {
-    const envelopeId = typeof row?.envelope_id === "string"
-      ? row.envelope_id
-      : "";
+    const envelopeId =
+      typeof row?.envelope_id === "string" ? row.envelope_id : "";
     const linkedCategory = normalizePocketCategory(row?.category);
     if (!envelopeId || !linkedCategory) continue;
     const current = categoriesByEnvelopeId.get(envelopeId) ?? [];
@@ -861,13 +862,15 @@ async function buildWalletPocketInsight(params: {
       0,
     );
     const baseLimit = Number(row?.budget_amount_cents ?? 0);
-    const limitCents = allocationByEnvelopeId.get(id) ??
+    const limitCents =
+      allocationByEnvelopeId.get(id) ??
       (Number.isFinite(baseLimit) ? Math.trunc(baseLimit) : 0);
     return {
       id,
-      name: typeof row?.name === "string" && row.name.trim().length > 0
-        ? row.name.trim()
-        : "Pocket",
+      name:
+        typeof row?.name === "string" && row.name.trim().length > 0
+          ? row.name.trim()
+          : "Pocket",
       limitCents,
       spentCents,
       remainingCents: limitCents - spentCents,
@@ -921,9 +924,10 @@ async function resolveWalletNotificationSpaceLabel(params: {
     if (!error && typeof household?.name === "string") {
       const trimmedName = household.name.replace(/\s+/g, " ").trim();
       if (trimmedName.length > 0) {
-        const displayName = trimmedName.length <= 40
-          ? trimmedName
-          : `${trimmedName.slice(0, 37)}...`;
+        const displayName =
+          trimmedName.length <= 40
+            ? trimmedName
+            : `${trimmedName.slice(0, 37)}...`;
         return displayName;
       }
     }
@@ -1016,15 +1020,6 @@ function buildWalletPocketNotificationMessage(params: {
   };
 }
 
-function buildWalletPocketNotificationDeepLink(params: {
-  scenario: string;
-  expenseId: string;
-  householdId: string | null;
-}): string {
-  const { expenseId } = params;
-  return `moneko://expense/${expenseId}`;
-}
-
 async function sendWalletPocketNotificationBestEffort(params: {
   supabase: any;
   userId: string;
@@ -1077,10 +1072,9 @@ async function sendWalletPocketNotificationBestEffort(params: {
       category,
       spaceLabel,
     });
-    const deepLink = buildWalletPocketNotificationDeepLink({
-      scenario: message.scenario,
-      expenseId,
-      householdId,
+    const deepLink = buildNotificationDeepLink("expense_added", {
+      expense_id: expenseId,
+      household_id: householdId ?? "",
     });
 
     const scope = resolveWalletBudgetScope(householdId, isPortfolio);
@@ -1107,7 +1101,7 @@ async function sendWalletPocketNotificationBestEffort(params: {
           data: payloadData,
           accessToken,
           platform: device.platform ?? undefined,
-        })
+        }),
       ),
     );
   } catch (error) {
@@ -1160,9 +1154,10 @@ function buildDuplicateWalletCaptureResponse(
   cached: Record<string, unknown>,
   captureSource: string,
 ): Record<string, unknown> {
-  const cachedMeta = cached["meta"] && typeof cached["meta"] === "object"
-    ? (cached["meta"] as Record<string, unknown>)
-    : {};
+  const cachedMeta =
+    cached["meta"] && typeof cached["meta"] === "object"
+      ? (cached["meta"] as Record<string, unknown>)
+      : {};
 
   return {
     ...cached,
@@ -1334,8 +1329,8 @@ function resolveAndroidNotificationPostedAt(
 ): Date {
   return (
     parseOptionalDate(tx.notificationPostTime) ??
-      parseOptionalDate(clientCreatedAt) ??
-      new Date()
+    parseOptionalDate(clientCreatedAt) ??
+    new Date()
   );
 }
 
@@ -1381,9 +1376,8 @@ function buildAndroidLogicalDuplicateResponse(
   const amountCents = Number(row.amountCents);
   const currency = typeof row.currency === "string" ? row.currency : null;
   const category = typeof row.category === "string" ? row.category : "other";
-  const reason = typeof row.reason === "string"
-    ? row.reason
-    : "android_logical_duplicate";
+  const reason =
+    typeof row.reason === "string" ? row.reason : "android_logical_duplicate";
 
   return {
     success: true,
@@ -1491,13 +1485,11 @@ async function claimAndroidWalletCaptureEvent(params: {
     throw new Error(`ANDROID_CAPTURE_DEDUP_FAILED:${error.message}`);
   }
 
-  const result = data && typeof data === "object"
-    ? (data as Record<string, unknown>)
-    : {};
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   const status = typeof result.status === "string" ? result.status : null;
-  const claimId = typeof result.claimId === "string"
-    ? result.claimId
-    : undefined;
+  const claimId =
+    typeof result.claimId === "string" ? result.claimId : undefined;
 
   if (status === "duplicate") {
     return {
@@ -1505,7 +1497,7 @@ async function claimAndroidWalletCaptureEvent(params: {
       claimId,
       duplicateResponse:
         buildAndroidLogicalDuplicateResponse(result, params.captureSource) ??
-          undefined,
+        undefined,
     };
   }
 
@@ -1748,10 +1740,12 @@ Transactions:
         fallbackModelName: GEMINI_CATEGORIZATION_MODELS.slice(1).join(","),
         transactionType: params.transactionType,
         currency: params.currency,
-        ...(params.redactFailureContext ? { redacted: true } : {
-          merchantName: params.merchantName,
-          amount: params.amount,
-        }),
+        ...(params.redactFailureContext
+          ? { redacted: true }
+          : {
+              merchantName: params.merchantName,
+              amount: params.amount,
+            }),
       },
     });
 
@@ -1813,11 +1807,9 @@ Deno.serve(async (req: Request) => {
         },
       );
       return errorResponse(
-        `captureSource must be one of: ${
-          Array.from(VALID_CAPTURE_SOURCES).join(
-            ", ",
-          )
-        }`,
+        `captureSource must be one of: ${Array.from(VALID_CAPTURE_SOURCES).join(
+          ", ",
+        )}`,
         400,
       );
     }
@@ -1872,14 +1864,15 @@ Deno.serve(async (req: Request) => {
     const merchantForStorage = resolveWalletTransactionMerchant(tx);
     // A raw notification/statement label remains display evidence.  Only the
     // explicit semantic merchant field is eligible for structured reuse.
-    const structuredMerchantForStorage = typeof tx.merchantName === "string"
-      ? tx.merchantName.trim() || null
-      : null;
+    const structuredMerchantForStorage =
+      typeof tx.merchantName === "string"
+        ? tx.merchantName.trim() || null
+        : null;
     const merchantDisplay = (
       merchantForStorage ??
-        tx.note ??
-        resolveWalletTransactionPackageName(tx) ??
-        ""
+      tx.note ??
+      resolveWalletTransactionPackageName(tx) ??
+      ""
     ).trim();
     if (!merchantDisplay) {
       logWalletCaptureValidationFailure(
@@ -2001,12 +1994,13 @@ Deno.serve(async (req: Request) => {
     const requestedAccountIdRaw = hasCamelAccountId
       ? bodyRecord.accountId
       : hasSnakeAccountId
-      ? bodyRecord.account_id
-      : undefined;
-    const requestedAccountId = requestedAccountIdRaw == null ||
-        String(requestedAccountIdRaw).trim().length === 0
-      ? null
-      : sanitizeUuid(String(requestedAccountIdRaw));
+        ? bodyRecord.account_id
+        : undefined;
+    const requestedAccountId =
+      requestedAccountIdRaw == null ||
+      String(requestedAccountIdRaw).trim().length === 0
+        ? null
+        : sanitizeUuid(String(requestedAccountIdRaw));
     if (
       hasRequestedAccountId &&
       requestedAccountIdRaw != null &&
@@ -2049,9 +2043,8 @@ Deno.serve(async (req: Request) => {
           .select("user_id")
           .eq("household_id", householdId);
 
-        householdMembers = membersError || !Array.isArray(members)
-          ? []
-          : members;
+        householdMembers =
+          membersError || !Array.isArray(members) ? [] : members;
         if (!membersError && householdMembers.length > 0) {
           householdAutoSplitSettings = await fetchHouseholdAutoSplitSettings(
             supabase,
@@ -2095,9 +2088,10 @@ Deno.serve(async (req: Request) => {
       if (isAccountInScope) {
         accountId = requestedAccountId;
         const account = await getAccountOrNull(supabase, requestedAccountId);
-        selectedAccountCurrency = typeof account?.currency === "string"
-          ? account.currency.trim().toUpperCase()
-          : null;
+        selectedAccountCurrency =
+          typeof account?.currency === "string"
+            ? account.currency.trim().toUpperCase()
+            : null;
       } else {
         return errorResponse(
           "Provided accountId does not belong to this scope or currency",
@@ -2148,12 +2142,14 @@ Deno.serve(async (req: Request) => {
 
       if (contact) {
         contactId = contact.id;
-        preferredCurrency = typeof contact.preferred_currency === "string"
-          ? normalizePreferredCurrency(contact.preferred_currency)
-          : null;
-        preferredTimezone = typeof contact.preferred_timezone === "string"
-          ? contact.preferred_timezone.trim() || null
-          : null;
+        preferredCurrency =
+          typeof contact.preferred_currency === "string"
+            ? normalizePreferredCurrency(contact.preferred_currency)
+            : null;
+        preferredTimezone =
+          typeof contact.preferred_timezone === "string"
+            ? contact.preferred_timezone.trim() || null
+            : null;
       } else {
         console.log(
           "[save-wallet-transaction] No user_contact row found; proceeding with null contact_id.",
@@ -2259,8 +2255,8 @@ Deno.serve(async (req: Request) => {
         "VALIDATION_ERROR",
       );
     }
-    const notificationCurrencyAmbiguous = isNotificationCapture &&
-      hasAmbiguousWalletCaptureCurrencyEvidence(tx);
+    const notificationCurrencyAmbiguous =
+      isNotificationCapture && hasAmbiguousWalletCaptureCurrencyEvidence(tx);
     if (
       accountId &&
       selectedAccountCurrency &&
@@ -2335,11 +2331,13 @@ Deno.serve(async (req: Request) => {
     const fallbackDate = Number.isNaN(fallbackDateBase.getTime())
       ? new Date()
       : fallbackDateBase;
-    const normalizedClientCreatedDate = clientCreatedAtPrefix ??
+    const normalizedClientCreatedDate =
+      clientCreatedAtPrefix ??
       (body.clientCreatedAt && !Number.isNaN(fallbackDateBase.getTime())
         ? getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDateBase)
         : null);
-    const normalizedDate = normalizedProvidedDate ??
+    const normalizedDate =
+      normalizedProvidedDate ??
       normalizedClientCreatedDate ??
       getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDate);
 
@@ -2368,37 +2366,37 @@ Deno.serve(async (req: Request) => {
       "[save-wallet-transaction] Processing:",
       isNotificationCapture
         ? {
-          captureSource,
-          transactionType,
-          currency,
-          isPortfolio,
-          hasHouseholdScope: Boolean(householdId),
-          hasAccountSelection: Boolean(accountId),
-        }
+            captureSource,
+            transactionType,
+            currency,
+            isPortfolio,
+            hasHouseholdScope: Boolean(householdId),
+            hasAccountSelection: Boolean(accountId),
+          }
         : {
-          userId,
-          captureSource,
-          transactionType,
-          merchant: merchantDisplay,
-          amount: tx.amount,
-          currency,
-          date: normalizedDate,
-          householdId,
-          isPortfolio,
-          accountId,
-          preferredTimezone,
-          usedProvidedDate: Boolean(normalizedProvidedDate),
-          usedClientCreatedAtDate: !normalizedProvidedDate &&
-            Boolean(normalizedClientCreatedDate),
-        },
+            userId,
+            captureSource,
+            transactionType,
+            merchant: merchantDisplay,
+            amount: tx.amount,
+            currency,
+            date: normalizedDate,
+            householdId,
+            isPortfolio,
+            accountId,
+            preferredTimezone,
+            usedProvidedDate: Boolean(normalizedProvidedDate),
+            usedClientCreatedAtDate:
+              !normalizedProvidedDate && Boolean(normalizedClientCreatedDate),
+          },
     );
 
     const requestIdempotencyKey = buildWalletCaptureIdempotencyKey({
       explicitKey: isNotificationCapture
         ? buildServerScopedAndroidIdempotencyKey({
-          explicitKey: body.idempotencyKey,
-          userId,
-        })
+            explicitKey: body.idempotencyKey,
+            userId,
+          })
         : body.idempotencyKey,
       captureSource,
       userId,
@@ -2453,14 +2451,16 @@ Deno.serve(async (req: Request) => {
             tx,
             body.clientCreatedAt,
           ),
-          currencyEvidenceRaw: typeof tx.currencyEvidenceRaw === "string"
-            ? tx.currencyEvidenceRaw.trim() || null
-            : null,
-          currencyEvidenceType: typeof tx.currencyEvidenceType === "string"
-            ? tx.currencyEvidenceType.trim() || null
-            : notificationCurrencyAmbiguous
-            ? "ambiguous_symbol"
-            : null,
+          currencyEvidenceRaw:
+            typeof tx.currencyEvidenceRaw === "string"
+              ? tx.currencyEvidenceRaw.trim() || null
+              : null,
+          currencyEvidenceType:
+            typeof tx.currencyEvidenceType === "string"
+              ? tx.currencyEvidenceType.trim() || null
+              : notificationCurrencyAmbiguous
+                ? "ambiguous_symbol"
+                : null,
           currencyAmbiguous: notificationCurrencyAmbiguous,
         });
 
@@ -2522,10 +2522,12 @@ Deno.serve(async (req: Request) => {
 
       // Step 2: Reuse a validated classifier category when supplied; otherwise
       // categorize parsed wallet/shortcut captures with Gemini.
-      const categoryHint = typeof tx.categoryHint === "string"
-        ? tx.categoryHint.trim().toLowerCase()
-        : "";
-      const aiCategory = categoryHint ||
+      const categoryHint =
+        typeof tx.categoryHint === "string"
+          ? tx.categoryHint.trim().toLowerCase()
+          : "";
+      const aiCategory =
+        categoryHint ||
         (await categorizeWithAI({
           genAI,
           merchantName: merchantDisplay,
@@ -2559,10 +2561,10 @@ Deno.serve(async (req: Request) => {
         isNotificationCapture
           ? { captureSource, aiCategory, resolved: resolvedCategory }
           : {
-            merchant: merchantDisplay,
-            aiCategory,
-            resolved: resolvedCategory,
-          },
+              merchant: merchantDisplay,
+              aiCategory,
+              resolved: resolvedCategory,
+            },
       );
     } catch (catError) {
       console.error(
@@ -2600,9 +2602,10 @@ Deno.serve(async (req: Request) => {
           preferredTimezone: preferredTimezone ?? undefined,
         });
         const merchantId = sanitizeUuid(candidateIdentity?.merchantId);
-        resolvedMerchantIdentity = candidateIdentity && merchantId
-          ? { ...candidateIdentity, merchantId }
-          : null;
+        resolvedMerchantIdentity =
+          candidateIdentity && merchantId
+            ? { ...candidateIdentity, merchantId }
+            : null;
       } catch (_) {
         console.warn(
           "[save-wallet-transaction] Optional merchant enrichment failed; continuing without canonical identity",
@@ -2629,7 +2632,7 @@ Deno.serve(async (req: Request) => {
       merchant: merchantForStorage,
       merchant_structured_name:
         resolvedMerchantIdentity?.merchantStructuredName ??
-          structuredMerchantForStorage,
+        structuredMerchantForStorage,
       ...(resolvedMerchantIdentity
         ? { merchant_id: resolvedMerchantIdentity.merchantId }
         : {}),
@@ -2643,11 +2646,9 @@ Deno.serve(async (req: Request) => {
       account_id: accountId,
       wallet_capture_idempotency_key: requestIdempotencyKey,
     };
-    let preparedHouseholdSplit:
-      | ReturnType<
-        typeof buildHouseholdSplitRecords
-      >
-      | null = null;
+    let preparedHouseholdSplit: ReturnType<
+      typeof buildHouseholdSplitRecords
+    > | null = null;
     if (householdId && requiresHouseholdSplit) {
       const effectiveSplit = resolveEffectiveSplit(
         null,
@@ -2683,26 +2684,29 @@ Deno.serve(async (req: Request) => {
         }
       }
     }
-    const atomicResult = preparedHouseholdSplit?.ok === true
-      ? await createHouseholdTransactionWithSplit({
-        supabase,
-        actorUserId: userId,
-        transaction: transactionRecord,
-        group: preparedHouseholdSplit.group,
-        lines: preparedHouseholdSplit.lines,
-        targetAccountId: accountId,
-        isRecurringTemplate: isRecurring,
-      })
-      : null;
-    const { data: insertedTransaction, error: expenseError } = atomicResult ??
+    const atomicResult =
+      preparedHouseholdSplit?.ok === true
+        ? await createHouseholdTransactionWithSplit({
+            supabase,
+            actorUserId: userId,
+            transaction: transactionRecord,
+            group: preparedHouseholdSplit.group,
+            lines: preparedHouseholdSplit.lines,
+            targetAccountId: accountId,
+            isRecurringTemplate: isRecurring,
+          })
+        : null;
+    const { data: insertedTransaction, error: expenseError } =
+      atomicResult ??
       (await supabase
         .from("expenses")
         .insert(transactionRecord)
         .select()
         .single());
-    let expense = atomicResult == null
-      ? insertedTransaction
-      : (insertedTransaction as Record<string, unknown>)?.expense;
+    let expense =
+      atomicResult == null
+        ? insertedTransaction
+        : (insertedTransaction as Record<string, unknown>)?.expense;
 
     if (expenseError) {
       if (expenseError.code === "23505") {
@@ -2729,8 +2733,8 @@ Deno.serve(async (req: Request) => {
             },
             meta: {
               captureSource,
-              resolvedCategory: responseExistingExpense.category ??
-                resolvedCategory,
+              resolvedCategory:
+                responseExistingExpense.category ?? resolvedCategory,
               deduplicatedAt: new Date().toISOString(),
             },
           };
@@ -2781,7 +2785,7 @@ Deno.serve(async (req: Request) => {
       const identityPatch = {
         merchant_structured_name:
           resolvedMerchantIdentity?.merchantStructuredName ??
-            structuredMerchantForStorage,
+          structuredMerchantForStorage,
         ...(resolvedMerchantIdentity
           ? { merchant_id: resolvedMerchantIdentity.merchantId }
           : {}),
@@ -2866,7 +2870,7 @@ Deno.serve(async (req: Request) => {
         expense.id,
         storedResponse,
       );
-      if (body.suppressNotification !== true && !isNotificationCapture) {
+      if (transactionType === "expense" && body.suppressNotification !== true) {
         await sendWalletPocketNotificationBestEffort({
           supabase,
           userId,
@@ -2907,9 +2911,8 @@ Deno.serve(async (req: Request) => {
             p_household_id: householdId,
             p_expense_id: expense.id,
             p_actor_user_id: userId,
-            p_event_type: transactionType === "income"
-              ? "income_added"
-              : "expense_added",
+            p_event_type:
+              transactionType === "income" ? "income_added" : "expense_added",
             p_expense_data: {
               actor_name: actorName,
               amount_cents: amountCents,
@@ -2961,7 +2964,7 @@ Deno.serve(async (req: Request) => {
       storedResponse,
     );
 
-    if (body.suppressNotification !== true && !isNotificationCapture) {
+    if (transactionType === "expense" && body.suppressNotification !== true) {
       await sendWalletPocketNotificationBestEffort({
         supabase,
         userId,

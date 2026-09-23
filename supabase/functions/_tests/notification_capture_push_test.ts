@@ -60,16 +60,26 @@ Deno.test(
   },
 );
 
-Deno.test("notification capture saves cannot emit a second wallet push", () => {
+Deno.test("notification capture saves emit one post-save wallet push", () => {
   assertStringIncludes(
     walletCaptureSource,
     "const isNotificationCapture = isNotificationCaptureSource(captureSource);",
   );
+  assertFalse(classificationSource.includes("suppressNotification:"));
   assertEquals(
     walletCaptureSource.match(
-      /body\.suppressNotification !== true &&\s+!isNotificationCapture/g,
+      /if \(transactionType === "expense" && body\.suppressNotification !== true\) \{\s+await sendWalletPocketNotificationBestEffort/g,
     )?.length ?? 0,
     2,
+  );
+  assertFalse(
+    walletCaptureSource.includes(
+      "body.suppressNotification !== true && !isNotificationCapture",
+    ),
+  );
+  assertStringIncludes(
+    walletCaptureSource,
+    '.or("is_active.is.true,is_active.is.null")',
   );
   assertEquals(
     walletCaptureSource.match(
@@ -78,3 +88,18 @@ Deno.test("notification capture saves cannot emit a second wallet push", () => {
     1,
   );
 });
+
+Deno.test(
+  "duplicate wallet captures return before post-save notification",
+  () => {
+    const duplicateReturn = walletCaptureSource.indexOf(
+      "return successResponse(claimResult.cachedResponse);",
+    );
+    const firstNotification = walletCaptureSource.indexOf(
+      "await sendWalletPocketNotificationBestEffort({",
+    );
+
+    assertEquals(duplicateReturn >= 0, true);
+    assertEquals(firstNotification > duplicateReturn, true);
+  },
+);
