@@ -3,6 +3,10 @@ import { normalizeCurrencyCode } from "../currency-normalize.ts";
 import { CURRENCY_SYMBOLS } from "../currency-symbols.ts";
 import { normalizeCalendarDateString } from "../date-normalization.ts";
 import { formatInvokeError } from "../formatting-helpers.ts";
+import {
+  type AnalyzedMerchantIdentity,
+  resolveAnalyzedMerchantIdentity,
+} from "../merchant-analysis.ts";
 import { resolveCurrencyFromOCR } from "../ocr-currency-resolver.ts";
 import {
   normalizeAiToolMoneyCents,
@@ -56,7 +60,17 @@ export type TransactionSaveParams = {
   ownerType?: string;
   privacyScope?: string;
   accountId?: string;
+  preferredTimezone?: string;
 };
+
+type MerchantIdentityResolver = (
+  params: Parameters<typeof resolveAnalyzedMerchantIdentity>[0],
+) => Promise<AnalyzedMerchantIdentity | null>;
+
+type BotMerchantTransaction = Pick<
+  NormalizedTransactionToolArgs,
+  "merchant" | "merchantId" | "merchantStructuredName" | "currency"
+>;
 
 type TransactionToolFallback = {
   date?: string;
@@ -89,6 +103,43 @@ export function merchantIdentitySaveFields(
   };
 }
 
+export async function resolveBotMerchantIdentityFields(params: {
+  transaction: BotMerchantTransaction;
+  supabase: any;
+  userId: string;
+  preferredTimezone?: string;
+  resolveIdentity?: MerchantIdentityResolver;
+}): Promise<{ merchantId?: string; merchantStructuredName?: string }> {
+  const existing = merchantIdentitySaveFields(params.transaction);
+  if (existing.merchantId || !params.transaction.merchant) return existing;
+
+  try {
+    const identity = await (
+      params.resolveIdentity ?? resolveAnalyzedMerchantIdentity
+    )({
+      merchant: params.transaction.merchant,
+      currency: params.transaction.currency,
+      supabase: params.supabase,
+      userId: params.userId,
+      logoDevSecretKey: Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "",
+      preferredTimezone: params.preferredTimezone,
+    });
+    if (!identity?.merchantId) return existing;
+    return {
+      merchantId: identity.merchantId,
+      merchantStructuredName:
+        identity.merchantStructuredName ??
+        existing.merchantStructuredName ??
+        params.transaction.merchant,
+    };
+  } catch (error) {
+    console.warn("[bot-transaction] Optional merchant enrichment failed", {
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return existing;
+  }
+}
+
 function collectCurrencyEvidenceText(
   input: Record<string, any>,
   fallback: TransactionToolFallback,
@@ -118,7 +169,8 @@ function resolveTransactionToolCurrency(
 
   const resolution = resolveCurrencyFromOCR({
     detectedCurrencyCode: rawCurrency || null,
-    detectedCurrencySymbol: normalizeOptionalString(input.currency_symbol) ||
+    detectedCurrencySymbol:
+      normalizeOptionalString(input.currency_symbol) ||
       normalizeOptionalString(input.currencySymbol) ||
       null,
     rawOcrText: collectCurrencyEvidenceText(input, fallback),
@@ -168,9 +220,9 @@ export function normalizeTransactionToolArgs(
 ):
   | { ok: true; transaction: NormalizedTransactionToolArgs }
   | {
-    ok: false;
-    error: string;
-  } {
+      ok: false;
+      error: string;
+    } {
   const input = args && typeof args === "object" ? args : {};
 
   const typeResult = normalizeAiToolTransactionType(input.type);
@@ -231,8 +283,8 @@ export function normalizeTransactionToolArgs(
     merchantId = rawMerchantId;
   }
 
-  const rawMerchantStructuredName = input.merchant_structured_name ??
-    input.merchantStructuredName;
+  const rawMerchantStructuredName =
+    input.merchant_structured_name ?? input.merchantStructuredName;
   let merchantStructuredName: string | undefined;
   if (
     rawMerchantStructuredName !== undefined &&
@@ -346,6 +398,12 @@ export async function invokeTransactionSave(
       ? "income"
       : "expense";
   const type = amountResult.isNegative ? "expense" : requestedType;
+  const merchantIdentity = await resolveBotMerchantIdentityFields({
+    transaction: params,
+    supabase,
+    userId,
+    preferredTimezone: params.preferredTimezone,
+  });
   const commonBody = {
     userId,
     amount: amountResult.amount,
@@ -354,33 +412,34 @@ export async function invokeTransactionSave(
     date: normalizedDate,
     description,
     merchant,
-    ...merchantIdentitySaveFields(params),
+    ...merchantIdentity,
     accountId: params.accountId,
     householdId: normalizedHouseholdId,
     isPortfolio: params.isPortfolio === true,
     isRecurring: params.isRecurring === true,
-    recurrence_rule: params.isRecurring === true
-      ? params.recurrence_rule || null
-      : undefined,
+    recurrence_rule:
+      params.isRecurring === true ? params.recurrence_rule || null : undefined,
     clientCreatedAt: new Date().toISOString(),
   };
 
-  const body = type === "income"
-    ? {
-      ...commonBody,
-      source: params.source,
-      ownerType: params.ownerType === "space"
-        ? "household"
-        : params.ownerType || "me",
-      privacyScope: params.privacyScope || "full",
-      payerUserId: params.payerUserId,
-      customSplits: params.customSplits,
-    }
-    : {
-      ...commonBody,
-      payerUserId: params.payerUserId,
-      customSplits: params.customSplits,
-    };
+  const body =
+    type === "income"
+      ? {
+          ...commonBody,
+          source: params.source,
+          ownerType:
+            params.ownerType === "space"
+              ? "household"
+              : params.ownerType || "me",
+          privacyScope: params.privacyScope || "full",
+          payerUserId: params.payerUserId,
+          customSplits: params.customSplits,
+        }
+      : {
+          ...commonBody,
+          payerUserId: params.payerUserId,
+          customSplits: params.customSplits,
+        };
 
   return await supabase.functions.invoke(
     type === "income" ? "save-income" : "save-expense",
@@ -403,9 +462,8 @@ export async function invokeTransactionDelete(
   success: boolean;
   formatted: string;
 }> {
-  const normalizedExpenseId = typeof expenseId === "string"
-    ? expenseId.trim()
-    : "";
+  const normalizedExpenseId =
+    typeof expenseId === "string" ? expenseId.trim() : "";
   if (!UUID_REGEX.test(normalizedExpenseId)) {
     return {
       data: null,
@@ -434,8 +492,8 @@ export async function invokeTransactionDelete(
   const formatted = success
     ? ""
     : errorMessageSource
-    ? formatInvokeError(errorMessageSource) || fallbackError
-    : fallbackError;
+      ? formatInvokeError(errorMessageSource) || fallbackError
+      : fallbackError;
 
   return {
     data,
