@@ -18,7 +18,16 @@ interface InProgressItem {
   color: string;
 }
 
-const inProgressItems: InProgressItem[] = [];
+const inProgressItems: InProgressItem[] = [
+  {
+    title: "Web & Desktop Platform",
+    description:
+      "Bring Moneko to web and desktop platforms in the next release, so you can manage your finances from even more places.",
+    icon: Layers,
+    status: "Next release",
+    color: "from-blue-500/20 to-violet-500/20",
+  },
+];
 
 interface ChangelogEntry {
   title: string;
@@ -30,6 +39,24 @@ interface ChangelogEntry {
 }
 
 const changelogs: ChangelogEntry[] = [
+  {
+    title: "Merchant Logos & iOS 27 Notification Capture",
+    date: "2026-09-23",
+    version: "4.0.0",
+    tags: ["Feature", "Merchant", "Notifications", "Accessibility", "Currency"],
+    description:
+      "Moneko 4.0.0 adds AI-powered merchant logos and iOS 27 notification capture, alongside more flexible recurring transactions and a more consistent, accessible experience across the app.",
+    items: [
+      "Added merchant logo support: Moneko's AI can now analyze a transaction and find the relevant merchant logo, making your spending easier to recognize at a glance",
+      "iPhone users on iOS 27 can now use a notification shortcut to log and save transactions from notifications received from other apps",
+      "Recurring transactions now support custom frequencies, giving you more flexibility for schedules that do not follow the standard options",
+      "Improved the appearance across different pages to create a more consistent experience throughout Moneko",
+      "Added Liquid Glass support for iOS 26 and above to bring a more modern look and feel to supported iPhones",
+      "Added Moroccan Dirham (MAD) support and improved currency recognition across imported transactions, budgets, wallets, and payment analysis",
+      "Improved accessibility for users who rely on larger text across dashboards, charts, transaction lists, wallets, pockets, recurring payments, household views, sign-in, and onboarding",
+      "Fixed bugs and improved general stability across the app",
+    ],
+  },
   {
     title: "AI Budget Suggestions & Recurring Fixes",
     date: "2026-09-15",
