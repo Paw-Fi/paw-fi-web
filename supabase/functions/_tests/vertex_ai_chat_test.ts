@@ -532,7 +532,7 @@ Deno.test("createVertexGenerativeAI preserves enum response configuration", asyn
   });
 
   const result = await ai
-    .getGenerativeModel({ model: "gemini-3.1-pro-preview" })
+    .getGenerativeModel({ model: "gemini-3.8-flash" })
     .generateContent({
       contents: [{ role: "user", parts: [{ text: "Verify fixture" }] }],
       generationConfig: {

@@ -6,9 +6,11 @@ import {
   buildWalletCaptureIdempotencyKey,
   getLocalYyyyMmDdInTimeZone,
   isAiUserPreferredCurrencyContextValid,
+  isNotificationCaptureSource,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureRecurrenceRule,
   normalizeWalletCaptureSource,
+  resolveNotificationCaptureSource,
   resolveWalletCaptureAccountForCurrency,
   resolveWalletCaptureCurrency,
   resolveWalletCaptureDefaultAccount,
@@ -102,16 +104,48 @@ Deno.test(
   },
 );
 
-Deno.test("wallet capture source normalizes Android legacy alias", () => {
-  assertEquals(
-    normalizeWalletCaptureSource("android_notification"),
-    "android_notification_listener",
-  );
-  assertEquals(
-    normalizeWalletCaptureSource("ios_wallet_shortcut"),
-    "ios_wallet_shortcut",
-  );
-});
+Deno.test(
+  "wallet capture source normalizes notification capture platforms",
+  () => {
+    assertEquals(
+      normalizeWalletCaptureSource("android_notification"),
+      "android_notification_listener",
+    );
+    assertEquals(
+      normalizeWalletCaptureSource("ios_notification_shortcut"),
+      "ios_notification_shortcut",
+    );
+    assertEquals(
+      normalizeWalletCaptureSource("ios_wallet_shortcut"),
+      "ios_wallet_shortcut",
+    );
+    assertEquals(
+      isNotificationCaptureSource("android_notification_listener"),
+      true,
+    );
+    assertEquals(
+      isNotificationCaptureSource("ios_notification_shortcut"),
+      true,
+    );
+    assertEquals(isNotificationCaptureSource("ios_wallet_shortcut"), false);
+    assertEquals(
+      resolveNotificationCaptureSource("ios_notification_shortcut"),
+      "ios_notification_shortcut",
+    );
+    assertEquals(
+      resolveNotificationCaptureSource("android_notification"),
+      "android_notification_listener",
+    );
+    assertEquals(
+      resolveNotificationCaptureSource(null),
+      "android_notification_listener",
+    );
+    assertEquals(
+      resolveNotificationCaptureSource("ios_wallet_shortcut"),
+      "android_notification_listener",
+    );
+  },
+);
 
 Deno.test(
   "wallet capture field resolvers support Android and iOS shapes",
@@ -166,19 +200,26 @@ Deno.test(
 );
 
 Deno.test(
-  "wallet capture currency uses preferred currency for Android bare dollar notifications",
+  "wallet capture currency uses preferred currency for bare dollar notifications",
   () => {
-    assertEquals(
-      resolveWalletCaptureCurrency({
-        captureSource: "android_notification_listener",
-        preferredCurrency: "CAD",
-        tx: {
-          currency: "USD",
-          note: "RBC Visa purchase at Coffee Shop $12.50",
-        },
-      }),
-      "CAD",
-    );
+    for (
+      const captureSource of [
+        "android_notification_listener",
+        "ios_notification_shortcut",
+      ]
+    ) {
+      assertEquals(
+        resolveWalletCaptureCurrency({
+          captureSource,
+          preferredCurrency: "CAD",
+          tx: {
+            currency: "USD",
+            note: "RBC Visa purchase at Coffee Shop $12.50",
+          },
+        }),
+        "CAD",
+      );
+    }
   },
 );
 

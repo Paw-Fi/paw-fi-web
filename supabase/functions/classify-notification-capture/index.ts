@@ -42,6 +42,7 @@ import {
 } from "../shared/vertex-ai-chat.ts";
 import {
   getLocalYyyyMmDdInTimeZone,
+  resolveNotificationCaptureSource,
   resolveWalletCaptureAccountForCurrency,
 } from "../shared/wallet-capture.ts";
 
@@ -271,7 +272,9 @@ async function invokeWalletCapture(params: {
         : { Authorization: authorization, apikey: anonKey }),
     },
     body: JSON.stringify({
-      captureSource: "android_notification_listener",
+      captureSource: resolveNotificationCaptureSource(
+        params.body.captureSource,
+      ),
       userId: params.userId,
       idempotencyKey: `${params.eventKey}|transaction`,
       clientCreatedAt: params.body.clientCreatedAt,

@@ -50,6 +50,7 @@ import {
   getLocalYyyyMmDdInTimeZone,
   hasAmbiguousWalletCaptureCurrencyEvidence,
   isAiUserPreferredCurrencyContextValid,
+  isNotificationCaptureSource,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureRecurrenceRule,
   normalizeWalletCaptureSource,
@@ -87,6 +88,7 @@ import { runWithTimeout } from "../shared/async-timeout.ts";
 
 const VALID_CAPTURE_SOURCES = new Set([
   "ios_wallet_shortcut",
+  "ios_notification_shortcut",
   "android_notification_listener",
 ]);
 
@@ -242,7 +244,7 @@ function buildWalletCaptureRequestLogContext(
   );
 
   const captureSource = normalizeWalletCaptureSource(body?.captureSource);
-  if (captureSource === "android_notification_listener") {
+  if (isNotificationCaptureSource(captureSource)) {
     return {
       captureSource,
       redacted: true,
@@ -1445,7 +1447,10 @@ async function claimAndroidWalletCaptureEvent(params: {
     p_household_id: params.householdId,
     p_is_portfolio: params.isPortfolio,
     p_account_id: params.accountId,
-    p_capture_source: params.captureSource,
+    // The deployed logical-dedup RPC predates iOS notification automations and
+    // accepts only this legacy internal source. External metadata still keeps
+    // params.captureSource so platform attribution is not lost.
+    p_capture_source: "android_notification_listener",
     p_source_package: params.sourcePackage,
     p_source_app_label: params.sourceAppLabel,
     p_exact_event_key: params.exactEventKey,
@@ -1816,6 +1821,7 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
+    const isNotificationCapture = isNotificationCaptureSource(captureSource);
 
     // ── Validate transaction object ───────────────────────────────────
     const tx = body.transaction;
@@ -1856,9 +1862,8 @@ Deno.serve(async (req: Request) => {
     } else if (rawDate && rawDate.trim().startsWith("00")) {
       console.log(
         "[save-wallet-transaction] Coerced short-year transaction date",
-        normalizeWalletCaptureSource(body.captureSource) ===
-            "android_notification_listener"
-          ? { captureSource: "android_notification_listener", redacted: true }
+        isNotificationCapture
+          ? { captureSource, redacted: true }
           : { rawDate, normalizedDate: normalizedProvidedDate },
       );
     }
@@ -2132,9 +2137,7 @@ Deno.serve(async (req: Request) => {
       if (contact && contact.wallet_capture_enabled === false) {
         console.log("[save-wallet-transaction] Wallet capture disabled", {
           captureSource,
-          ...(captureSource === "android_notification_listener"
-            ? { redacted: true }
-            : { userId }),
+          ...(isNotificationCapture ? { redacted: true } : { userId }),
         });
         return errorResponse(
           "Wallet capture is disabled",
@@ -2154,7 +2157,7 @@ Deno.serve(async (req: Request) => {
       } else {
         console.log(
           "[save-wallet-transaction] No user_contact row found; proceeding with null contact_id.",
-          captureSource === "android_notification_listener"
+          isNotificationCapture
             ? { captureSource, redacted: true }
             : { userId },
         );
@@ -2206,14 +2209,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const strongCurrencyEvidence =
-      captureSource === "android_notification_listener"
-        ? resolveStrongWalletCaptureCurrencyEvidence(tx)
-        : null;
+    const strongCurrencyEvidence = isNotificationCapture
+      ? resolveStrongWalletCaptureCurrencyEvidence(tx)
+      : null;
     const payloadCurrencyCode =
       resolveWalletTransactionCurrency(tx)?.trim().toUpperCase() ?? null;
     if (
-      captureSource === "android_notification_listener" &&
+      isNotificationCapture &&
       usesAiAccountCurrencyContext(tx) &&
       (!selectedAccountCurrency ||
         payloadCurrencyCode !== selectedAccountCurrency.toUpperCase())
@@ -2234,7 +2236,7 @@ Deno.serve(async (req: Request) => {
       );
     }
     if (
-      captureSource === "android_notification_listener" &&
+      isNotificationCapture &&
       usesAiUserPreferredCurrency(tx) &&
       !isAiUserPreferredCurrencyContextValid({
         payloadCurrency: payloadCurrencyCode,
@@ -2257,8 +2259,7 @@ Deno.serve(async (req: Request) => {
         "VALIDATION_ERROR",
       );
     }
-    const androidCurrencyAmbiguous =
-      captureSource === "android_notification_listener" &&
+    const notificationCurrencyAmbiguous = isNotificationCapture &&
       hasAmbiguousWalletCaptureCurrencyEvidence(tx);
     if (
       accountId &&
@@ -2365,7 +2366,7 @@ Deno.serve(async (req: Request) => {
 
     console.log(
       "[save-wallet-transaction] Processing:",
-      captureSource === "android_notification_listener"
+      isNotificationCapture
         ? {
           captureSource,
           transactionType,
@@ -2393,7 +2394,7 @@ Deno.serve(async (req: Request) => {
     );
 
     const requestIdempotencyKey = buildWalletCaptureIdempotencyKey({
-      explicitKey: captureSource === "android_notification_listener"
+      explicitKey: isNotificationCapture
         ? buildServerScopedAndroidIdempotencyKey({
           explicitKey: body.idempotencyKey,
           userId,
@@ -2431,7 +2432,7 @@ Deno.serve(async (req: Request) => {
     }
     idempotencyClaimId = claimResult.claimId ?? null;
 
-    if (captureSource === "android_notification_listener") {
+    if (isNotificationCapture) {
       try {
         const androidClaim = await claimAndroidWalletCaptureEvent({
           supabase,
@@ -2457,10 +2458,10 @@ Deno.serve(async (req: Request) => {
             : null,
           currencyEvidenceType: typeof tx.currencyEvidenceType === "string"
             ? tx.currencyEvidenceType.trim() || null
-            : androidCurrencyAmbiguous
+            : notificationCurrencyAmbiguous
             ? "ambiguous_symbol"
             : null,
-          currencyAmbiguous: androidCurrencyAmbiguous,
+          currencyAmbiguous: notificationCurrencyAmbiguous,
         });
 
         if (androidClaim.status === "duplicate") {
@@ -2535,13 +2536,12 @@ Deno.serve(async (req: Request) => {
           note: tx.note,
           expenseCategories: expenseCategoryList,
           incomeCategories: incomeCategoryList,
-          redactFailureContext:
-            captureSource === "android_notification_listener",
+          redactFailureContext: isNotificationCapture,
         }));
 
       console.log(
         "[save-wallet-transaction] AI categorization result:",
-        captureSource === "android_notification_listener"
+        isNotificationCapture
           ? { captureSource, aiCategory }
           : { merchant: merchantDisplay, aiCategory },
       );
@@ -2556,7 +2556,7 @@ Deno.serve(async (req: Request) => {
 
       console.log(
         "[save-wallet-transaction] Category resolution:",
-        captureSource === "android_notification_listener"
+        isNotificationCapture
           ? { captureSource, aiCategory, resolved: resolvedCategory }
           : {
             merchant: merchantDisplay,
@@ -2606,7 +2606,7 @@ Deno.serve(async (req: Request) => {
       } catch (_) {
         console.warn(
           "[save-wallet-transaction] Optional merchant enrichment failed; continuing without canonical identity",
-          captureSource === "android_notification_listener"
+          isNotificationCapture
             ? { captureSource, redacted: true }
             : { captureSource },
         );
@@ -2644,7 +2644,9 @@ Deno.serve(async (req: Request) => {
       wallet_capture_idempotency_key: requestIdempotencyKey,
     };
     let preparedHouseholdSplit:
-      | ReturnType<typeof buildHouseholdSplitRecords>
+      | ReturnType<
+        typeof buildHouseholdSplitRecords
+      >
       | null = null;
     if (householdId && requiresHouseholdSplit) {
       const effectiveSplit = resolveEffectiveSplit(
@@ -2693,11 +2695,11 @@ Deno.serve(async (req: Request) => {
       })
       : null;
     const { data: insertedTransaction, error: expenseError } = atomicResult ??
-      await supabase
+      (await supabase
         .from("expenses")
         .insert(transactionRecord)
         .select()
-        .single();
+        .single());
     let expense = atomicResult == null
       ? insertedTransaction
       : (insertedTransaction as Record<string, unknown>)?.expense;
@@ -2795,7 +2797,7 @@ Deno.serve(async (req: Request) => {
       if (identityUpdateError) {
         console.warn(
           "[save-wallet-transaction] Optional household merchant identity update failed; capture remains saved",
-          captureSource === "android_notification_listener"
+          isNotificationCapture
             ? { captureSource, redacted: true }
             : { captureSource },
         );
@@ -2804,7 +2806,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (captureSource !== "android_notification_listener") {
+    if (!isNotificationCapture) {
       console.log("[save-wallet-transaction] Expense saved:", expense.id);
     }
 
@@ -2864,10 +2866,7 @@ Deno.serve(async (req: Request) => {
         expense.id,
         storedResponse,
       );
-      if (
-        body.suppressNotification !== true &&
-        captureSource !== "android_notification_listener"
-      ) {
+      if (body.suppressNotification !== true && !isNotificationCapture) {
         await sendWalletPocketNotificationBestEffort({
           supabase,
           userId,
@@ -2884,7 +2883,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (householdId && requiresHouseholdSplit) {
-      if (captureSource !== "android_notification_listener") {
+      if (!isNotificationCapture) {
         let actorName = "Someone";
         try {
           const { data: appUser } = await supabase
@@ -2962,10 +2961,7 @@ Deno.serve(async (req: Request) => {
       storedResponse,
     );
 
-    if (
-      body.suppressNotification !== true &&
-      captureSource !== "android_notification_listener"
-    ) {
+    if (body.suppressNotification !== true && !isNotificationCapture) {
       await sendWalletPocketNotificationBestEffort({
         supabase,
         userId,
