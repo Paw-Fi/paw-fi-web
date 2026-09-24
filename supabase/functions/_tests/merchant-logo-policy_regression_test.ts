@@ -84,19 +84,13 @@ Deno.test("stream and non-stream Analyze share merchant enrichment", () => {
   assertStringIncludes(analyze, 'from("user_contacts")');
   assertStringIncludes(analyze, '.select("preferred_timezone")');
   assertStringIncludes(analyze, "body.preferredTimezone");
-  assertStringIncludes(
-    merchantAnalysis,
-    "merchantDomain: evidencedDomain",
-  );
+  assertStringIncludes(merchantAnalysis, "merchantDomain: evidencedDomain");
   assertStringIncludes(
     merchantAnalysis,
     "selectMerchantCandidateByRegionalContext",
   );
   assertStringIncludes(merchantAnalysis, "persistCanonicalMerchant");
-  assertStringIncludes(
-    merchantAnalysis,
-    'resolutionSource: "logo_dev_search"',
-  );
+  assertStringIncludes(merchantAnalysis, 'resolutionSource: "logo_dev_search"');
   assertStringIncludes(
     merchantAnalysis,
     "params.autoResolveCandidates === true ? 4_000 : 8_000",
@@ -238,10 +232,7 @@ Deno.test(
     const merchantId = "4d055fac-88b0-4750-b606-92f37c008975";
     const candidate = { name: "Tesco Ireland", domain: "tesco.ie" };
     const supabase = {
-      rpc: (
-        name: string,
-        args: Record<string, unknown>,
-      ) => {
+      rpc: (name: string, args: Record<string, unknown>) => {
         assertEquals(name, "merchant_resolution_descriptor_key");
         return {
           data: args.p_merchant === candidate.name ? "tesco ireland" : "tesco",
@@ -308,10 +299,7 @@ Deno.test(
 Deno.test(
   "wallet captures share merchant enrichment without risking transaction save",
   () => {
-    assertStringIncludes(
-      walletCapture,
-      '"../shared/merchant-analysis.ts"',
-    );
+    assertStringIncludes(walletCapture, '"../shared/merchant-analysis.ts"');
     assert(!merchantAnalysis.includes('from("./analyze-core.ts")'));
     assertStringIncludes(
       walletCapture,
@@ -328,8 +316,9 @@ Deno.test(
     );
     assertStringIncludes(
       walletCapture,
-      "merchant: merchantForStorage,",
+      'tx.merchantEntityType === "organization"',
     );
+    assertStringIncludes(walletCapture, "merchant: merchantForStorage,");
     assertStringIncludes(
       walletCapture,
       "Optional merchant enrichment failed; continuing without canonical identity",
@@ -339,10 +328,7 @@ Deno.test(
       "WALLET_CATEGORIZATION_TIMEOUT_MS = 6_000",
     );
     assertStringIncludes(walletCapture, "await runWithTimeout({");
-    assertStringIncludes(
-      walletCapture,
-      "capture remains saved",
-    );
+    assertStringIncludes(walletCapture, "capture remains saved");
     assertStringIncludes(
       walletCapture,
       "merchant_id: resolvedMerchantIdentity.merchantId",
@@ -354,13 +340,16 @@ Deno.test(
   },
 );
 
-Deno.test("transaction analyzers converge on shared merchant enrichment", () => {
-  assertStringIncludes(analyze, "runEnrichedTransactionAnalysis");
-  assertStringIncludes(resendInbound, "runEnrichedTransactionAnalysis");
-  assertStringIncludes(botMedia, "runEnrichedTransactionAnalysis");
-  assertStringIncludes(walletCapture, "resolveAnalyzedMerchantIdentity");
-  assertStringIncludes(notificationCapture, "save-wallet-transaction");
-});
+Deno.test(
+  "transaction analyzers converge on shared merchant enrichment",
+  () => {
+    assertStringIncludes(analyze, "runEnrichedTransactionAnalysis");
+    assertStringIncludes(resendInbound, "runEnrichedTransactionAnalysis");
+    assertStringIncludes(botMedia, "runEnrichedTransactionAnalysis");
+    assertStringIncludes(walletCapture, "resolveAnalyzedMerchantIdentity");
+    assertStringIncludes(notificationCapture, "save-wallet-transaction");
+  },
+);
 
 Deno.test(
   "headless email attachment and body analysis resolve Logo.dev candidates",
@@ -412,10 +401,9 @@ Deno.test(
 );
 
 Deno.test("internal background resolver has no fetch dependency", () => {
-  const worker =
-    backgroundSources.find((entry) =>
-      entry.path.includes("merchant-resolution-worker")
-    )!.source;
+  const worker = backgroundSources.find((entry) =>
+    entry.path.includes("merchant-resolution-worker"),
+  )!.source;
   assert(!worker.includes("fetch("));
   assertStringIncludes(worker, "resolveMerchant");
   assertStringIncludes(worker, 'mode: "INTERNAL_ONLY"');

@@ -280,6 +280,7 @@ async function invokeWalletCapture(params: {
       ...(params.accountId ? { accountId: params.accountId } : {}),
       transaction: {
         merchantName: params.classification.merchant,
+        merchantEntityType: params.classification.merchantEntityType,
         type: params.classification.transactionType,
         amount: params.classification.amount,
         currency: params.classification.currency,

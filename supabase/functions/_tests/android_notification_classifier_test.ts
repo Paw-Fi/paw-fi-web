@@ -62,7 +62,8 @@ function fakeGenAI(
           if (generationConfig?.responseMimeType === "text/x.enum") {
             return Promise.resolve({
               response: {
-                text: () => call?.args.approved === true ? "APPROVE" : "REJECT",
+                text: () =>
+                  call?.args.approved === true ? "APPROVE" : "REJECT",
               },
             });
           }
@@ -139,6 +140,7 @@ function saveArgs(
     currencyEvidenceRaw: "USD",
     currencySource: "notification_explicit",
     merchant: "Cafe Bloom",
+    merchantEntityType: "organization",
     merchantEvidenceRaw: "Cafe Bloom",
     completionEvidenceRaw: "was completed",
     transactionEvidenceRaw:
@@ -167,6 +169,7 @@ function classification(
     currencySource: "notification_explicit",
     currencyAmbiguous: false,
     merchant: "Cafe Bloom",
+    merchantEntityType: "organization",
     merchantEvidenceRaw: "Cafe Bloom",
     completionEvidenceRaw: "was completed",
     transactionEvidenceRaw:
@@ -201,6 +204,7 @@ Deno.test(
                   currency: "EUR",
                   currencyEvidenceRaw: "€",
                   merchant: "Camille",
+                  merchantEntityType: "person",
                   merchantEvidenceRaw: "Camille",
                   completionEvidenceRaw: "vous a envoyé",
                   transactionEvidenceRaw: notificationText,
@@ -229,6 +233,8 @@ Deno.test(
     assertEquals(result.action, "save_transaction");
     assertEquals(result.transactionType, "income");
     assertEquals(result.subtype, "deposit");
+    assertEquals(result.merchant, "Camille");
+    assertEquals(result.merchantEntityType, "person");
 
     const classifierPrompt = String(
       (
@@ -249,8 +255,20 @@ Deno.test(
       "Completed money received from another person or external source is income",
     );
     assertStringIncludes(
+      classifierPrompt,
+      "Never infer entity type from spelling, script, language, name length, capitalization",
+    );
+    assertStringIncludes(
+      classifierPrompt,
+      "must not change action, eventStatus, or whether an otherwise valid transaction is saved",
+    );
+    assertStringIncludes(
       verifierPrompt,
       "Completed money received from another person or external source is income",
+    );
+    assertStringIncludes(
+      verifierPrompt,
+      "Do not approve or reject the transaction based on merchantEntityType",
     );
   },
 );
@@ -716,7 +734,10 @@ Deno.test(
     assertEquals(result.amount, 125.5);
     assertEquals(result.model, "gemini-3.1-flash-lite");
     assertEquals(result.verificationModel, "gemini-3.5-flash-lite");
-    assertEquals(capturedModels, ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"]);
+    assertEquals(capturedModels, [
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash-lite",
+    ]);
   },
 );
 
@@ -1242,9 +1263,8 @@ Deno.test(
       incomeCategories: ["other income"],
     };
 
-    const original = await buildAndroidNotificationClassificationContextHash(
-      base,
-    );
+    const original =
+      await buildAndroidNotificationClassificationContextHash(base);
     const same = await buildAndroidNotificationClassificationContextHash({
       ...base,
     });
@@ -1567,7 +1587,10 @@ Deno.test("promotion is ignored only after independent agreement", async () => {
   assertEquals(result.reasonCode, "promotion");
   assertEquals(result.model, "gemini-3.1-flash-lite");
   assertEquals(result.verificationModel, "gemini-3.5-flash-lite");
-  assertEquals(capturedModels, ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"]);
+  assertEquals(capturedModels, [
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
+  ]);
 });
 
 Deno.test(

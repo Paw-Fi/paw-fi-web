@@ -126,6 +126,7 @@ const firebaseProjectId = readRuntimeEnv("FIREBASE_PROJECT_ID");
 
 interface TransactionPayload {
   merchantName?: string | null;
+  merchantEntityType?: "organization" | "person" | "unknown" | null;
   rawMerchant?: string | null;
   type?: string | null;
   amount: number;
@@ -1901,6 +1902,8 @@ Deno.serve(async (req: Request) => {
       typeof tx.merchantName === "string"
         ? tx.merchantName.trim() || null
         : null;
+    const shouldResolveStructuredMerchant =
+      !isNotificationCapture || tx.merchantEntityType === "organization";
     const merchantDisplay = (
       merchantForStorage ??
       tx.note ??
@@ -2624,7 +2627,7 @@ Deno.serve(async (req: Request) => {
     // guessed business name. Failures are non-blocking so optional logo
     // enrichment can never prevent an otherwise valid capture from saving.
     let resolvedMerchantIdentity: AnalyzedMerchantIdentity | null = null;
-    if (structuredMerchantForStorage) {
+    if (structuredMerchantForStorage && shouldResolveStructuredMerchant) {
       try {
         const candidateIdentity = await resolveAnalyzedMerchantIdentity({
           merchant: structuredMerchantForStorage,
