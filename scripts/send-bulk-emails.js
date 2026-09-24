@@ -3,53 +3,93 @@
 /**
  * Last sent: 04/02/2026 @ 11:57
  * Bulk Email Sender Script
- * 
+ *
  * This script fetches users from Supabase based on a custom SQL query
  * and sends personalized emails using Resend API.
- * 
+ *
  * Features:
  * - Test mode with single email testing
  * - Confirmation prompt before sending to all users
  * - Customizable SQL query via migration script
- * - HTML email template support with variable substitution
+ * - Localized JSON email template support with variable substitution
  * - Rate limiting to avoid API throttling
- * 
+ *
  * Usage:
- *   Test mode:     node scripts/send-bulk-emails.js --test yflim7020@gmail.com  --template ./scripts/email-templates/1.5.5-wallets.html
- *   Production:    node scripts/send-bulk-emails.js  --template ./scripts/email-templates/1.5.5-wallets.html
+ *   Test mode:     node scripts/send-bulk-emails.js --test yflim7020@gmail.com --template ./scripts/email-templates/4.0.0/campaign.json
+ *   Production:    node scripts/send-bulk-emails.js --template ./scripts/email-templates/4.0.0/campaign.json
+ *
+ * Each locale entry includes a title (subject and preview text) and body (HTML
+ * inside the shared body tag). The en entry is required and is used when a
+ * user's preferred_language or its locale entry is unavailable.
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
-import fs from 'fs';
-import path from 'path';
-import readline from 'readline';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
+import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
+import fs from "fs";
+import path from "path";
+import readline from "readline";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 
-const DEFAULT_EMAIL_SUBJECT='Moneko 3.0: recurring payments & periods'
+const SUPPORTED_TEMPLATE_LANGUAGES = new Map([
+  ["de", "de"],
+  ["en", "en"],
+  ["es", "es"],
+  ["fr", "fr"],
+  ["it", "it"],
+  ["ja", "ja"],
+  ["ko", "ko"],
+  ["nl", "nl"],
+  ["ur", "ur"],
+  ["ru", "ru"],
+  ["th", "th"],
+  ["uk", "uk"],
+  ["zh", "zh"],
+  ["zh_tw", "zh_TW"],
+  ["vi", "vi"],
+]);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const EMAIL_TEMPLATE_SHELL_FILE = path.join(
+  __dirname,
+  "email-templates",
+  "3.0.0-recurring-and-periods.html",
+);
 
 // Load environment variables from .env.production
-const projectRoot = path.resolve(__dirname, '..');
-dotenv.config({ path: path.join(projectRoot, '.env.production') });
+const projectRoot = path.resolve(__dirname, "..");
+dotenv.config({ path: path.join(projectRoot, ".env.production") });
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://qbuynyxyemigtnvdujts.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL || "https://qbuynyxyemigtnvdujts.supabase.co";
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const FROM_EMAIL = 'hello@moneko.io'; // Update with your verified sender email
-const FROM_NAME =  'Moneko Team';
-const ADMIN_EMAIL = 'yifan.lim@moneko.io'; // Admin email for summary reports
+const FROM_EMAIL = "hello@moneko.io"; // Update with your verified sender email
+const FROM_NAME = "Moneko Team";
+const ADMIN_EMAIL = "yifan.lim@moneko.io"; // Admin email for summary reports
 
 // Rate limiting: delay between emails (in milliseconds)
 const RATE_LIMIT_DELAY = 510; // 510ms = 2 emails per second (Resend's limit)
+const CAMPAIGN_CHANGELOG_URL =
+  "https://moneko.io/changelog?source=marketing-email-4.0.0";
+const CAMPAIGN_BLOG_URL =
+  "https://moneko.io/blogs/moneko-update-4-0-0?source=marketing-email-4.0.0";
+const CAMPAIGN_IMAGES = {
+  cover:
+    "https://firebasestorage.googleapis.com/v0/b/paw-fi-3c4f7.firebasestorage.app/o/email_template_photos%2F4.0.0%2F4.0.0.png?alt=media&token=72c70d97-2133-4148-ae82-9b83e56b955e",
+  merchantLogos:
+    "https://firebasestorage.googleapis.com/v0/b/paw-fi-3c4f7.firebasestorage.app/o/email_template_photos%2F4.0.0%2F01-merchant-logos.png?alt=media&token=92b36241-b7c6-45ec-b352-f71b34253891",
+  notificationCapture:
+    "https://firebasestorage.googleapis.com/v0/b/paw-fi-3c4f7.firebasestorage.app/o/email_template_photos%2F4.0.0%2F02-ios-notification-capture.png?alt=media&token=ea2c6dc0-e32b-4908-af04-8b76bba64374",
+  recurringAndMad:
+    "https://firebasestorage.googleapis.com/v0/b/paw-fi-3c4f7.firebasestorage.app/o/email_template_photos%2F4.0.0%2F03-custom-recurring-and-mad.png?alt=media&token=7b7d00e4-0966-4d04-af1b-5993fbd20528",
+};
 
 // ============================================================================
 // INITIALIZE CLIENTS
@@ -75,14 +115,14 @@ function parseArgs() {
   };
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--test' && args[i + 1]) {
+    if (args[i] === "--test" && args[i + 1]) {
       config.testMode = true;
       config.testEmail = args[i + 1];
       i++;
-    } else if (args[i] === '--query-file' && args[i + 1]) {
+    } else if (args[i] === "--query-file" && args[i + 1]) {
       config.queryFile = args[i + 1];
       i++;
-    } else if (args[i] === '--template' && args[i + 1]) {
+    } else if (args[i] === "--template" && args[i + 1]) {
       config.templateFile = args[i + 1];
       i++;
     }
@@ -110,16 +150,17 @@ ORDER BY u.created_at;
     throw new Error(`Query file not found: ${queryPath}`);
   }
 
-  return fs.readFileSync(queryPath, 'utf-8');
+  return fs.readFileSync(queryPath, "utf-8");
 }
 
 /**
- * Load HTML email template from file
+ * Load the localized email template catalog from JSON.
  */
-function loadTemplate(templateFile) {
+function loadTemplateCatalog(templateFile) {
   if (!templateFile) {
-    // Default template path
-    templateFile = path.join(__dirname, 'email-templates', 'default-template.html');
+    throw new Error(
+      "A JSON template file is required. Pass it with --template.",
+    );
   }
 
   const templatePath = path.resolve(templateFile);
@@ -127,7 +168,135 @@ function loadTemplate(templateFile) {
     throw new Error(`Template file not found: ${templatePath}`);
   }
 
-  return fs.readFileSync(templatePath, 'utf-8');
+  let templateCatalog;
+  try {
+    templateCatalog = JSON.parse(fs.readFileSync(templatePath, "utf-8"));
+  } catch (error) {
+    throw new Error(`Invalid template JSON: ${error.message}`);
+  }
+
+  if (
+    !templateCatalog ||
+    typeof templateCatalog !== "object" ||
+    Array.isArray(templateCatalog) ||
+    !isValidTemplate(templateCatalog.en)
+  ) {
+    throw new Error(
+      'Template JSON must contain a non-empty "en" title and body.',
+    );
+  }
+
+  return templateCatalog;
+}
+
+/**
+ * Load the shared document shell, preserving the 3.0 email styling.
+ */
+function loadEmailTemplateShell() {
+  const shell = fs.readFileSync(EMAIL_TEMPLATE_SHELL_FILE, "utf-8");
+  const bodyStartMatch = shell.match(/<body\b[^>]*>/i);
+  const bodyEndIndex = shell.toLowerCase().lastIndexOf("</body>");
+
+  if (
+    !bodyStartMatch ||
+    bodyStartMatch.index === undefined ||
+    bodyEndIndex < 0
+  ) {
+    throw new Error(
+      "Email template shell must contain opening and closing body tags.",
+    );
+  }
+
+  return {
+    header: shell.slice(0, bodyStartMatch.index),
+    bodyTag: bodyStartMatch[0],
+    footer: shell.slice(bodyEndIndex),
+  };
+}
+
+/**
+ * Return a supported language code, defaulting to English.
+ */
+function getTemplateLanguage(preferredLanguage) {
+  if (typeof preferredLanguage !== "string") return "en";
+
+  return (
+    SUPPORTED_TEMPLATE_LANGUAGES.get(
+      preferredLanguage.trim().replace("-", "_").toLowerCase(),
+    ) || "en"
+  );
+}
+
+/**
+ * Return a complete localized template, falling back to English.
+ */
+function getLocalizedTemplate(templateCatalog, language) {
+  const template = templateCatalog[language];
+  return isValidTemplate(template) ? template : templateCatalog.en;
+}
+
+function isValidTemplate(template) {
+  return Boolean(
+    template &&
+      typeof template === "object" &&
+      typeof template.title === "string" &&
+      template.title.trim() &&
+      typeof template.body === "string" &&
+      template.body.trim(),
+  );
+}
+
+/**
+ * Render a locale's HTML fragment inside the shared email document shell.
+ */
+function renderTemplate(shell, template) {
+  const header = shell.header.replace(
+    /<title\b[^>]*>[\s\S]*?<\/title>/i,
+    `<title>${escapeHtml(template.title)}</title>`,
+  );
+  const content = addCampaignImages(template.body).replace(
+    CAMPAIGN_CHANGELOG_URL,
+    CAMPAIGN_BLOG_URL,
+  );
+
+  return `${header}${shell.bodyTag}${content}${shell.footer}`;
+}
+
+function addCampaignImages(content) {
+  const image = (source, style = "") =>
+    `<div style="${style}"><img class="feature-gif" src="${source}" alt="" width="100%" style="width:100%; max-width:528px; height:auto; border-radius:12px; display:block;" /></div>`;
+  const sections = content.split('<td class="card-padding"');
+
+  if (sections.length < 5) return content;
+
+  [
+    [2, CAMPAIGN_IMAGES.merchantLogos],
+    [3, CAMPAIGN_IMAGES.notificationCapture],
+    [4, CAMPAIGN_IMAGES.recurringAndMad],
+  ].forEach(([index, source]) => {
+    sections[index] = sections[index].replace(
+      "</td></tr>",
+      `${image(source, "margin-top:20px;")}</td></tr>`,
+    );
+  });
+
+  const cover = `<tr><td class="card-padding" style="padding:32px 36px 0;">${image(CAMPAIGN_IMAGES.cover)}</td></tr>`;
+
+  return sections
+    .join('<td class="card-padding"')
+    .replace(
+      /(<td class="email-card"[^>]*>\s*<table role="presentation" cellpadding="0" cellspacing="0" width="100%">)/,
+      `$1${cover}`,
+    );
+}
+
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /**
@@ -135,12 +304,12 @@ function loadTemplate(templateFile) {
  */
 function replaceVariables(template, variables) {
   let result = template;
-  
+
   for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    result = result.replace(regex, value || '');
+    const regex = new RegExp(`{{${key}}}`, "g");
+    result = result.replace(regex, value || "");
   }
-  
+
   return result;
 }
 
@@ -149,7 +318,7 @@ function replaceVariables(template, variables) {
  */
 function getFirstName(fullName) {
   if (!fullName) return null;
-  const parts = fullName.trim().split(' ');
+  const parts = fullName.trim().split(" ");
   return parts[0] || null;
 }
 
@@ -165,7 +334,7 @@ function promptConfirmation(message) {
 
     rl.question(`${message} (yes/no): `, (answer) => {
       rl.close();
-      resolve(answer.toLowerCase() === 'yes' || answer.toLowerCase() === 'y');
+      resolve(answer.toLowerCase() === "yes" || answer.toLowerCase() === "y");
     });
   });
 }
@@ -237,14 +406,18 @@ function generateSummaryReport(results, campaignDetails) {
                 </tr>
               </table>
 
-              ${failed > 0 ? `
+              ${
+                failed > 0
+                  ? `
               <div style="margin-top:24px; padding:16px; background:#fef2f2; border-left:4px solid #ef4444; border-radius:8px;">
                 <h3 style="margin:0 0 12px; font-size:14px; color:#991b1b; font-weight:600;">Failed Emails (${failed}):</h3>
                 <ul style="margin:0; padding-left:20px; font-size:13px; color:#7f1d1d; line-height:1.8;">
-                  ${errors.map(err => `<li>${err.email}: ${err.error}</li>`).join('')}
+                  ${errors.map((err) => `<li>${err.email}: ${err.error}</li>`).join("")}
                 </ul>
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
 
               <div style="margin-top:24px; padding:16px; background:#f0fdf4; border-left:4px solid #10b981; border-radius:8px;">
                 <p style="margin:0; font-size:13px; color:#065f46;">
@@ -261,7 +434,7 @@ function generateSummaryReport(results, campaignDetails) {
       <td style="text-align:center; padding:12px 0;">
         <p style="margin:0; font-size:12px; color:#9ca3af;">
           Generated by Moneko Bulk Email Script<br/>
-          ${new Date().toLocaleString('en-US', { timeZone: 'UTC', dateStyle: 'full', timeStyle: 'long' })}
+          ${new Date().toLocaleString("en-US", { timeZone: "UTC", dateStyle: "full", timeStyle: "long" })}
         </p>
       </td>
     </tr>
@@ -274,7 +447,7 @@ function generateSummaryReport(results, campaignDetails) {
 /**
  * Send email via Resend
  */
-async function sendEmail(to, subject, html, previewText = '') {
+async function sendEmail(to, subject, html, previewText = "") {
   try {
     // Add preview text to HTML if provided
     let emailHtml = html;
@@ -282,7 +455,7 @@ async function sendEmail(to, subject, html, previewText = '') {
       // Insert preview text at the beginning of the body
       emailHtml = html.replace(
         /<body([^>]*)>/i,
-        `<body$1><div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${previewText}</div>`
+        `<body$1><div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${escapeHtml(previewText)}</div>`,
       );
     }
 
@@ -308,30 +481,33 @@ async function sendEmail(to, subject, html, previewText = '') {
 // ============================================================================
 
 async function main() {
-  console.log('\n🚀 Bulk Email Sender Script\n');
-  console.log('='.repeat(60));
+  console.log("\n🚀 Bulk Email Sender Script\n");
+  console.log("=".repeat(60));
 
   // Parse arguments
   const config = parseArgs();
 
   // Validate configuration
   if (!RESEND_API_KEY) {
-    console.error('❌ Error: RESEND_API_KEY environment variable not set');
-    console.error('   Add to your .env file: RESEND_API_KEY=re_your_key_here');
+    console.error("❌ Error: RESEND_API_KEY environment variable not set");
+    console.error("   Add to your .env file: RESEND_API_KEY=re_your_key_here");
     process.exit(1);
   }
 
   if (!SUPABASE_SERVICE_KEY) {
-    console.error('❌ Error: SUPABASE_SERVICE_ROLE_KEY environment variable not set');
+    console.error(
+      "❌ Error: SUPABASE_SERVICE_ROLE_KEY environment variable not set",
+    );
     process.exit(1);
   }
 
   // Load query and template
-  let query, template;
-  
+  let query, templateCatalog, emailTemplateShell;
+
   try {
     query = loadQuery(config.queryFile);
-    template = loadTemplate(config.templateFile);
+    templateCatalog = loadTemplateCatalog(config.templateFile);
+    emailTemplateShell = loadEmailTemplateShell();
   } catch (error) {
     console.error(`❌ Error loading files: ${error.message}`);
     process.exit(1);
@@ -339,24 +515,35 @@ async function main() {
 
   // Test mode
   if (config.testMode) {
-    console.log('\n📧 TEST MODE ENABLED');
+    console.log("\n📧 TEST MODE ENABLED");
     console.log(`Test email will be sent to: ${config.testEmail}\n`);
 
     const testVariables = {
-      name: 'Test User',
-      first_name: 'Test User',
+      name: "Test User",
+      first_name: "Test User",
       email: config.testEmail,
       unsubscribe_url: `https://moneko.io/unsubscribe?email=${encodeURIComponent(
         config.testEmail,
       )}`,
     };
 
-    const testHtml = replaceVariables(template, testVariables);
-    const testSubject = testVariables.first_name ? `${testVariables.first_name} - ${DEFAULT_EMAIL_SUBJECT}` : DEFAULT_EMAIL_SUBJECT;
+    const testTemplate = templateCatalog.en;
+    const testHtml = replaceVariables(
+      renderTemplate(emailTemplateShell, testTemplate),
+      testVariables,
+    );
+    const testSubject = testVariables.first_name
+      ? `${testVariables.first_name} - ${testTemplate.title}`
+      : testTemplate.title;
     const testPreviewText = testSubject;
 
-    console.log('Sending test email...');
-    const result = await sendEmail(config.testEmail, testSubject, testHtml, testPreviewText);
+    console.log("Sending test email...");
+    const result = await sendEmail(
+      config.testEmail,
+      testSubject,
+      testHtml,
+      testPreviewText,
+    );
 
     if (result.success) {
       console.log(`✅ Test email sent successfully! Email ID: ${result.id}`);
@@ -368,20 +555,26 @@ async function main() {
   }
 
   // Production mode: load users from JSON file
-  console.log('\n📊 Loading users from JSON file...\n');
+  console.log("\n📊 Loading users from JSON file...\n");
 
-  const usersJsonPath = path.join(__dirname, 'audiences.json');
-  
+  const usersJsonPath = path.join(__dirname, "audiences.json");
+
   if (!fs.existsSync(usersJsonPath)) {
-    console.error(`❌ Error: audiences.json file not found at ${usersJsonPath}`);
-    console.error('   Please create scripts/audiences.json with your user list');
-    console.error('   Expected format: [{"id": "...", "email": "...", "full_name": "..."}]');
+    console.error(
+      `❌ Error: audiences.json file not found at ${usersJsonPath}`,
+    );
+    console.error(
+      "   Please create scripts/audiences.json with your user list",
+    );
+    console.error(
+      '   Expected format: [{"id": "...", "email": "...", "full_name": "...", "preferred_language": "en"}]',
+    );
     process.exit(1);
   }
 
   let userList;
   try {
-    const usersJsonContent = fs.readFileSync(usersJsonPath, 'utf-8');
+    const usersJsonContent = fs.readFileSync(usersJsonPath, "utf-8");
     userList = JSON.parse(usersJsonContent);
   } catch (error) {
     console.error(`❌ Error reading audiences.json: ${error.message}`);
@@ -389,14 +582,16 @@ async function main() {
   }
 
   if (!Array.isArray(userList) || userList.length === 0) {
-    console.log('⚠️  No users found in audiences.json');
+    console.log("⚠️  No users found in audiences.json");
     process.exit(0);
   }
 
   console.log(`Found ${userList.length} user(s)\n`);
-  console.log('Sample users:');
+  console.log("Sample users:");
   userList.slice(0, 5).forEach((user, index) => {
-    console.log(`  ${index + 1}. ${user.email} (${user.full_name || 'No name'})`);
+    console.log(
+      `  ${index + 1}. ${user.email} (${user.full_name || "No name"})`,
+    );
   });
 
   if (userList.length > 5) {
@@ -405,20 +600,19 @@ async function main() {
 
   // Confirmation prompt
   const confirmed = await promptConfirmation(
-    `\n⚠️  Are you sure you want to send emails to ${userList.length} user(s)?`
+    `\n⚠️  Are you sure you want to send emails to ${userList.length} user(s)?`,
   );
 
   if (!confirmed) {
-    console.log('\n❌ Operation cancelled by user');
+    console.log("\n❌ Operation cancelled by user");
     process.exit(0);
   }
 
   // Send emails
-  console.log('\n📤 Sending emails...\n');
+  console.log("\n📤 Sending emails...\n");
 
   const campaignStartTime = Date.now();
-  const campaignDefaultSubject = DEFAULT_EMAIL_SUBJECT;
-  const campaignPreviewText = campaignDefaultSubject;
+  const campaignDefaultSubject = templateCatalog.en.title;
 
   const results = {
     total: userList.length,
@@ -430,21 +624,37 @@ async function main() {
   for (let i = 0; i < userList.length; i++) {
     const user = userList[i];
     const firstName = getFirstName(user.full_name);
+    const language = getTemplateLanguage(user.preferred_language);
+    const localizedTemplate = getLocalizedTemplate(templateCatalog, language);
+    const localizedSubject = localizedTemplate.title;
 
     const variables = {
-      name: firstName || 'there',
+      name: firstName || "there",
       first_name: firstName,
       full_name: user.full_name || firstName,
       email: user.email,
       unsubscribe_url: `https://moneko.io/unsubscribe?email=${encodeURIComponent(user.email)}`,
     };
 
-    const html = replaceVariables(template, variables);
-    const personalizedSubject = firstName ? `${firstName} - ${campaignDefaultSubject}` : campaignDefaultSubject;
+    const html = replaceVariables(
+      renderTemplate(emailTemplateShell, localizedTemplate),
+      variables,
+    );
+    const personalizedSubject = firstName
+      ? `${firstName} - ${localizedSubject}`
+      : localizedSubject;
+    const previewText = localizedSubject;
 
-    console.log(`[${i + 1}/${userList.length}] Sending to ${user.email}...`);
+    console.log(
+      `[${i + 1}/${userList.length}] Sending to ${user.email} (${language})...`,
+    );
 
-    const result = await sendEmail(user.email, personalizedSubject, html, campaignPreviewText);
+    const result = await sendEmail(
+      user.email,
+      personalizedSubject,
+      html,
+      previewText,
+    );
 
     if (result.success) {
       results.success++;
@@ -462,23 +672,23 @@ async function main() {
   }
 
   // Summary
-  console.log('\n' + '='.repeat(60));
-  console.log('📊 SUMMARY');
-  console.log('='.repeat(60));
+  console.log("\n" + "=".repeat(60));
+  console.log("📊 SUMMARY");
+  console.log("=".repeat(60));
   console.log(`Total users:     ${results.total}`);
   console.log(`✅ Successful:   ${results.success}`);
   console.log(`❌ Failed:       ${results.failed}`);
 
   if (results.errors.length > 0) {
-    console.log('\nFailed emails:');
+    console.log("\nFailed emails:");
     results.errors.forEach((err) => {
       console.log(`  - ${err.email}: ${err.error}`);
     });
   }
 
   // Send summary report to admin
-  console.log('\n📧 Sending summary report to admin...');
-  
+  console.log("\n📧 Sending summary report to admin...");
+
   const campaignEndTime = Date.now();
   const summaryHtml = generateSummaryReport(results, {
     subject: campaignDefaultSubject,
@@ -488,23 +698,26 @@ async function main() {
 
   // Also send a copy of the actual campaign email to admin
   const adminVariables = {
-    first_name: 'Yifan',
-    full_name: 'Yifan Lim',
+    first_name: "Yifan",
+    full_name: "Yifan Lim",
     email: ADMIN_EMAIL,
     unsubscribe_url: `https://moneko.io/unsubscribe?email=${encodeURIComponent(
       ADMIN_EMAIL,
     )}`,
   };
-  const adminCampaignEmail = replaceVariables(template, adminVariables);
+  const adminCampaignEmail = replaceVariables(
+    renderTemplate(emailTemplateShell, templateCatalog.en),
+    adminVariables,
+  );
 
   // Wait before sending summary report to avoid rate limit
   await sleep(RATE_LIMIT_DELAY);
-  
+
   // Send summary report
   const summaryResult = await sendEmail(
     ADMIN_EMAIL,
     `📊 Campaign Report: ${campaignDefaultSubject}`,
-    summaryHtml
+    summaryHtml,
   );
 
   if (summaryResult.success) {
@@ -519,16 +732,18 @@ async function main() {
     ADMIN_EMAIL,
     `[COPY] ${campaignDefaultSubject}`,
     adminCampaignEmail,
-    campaignPreviewText
+    campaignDefaultSubject,
   );
 
   if (campaignCopyResult.success) {
     console.log(`✅ Campaign copy sent to ${ADMIN_EMAIL}`);
   } else {
-    console.log(`⚠️  Failed to send campaign copy: ${campaignCopyResult.error}`);
+    console.log(
+      `⚠️  Failed to send campaign copy: ${campaignCopyResult.error}`,
+    );
   }
 
-  console.log('\n✨ Done!\n');
+  console.log("\n✨ Done!\n");
 }
 
 // ============================================================================
@@ -536,7 +751,7 @@ async function main() {
 // ============================================================================
 
 main().catch((error) => {
-  console.error('\n❌ Fatal error:', error.message);
+  console.error("\n❌ Fatal error:", error.message);
   console.error(error.stack);
   process.exit(1);
 });

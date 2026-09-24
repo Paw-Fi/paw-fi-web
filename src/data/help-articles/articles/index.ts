@@ -1,5 +1,6 @@
 import type { HelpArticle } from "../types";
 import { androidNotificationCaptureArticle } from "./android-notification-capture";
+import { iosNotificationCaptureArticle } from "./ios-notification-capture";
 import { aiCaptureAccuracyArticle } from "./ai-capture-accuracy";
 import { aiAssistantBoundariesArticle } from "./ai-assistant-boundaries";
 import { householdsArticle } from "./households";
@@ -69,6 +70,7 @@ export const helpArticles: HelpArticle[] = [
   whatsappTelegramArticle,
   applePayTrackingArticle,
   androidNotificationCaptureArticle,
+  iosNotificationCaptureArticle,
   duplicateTransactionsArticle,
   emailReceiptsArticle,
   quickActionsSiriArticle,
