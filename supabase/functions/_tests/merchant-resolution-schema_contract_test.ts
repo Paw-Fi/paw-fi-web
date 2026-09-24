@@ -30,6 +30,13 @@ const plaidMerchantMigration = await Deno.readTextFile(
   ),
 );
 
+const atomicExpensePatchMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260924130000_allow_merchant_identity_in_atomic_expense_patch.sql",
+    import.meta.url,
+  ),
+);
+
 const listIncome = await Deno.readTextFile(
   new URL("../list-income/index.ts", import.meta.url),
 );
@@ -60,6 +67,33 @@ Deno.test(
     assertStringIncludes(
       migration,
       "merchant text remains raw transaction evidence",
+    );
+  },
+);
+
+Deno.test(
+  "atomic household expense patches preserve nullable merchant identity",
+  () => {
+    assertStringIncludes(atomicExpensePatchMigration, "'merchant_id'");
+    assertStringIncludes(
+      atomicExpensePatchMigration,
+      "'merchant_structured_name'",
+    );
+    assertStringIncludes(
+      atomicExpensePatchMigration,
+      "(v_patch ->> 'merchant_id')::uuid",
+    );
+    assertStringIncludes(
+      atomicExpensePatchMigration,
+      "jsonb_typeof(v_patch -> 'merchant_id') = 'null' then null",
+    );
+    assertStringIncludes(
+      atomicExpensePatchMigration,
+      "merchant_structured_name = case",
+    );
+    assertStringIncludes(
+      atomicExpensePatchMigration,
+      "revoke all on function public.households_apply_expense_patch_v3",
     );
   },
 );
@@ -293,10 +327,7 @@ Deno.test(
       analyticsReadMigration,
       "e.merchant, e.merchant_id, merchant.domain as merchant_domain",
     );
-    assertStringIncludes(
-      analyticsReadMigration,
-      "e.merchant_structured_name",
-    );
+    assertStringIncludes(analyticsReadMigration, "e.merchant_structured_name");
     assertStringIncludes(
       analyticsReadMigration,
       "left join public.merchants merchant on merchant.id = e.merchant_id",
@@ -334,28 +365,34 @@ Deno.test("legacy expense list endpoints preserve merchant identity", () => {
   assertStringIncludes(listExpenses, "merchant_logo_url:");
 });
 
-Deno.test("premium dashboard transaction rows preserve merchant identity", () => {
-  assertStringIncludes(premiumDashboardSummary, "merchant_id");
-  assertStringIncludes(premiumDashboardSummary, "merchant_structured_name");
-  assertStringIncludes(
-    premiumDashboardSummary,
-    "merchants(domain, logo_identifier)",
-  );
-  assertStringIncludes(premiumDashboardSummary, "merchant: row.merchant");
-  assertStringIncludes(premiumDashboardSummary, "merchantId: row.merchant_id");
-  assertStringIncludes(
-    premiumDashboardSummary,
-    "merchantDomain: row.merchants?.domain ?? null",
-  );
-  assertStringIncludes(
-    premiumDashboardSummary,
-    "merchantLogoUrl: row.merchants?.logo_identifier ?? null",
-  );
-  assertStringIncludes(
-    premiumDashboardSummary,
-    "merchantStructuredName: row.merchant_structured_name",
-  );
-});
+Deno.test(
+  "premium dashboard transaction rows preserve merchant identity",
+  () => {
+    assertStringIncludes(premiumDashboardSummary, "merchant_id");
+    assertStringIncludes(premiumDashboardSummary, "merchant_structured_name");
+    assertStringIncludes(
+      premiumDashboardSummary,
+      "merchants(domain, logo_identifier)",
+    );
+    assertStringIncludes(premiumDashboardSummary, "merchant: row.merchant");
+    assertStringIncludes(
+      premiumDashboardSummary,
+      "merchantId: row.merchant_id",
+    );
+    assertStringIncludes(
+      premiumDashboardSummary,
+      "merchantDomain: row.merchants?.domain ?? null",
+    );
+    assertStringIncludes(
+      premiumDashboardSummary,
+      "merchantLogoUrl: row.merchants?.logo_identifier ?? null",
+    );
+    assertStringIncludes(
+      premiumDashboardSummary,
+      "merchantStructuredName: row.merchant_structured_name",
+    );
+  },
+);
 
 Deno.test("Plaid enrichment reuses the existing merchant logo contract", () => {
   assertStringIncludes(

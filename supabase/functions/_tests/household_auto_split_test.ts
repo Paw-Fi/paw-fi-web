@@ -11,6 +11,7 @@ import {
   buildPreservedHistoricalSplitRecords,
   commitHouseholdSplitRecords,
   commitHouseholdSplitRecordsWithPatch,
+  commitRecurringTemplateSplitRecordsWithPatch,
   createHouseholdAutoSplitForTransaction,
   createHouseholdTransactionWithSplit,
   type CustomSplits,
@@ -96,34 +97,37 @@ Deno.test(
   },
 );
 
-Deno.test("re-split request parser accepts aliases and rejects ambiguity", () => {
-  assertEquals(parseExplicitReSplitRequested({}), {
-    ok: true,
-    value: undefined,
-  });
-  assertEquals(parseExplicitReSplitRequested({ reSplitRequested: false }), {
-    ok: true,
-    value: false,
-  });
-  assertEquals(
-    parseExplicitReSplitRequested({
-      reSplitRequested: true,
-      resplit_requested: true,
-    }),
-    { ok: true, value: true },
-  );
-  assertEquals(
-    parseExplicitReSplitRequested({ reSplitRequested: "true" }).ok,
-    false,
-  );
-  assertEquals(
-    parseExplicitReSplitRequested({
-      reSplitRequested: true,
-      resplitRequested: false,
-    }).ok,
-    false,
-  );
-});
+Deno.test(
+  "re-split request parser accepts aliases and rejects ambiguity",
+  () => {
+    assertEquals(parseExplicitReSplitRequested({}), {
+      ok: true,
+      value: undefined,
+    });
+    assertEquals(parseExplicitReSplitRequested({ reSplitRequested: false }), {
+      ok: true,
+      value: false,
+    });
+    assertEquals(
+      parseExplicitReSplitRequested({
+        reSplitRequested: true,
+        resplit_requested: true,
+      }),
+      { ok: true, value: true },
+    );
+    assertEquals(
+      parseExplicitReSplitRequested({ reSplitRequested: "true" }).ok,
+      false,
+    );
+    assertEquals(
+      parseExplicitReSplitRequested({
+        reSplitRequested: true,
+        resplitRequested: false,
+      }).ok,
+      false,
+    );
+  },
+);
 
 Deno.test(
   "amount-only legacy splitUpdate preserves history unless re-split is explicit",
@@ -446,7 +450,10 @@ Deno.test(
     });
     assertEquals(result.ok, true);
     if (!result.ok) throw new Error(result.error);
-    assertEquals(result.lines.map((line) => line.amount_cents), [2000, 2000]);
+    assertEquals(
+      result.lines.map((line) => line.amount_cents),
+      [2000, 2000],
+    );
   },
 );
 
@@ -934,14 +941,12 @@ Deno.test(
 Deno.test(
   "createHouseholdAutoSplitForTransaction returns created only after atomic commit",
   async () => {
-    const calls: Array<
-      { functionName: string; params: Record<string, unknown> }
-    > = [];
+    const calls: Array<{
+      functionName: string;
+      params: Record<string, unknown>;
+    }> = [];
     const supabase = {
-      rpc(
-        functionName: string,
-        params: Record<string, unknown>,
-      ) {
+      rpc(functionName: string, params: Record<string, unknown>) {
         calls.push({ functionName, params });
         return { data: { committed: true }, error: null };
       },
@@ -1019,6 +1024,8 @@ function splitCommitFixture() {
     },
     expensePatch: {
       raw_text: "Updated cat food",
+      merchant_id: "44444444-4444-4444-8444-444444444444",
+      merchant_structured_name: "Pet Shop",
       updated_at: "2026-07-16T01:00:00.000Z",
     },
   };
@@ -1134,6 +1141,56 @@ Deno.test("atomic split patch RPC keeps its production contract", async () => {
 });
 
 Deno.test(
+  "recurring template split patch accepts merchant identity fields",
+  async () => {
+    const fixture = splitCommitFixture();
+    const calls: Array<{
+      functionName: string;
+      params: Record<string, unknown>;
+    }> = [];
+    const supabase = {
+      rpc(functionName: string, params: Record<string, unknown>) {
+        calls.push({ functionName, params });
+        return { data: { committed: true }, error: null };
+      },
+    };
+
+    const result = await commitRecurringTemplateSplitRecordsWithPatch({
+      supabase,
+      actorUserId: members[0].user_id,
+      ...fixture,
+      targetAccountId: fixture.expectedParent.account_id,
+    });
+
+    assertEquals(result.error, null);
+    assertEquals(calls.length, 1);
+    assertEquals(
+      calls[0].functionName,
+      "households_commit_recurring_template_split_v1",
+    );
+    assertEquals(calls[0].params.p_expense_patch, fixture.expensePatch);
+  },
+);
+
+Deno.test("atomic split patches still reject structural fields", async () => {
+  const fixture = splitCommitFixture();
+  await assertRejects(
+    () =>
+      commitHouseholdSplitRecordsWithPatch({
+        supabase: { rpc: () => ({ data: null, error: null }) },
+        actorUserId: members[0].user_id,
+        ...fixture,
+        expensePatch: {
+          ...fixture.expensePatch,
+          amount_cents: fixture.group.total_amount_cents,
+        },
+      }),
+    Error,
+    "Unsafe expense patch keys for split commit: amount_cents",
+  );
+});
+
+Deno.test(
   "wallet response-loss recovery keeps account scope in the CAS snapshot",
   () => {
     const accountId = "77777777-7777-4777-8777-777777777777";
@@ -1203,16 +1260,14 @@ Deno.test(
       assertEquals(
         stub.writes.some(
           (write) =>
-            write.table === "expense_split_groups" &&
-            write.action === "insert",
+            write.table === "expense_split_groups" && write.action === "insert",
         ),
         true,
       );
       assertEquals(
         stub.writes.some(
           (write) =>
-            write.table === "expense_split_lines" &&
-            write.action === "insert",
+            write.table === "expense_split_lines" && write.action === "insert",
         ),
         true,
       );
@@ -1266,43 +1321,46 @@ Deno.test(
   },
 );
 
-Deno.test("atomic split removal patch keeps its production contract", async () => {
-  const fixture = splitCommitFixture();
-  const calls: Array<{
-    functionName: string;
-    params: Record<string, unknown>;
-  }> = [];
-  const supabase = {
-    rpc(functionName: string, params: Record<string, unknown>) {
-      calls.push({ functionName, params });
-      return { data: null, error: null };
-    },
-  };
-  const result = await removeHouseholdSplitWithPatch({
-    supabase,
-    actorUserId: members[0].user_id,
-    expenseId: fixture.group.expense_id,
-    splitGroupId: fixture.group.id,
-    targetHouseholdId: null,
-    targetCurrency: "CAD",
-    targetAmountCents: fixture.group.total_amount_cents,
-    targetAccountId: fixture.expectedParent.account_id,
-    expectedParent: fixture.expectedParent,
-    expensePatch: fixture.expensePatch,
-  });
+Deno.test(
+  "atomic split removal patch keeps its production contract",
+  async () => {
+    const fixture = splitCommitFixture();
+    const calls: Array<{
+      functionName: string;
+      params: Record<string, unknown>;
+    }> = [];
+    const supabase = {
+      rpc(functionName: string, params: Record<string, unknown>) {
+        calls.push({ functionName, params });
+        return { data: null, error: null };
+      },
+    };
+    const result = await removeHouseholdSplitWithPatch({
+      supabase,
+      actorUserId: members[0].user_id,
+      expenseId: fixture.group.expense_id,
+      splitGroupId: fixture.group.id,
+      targetHouseholdId: null,
+      targetCurrency: "CAD",
+      targetAmountCents: fixture.group.total_amount_cents,
+      targetAccountId: fixture.expectedParent.account_id,
+      expectedParent: fixture.expectedParent,
+      expensePatch: fixture.expensePatch,
+    });
 
-  assertEquals(result.error, null);
-  assertEquals(calls.length, 1);
-  assertEquals(
-    calls[0].functionName,
-    "households_remove_expense_split_with_patch_v3",
-  );
-  assertEquals(calls[0].params.p_expense_id, fixture.group.expense_id);
-  assertEquals(calls[0].params.p_split_group_id, fixture.group.id);
-  assertEquals(calls[0].params.p_target_household_id, null);
-  assertEquals(calls[0].params.p_expected_parent, fixture.expectedParent);
-  assertEquals(calls[0].params.p_expense_patch, fixture.expensePatch);
-});
+    assertEquals(result.error, null);
+    assertEquals(calls.length, 1);
+    assertEquals(
+      calls[0].functionName,
+      "households_remove_expense_split_with_patch_v3",
+    );
+    assertEquals(calls[0].params.p_expense_id, fixture.group.expense_id);
+    assertEquals(calls[0].params.p_split_group_id, fixture.group.id);
+    assertEquals(calls[0].params.p_target_household_id, null);
+    assertEquals(calls[0].params.p_expected_parent, fixture.expectedParent);
+    assertEquals(calls[0].params.p_expense_patch, fixture.expensePatch);
+  },
+);
 
 Deno.test(
   "missing atomic removal wrapper fails closed without partial writes",

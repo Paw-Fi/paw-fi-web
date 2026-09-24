@@ -71,7 +71,7 @@ const SUPABASE_URL =
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 const FROM_EMAIL = "hello@moneko.io"; // Update with your verified sender email
-const FROM_NAME = "Moneko Team";
+const FROM_NAME = "Moneko AI";
 const ADMIN_EMAIL = "yifan.lim@moneko.io"; // Admin email for summary reports
 
 // Rate limiting: delay between emails (in milliseconds)

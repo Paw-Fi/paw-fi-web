@@ -54,10 +54,10 @@ export interface HouseholdMemberRow {
 export type EffectiveSplit =
   | { kind: "skip" }
   | {
-    kind: "customSplits";
-    customSplits: CustomSplits | null;
-    source: "explicit" | "default";
-  };
+      kind: "customSplits";
+      customSplits: CustomSplits | null;
+      source: "explicit" | "default";
+    };
 
 export interface SplitGroupRecord {
   id: string;
@@ -102,16 +102,16 @@ export type ParsedReSplitRequest =
 
 export type ExistingSplitPayerIntent =
   | {
-    ok: true;
-    effectivePayerUserId: string;
-    payerChanged: boolean;
-    requiresCurrentMembership: boolean;
-  }
+      ok: true;
+      effectivePayerUserId: string;
+      payerChanged: boolean;
+      requiresCurrentMembership: boolean;
+    }
   | {
-    ok: false;
-    code: "PAYER_NOT_CURRENT" | "RESPLIT_REQUIRED";
-    error: string;
-  };
+      ok: false;
+      code: "PAYER_NOT_CURRENT" | "RESPLIT_REQUIRED";
+      error: string;
+    };
 
 export type ExistingSplitMutationReason =
   | "explicit_resplit"
@@ -141,6 +141,8 @@ const ALLOWED_ATOMIC_EXPENSE_PATCH_KEYS = new Set([
   "category",
   "raw_text",
   "merchant",
+  "merchant_id",
+  "merchant_structured_name",
   "date",
   "created_at",
   "receipt_image_url",
@@ -160,24 +162,28 @@ export function expectedSplitParentFromTransaction(
   transaction: Record<string, unknown>,
 ): ExpectedSplitParent {
   const amountCents = Number(transaction.amount_cents);
-  const currency = typeof transaction.currency === "string"
-    ? transaction.currency.trim().toUpperCase()
-    : "";
+  const currency =
+    typeof transaction.currency === "string"
+      ? transaction.currency.trim().toUpperCase()
+      : "";
   if (!Number.isSafeInteger(amountCents) || amountCents <= 0 || !currency) {
     throw new Error("Invalid expense parent snapshot for split commit");
   }
   return {
-    household_id: typeof transaction.household_id === "string"
-      ? transaction.household_id
-      : null,
+    household_id:
+      typeof transaction.household_id === "string"
+        ? transaction.household_id
+        : null,
     currency,
     amount_cents: amountCents,
-    split_group_id: typeof transaction.split_group_id === "string"
-      ? transaction.split_group_id
-      : null,
-    account_id: typeof transaction.account_id === "string"
-      ? transaction.account_id
-      : null,
+    split_group_id:
+      typeof transaction.split_group_id === "string"
+        ? transaction.split_group_id
+        : null,
+    account_id:
+      typeof transaction.account_id === "string"
+        ? transaction.account_id
+        : null,
   };
 }
 
@@ -189,10 +195,10 @@ export type CreateAutoSplitResult =
   | { kind: "not_applicable"; transaction: Record<string, unknown> }
   | { kind: "skipped"; transaction: Record<string, unknown> }
   | {
-    kind: "created";
-    splitGroupId: string;
-    transaction: Record<string, unknown>;
-  }
+      kind: "created";
+      splitGroupId: string;
+      transaction: Record<string, unknown>;
+    }
   | { kind: "invalid"; code: string; error: string }
   | { kind: "failed"; error: unknown };
 
@@ -347,7 +353,7 @@ export function validateExistingSplitPayerIntent({
     const normalizedParticipants = [...new Set(participantIds)].sort();
     if (
       JSON.stringify(normalizedParticipants) !==
-        JSON.stringify(normalizedCurrentMembers)
+      JSON.stringify(normalizedCurrentMembers)
     ) {
       return {
         ok: false,
@@ -407,10 +413,12 @@ export function resolveExistingSplitMutationDecision({
   ) {
     reasons.push("currency_changed");
   }
-  const payerDiffers = requestedPayerUserId != null &&
-    requestedPayerUserId !== storedPayerUserId;
-  const isLegacyDepartedPayerSubstitution = payerDiffers &&
-    legacyImplicitPayerPayload && !storedPayerIsCurrentMember &&
+  const payerDiffers =
+    requestedPayerUserId != null && requestedPayerUserId !== storedPayerUserId;
+  const isLegacyDepartedPayerSubstitution =
+    payerDiffers &&
+    legacyImplicitPayerPayload &&
+    !storedPayerIsCurrentMember &&
     !reSplitRequested;
   if (payerDiffers && !isLegacyDepartedPayerSubstitution) {
     reasons.push("payer_changed");
@@ -425,11 +433,13 @@ export function resolveExistingSplitMutationDecision({
 function hasSplitUpdatePayload(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const obj = raw as Record<string, unknown>;
-  const rawType = typeof obj.splitType === "string"
-    ? obj.splitType.trim().toLowerCase()
-    : "";
-  return ALLOWED_SPLIT_TYPES.has(rawType) &&
-    Array.isArray(obj.memberSplits) && obj.memberSplits.length > 0;
+  const rawType =
+    typeof obj.splitType === "string" ? obj.splitType.trim().toLowerCase() : "";
+  return (
+    ALLOWED_SPLIT_TYPES.has(rawType) &&
+    Array.isArray(obj.memberSplits) &&
+    obj.memberSplits.length > 0
+  );
 }
 
 function isUniform(values: number[], epsilon = 1e-6): boolean {
@@ -485,9 +495,8 @@ function isSemanticallyEqualSplit(customSplits: CustomSplits): boolean {
 function coerceCustomSplits(raw: unknown): CustomSplits | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
-  const rawType = typeof obj.splitType === "string"
-    ? obj.splitType.trim().toLowerCase()
-    : "";
+  const rawType =
+    typeof obj.splitType === "string" ? obj.splitType.trim().toLowerCase() : "";
   if (!ALLOWED_SPLIT_TYPES.has(rawType)) return null;
   if (rawType === "equal") return null;
 
@@ -525,18 +534,18 @@ function coerceCustomSplits(raw: unknown): CustomSplits | null {
 
 function isEqualSplitPayload(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
-  const rawType = typeof (raw as Record<string, unknown>).splitType === "string"
-    ? (raw as Record<string, unknown>).splitType as string
-    : "";
+  const rawType =
+    typeof (raw as Record<string, unknown>).splitType === "string"
+      ? ((raw as Record<string, unknown>).splitType as string)
+      : "";
   return rawType.trim().toLowerCase() === "equal";
 }
 
 export function hasExplicitCustomSplits(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const obj = raw as Record<string, unknown>;
-  const rawType = typeof obj.splitType === "string"
-    ? obj.splitType.trim().toLowerCase()
-    : "";
+  const rawType =
+    typeof obj.splitType === "string" ? obj.splitType.trim().toLowerCase() : "";
   if (!ALLOWED_SPLIT_TYPES.has(rawType) || rawType === "equal") return false;
   const rawMembers = Array.isArray(obj.memberSplits) ? obj.memberSplits : null;
   return !!rawMembers && rawMembers.length > 0;
@@ -565,9 +574,10 @@ export async function fetchHouseholdAutoSplitSettings(
     throw new HouseholdAutoSplitSettingsError(householdId, "read_failed");
   }
 
-  const autoSplitEnabled = typeof data?.ai_use_default_split === "boolean"
-    ? data.ai_use_default_split
-    : true;
+  const autoSplitEnabled =
+    typeof data?.ai_use_default_split === "boolean"
+      ? data.ai_use_default_split
+      : true;
   const rawDefaultConfig = data?.ai_default_split_config;
   const defaultConfig = coerceCustomSplits(rawDefaultConfig);
   if (
@@ -621,10 +631,10 @@ export function resolveEffectiveSplit(
     if (!coerced) {
       return settings.autoSplitEnabled
         ? {
-          kind: "customSplits",
-          customSplits: settings.defaultConfig,
-          source: "default",
-        }
+            kind: "customSplits",
+            customSplits: settings.defaultConfig,
+            source: "default",
+          }
         : { kind: "skip" };
     }
     if (isSemanticallyEqualSplit(coerced)) {
@@ -633,10 +643,10 @@ export function resolveEffectiveSplit(
       );
       return settings.autoSplitEnabled
         ? {
-          kind: "customSplits",
-          customSplits: settings.defaultConfig,
-          source: "default",
-        }
+            kind: "customSplits",
+            customSplits: settings.defaultConfig,
+            source: "default",
+          }
         : { kind: "skip" };
     }
     return {
@@ -684,8 +694,8 @@ function allocateCentsByWeights(
 
   const raw = normalized.map((weight) => (totalCents * weight) / totalWeight);
   const floorValues = raw.map((value) => Math.floor(value));
-  let remainder = totalCents -
-    floorValues.reduce((sum, value) => sum + value, 0);
+  let remainder =
+    totalCents - floorValues.reduce((sum, value) => sum + value, 0);
   const order = raw
     .map((value, index) => ({
       index,
@@ -703,7 +713,7 @@ function allocateCentsByWeights(
 function memberIdsFromRows(members: HouseholdMemberRow[]): string[] {
   return members
     .map((member) =>
-      typeof member.user_id === "string" ? member.user_id.trim() : ""
+      typeof member.user_id === "string" ? member.user_id.trim() : "",
     )
     .filter((userId) => userId.length > 0);
 }
@@ -882,7 +892,7 @@ export function buildHouseholdSplitRecords({
     }));
   } else if (splitType === "amount") {
     const cents = reconciledCustomSplits.memberSplits.map((split) =>
-      Math.max(0, Math.round((normalizeAmount(split.amount) || 0) * 100))
+      Math.max(0, Math.round((normalizeAmount(split.amount) || 0) * 100)),
     );
     const sumCents = cents.reduce((sum, value) => sum + value, 0);
     const diff = amountCents - sumCents;
@@ -998,7 +1008,8 @@ export function buildPreservedHistoricalSplitRecords({
   now?: string;
 }): BuildSplitRecordsResult {
   if (
-    !Number.isSafeInteger(targetAmountCents) || targetAmountCents <= 0 ||
+    !Number.isSafeInteger(targetAmountCents) ||
+    targetAmountCents <= 0 ||
     !targetCurrency.trim()
   ) {
     return {
@@ -1077,12 +1088,12 @@ export function buildPreservedHistoricalSplitRecords({
       split_group_id: group.id,
       user_id: participantIds[index],
       amount_cents: targetLineAmounts[index] ?? 0,
-      percentage: group.split_type === "percentage"
-        ? Number(line.percentage ?? 0)
-        : null,
-      shares: group.split_type === "shares" && Number(line.shares ?? 0) > 0
-        ? Math.trunc(Number(line.shares))
-        : null,
+      percentage:
+        group.split_type === "percentage" ? Number(line.percentage ?? 0) : null,
+      shares:
+        group.split_type === "shares" && Number(line.shares ?? 0) > 0
+          ? Math.trunc(Number(line.shares))
+          : null,
       is_settled: false,
       settled_at: null,
       created_at: line.created_at ?? now,
@@ -1161,12 +1172,11 @@ async function applyExpensePatchAfterAtomicCommit({
     .update(expensePatch)
     .eq("id", expenseId)
     .is("deleted_at", null);
-  patchQuery = expectedSplitGroupId == null
-    ? patchQuery.is("split_group_id", null)
-    : patchQuery.eq("split_group_id", expectedSplitGroupId);
-  return await patchQuery
-    .select("id")
-    .single();
+  patchQuery =
+    expectedSplitGroupId == null
+      ? patchQuery.is("split_group_id", null)
+      : patchQuery.eq("split_group_id", expectedSplitGroupId);
+  return await patchQuery.select("id").single();
 }
 
 /**
@@ -1258,15 +1268,18 @@ async function writeLegacyHouseholdSplitRecords({
     .eq("amount_cents", expectedParent.amount_cents)
     .eq("currency", expectedParent.currency)
     .is("deleted_at", null);
-  parentUpdate = expectedParent.household_id == null
-    ? parentUpdate.is("household_id", null)
-    : parentUpdate.eq("household_id", expectedParent.household_id);
-  parentUpdate = expectedParent.split_group_id == null
-    ? parentUpdate.is("split_group_id", null)
-    : parentUpdate.eq("split_group_id", expectedParent.split_group_id);
-  parentUpdate = expectedParent.account_id == null
-    ? parentUpdate.is("account_id", null)
-    : parentUpdate.eq("account_id", expectedParent.account_id);
+  parentUpdate =
+    expectedParent.household_id == null
+      ? parentUpdate.is("household_id", null)
+      : parentUpdate.eq("household_id", expectedParent.household_id);
+  parentUpdate =
+    expectedParent.split_group_id == null
+      ? parentUpdate.is("split_group_id", null)
+      : parentUpdate.eq("split_group_id", expectedParent.split_group_id);
+  parentUpdate =
+    expectedParent.account_id == null
+      ? parentUpdate.is("account_id", null)
+      : parentUpdate.eq("account_id", expectedParent.account_id);
   const { data: updatedParent, error: updateParentError } = await parentUpdate
     .select("id")
     .single();
@@ -1577,15 +1590,14 @@ export async function createHouseholdAutoSplitForTransaction({
   payerUserId?: string | null;
   isRecurringTemplate?: boolean;
 }): Promise<CreateAutoSplitResult> {
-  const transactionId = typeof transaction.id === "string"
-    ? transaction.id
-    : "";
-  const amountCents = typeof transaction.amount_cents === "number"
-    ? transaction.amount_cents
-    : Number(transaction.amount_cents ?? 0);
-  const currency = typeof transaction.currency === "string"
-    ? transaction.currency
-    : "";
+  const transactionId =
+    typeof transaction.id === "string" ? transaction.id : "";
+  const amountCents =
+    typeof transaction.amount_cents === "number"
+      ? transaction.amount_cents
+      : Number(transaction.amount_cents ?? 0);
+  const currency =
+    typeof transaction.currency === "string" ? transaction.currency : "";
 
   if (!householdId || !transactionId || amountCents <= 0 || !currency) {
     return { kind: "not_applicable", transaction };
@@ -1613,9 +1625,8 @@ export async function createHouseholdAutoSplitForTransaction({
     payerUserId: payerUserId || actorUserId,
     amountCents,
     currency,
-    description: typeof transaction.raw_text === "string"
-      ? transaction.raw_text
-      : null,
+    description:
+      typeof transaction.raw_text === "string" ? transaction.raw_text : null,
     members,
     customSplits: effective.customSplits,
     reconcileMemberChanges: effective.source === "default",
