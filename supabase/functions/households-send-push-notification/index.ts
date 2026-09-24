@@ -15,6 +15,7 @@ import {
   isServiceRoleRequest,
   shouldSkipPushEvent,
 } from "../shared/notification-delivery.ts";
+import { PRICING_URL } from "../shared/plus-entitlement.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1670,6 +1671,23 @@ function buildNotificationMessage(
           action: "openPocketsPage",
           cycle_start: String(payload.cycle_start || ""),
           deep_link: "moneko://pockets",
+        },
+      };
+    }
+
+    case "capture_plus_required": {
+      const captureSource = String(payload.capture_source || "");
+      const feature =
+        captureSource === "ios_wallet_shortcut"
+          ? "Apple Pay capture"
+          : "Notification capture";
+      return {
+        title: "Moneko Plus required",
+        body: `${feature} is available with an active Moneko Plus plan. Start a trial or subscribe to continue.`,
+        data: {
+          capture_source: captureSource,
+          pricing_url: PRICING_URL,
+          deep_link: PRICING_URL,
         },
       };
     }

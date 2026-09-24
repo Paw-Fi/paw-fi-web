@@ -32,10 +32,11 @@ import {
 import { loadCategoryContext } from "../shared/category-resolution.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
-  hasPlusEntitlement,
+  hasCapturePlusEntitlement,
   jsonSubscriptionRequired,
   loadLatestSubscriptionForUser,
 } from "../shared/plus-entitlement.ts";
+import { queueCapturePlusRequiredNotification } from "../shared/capture-plus-notification.ts";
 import {
   createVertexGenerativeAI,
   getVertexAiConfigFromEnv,
@@ -387,7 +388,19 @@ Deno.serve(async (req: Request) => {
     }
 
     const subscription = await loadLatestSubscriptionForUser(supabase, userId);
-    if (!hasPlusEntitlement(subscription)) {
+    if (!hasCapturePlusEntitlement(subscription)) {
+      try {
+        await queueCapturePlusRequiredNotification({
+          supabase,
+          userId,
+          captureSource: body.captureSource,
+        });
+      } catch (notificationError) {
+        console.warn(
+          "[classify-notification-capture] Failed to queue Plus-required notification",
+          notificationError,
+        );
+      }
       return jsonResponse(jsonSubscriptionRequired("wallet capture"), 403);
     }
 

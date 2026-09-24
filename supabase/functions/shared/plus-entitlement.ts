@@ -1,4 +1,4 @@
-export const PRICING_URL = "https://www.moneko.io/pricing";
+export const PRICING_URL = "https://moneko.io/pricing";
 
 export type PlusEntitlementSubscription = {
   plan?: string | null;
@@ -8,7 +8,9 @@ export type PlusEntitlementSubscription = {
 };
 
 function normalize(value?: string | null): string {
-  return String(value ?? "").trim().toLowerCase();
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 function isFutureDate(value?: string | Date | null): boolean {
@@ -35,6 +37,16 @@ export function hasPlusEntitlement(
 
   return isFutureDate(
     subscription.currentPeriodEnd ?? subscription.current_period_end ?? null,
+  );
+}
+
+export function hasCapturePlusEntitlement(
+  subscription?: PlusEntitlementSubscription | null,
+): boolean {
+  const status = normalize(subscription?.status);
+  return (
+    (status === "active" || status === "trialing") &&
+    hasPlusEntitlement(subscription)
   );
 }
 
@@ -81,9 +93,9 @@ export async function loadLatestSubscriptionForUser(
 
   return data
     ? {
-      plan: data.plan,
-      status: data.status,
-      currentPeriodEnd: data.current_period_end,
-    }
+        plan: data.plan,
+        status: data.status,
+        currentPeriodEnd: data.current_period_end,
+      }
     : null;
 }

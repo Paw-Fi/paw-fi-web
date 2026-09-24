@@ -8,6 +8,9 @@ const saveSource = await Deno.readTextFile(
 const classificationSource = await Deno.readTextFile(
   new URL("../classify-notification-capture/index.ts", import.meta.url),
 );
+const pushSource = await Deno.readTextFile(
+  new URL("../households-send-push-notification/index.ts", import.meta.url),
+);
 const provenanceMigration = await Deno.readTextFile(
   new URL(
     "../../migrations/20260728120000_notification_capture_field_provenance.sql",
@@ -19,6 +22,29 @@ const terminalFailureMigration = await Deno.readTextFile(
     "../../migrations/20260802100000_cache_terminal_notification_classification_failures.sql",
     import.meta.url,
   ),
+);
+const capturePlusEventMigration = await Deno.readTextFile(
+  new URL(
+    "../../migrations/20260924120000_add_capture_plus_required_notification_event.sql",
+    import.meta.url,
+  ),
+);
+
+Deno.test(
+  "notification captures enforce Plus before classification and notify denied users",
+  () => {
+    assertStringIncludes(classificationSource, "hasCapturePlusEntitlement");
+    assertStringIncludes(
+      classificationSource,
+      "queueCapturePlusRequiredNotification",
+    );
+    assertStringIncludes(saveSource, "hasCapturePlusEntitlement");
+    assertStringIncludes(saveSource, "queueCapturePlusRequiredNotification");
+    assertStringIncludes(pushSource, 'case "capture_plus_required"');
+    assertStringIncludes(pushSource, 'title: "Moneko Plus required"');
+    assertStringIncludes(pushSource, "deep_link: PRICING_URL");
+    assertStringIncludes(capturePlusEventMigration, "capture_plus_required");
+  },
 );
 
 Deno.test(
