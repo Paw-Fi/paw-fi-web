@@ -6,6 +6,7 @@ import whatsappBudgetSetupBlog from "./new-blog-whatsapp-budget-setup";
 import whatsappVsAppsBlog from "./new-blog-whatsapp-vs-apps";
 import appleWalletSyncBlog from "./new-blog-apple-wallet-sync";
 import update400Blog from "./new-blog-update-4-0-0";
+import iosNotificationCaptureBlog from "./new-blog-ios-notification-capture";
 import { APP_FEATURES_GUIDELINES } from "./app-features-guidelines";
 import { BLOG_YNAB_ALTERNATIVES_2026 } from "./blog-ynab-alternatives-2026";
 import { BLOG_COUPLE_BUDGETING_2026 } from "./blog-couple-budgeting-2026";
@@ -27,6 +28,7 @@ export const blogs: Blog[] = [
   whatsappVsAppsBlog,
   appleWalletSyncBlog,
   update400Blog,
+  iosNotificationCaptureBlog,
   ...APP_FEATURES_GUIDELINES,
   ...BLOG_YNAB_ALTERNATIVES_2026,
   ...BLOG_COUPLE_BUDGETING_2026,

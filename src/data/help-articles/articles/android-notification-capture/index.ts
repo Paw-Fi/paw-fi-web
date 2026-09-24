@@ -70,6 +70,8 @@ export const androidNotificationCaptureArticle: HelpArticle = {
 
 Moneko can automatically capture completed expenses, income, refunds, and recurring payments from notifications sent by Android apps you select.
 
+Moneko also supports notification capture on iPhone with iOS 27 or later. That setup uses an iOS Shortcuts notification automation; [see the iPhone notification capture guide](/help/automatically-track-transactions-from-iphone-notifications-moneko).
+
 You can select banking, payment, shopping, and email apps such as Gmail. Moneko reads only the notification preview shown by Android. It does not connect to or read your mailbox.
 
 ---

@@ -81,6 +81,8 @@ Moneko also offers an iOS Shortcut that lets you capture Apple Pay transactions 
 
 Once configured, every time you pay with Apple Pay, the shortcut can log the transaction directly into Moneko — merchant, amount, and date — without you having to type anything.
 
+> **Current product update — September 24, 2026:** Moneko also supports notification capture on iOS 27 or later. Choose the apps whose notifications should trigger it, then add Moneko's **Capture Transaction Notification** action in Shortcuts. This can capture supported completed transactions from payment notifications; it does not give Moneko access to every notification or connect directly to your bank. [See the iPhone notification capture setup guide](https://moneko.io/help/automatically-track-transactions-from-iphone-notifications-moneko).
+
 **What Moneko does with Apple Wallet spending:**
 
 - Log Apple Pay transactions instantly via notification forwarding, iOS Shortcuts, or text

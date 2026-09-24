@@ -17,7 +17,7 @@
   {
     "id": "automatic-expense-tracking",
     "question": "Can Moneko automatically track expenses?",
-    "answer": "Yes. Moneko is designed to turn everyday signals into budget updates. You can log spending from chat, voice notes, receipt scans, Apple Wallet activity on iPhone, and Android transaction notifications, then review the result before saving."
+    "answer": "Yes. Moneko can capture completed transactions from selected app notifications on Android and through a Shortcuts notification automation on iOS 27 or later. It also supports text, voice, chat, and receipt capture. Notification captures are checked for a completed transaction before Moneko saves them; this is not bank account syncing."
   },
   {
     "id": "pockets-system",
@@ -41,13 +41,13 @@
   },
   {
     "id": "apple-wallet-sync",
-    "question": "Does Moneko work with Apple Wallet?",
-    "answer": "Yes. Moneko supports an iPhone-friendly workflow for budgeting Apple Wallet spending so you can move Apple Pay activity into your budget, categorize it, and update the correct pocket without relying on a spreadsheet."
+    "question": "Does Moneko work with Apple Wallet and iPhone notifications?",
+    "answer": "Yes. On iOS 27 or later, you can set up a Shortcuts automation for notifications from apps you select and send those notification details to Moneko for transaction capture. Apple Pay purchases can also be captured with Moneko's separate Wallet transaction Shortcut. Neither method connects directly to your bank."
   },
   {
-    "id": "android-notification-sync",
-    "question": "How does Android transaction sync work?",
-    "answer": "Moneko uses notification-based tracking on Android so supported transaction alerts can become budget updates in real time. This helps Android users capture expenses faster and reduces manual entry after each purchase."
+    "id": "cross-platform-notification-capture",
+    "question": "Does Moneko support notification capture on iPhone and Android?",
+    "answer": "Yes. On Android, Moneko can process supported notifications from apps you enable. On iOS 27 or later, you can choose apps in a Shortcuts notification automation and pass their notification details to Moneko's capture action. Moneko only saves notifications that contain enough evidence of a completed transaction."
   },
   {
     "id": "whatsapp-telegram",

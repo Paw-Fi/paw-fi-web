@@ -1,77 +1,7 @@
 [
   {
     "email": "yflim7020@gmail.com",
-    "full_name": "German",
-    "preferred_language": "de"
-  },
-  {
-    "email": "yflim7020@gmail.com",
     "full_name": "English",
     "preferred_language": "en"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Spanish",
-    "preferred_language": "es"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "French",
-    "preferred_language": "fr"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Italian",
-    "preferred_language": "it"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Japanese",
-    "preferred_language": "ja"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Korean",
-    "preferred_language": "ko"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Dutch",
-    "preferred_language": "nl"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Urdu",
-    "preferred_language": "ur"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Russian",
-    "preferred_language": "ru"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Thai",
-    "preferred_language": "th"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Ukrainian",
-    "preferred_language": "uk"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Chinese",
-    "preferred_language": "zh"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Traditional Chinese",
-    "preferred_language": "zh_TW"
-  },
-  {
-    "email": "yflim7020@gmail.com",
-    "full_name": "Vietnamese",
-    "preferred_language": "vi"
   }
 ]

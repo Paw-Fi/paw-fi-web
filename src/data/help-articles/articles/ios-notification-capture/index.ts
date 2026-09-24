@@ -9,7 +9,7 @@ export const iosNotificationCaptureArticle: HelpArticle = {
   title:
     "How to Automatically Track Transactions from iPhone Notifications (iOS 27+)",
   description:
-    "Set up Moneko on iOS 27 or later to check selected bank and payment notifications and save completed transactions automatically.",
+    "Set up Moneko's iOS 27 notification capture in Shortcuts to send selected app notifications to Moneko and save supported completed transactions without bank syncing.",
   categoryId: "automation-planning",
   readTime: 7,
   keywords: [
@@ -19,8 +19,21 @@ export const iosNotificationCaptureArticle: HelpArticle = {
     "Moneko notification automation",
     "Capture Transaction Notification",
     "iOS notification expense tracking",
+    "iPhone automatic expense tracker",
+    "iOS 27 expense tracking",
+    "capture transactions from iPhone notifications",
   ],
   faqItems: [
+    {
+      question: "Can Moneko capture transactions from iPhone notifications?",
+      answer:
+        "Yes. On iOS 27 or later, configure a Shortcuts notification automation for the apps you choose and add Moneko's Capture Transaction Notification action. Moneko checks the selected notification details and saves a supported completed transaction. This is not bank syncing or access to every notification on your iPhone.",
+    },
+    {
+      question: "Do I need Apple Shortcuts to capture transactions on iPhone?",
+      answer:
+        "A Shortcuts automation is required for notification capture on iOS 27 and for the Apple Pay Wallet transaction trigger. You can still record transactions on iPhone with Moneko's other supported methods, such as text, voice, receipt photos, and chat, without setting up these automations.",
+    },
     {
       question: "Does Moneko read all of my iPhone notifications?",
       answer:
@@ -237,6 +250,12 @@ This check helps prevent false transactions from appearing in your budget.
 - If a temporary network or session problem prevents an immediate request, Moneko can keep the capture in a secure pending queue for later synchronization.
 
 Moneko does not connect directly to your bank or card for this feature.
+
+## Related capture methods
+
+- [Set up Apple Pay transaction capture with the Wallet Shortcut](/help/automatically-track-apple-pay-transactions-moneko)
+- [Capture transactions from Android notifications](/help/automatically-track-android-notifications-moneko)
+- [Use Quick Actions and Siri Shortcuts](/help/quick-actions-siri-shortcuts-moneko)
 
 ---
 

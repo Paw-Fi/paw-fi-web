@@ -125,7 +125,11 @@ function PrivacyPolicy() {
           <p>
             Moneko uses Google Gemini for selected AI features. The information
             sent depends on the feature you use: expense capture can send the
-            text, receipt, image, or voice-derived information you submit;
+            text, receipt, image, voice-derived information, or notification
+            details you submit or choose to capture;
+            on iOS 27, notification capture runs only through the Shortcuts
+            automation you configure for selected apps, and Moneko receives
+            only the notification details passed by that automation;
             financial guidance and scenario planning can also send the relevant
             Moneko financial context needed to answer your request, such as
             applicable transactions, balances, budgets, recurring items, and

@@ -1011,6 +1011,8 @@ This creates two different approaches:
 
 The Wallet Transaction trigger is the simpler starting point because Apple officially documents the feature. Notification-based expense tracking is newer and depends more heavily on your iOS version, notification content, and receiving app.
 
+> **Current Moneko product note — September 24, 2026:** Moneko now supports transaction capture from selected app notifications on iOS 27 or later. Set up the Notification automation in Shortcuts, choose the apps you want, and add Moneko's Capture Transaction Notification action. This is separate from the Apple Pay Wallet Transaction trigger and does not connect Moneko to your bank. [See the iPhone notification capture setup guide.](/help/automatically-track-transactions-from-iphone-notifications-moneko)
+
 ### **Apple Pay Shortcuts vs. Bank Sync**
 
 | Feature | Apple Pay Shortcuts | Bank Sync |
@@ -1411,6 +1413,8 @@ Many banks, card providers, Google Wallet, and payment apps send a notification 
 You spend normally. Your phone receives the payment notification. Your expense tracker turns the alert into a transaction.
 
 For people who want automatic expense tracking without bank sync, this is one of Android's most useful advantages.
+
+> **Current Moneko product note — September 24, 2026:** Moneko also supports notification capture on iOS 27 or later. iPhone users configure a Shortcuts notification automation for apps they select; Android users continue to use Android notification access. These are platform-specific setup paths. [Read the iPhone setup guide.](/help/automatically-track-transactions-from-iphone-notifications-moneko)
 
 ### **How Automatic Expense Tracking Works on Android**
 

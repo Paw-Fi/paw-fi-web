@@ -79,7 +79,8 @@ When you upgrade to Moneko Plus, you gain access to our most powerful tools:
 - **Bank Sync (Plaid)**: Connect your actual bank accounts to automatically import transactions.
 - **Messaging App Capture**: Log expenses directly from **WhatsApp** and **Telegram**.
 - **Email Receipt Import**: Forward digital receipts to Moneko to have them logged automatically.
-- **Android Notification Capture**: Track spending in real-time from bank push notifications.
+- **Android Notification Capture**: Process supported transaction notifications from apps you enable.
+- **iOS 27 Notification Capture**: Use a Shortcuts automation for notifications from apps you select, then pass their details to Moneko's capture action.
 
 ### 2. Powerful Budgeting & Organization
 - **Unlimited Spaces**: Create as many Households, Trip folders, or Personal spaces as you need.

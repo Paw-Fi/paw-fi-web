@@ -1594,7 +1594,7 @@
     },
     "hero": {
       "title": "A Modern AI Alternative to YNAB",
-      "subtitle": "YNAB is powerful for zero-based budgeting. Moneko keeps the intention of giving every dollar a job, and adds AI coaching, interactive tools, and faster capture (including WhatsApp and Apple Wallet/Apple Pay auto-capture on iOS via Shortcuts).",
+      "subtitle": "YNAB is powerful for zero-based budgeting. Moneko keeps the intention of giving every dollar a job, and adds AI coaching, interactive tools, and faster capture through WhatsApp, Android notifications, and selected app notifications on iOS 27. iPhone users can also capture Apple Pay Wallet transactions with a separate Shortcut.",
       "ctaText": "Start with Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [
@@ -1768,7 +1768,7 @@
     },
     "hero": {
       "title": "A Monarch Money Alternative Built Around AI Coaching",
-      "subtitle": "Monarch Money shines at flexible, collaborative budgeting. Moneko adds AI coaching, rich calculators, and low-friction capture (including WhatsApp and Apple Wallet/Apple Pay auto-capture on iOS via Shortcuts) so your household can plan, learn, and grow together.",
+      "subtitle": "Monarch Money shines at flexible, collaborative budgeting. Moneko adds AI coaching, rich calculators, and low-friction capture through WhatsApp, Android notifications, and selected app notifications on iOS 27. iPhone users can also capture Apple Pay Wallet transactions with a separate Shortcut, so your household can plan, learn, and grow together.",
       "ctaText": "Discover Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [
@@ -2377,7 +2377,7 @@
     },
     "hero": {
       "title": "A Modern Mint Alternative Built for 2025 and Beyond",
-      "subtitle": "Mint (legacy) helped a generation start tracking money. Moneko takes the next step with AI budgeting, deeper calculators, shared-expense support, and faster capture (including WhatsApp and Apple Wallet/Apple Pay auto-capture on iOS via Shortcuts).",
+      "subtitle": "Mint (legacy) helped a generation start tracking money. Moneko takes the next step with AI budgeting, deeper calculators, shared-expense support, and faster capture through WhatsApp, Android notifications, and selected app notifications on iOS 27. Apple Pay Wallet capture is also available through a separate iPhone Shortcut.",
       "ctaText": "Move from Mint to Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [
@@ -2893,13 +2893,13 @@
   },
   "apple-pay-expense-tracker": {
     "meta": {
-      "title": "Apple Pay Expense Tracker (2026) – Auto Log Purchases to Your Budget | Moneko",
-      "description": "Automatically log Apple Pay purchases into your budget on iPhone using iOS Shortcuts automation. Categorize with AI, track pockets, and keep shared expenses organized.",
-      "keywords": "apple pay expense tracker, apple pay budgeting, log apple pay purchases, apple pay spending tracker, ios shortcuts expense tracker, ai expense tracker"
+      "title": "Apple Pay Expense Tracker | Moneko",
+      "description": "Track Apple Pay with an iPhone Shortcut or capture supported app notifications on iOS 27. Categorize spending and manage your Moneko budget.",
+      "keywords": "apple pay expense tracker, apple pay budgeting, log apple pay purchases, apple pay spending tracker, iPhone automatic expense tracker, iOS 27 notification expense tracker, iOS shortcuts expense tracker"
     },
     "hero": {
       "title": "Track Apple Pay Spending Automatically",
-      "subtitle": "Use iOS Shortcuts automation to capture Apple Pay purchases into Moneko. Get AI categorization, clear budgets, and shared-expense support without manual typing.",
+      "subtitle": "Use the Apple Pay Wallet Shortcut to capture Wallet transactions. On iOS 27, you can also set up a separate Shortcuts automation for supported transactions in selected app notifications. Get AI categorization, clear budgets, and shared-expense support.",
       "ctaText": "Download for iOS",
       "ctaRoute": "/download",
       "chatSuggestions": [
@@ -2930,6 +2930,12 @@
       "subtitle": "Watch how Apple Pay purchases can flow into a clear budget with AI categorization and simple review."
     },
     "features": [
+      {
+        "title": "iOS 27 Notification Capture",
+        "description": "Choose supported apps in Shortcuts to send selected notification details to Moneko. Moneko can create expense transactions from supported completed payments; this does not provide access to every notification or bank account.",
+        "icon": "🔔",
+        "route": "/help/automatically-track-transactions-from-iphone-notifications-moneko"
+      },
       {
         "title": "Apple Pay Auto-Capture (iOS)",
         "description": "Automatically capture transactions on iPhone via iOS Shortcuts + App Intents.",
@@ -2970,13 +2976,13 @@
   },
   "apple-wallet-expense-tracker": {
     "meta": {
-      "title": "Apple Wallet Expense Tracker (2026) – Auto Capture Transactions on iPhone | Moneko",
-      "description": "Track Apple Wallet spending with iOS Shortcuts automation. Capture transactions into Moneko, categorize with AI, and keep budgets and shared expenses up to date.",
-      "keywords": "apple wallet expense tracker, apple wallet spending tracker, apple wallet budgeting, track apple wallet transactions, ios shortcuts automation budgeting"
+      "title": "Apple Wallet Expense Tracker | Moneko",
+      "description": "Capture Apple Wallet transactions with an iPhone Shortcut or supported app notifications on iOS 27. Organize spending and budgets with Moneko.",
+      "keywords": "apple wallet expense tracker, apple wallet spending tracker, apple wallet budgeting, track apple wallet transactions, iOS 27 notification expense tracker, iPhone automatic expense tracker"
     },
     "hero": {
       "title": "An Apple Wallet Expense Tracker That Fits Your Budget",
-      "subtitle": "Capture Apple Wallet transactions into Moneko via iOS Shortcuts automation, then keep everything organized with AI categorization and budget pockets.",
+      "subtitle": "Capture Apple Wallet transactions with its dedicated iOS Shortcut, or set up a separate iOS 27 Shortcuts automation to capture supported transactions from selected app notifications. Moneko organizes both in your budget.",
       "ctaText": "Set Up on iPhone",
       "ctaRoute": "/download",
       "chatSuggestions": [
@@ -3007,6 +3013,12 @@
       "subtitle": "See how Apple Wallet spending can become a clear, consistent monthly plan with minimal effort."
     },
     "features": [
+      {
+        "title": "iOS 27 App Notification Capture",
+        "description": "Set up a Shortcuts notification automation for selected apps. Moneko processes the selected notification details and can create supported completed transactions.",
+        "icon": "🔔",
+        "route": "/help/automatically-track-transactions-from-iphone-notifications-moneko"
+      },
       {
         "title": "Wallet Transaction Capture (iOS)",
         "description": "Capture transactions via iOS Shortcuts + App Intents.",

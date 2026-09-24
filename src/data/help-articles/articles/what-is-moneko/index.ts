@@ -6,7 +6,7 @@ export const whatIsMonekoArticle: HelpArticle = {
   slug: "what-is-moneko",
   title: "What is Moneko?",
   description:
-    "Understand how Moneko helps you track spending, plan budgets, and manage money with AI-assisted workflows.",
+    "Learn how Moneko tracks spending with AI-assisted budgeting, receipt capture, and selected payment notification capture on Android and iOS 27.",
   categoryId: "getting-started",
   readTime: 3,
   featured: true,
@@ -15,6 +15,8 @@ export const whatIsMonekoArticle: HelpArticle = {
     "AI budgeting",
     "expense tracking",
     "personal finance app",
+    "iPhone automatic expense tracker",
+    "iOS 27 notification capture",
   ],
   faqItems: [
     {
@@ -32,6 +34,10 @@ export const whatIsMonekoArticle: HelpArticle = {
     {
       question: "Can I upload receipts to expenses?",
       answer: "Yes. You can attach receipts directly to expenses for better organization and transparency.",
+    },
+    {
+      question: "Can Moneko capture transactions from iPhone notifications?",
+      answer: "Yes. On iOS 27 or later, configure a Shortcuts notification automation for apps you select and add Moneko's Capture Transaction Notification action. Moneko can save supported completed transactions from the details passed by that automation.",
     },
     {
       question: "Does Moneko work for travel expenses?",
@@ -60,7 +66,7 @@ Whether you're managing your own money or splitting expenses with a partner, Mon
 - **Spaces:** Keep your personal spending separate from shared household expenses or group trips.
 - **Wallets:** Track your actual balances across cash, bank accounts, and savings.
 - **AI Scenario Planning:** Ask questions about your future spending, like "Can I afford a new laptop next month?"
-- **Automated Tracking:** Connect Apple Pay or use email receipt capture to log transactions without manual entry.
+- **Automated Capture:** Capture supported completed transactions from selected app notifications on Android and, through a Shortcuts notification automation, on iOS 27 or later. Apple Pay Wallet capture uses a separate Shortcut; email receipt capture is also available.
 
 ## Why Moneko?
 
@@ -75,5 +81,7 @@ By focusing on **natural language input** and **automatic organization**, Moneko
 - [Learn more about shared expense tracking](/help/shared-expense-tracker-guide)
 - [How to create your first Space](/help/how-to-create-your-first-space)
 - [How to use Pockets to organize your spending](/help/how-to-use-pockets-to-organize-your-spending)
+- [Capture transactions from iPhone notifications on iOS 27](/help/automatically-track-transactions-from-iphone-notifications-moneko)
+- [Capture transactions from Android notifications](/help/automatically-track-android-notifications-moneko)
 `,
 };

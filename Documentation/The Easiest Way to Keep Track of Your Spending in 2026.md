@@ -6,6 +6,8 @@ According to a Debt.com budgeting survey, 84% of people said they sometimes exce
 
 [Moneko.io](http://Moneko.io) was built around this exact problem. Instead of manually organizing every transaction yourself, you log expenses quickly through text, voice, receipts, WhatsApp, or Apple Wallet automations, and the app organizes the details afterward using AI. The goal is simple. Spend less time maintaining budgets and more time understanding where your money goes.
 
+> **Current product update — September 24, 2026:** Moneko now supports notification capture from selected apps on iOS 27 or later and Android. On iPhone, set up a Shortcuts notification automation and add Moneko's Capture Transaction Notification action. This capability was added after this article was first published. [See the iPhone notification capture setup guide](https://moneko.io/help/automatically-track-transactions-from-iphone-notifications-moneko).
+
 ## **Why Most Expense Tracking Systems Break**
 
 Expense tracking sounds simple at first. You record purchases, review spending, and adjust your habits over time. The difficult part is maintaining the process consistently once spending starts happening across multiple places every day.
@@ -144,4 +146,3 @@ Yes. Moneko supports Apple Wallet automations through iOS Shortcuts, allowing tr
 
 YouTube tutorials:  
 [https://www.youtube.com/@moneko\_ai/playlists](https://www.youtube.com/@moneko_ai/playlists)
-

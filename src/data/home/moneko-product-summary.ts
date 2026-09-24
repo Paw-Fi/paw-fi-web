@@ -128,6 +128,11 @@ export const monekoCaptureMethods: MonekoCaptureMethod[] = [
       "Record a spoken expense or income update and Moneko turns it into a reviewable transaction draft.",
   },
   {
+    label: "Payment notifications",
+    answer:
+      "On Android, Moneko can process supported notifications from apps you enable. On iOS 27 or later, a Shortcuts notification automation can pass notifications from apps you select to Moneko's capture action. Moneko checks for a completed transaction before saving it; this is not bank syncing.",
+  },
+  {
     label: "Files and chat",
     answer:
       "Attach supported files, forward receipt emails, or use WhatsApp to log spending, request summaries, update pockets, and keep shared budgets current.",
@@ -143,7 +148,7 @@ export const monekoComparisonRows: MonekoComparisonRow[] = [
   {
     label: "Getting transactions in",
     moneko:
-      "Fast capture through text, receipt photos, voice notes, files, mobile alerts, and WhatsApp.",
+      "Fast capture through text, receipt photos, voice notes, files, selected Android and iOS 27 notifications, and WhatsApp.",
     traditionalApps:
       "Often depends on manual entry, delayed bank import, or dashboard-first review.",
   },

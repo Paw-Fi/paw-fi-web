@@ -29,9 +29,9 @@ The logo is there to help identify the merchant. Your transaction details and sp
 
 ## Capture a transaction from an iPhone notification
 
-If you use an iPhone running iOS 27, you can use Moneko's notification shortcut to log and save a transaction from a notification received from another app. It gives you a quicker route from seeing a payment notification to keeping the expense in your budget.
+If you use an iPhone running iOS 27, you can set up a Shortcuts notification automation for apps you choose and add Moneko's Capture Transaction Notification action. Moneko checks the notification and saves a supported completed transaction, giving you a quicker route from a payment alert to your budget.
 
-This is a shortcut you choose to use; it does not mean Moneko reads every notification on your phone automatically. Availability depends on the supported iOS version and shortcut setup.
+This is a user-configured automation; Moneko does not read every notification on your phone. Availability depends on iOS 27 or later, the selected apps, the notification content, and your Shortcuts setup.
 
 <p>Need a hand setting it up? <a href="/help/automatically-track-transactions-from-iphone-notifications-moneko">Learn how to set it up</a>.</p>
 

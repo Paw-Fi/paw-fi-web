@@ -258,7 +258,8 @@ function AboutPage() {
           </p>
           <p>
             Today, you can use Moneko to track expenses through text, voice,
-            receipts, notifications, WhatsApp, Telegram, and connected bank
+            receipts, selected Android notifications, iOS 27 Shortcuts
+            notification automations, WhatsApp, Telegram, and connected bank
             accounts. AI helps organize that information so you spend less time
             entering and cleaning up data and more time actually understanding
             where your money is going.
@@ -270,7 +271,7 @@ function AboutPage() {
           >
             <img
               src={captureIllustration}
-              alt="Expenses flowing into Moneko from a receipt, voice note, bank card, chat message, WhatsApp, Telegram, and a notification"
+              alt="Expenses flowing into Moneko from a receipt, voice note, bank card, chat message, WhatsApp, Telegram, and selected app notifications"
               className="border-border/40 w-full rounded-3xl border shadow-lg"
               loading="lazy"
               width={1536}

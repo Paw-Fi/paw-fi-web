@@ -48,7 +48,7 @@ const changelogs: ChangelogEntry[] = [
       "Moneko 4.0.0 adds AI-powered merchant logos and iOS 27 notification capture, alongside more flexible recurring transactions and a more consistent, accessible experience across the app.",
     items: [
       "Added merchant logo support: Moneko's AI can now analyze a transaction and find the relevant merchant logo, making your spending easier to recognize at a glance",
-      "iPhone users on iOS 27 can now use a notification shortcut to log and save transactions from notifications received from other apps",
+      "iPhone users on iOS 27 can set up a Shortcuts notification automation for selected apps and send supported completed transactions to Moneko",
       "Recurring transactions now support custom frequencies, giving you more flexibility for schedules that do not follow the standard options",
       "Improved the appearance across different pages to create a more consistent experience throughout Moneko",
       "Added Liquid Glass support for iOS 26 and above to bring a more modern look and feel to supported iPhones",

@@ -23,6 +23,11 @@ export const applePayTrackingArticle: HelpArticle = {
   ],
   faqItems: [
     {
+      question: "Can I capture other payment notifications on iPhone without using the Apple Pay trigger?",
+      answer:
+        "Yes. On iOS 27 or later, Moneko can capture supported transactions from notifications sent by apps you select in a separate Shortcuts notification automation. This is distinct from the Wallet transaction trigger used for eligible Apple Pay purchases. See the iPhone notification capture setup guide.",
+    },
+    {
       question: "Can Moneko automatically track Apple Pay transactions?",
       answer: "Yes. Moneko can automatically track Apple Pay transactions using iOS Shortcuts automation.",
     },
@@ -102,6 +107,8 @@ No extra friction.
 Just tap, pay, and it is logged.
 
 This setup works through **iOS Shortcuts automation**.
+
+This guide covers the **Wallet transaction trigger** for Apple Pay purchases. iOS 27 users can also capture supported transactions from selected app notifications using a separate Shortcuts notification automation. [See the iPhone notification capture setup guide](/help/automatically-track-transactions-from-iphone-notifications-moneko).
 
 ---
 

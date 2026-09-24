@@ -2,11 +2,11 @@
   "main": {
     "slug": "main",
     "title": "Moneko - AI Budgeting App for Pockets, Email Receipts, WhatsApp, and Shared Expenses",
-    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web. Track spending, forward receipt emails, plan Pockets, manage Wallets, recurring bills, Insights, and shared budgets.",
-    "keywords": "best budgeting app, budgeting app 2026, free budgeting app, expense tracker app, YNAB alternative, AI budgeting app, email based budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, shared expense tracker, Moneyko budgeting app, Apple Wallet budgeting, Android expense tracker, envelope budgeting pockets, net worth wallet tracker, recurring bill tracker",
-    "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web with Pockets, Wallets, email receipt capture, recurring bills, Insights, and household finance workflows.",
-    "websiteDescription": "Moneko helps people track expenses automatically, forward receipt emails, organize money into Pockets, manage Wallets and recurring bills, plan scenarios with Insights, and budget through chat-based workflows.",
-    "softwareDescription": "AI budgeting app and expense tracker with Overview, Recurring, Pockets, Wallets, Insights, email receipt capture, multilingual AI answers, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
+    "description": "Moneko is an AI expense tracker for iPhone and Android. Capture completed transactions from iOS 27 or Android app notifications, plus chat and receipts.",
+    "keywords": "best budgeting app, budgeting app 2026, free budgeting app, expense tracker app, YNAB alternative, AI budgeting app, email based budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, shared expense tracker, Moneyko budgeting app, Apple Wallet budgeting, Android expense tracker, envelope budgeting pockets, net worth wallet tracker, recurring bill tracker, iPhone automatic expense tracker, iOS notification expense tracker, iOS 27 expense tracking, automatic expense capture, Apple Pay expense tracker",
+    "organizationDescription": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and web, with iOS 27 and Android notification capture, Pockets, Wallets, and shared budgets.",
+    "websiteDescription": "Moneko helps people capture completed transactions from selected iOS 27 and Android app notifications, chat, text, voice, and receipts, then organize spending into Pockets and shared budgets.",
+    "softwareDescription": "AI budgeting app and expense tracker with iOS 27 notification capture, Apple Pay Shortcuts, Android notification capture, email receipt capture, Pockets, Wallets, AI Insights, and WhatsApp or Telegram budgeting.",
     "softwareAlternateNames": [
       "Moneko budgeting app",
       "Moneko expense tracker",
@@ -25,9 +25,10 @@
       "Personal and Household modes for shared finance tracking",
       "AI Insights for running balances, spending trends, and what-if planning",
       "WhatsApp and Telegram budgeting assistant",
-      "Apple Wallet-friendly iPhone budgeting workflow",
+      "Apple Pay transaction capture with iOS Shortcuts",
       "Android notification-based expense tracking",
-      "Multilingual AI budget answers"
+      "Multilingual AI budget answers",
+      "iOS 27 notification capture from apps you select"
     ],
     "faqItems": [
       {
@@ -44,7 +45,7 @@
       },
       {
         "question": "Can Moneko automatically track expenses?",
-        "answer": "Yes. Moneko is designed to turn everyday signals into budget updates. You can log spending from chat, voice notes, receipt scans, Apple Wallet activity on iPhone, and Android transaction notifications, then review the result before saving."
+        "answer": "Yes. Moneko can capture completed transactions from selected app notifications on Android and through a Shortcuts notification automation on iOS 27 or later. It also supports text, voice, chat, and receipt capture. Notification captures are checked for a completed transaction before Moneko saves them; this is not bank account syncing."
       },
       {
         "question": "What are Moneko Pockets?",
@@ -63,12 +64,12 @@
         "answer": "Moneko Insights can show running balance views, budget versus spending trends, and AI scenario planning. You can ask a plain-language what-if question with a target date and save scenarios for later review."
       },
       {
-        "question": "Does Moneko work with Apple Wallet?",
-        "answer": "Yes. Moneko supports an iPhone-friendly workflow for budgeting Apple Wallet spending so you can move Apple Pay activity into your budget, categorize it, and update the correct pocket without relying on a spreadsheet."
+        "question": "Does Moneko work with Apple Wallet and iPhone notifications?",
+        "answer": "Yes. On iOS 27 or later, you can set up a Shortcuts automation for notifications from apps you select and send those notification details to Moneko for transaction capture. Apple Pay purchases can also be captured with Moneko's separate Wallet transaction Shortcut. Neither method connects directly to your bank."
       },
       {
-        "question": "How does Android transaction sync work?",
-        "answer": "Moneko uses notification-based tracking on Android so supported transaction alerts can become budget updates in real time. This helps Android users capture expenses faster and reduces manual entry after each purchase."
+        "question": "Does Moneko support notification capture on iPhone and Android?",
+        "answer": "Yes. On Android, Moneko can process supported notifications from apps you enable. On iOS 27 or later, you can choose apps in a Shortcuts notification automation and pass their notification details to Moneko's capture action. Moneko only saves notifications that contain enough evidence of a completed transaction."
       },
       {
         "question": "Can I manage my budget via WhatsApp or Telegram?",
@@ -1044,12 +1045,12 @@
   },
   "ai-budgeting-app": {
     "slug": "ai-budgeting-app",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "AI Budgeting App | Moneko",
-    "description": "Moneko is an AI budgeting app that helps you track expenses automatically, organize spending into pockets, and manage budgets through iPhone, Android, WhatsApp, and Telegram.",
-    "keywords": "AI budgeting app, AI expense tracker, personal finance AI app, automatic expense tracking app, WhatsApp budgeting app, Telegram budgeting app",
+    "description": "Moneko is an AI budgeting app for automatic expense tracking from selected iOS 27 and Android notifications, chat, voice notes, and receipts.",
+    "keywords": "AI budgeting app, AI expense tracker, personal finance AI app, automatic expense tracking app, WhatsApp budgeting app, Telegram budgeting app, iOS 27 expense tracking, iPhone automatic expense tracker, notification expense capture",
     "eyebrow": "AI budgeting app",
     "pageTitle": "Moneko is an AI budgeting app built for real-world expense tracking.",
     "pageDescription": "Moneko combines AI-assisted expense capture, envelope-style budgeting, and chat-based money management so you can budget through iPhone, Android, WhatsApp, Telegram, and the web without relying on a slow manual workflow.",
@@ -1064,7 +1065,7 @@
     "comparisonRows": [
       {
         "label": "Expense capture",
-        "moneko": "Captures expenses through text, voice notes, receipts, Apple Wallet-friendly iPhone workflows, and Android notifications.",
+        "moneko": "Captures expenses through text, voice notes, receipts, iOS 27 notification automations, Apple Pay Shortcuts, and Android app notifications.",
         "alternative": "Often focuses on dashboards, categorization, or summaries after transactions are already imported."
       },
       {
@@ -1105,7 +1106,7 @@
         "title": "What is an AI budgeting app?",
         "paragraphs": [
           "An AI budgeting app uses machine assistance to reduce the work involved in tracking, categorizing, and planning your money. The strongest AI budgeting tools do more than answer questions. They help you capture expenses quickly, route those expenses into a budget system, and explain what changed.",
-          "Moneko fits that definition because the AI layer is tied to the budget itself. Instead of generating generic finance advice, it helps turn text messages, receipt photos, voice notes, and device notifications into budget updates you can act on immediately."
+          "Moneko connects its AI to real budget actions. It can organize text, receipt photos, voice notes, and supported completed transactions from selected app notifications on iOS 27 and Android."
         ],
         "bullets": [
           "AI-assisted expense capture",
@@ -1143,7 +1144,7 @@
       },
       {
         "question": "Can Moneko automatically track expenses?",
-        "answer": "Moneko is designed for lower-friction automatic tracking through text, voice, receipt capture, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking flows."
+        "answer": "Moneko reduces manual entry through text, voice, receipt capture, iOS 27 notification automations for apps you select, Apple Pay Shortcuts, and supported Android app notifications."
       },
       {
         "question": "Does Moneko work through WhatsApp and Telegram?",
@@ -1188,15 +1189,15 @@
   },
   "ynab-alternative": {
     "slug": "ynab-alternative",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "YNAB Alternative | Moneko",
-    "description": "Moneko is a YNAB alternative for people who want faster expense capture, WhatsApp and Telegram budgeting, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking with less manual effort.",
+    "description": "Moneko is a YNAB alternative for faster expense capture through iOS 27 and Android notifications, Apple Pay Shortcuts, WhatsApp, and Telegram.",
     "keywords": "YNAB alternative, best alternative to YNAB, budgeting app like YNAB, envelope budgeting alternative, chat-based budgeting app",
     "eyebrow": "YNAB alternative",
     "pageTitle": "Moneko is a YNAB alternative for people who want lower-friction budgeting.",
-    "pageDescription": "Moneko keeps the discipline of envelope-style budgeting while reducing the manual overhead that pushes many users away from traditional apps. It is especially strong for chat-based capture, shared budgets, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking.",
+    "pageDescription": "Moneko keeps envelope-style budgeting while reducing manual work through chat, shared budgets, iOS 27 notification capture from selected apps, Apple Pay Shortcuts, and Android notification capture.",
     "keyTakeaways": [
       "Moneko is strongest for people who want faster logging and less app friction.",
       "YNAB is stronger for users who want a traditional, highly structured budgeting workflow.",
@@ -1213,7 +1214,7 @@
       },
       {
         "label": "Capture speed",
-        "moneko": "Built for chat-based logging, receipt capture, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking.",
+        "moneko": "Built for chat-based logging, receipt capture, iOS 27 notification automations, Apple Pay Shortcuts, and Android notification capture.",
         "alternative": "Often requires users to return to the app interface or rely on account import flows."
       },
       {
@@ -1262,7 +1263,7 @@
       {
         "title": "Why does Moneko feel easier to keep up with?",
         "paragraphs": [
-          "Moneko reduces the number of steps between a purchase and a budget update. You can log through chat, send receipts, use voice notes, and rely on Apple Wallet-friendly or Android notification-based workflows instead of saving everything for later.",
+          "Moneko reduces the steps between a purchase and a budget update. You can log through chat, send receipts, use voice notes, capture selected iPhone app notifications on iOS 27, use Apple Pay Shortcuts, or capture supported Android notifications.",
           "That lower-friction design makes Moneko especially appealing to people who have tried strict budgeting apps before but struggled to stay consistent after the first few weeks."
         ]
       },
@@ -1285,7 +1286,7 @@
       },
       {
         "question": "What makes Moneko easier than YNAB for some users?",
-        "answer": "Moneko is easier for users who want to capture expenses in chat, use Apple Wallet-friendly iPhone workflows, rely on Android notification-based tracking, or manage shared budgets without a more demanding app routine."
+        "answer": "Moneko can capture expenses in chat, from selected iPhone app notifications on iOS 27, through Apple Pay Shortcuts, and from supported Android notifications, alongside shared budgets and envelope-style Pockets."
       },
       {
         "question": "Is Moneko good for couples and households?",
@@ -1459,7 +1460,7 @@
   },
   "best-budgeting-app": {
     "slug": "best-budgeting-app",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "Best Budgeting App | Moneko",
@@ -1526,7 +1527,7 @@
       {
         "title": "Why does Moneko stand out?",
         "paragraphs": [
-          "Moneko stands out because it combines chat-based capture, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, envelope-style pockets, and AI planning in one system.",
+          "Moneko combines chat-based capture, receipt scanning, voice notes, iOS 27 notification capture from selected apps, Apple Pay Shortcuts, Android notification capture, envelope-style Pockets, and AI planning.",
           "That combination is useful for users who want direct answers, shared budgeting support, and a workflow that feels lighter than spreadsheet-style money management."
         ]
       },
@@ -1592,12 +1593,12 @@
   },
   "expense-tracker-app": {
     "slug": "expense-tracker-app",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "Expense Tracker App | Moneko",
-    "description": "Moneko is an expense tracker app that helps you capture spending automatically, organize it into budget pockets, and review personal or shared finances across iPhone, Android, WhatsApp, and Telegram.",
-    "keywords": "expense tracker app, automatic expense tracker, AI expense tracker, shared expense tracker app, personal finance tracker",
+    "description": "Moneko is an expense tracker for iPhone and Android with selected app notification capture on iOS 27 and Android, plus text, voice, receipts, and budget Pockets.",
+    "keywords": "expense tracker app, automatic expense tracker, AI expense tracker, shared expense tracker app, personal finance tracker, iPhone automatic expense tracker, iOS notification expense tracker, payment notification expense tracker",
     "eyebrow": "Expense tracker app",
     "pageTitle": "Moneko is an expense tracker app designed to keep up with real spending habits.",
     "pageDescription": "A strong expense tracker app should not just store transactions. It should help users capture spending fast, keep categories current, and connect those transactions to real budget decisions. That is the role Moneko is built to fill.",
@@ -1612,7 +1613,7 @@
     "comparisonRows": [
       {
         "label": "Capture options",
-        "moneko": "Supports messages, voice notes, receipts, Apple Wallet-friendly iPhone workflows, and Android notifications.",
+        "moneko": "Supports messages, voice notes, receipts, iOS 27 notification automations, Apple Pay Shortcuts, and Android notifications.",
         "alternative": "Often expects manual app entry or delayed imports only."
       },
       {
@@ -1667,7 +1668,7 @@
         "title": "Who should use Moneko as an expense tracker app?",
         "paragraphs": [
           "Moneko is well suited to people who want automatic expense tracking, users logging spending through chat, couples and households with shared costs, and anyone who wants an expense tracker that does more than act as a ledger.",
-          "It is also relevant for users comparing AI expense trackers, Android expense tracking tools, and budgeting apps with better iPhone workflows."
+          "It is relevant for people comparing AI expense trackers, Android expense tracking tools, and iPhone expense trackers that can capture selected app notifications on iOS 27."
         ]
       },
       {
@@ -1681,7 +1682,7 @@
     "faqItems": [
       {
         "question": "Can Moneko automatically track expenses?",
-        "answer": "Moneko is designed for lower-friction automatic tracking through chat, receipt scans, voice notes, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking."
+        "answer": "Moneko reduces manual work through chat, receipts, voice notes, iOS 27 notification automations for apps you select, Apple Pay Shortcuts, and supported Android notification capture."
       },
       {
         "question": "Is Moneko just a tracker or also a budgeting app?",
@@ -1708,8 +1709,13 @@
       },
       {
         "label": "Android expense tracker",
-        "description": "Explore Moneko's Android notification-based tracking workflows.",
+        "description": "Set up Moneko to capture supported transaction notifications from selected Android apps.",
         "href": "/android-expense-tracker"
+      },
+      {
+        "label": "iPhone notification capture",
+        "description": "Set up iOS 27 Shortcuts notification capture for apps you select.",
+        "href": "/help/automatically-track-transactions-from-iphone-notifications-moneko"
       },
       {
         "label": "Expense tracker for couples",
@@ -1725,12 +1731,12 @@
   },
   "track-expenses-automatically": {
     "slug": "track-expenses-automatically",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "Track Expenses Automatically | Moneko",
-    "description": "Moneko helps users track expenses automatically through chat capture, receipt scans, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking so budgets stay current with less manual work.",
-    "keywords": "track expenses automatically, automatic expense tracking, automated expense tracker, AI expense logging, no manual expense entry",
+    "description": "Track expenses automatically with Moneko through chat, receipts, iOS 27 notification capture from selected apps, Apple Pay Shortcuts, and Android notifications.",
+    "keywords": "track expenses automatically, automatic expense tracking, automated expense tracker, AI expense logging, no manual expense entry, iPhone automatic expense tracker, iOS 27 expense tracking, iOS notification expense tracker, capture transactions from notifications",
     "eyebrow": "Track expenses automatically",
     "pageTitle": "How does Moneko help you track expenses automatically?",
     "pageDescription": "Automatic expense tracking works best when capture happens close to the moment of spending. Moneko is designed around that principle, using chat, receipts, voice, and device-friendly workflows to keep budgets updated with less effort.",
@@ -1769,7 +1775,7 @@
         "title": "What does automatic expense tracking actually mean?",
         "paragraphs": [
           "Automatic expense tracking means reducing the manual work required to keep spending records current. In practice, that means the system should help capture expenses near the moment of spending and reduce how much typing or reconstruction users need to do later.",
-          "Moneko approaches that through a mix of chat-based capture, receipt scanning, voice notes, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking."
+          "Moneko combines chat capture, receipt scanning, voice notes, iOS 27 notification automations for apps you choose, Apple Pay Shortcuts, and Android notification capture to reduce manual entry."
         ]
       },
       {
@@ -1797,7 +1803,7 @@
     "faqItems": [
       {
         "question": "Can Moneko really help me track expenses automatically?",
-        "answer": "Yes. Moneko is designed to reduce manual work through chat, receipts, voice notes, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking."
+        "answer": "Yes. Moneko reduces manual work through chat, receipts, voice notes, selected app notifications on iOS 27, Apple Pay Shortcuts, and supported Android notifications. Moneko checks notification content for a completed transaction before saving it."
       },
       {
         "question": "Does Moneko replace all manual confirmation?",
@@ -1805,7 +1811,7 @@
       },
       {
         "question": "Can I use Moneko on both iPhone and Android?",
-        "answer": "Yes. Moneko supports both iPhone and Android workflows, plus WhatsApp, Telegram, and web access."
+        "answer": "Yes. Moneko supports iPhone and Android. On iOS 27 or later, selected app notifications can trigger a Shortcuts automation that sends details to Moneko; Android supports notification capture from apps you enable. WhatsApp, Telegram, and web access are also available."
       },
       {
         "question": "Does automatic tracking also update my budget?",
@@ -1829,8 +1835,13 @@
       },
       {
         "label": "Android expense tracker",
-        "description": "Explore Android notification-based tracking flows.",
+        "description": "Set up notification capture from selected apps on Android.",
         "href": "/android-expense-tracker"
+      },
+      {
+        "label": "iPhone notification capture",
+        "description": "Learn how to capture selected app notifications on iOS 27 with Shortcuts.",
+        "href": "/help/automatically-track-transactions-from-iphone-notifications-moneko"
       },
       {
         "label": "Moneko homepage",
@@ -1957,11 +1968,11 @@
   },
   "android-expense-tracker": {
     "slug": "android-expense-tracker",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "Android Expense Tracker | Moneko",
-    "description": "Moneko is an Android expense tracker built for lower-friction spending capture through notification-based workflows, chat-based logging, and budget pockets that help Android users stay current without extra manual work.",
+    "description": "Moneko is an Android expense tracker with supported notification capture, chat logging, and budget Pockets to help you track spending with less manual work.",
     "keywords": "Android expense tracker, expense tracker for Android, automatic Android expense tracker, notification-based expense tracking, Android budgeting app",
     "eyebrow": "Android expense tracker",
     "pageTitle": "Moneko is an Android expense tracker designed around real-time spending signals.",
@@ -2037,7 +2048,7 @@
       },
       {
         "question": "Is Moneko only for Android?",
-        "answer": "No. Moneko also supports iPhone, WhatsApp, Telegram, and web workflows."
+        "answer": "No. Moneko also supports iPhone, including selected app notification capture through Shortcuts on iOS 27 or later, as well as WhatsApp, Telegram, and web workflows."
       },
       {
         "question": "Does Moneko connect Android tracking to budgeting?",
@@ -2065,6 +2076,11 @@
         "href": "/budgeting-via-whatsapp"
       },
       {
+        "label": "iPhone notification capture",
+        "description": "See how Moneko captures selected app notifications on iOS 27 using Shortcuts.",
+        "href": "/help/automatically-track-transactions-from-iphone-notifications-moneko"
+      },
+      {
         "label": "Moneko homepage",
         "description": "Return to the main product overview.",
         "href": "/"
@@ -2073,15 +2089,15 @@
   },
   "apple-wallet-budgeting-app": {
     "slug": "apple-wallet-budgeting-app",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "Apple Wallet Budgeting App | Moneko",
-    "description": "Moneko is an Apple Wallet-friendly budgeting app for iPhone users who want to capture spending faster, organize purchases into budget pockets, and keep money plans current with less manual work.",
-    "keywords": "Apple Wallet budgeting app, Apple Wallet expense tracker, iPhone budgeting app, Apple Pay budgeting app, budget with Apple Wallet",
+    "description": "An Apple Pay and Apple Wallet budgeting app for iPhone, with Wallet Shortcuts and selected app notification capture on iOS 27.",
+    "keywords": "Apple Wallet budgeting app, Apple Wallet expense tracker, iPhone budgeting app, Apple Pay budgeting app, budget with Apple Wallet, iOS 27 notification expense tracker, iPhone automatic expense tracker, Apple Pay expense tracker, capture transactions from notifications",
     "eyebrow": "Apple Wallet budgeting app",
     "pageTitle": "Moneko is built for iPhone users who want a better Apple Wallet budgeting workflow.",
-    "pageDescription": "Most budgeting apps make iPhone users jump back into a separate app after they pay. Moneko is designed to make Apple Wallet and Apple Pay spending easier to capture, categorize, and turn into usable budget decisions.",
+    "pageDescription": "Moneko helps iPhone users bring Apple Pay purchases into a budget with a Wallet transaction Shortcut. On iOS 27, a separate Shortcuts notification automation can capture supported transactions from apps you select.",
     "keyTakeaways": [
       "Moneko is designed for Apple Wallet-friendly budgeting on iPhone.",
       "It helps reduce manual budget entry after Apple Pay purchases.",
@@ -2123,7 +2139,7 @@
       {
         "title": "How does Moneko help with Apple Wallet budgeting?",
         "paragraphs": [
-          "Moneko helps iPhone users move from Apple Pay activity to a categorized budget update faster. Instead of relying on delayed cleanup, it is designed to connect iPhone spending to pockets and planning while the purchase is still fresh.",
+          "Moneko helps iPhone users move Apple Pay activity into a categorized budget with a Wallet transaction Shortcut. On iOS 27, you can also configure a separate Shortcuts notification automation for selected apps to capture supported completed transactions.",
           "That makes budgeting more practical for users who want control without adding more admin to every purchase."
         ]
       },
@@ -2145,7 +2161,11 @@
     "faqItems": [
       {
         "question": "Does Moneko work as an Apple Wallet budgeting app?",
-        "answer": "Yes. Moneko is designed for Apple Wallet-friendly budgeting workflows on iPhone so spending can become usable budget updates faster."
+        "answer": "Yes. Moneko supports an Apple Pay Wallet transaction Shortcut on iPhone. On iOS 27 or later, you can also set up notification capture for apps you select in Shortcuts; that path sends notification details to Moneko for transaction classification."
+      },
+      {
+        "question": "Can Moneko capture transactions from iPhone notifications?",
+        "answer": "Yes. iOS 27 users can choose apps in a Shortcuts notification automation and add Moneko's Capture Transaction Notification action. Moneko checks the notification for a completed transaction before saving it. This is separate from the Apple Pay Wallet transaction Shortcut and is not bank syncing."
       },
       {
         "question": "Is Moneko just an iPhone expense tracker?",
@@ -2176,6 +2196,11 @@
         "href": "/expense-tracker-app"
       },
       {
+        "label": "iOS 27 notification capture",
+        "description": "Set up transaction capture from selected iPhone app notifications.",
+        "href": "/help/automatically-track-transactions-from-iphone-notifications-moneko"
+      },
+      {
         "label": "Best budgeting app",
         "description": "See why Moneko works well for users who want lower-friction budgeting.",
         "href": "/budgeting-app-2026"
@@ -2189,11 +2214,11 @@
   },
   "monarch-money-alternative": {
     "slug": "monarch-money-alternative",
-    "sitemapLastmod": "2026-03-19",
+    "sitemapLastmod": "2026-09-24",
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "Monarch Money Alternative | Moneko",
-    "description": "Moneko is a Monarch Money alternative for people who want lower-friction budgeting, chat-based expense capture, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and envelope-style pockets.",
+    "description": "Moneko is a Monarch Money alternative with chat-based expense capture, iOS 27 and Android notification capture, Apple Pay Shortcuts, and envelope-style Pockets.",
     "keywords": "Monarch Money alternative, alternative to Monarch Money, budgeting app like Monarch, expense tracker alternative, AI budgeting alternative",
     "eyebrow": "Monarch Money alternative",
     "pageTitle": "Moneko is a Monarch Money alternative for people who want a faster budgeting workflow.",
@@ -2214,7 +2239,7 @@
       },
       {
         "label": "Expense capture",
-        "moneko": "Supports chat-based logging, receipts, voice notes, Apple Wallet-friendly iPhone workflows, and Android notifications.",
+        "moneko": "Supports chat-based logging, receipts, voice notes, iOS 27 notification capture, Apple Pay Shortcuts, Android notifications, and shared budgeting.",
         "alternative": "Less focused on messaging-first or device-native budgeting flows."
       },
       {
@@ -2265,7 +2290,7 @@
       },
       {
         "question": "What makes Moneko different from Monarch Money?",
-        "answer": "Moneko emphasizes envelope-style pockets, chat-based capture, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and shared budgeting workflows."
+        "answer": "Moneko combines envelope-style Pockets and chat-based capture with selected iPhone app notification capture on iOS 27, Apple Pay Shortcuts, Android notification capture, and shared budgeting."
       },
       {
         "question": "Is Moneko better for users who hate manual budgeting?",

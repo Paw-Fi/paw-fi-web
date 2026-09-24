@@ -61,6 +61,7 @@ The supported widget implementation is covered in [Add Moneko widgets to an iOS 
 ## Related information
 
 - [Add Moneko widgets to an iOS home screen](/help/ios-home-screen-widgets)
+- [Capture transactions from iPhone notifications on iOS 27](/help/automatically-track-transactions-from-iphone-notifications-moneko)
 - [Android notification capture](/help/automatically-track-android-notifications-moneko)
 - [Offline mode and sync](/help/offline-pending-saves-sync-changing-devices-moneko)
 `,

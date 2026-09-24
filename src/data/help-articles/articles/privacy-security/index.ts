@@ -100,10 +100,11 @@ When you connect your bank:
 
 ---
 
-## Local Processing
+## Notification and AI Processing
 
-Whenever possible, Moneko processes your data locally on your device. For example:
-- **Android Notification Capture**: Push notifications are parsed on your phone to extract merchant and amount before being securely synced.
+Notification processing depends on the capture method you choose:
+- **Android Notification Capture**: Moneko processes supported notifications from apps you enable to identify completed transactions.
+- **iOS 27 Notification Capture**: You choose the apps in a Shortcuts notification automation. When it runs, the notification title, subtitle, message, and source app passed to Moneko's action are sent to Moneko for transaction classification. This does not give Moneko access to every notification or connect it to your bank.
 - **AI Features**: AI features can process the text, receipt, image, voice-derived information, and relevant Moneko context needed for your request. Do not submit bank login credentials.
 - **AI Data Use and Retention**: Review the Privacy Policy for the current providers, data-use, and retention terms.
 
