@@ -36,6 +36,7 @@ const REPLY_LANGUAGE_PROMPT_NAMES: Record<string, string> = {
 
 const CURRENCY_LANGUAGE_FALLBACKS: Record<string, string> = {
   AED: "en",
+  AMD: "en",
   ARS: "es",
   AUD: "en",
   BDT: "en",

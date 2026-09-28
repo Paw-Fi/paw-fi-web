@@ -4,6 +4,7 @@
  */
 export const CURRENCY_SYMBOLS: Record<string, string> = {
   'AED': 'د.إ',
+  'AMD': '֏',
   'ARS': 'ARS$',
   'AUD': 'A$',
   'BDT': '৳',

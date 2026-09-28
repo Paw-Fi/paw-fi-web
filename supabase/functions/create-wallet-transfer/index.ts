@@ -11,6 +11,7 @@ interface RequestBody {
   currency: string;
   date: string;
   note?: string;
+  clientRecordId?: string;
   userId?: string;
 }
 
@@ -95,6 +96,30 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
+    if (
+      body.clientRecordId !== undefined &&
+      (typeof body.clientRecordId !== "string" || !body.clientRecordId.trim())
+    ) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "clientRecordId must be a non-empty string",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+    const clientRecordId = body.clientRecordId?.trim() ?? "";
+    if (clientRecordId.length > 128) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "clientRecordId must be 128 characters or fewer",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
@@ -147,10 +172,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const sameScope =
-      (fromAccount.household_id == null &&
-        toAccount.household_id == null &&
-        fromAccount.user_id === toAccount.user_id) ||
+    const sameScope = (fromAccount.household_id == null &&
+      toAccount.household_id == null &&
+      fromAccount.user_id === toAccount.user_id) ||
       (fromAccount.household_id != null &&
         fromAccount.household_id === toAccount.household_id);
 
@@ -205,22 +229,94 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const transferPayload = {
+      from_account_id: fromAccountId,
+      to_account_id: toAccountId,
+      amount_cents: amountCents,
+      currency,
+      date: normalizedDate,
+      note: body.note?.trim() || null,
+      created_by_user_id: userId,
+      household_id: fromAccount.household_id ?? null,
+    };
+    const matchesRequestedTransfer = (transfer: Record<string, unknown>) =>
+      transfer.from_account_id === transferPayload.from_account_id &&
+      transfer.to_account_id === transferPayload.to_account_id &&
+      Number(transfer.amount_cents) === transferPayload.amount_cents &&
+      String(transfer.currency ?? "").toUpperCase() ===
+        transferPayload.currency &&
+      String(transfer.date ?? "") === transferPayload.date &&
+      (transfer.note ?? null) === transferPayload.note &&
+      (transfer.household_id ?? null) === transferPayload.household_id;
+
+    if (clientRecordId) {
+      const { data: existingTransfer, error: existingError } = await supabase
+        .from("account_transfers")
+        .select("*")
+        .eq("created_by_user_id", userId)
+        .eq("client_record_id", clientRecordId)
+        .maybeSingle();
+      if (existingError) {
+        console.error(
+          "[create-account-transfer] load idempotent transfer",
+          existingError,
+        );
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to create transfer",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+      if (existingTransfer) {
+        if (!matchesRequestedTransfer(existingTransfer)) {
+          return jsonResponse(
+            {
+              success: false,
+              error: "clientRecordId was already used for a different transfer",
+              code: "IDEMPOTENCY_CONFLICT",
+            },
+            409,
+          );
+        }
+        return jsonResponse({ success: true, data: existingTransfer });
+      }
+    }
+
     const { data, error } = await supabase
       .from("account_transfers")
       .insert({
-        from_account_id: fromAccountId,
-        to_account_id: toAccountId,
-        amount_cents: amountCents,
-        currency,
-        date: normalizedDate,
-        note: body.note?.trim() || null,
-        created_by_user_id: userId,
-        household_id: fromAccount.household_id ?? null,
+        ...transferPayload,
+        ...(clientRecordId ? { client_record_id: clientRecordId } : {}),
       })
       .select()
       .single();
 
     if (error || !data) {
+      if (clientRecordId) {
+        const { data: racedTransfer } = await supabase
+          .from("account_transfers")
+          .select("*")
+          .eq("created_by_user_id", userId)
+          .eq("client_record_id", clientRecordId)
+          .maybeSingle();
+        if (racedTransfer) {
+          if (!matchesRequestedTransfer(racedTransfer)) {
+            return jsonResponse(
+              {
+                success: false,
+                error:
+                  "clientRecordId was already used for a different transfer",
+                code: "IDEMPOTENCY_CONFLICT",
+              },
+              409,
+            );
+          }
+          return jsonResponse({ success: true, data: racedTransfer });
+        }
+      }
       console.error("[create-account-transfer]", error);
       return jsonResponse(
         {

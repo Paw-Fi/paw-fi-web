@@ -29,6 +29,13 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     // Dirham (UAE)
     "د.إ": "AED",
 
+    // Armenian dram
+    "֏": "AMD",
+    "ԴՐ": "AMD",
+    "ԴՐ.": "AMD",
+    "ԴՐԱՄ": "AMD",
+    "ARMENIAN DRAM": "AMD",
+
     // Dinar (Algeria)
     "د.ج": "DZD",
     "DA": "DZD",

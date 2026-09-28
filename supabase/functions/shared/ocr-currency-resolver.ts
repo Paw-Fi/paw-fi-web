@@ -126,6 +126,7 @@ const UNIQUE_SYMBOL_TO_CURRENCY: Record<string, string> = {
   "د.ج": "DZD",
   "د.أ": "JOD",
   "د.م.": "MAD",
+  "֏": "AMD",
 };
 
 const EXPLICIT_CURRENCY_NAME_TO_CODE: Record<string, string> = {
@@ -187,6 +188,7 @@ const EXPLICIT_CURRENCY_NAME_TO_CODE: Record<string, string> = {
   "MALAWIAN KWACHA": "MWK",
   "MAURITIAN RUPEE": "MUR",
   "MOROCCAN DIRHAM": "MAD",
+  "ARMENIAN DRAM": "AMD",
   "NAMIBIAN DOLLAR": "NAD",
   "NIGERIAN NAIRA": "NGN",
   "NORWEGIAN KRONE": "NOK",

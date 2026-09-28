@@ -8,6 +8,7 @@ import { resolveCurrencyFromOCR } from "../shared/ocr-currency-resolver.ts";
 Deno.test("currency support: accepts MDL and MUR", () => {
   assertEquals(validateCurrency("mdl"), "MDL");
   assertEquals(validateCurrency("mur"), "MUR");
+  assertEquals(validateCurrency("amd"), "AMD");
 });
 
 Deno.test(
@@ -29,3 +30,30 @@ Deno.test(
     );
   },
 );
+
+Deno.test("currency support: resolves Armenian dram name and symbol", () => {
+  assertEquals(
+    resolveCurrencyFromOCR({
+      rawOcrText: "Total 100 Armenian Dram",
+      userPreferredCurrency: "USD",
+    }).finalCurrencyCode,
+    "AMD",
+  );
+  assertEquals(
+    resolveCurrencyFromOCR({
+      rawOcrText: "֏ 100",
+      userPreferredCurrency: "USD",
+    }).finalCurrencyCode,
+    "AMD",
+  );
+});
+
+Deno.test("currency support: does not treat Armenian prose as AMD", () => {
+  assertEquals(
+    resolveCurrencyFromOCR({
+      rawOcrText: "Դրա արժեքը 500",
+      userPreferredCurrency: "USD",
+    }).finalCurrencyCode,
+    "USD",
+  );
+});
