@@ -57,10 +57,10 @@ Deno.test(
       normalizeBatchTransactionInput({ type: "จาก", amount: 25425 }),
       { ok: false, error: "Invalid or missing type" },
     );
-    assertEquals(
-      normalizeBatchTransactionInput({ amount: 25425 }),
-      { ok: false, error: "Invalid or missing type" },
-    );
+    assertEquals(normalizeBatchTransactionInput({ amount: 25425 }), {
+      ok: false,
+      error: "Invalid or missing type",
+    });
   },
 );
 
@@ -140,6 +140,50 @@ Deno.test(
         category: "coffee & tea",
         usedFallback: false,
       },
+    );
+  },
+);
+
+Deno.test(
+  "batch preserves an already analyzed category instead of swapping it again",
+  () => {
+    const ctx = makeCategoryContext({
+      allowedExpenseSet: new Set(["groceries", "supplements", "other"]),
+      remaps: [
+        {
+          transaction_type: "expense",
+          from_category_name: "supplements",
+          to_category_name: "groceries",
+          use_count: 9,
+          last_used_at: null,
+        },
+        {
+          transaction_type: "expense",
+          from_category_name: "groceries",
+          to_category_name: "supplements",
+          use_count: 1,
+          last_used_at: null,
+        },
+      ],
+    });
+    assertEquals(
+      resolveBatchCategoryForStorage({
+        rawCategory: "groceries",
+        description: "bread",
+        transactionType: "expense",
+        ctx,
+        categoryAlreadyResolved: true,
+      }),
+      { category: "groceries", usedFallback: false },
+    );
+    assertEquals(
+      resolveBatchCategoryForStorage({
+        rawCategory: "groceries",
+        description: "bread",
+        transactionType: "expense",
+        ctx,
+      }),
+      { category: "supplements", usedFallback: false },
     );
   },
 );

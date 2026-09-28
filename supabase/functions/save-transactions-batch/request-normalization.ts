@@ -9,14 +9,14 @@ export type BatchTransactionType = "expense" | "income";
 
 export type NormalizedBatchTransactionInput =
   | {
-    ok: true;
-    type: BatchTransactionType;
-    amount: number;
-  }
+      ok: true;
+      type: BatchTransactionType;
+      amount: number;
+    }
   | {
-    ok: false;
-    error: "Invalid or missing type" | "Invalid amount";
-  };
+      ok: false;
+      error: "Invalid or missing type" | "Invalid amount";
+    };
 
 export function normalizeBatchTransactionInput(input: {
   type?: unknown;
@@ -61,6 +61,7 @@ export function resolveBatchCategoryForStorage(input: {
   merchant?: unknown;
   transactionType: BatchTransactionType;
   ctx: CategoryContext;
+  categoryAlreadyResolved?: boolean;
 }): {
   category: string;
   usedFallback: boolean;
@@ -71,12 +72,15 @@ export function resolveBatchCategoryForStorage(input: {
     description: input.description,
     merchant: input.merchant,
   });
-  const resolvedCategory = resolveCategory({
-    initialGuess: normalizedCategory.category,
-    description,
-    transactionType: input.transactionType,
-    ctx: input.ctx,
-  });
+  const resolvedCategory =
+    input.categoryAlreadyResolved && !normalizedCategory.usedFallback
+      ? normalizedCategory.category
+      : resolveCategory({
+          initialGuess: normalizedCategory.category,
+          description,
+          transactionType: input.transactionType,
+          ctx: input.ctx,
+        });
 
   if (
     !normalizedCategory.usedFallback &&
@@ -179,12 +183,13 @@ function recoverZeroPaddedTwoDigitYearDate(
 }
 
 function expandTwoDigitYear(year: number, referenceYear?: number): number {
-  const safeReferenceYear = Number.isInteger(referenceYear) &&
-      referenceYear != null &&
-      referenceYear >= 1900 &&
-      referenceYear <= 9999
-    ? referenceYear
-    : new Date().getUTCFullYear();
+  const safeReferenceYear =
+    Number.isInteger(referenceYear) &&
+    referenceYear != null &&
+    referenceYear >= 1900 &&
+    referenceYear <= 9999
+      ? referenceYear
+      : new Date().getUTCFullYear();
   const century = Math.floor(safeReferenceYear / 100) * 100;
   let expanded = century + year;
 

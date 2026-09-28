@@ -726,11 +726,12 @@ export function normalizePreferenceMatchKey(
   if (!raw) return null;
   const cleaned = raw
     .toString()
+    .normalize("NFKC")
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .replace(/\s{2,}/g, " ")
     .trim();
   if (!cleaned) return null;
-  return cleaned.length > 80 ? cleaned.slice(0, 80) : cleaned;
+  return Array.from(cleaned).slice(0, 80).join("");
 }

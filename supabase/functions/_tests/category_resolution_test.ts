@@ -74,6 +74,70 @@ Deno.test(
 );
 
 Deno.test(
+  "confirmed description beats a category-wide remap for that description only",
+  () => {
+    const ctx = makeContext({
+      allowedExpenseSet: new Set(["groceries", "supplements", "other"]),
+      remaps: [
+        {
+          transaction_type: "expense",
+          from_category_name: "groceries",
+          to_category_name: "supplements",
+          use_count: 2,
+          last_used_at: null,
+        },
+      ],
+      confirmedPreferences: [
+        {
+          transaction_type: "expense",
+          match_key: "milk and bread",
+          category_name: "groceries",
+          use_count: 1,
+          last_used_at: null,
+          is_user_confirmed: true,
+        },
+      ],
+      preferences: [
+        {
+          transaction_type: "expense",
+          match_key: "other grocery",
+          category_name: "groceries",
+          use_count: 5,
+          last_used_at: null,
+        },
+      ],
+    });
+    assertEquals(
+      resolveCategory({
+        initialGuess: "groceries",
+        description: "Milk and bread",
+        transactionType: "expense",
+        ctx,
+      }),
+      "groceries",
+    );
+    assertEquals(
+      resolveCategory({
+        initialGuess: "groceries",
+        description: "Other grocery",
+        transactionType: "expense",
+        ctx,
+      }),
+      "supplements",
+    );
+    assertEquals(
+      resolveCategory({
+        initialGuess: "groceries",
+        description: "different item",
+        transactionType: "expense",
+        ctx,
+      }),
+      "supplements",
+    );
+  },
+);
+
+Deno.test(
   "Android classifier hints pass through the final category remap",
   () => {
     const result = resolveCategory({
@@ -95,5 +159,58 @@ Deno.test(
     });
 
     assertEquals(result, "restaurants");
+  },
+);
+
+Deno.test(
+  "opposite explicit remaps swap the original categories exactly once",
+  () => {
+    const ctx = makeContext({
+      allowedExpenseSet: new Set(["groceries", "supplements", "other"]),
+      remaps: [
+        {
+          transaction_type: "expense",
+          from_category_name: "supplements",
+          to_category_name: "groceries",
+          use_count: 9,
+          last_used_at: null,
+        },
+        {
+          transaction_type: "expense",
+          from_category_name: "groceries",
+          to_category_name: "supplements",
+          use_count: 1,
+          last_used_at: null,
+        },
+      ],
+      preferences: [
+        {
+          transaction_type: "expense",
+          match_key: "bread",
+          category_name: "supplements",
+          use_count: 2,
+          last_used_at: null,
+        },
+      ],
+    });
+
+    assertEquals(
+      resolveCategory({
+        initialGuess: "supplements",
+        description: "bread",
+        transactionType: "expense",
+        ctx,
+      }),
+      "groceries",
+    );
+    assertEquals(
+      resolveCategory({
+        initialGuess: "groceries",
+        description: "牛乳と卵",
+        transactionType: "expense",
+        ctx,
+      }),
+      "supplements",
+    );
   },
 );

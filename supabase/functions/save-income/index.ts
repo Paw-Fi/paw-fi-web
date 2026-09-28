@@ -16,6 +16,8 @@ import {
   applyCategoryRemap,
   ensureUserCategory,
   fetchUserCategoryRemaps,
+  fetchConfirmedCategoryPreferences,
+  matchConfirmedCategoryPreference,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
 import {
@@ -79,6 +81,7 @@ interface RequestBody {
   userId: string; // User ID (required)
   amount: number; // Amount in major units (required, must be > 0)
   category: string; // Category name (required, e.g., 'income:salary')
+  categoryAlreadyResolved?: boolean; // Category finalized by analysis
   currency: string; // ISO currency code (required)
   date: string; // ISO date (YYYY-MM-DD) or ISO datetime (YYYY-MM-DDTHH:mm:ss)
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
@@ -238,19 +241,27 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
     }
 
-    try {
-      const remaps = await fetchUserCategoryRemaps({
-        supabase,
-        userId,
-        limit: 120,
-      });
-      effectiveCategory = applyCategoryRemap({
-        categoryName: resolvedCategory,
-        transactionType: "income",
-        remaps,
-      });
-    } catch (error) {
-      console.error("[save-income] Failed to apply category remaps:", error);
+    if (body.categoryAlreadyResolved !== true) {
+      try {
+        const [remaps, confirmedPreferences] = await Promise.all([
+          fetchUserCategoryRemaps({ supabase, userId, limit: 120 }),
+          fetchConfirmedCategoryPreferences({ supabase, userId }),
+        ]);
+        effectiveCategory =
+          matchConfirmedCategoryPreference({
+            description: body.merchant ?? body.description ?? null,
+            transactionType: "income",
+            preferences: confirmedPreferences,
+          }) ??
+          applyCategoryRemap({
+            categoryName: resolvedCategory,
+            transactionType: "income",
+            remaps,
+          });
+      } catch (error) {
+        console.error("[save-income] Failed to apply category remaps:", error);
+        throw error;
+      }
     }
 
     console.log("[save-income] Effective category after remaps:", {

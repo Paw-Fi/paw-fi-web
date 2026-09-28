@@ -8,12 +8,16 @@ import {
   getExpenseCategories,
   getIncomeCategories,
   normalizeCategoryForStorage,
+  normalizePreferenceMatchKey,
   sanitizeCategoryName,
 } from "../shared/category-colors.ts";
 import {
   applyCategoryRemap,
   applyPreferencesToItems,
   mergeAllowedCategories,
+  matchConfirmedCategoryPreference,
+  learnUserCategoryPreference,
+  fetchConfirmedCategoryPreferences,
 } from "../shared/user-categories.ts";
 
 function withSilencedConsoleWarn<T>(fn: () => T): T {
@@ -25,6 +29,87 @@ function withSilencedConsoleWarn<T>(fn: () => T): T {
     console.warn = original;
   }
 }
+
+Deno.test(
+  "confirmed preferences match non-Latin descriptions without losing script",
+  () => {
+    const key = normalizePreferenceMatchKey("牛乳と卵 ・ ٢,٥");
+    assertEquals(key, "牛乳と卵 ٢ ٥");
+    assertEquals(
+      matchConfirmedCategoryPreference({
+        description: "牛乳と卵 ・ ٢,٥",
+        transactionType: "expense",
+        preferences: [
+          {
+            transaction_type: "expense",
+            match_key: key!,
+            category_name: "groceries",
+            use_count: 1,
+            last_used_at: null,
+            is_user_confirmed: true,
+          },
+        ],
+      }),
+      "groceries",
+    );
+  },
+);
+
+Deno.test(
+  "manual category correction records confirmed provenance",
+  async () => {
+    const saved: Record<string, unknown>[] = [];
+    const query = {
+      select: (_: string) => query,
+      eq: (_: string, __: unknown) => query,
+      upsert: (row: Record<string, unknown>) => {
+        saved.push(row);
+        return query;
+      },
+      maybeSingle: async () => ({ data: { use_count: 1 }, error: null }),
+    };
+    await learnUserCategoryPreference({
+      supabase: { from: (_: string) => query },
+      userId: "user-1",
+      transactionType: "expense",
+      descriptionText: "パンと牛乳",
+      categoryName: "groceries",
+      isUserConfirmed: true,
+    });
+    assertEquals(saved[0].match_key, "パンと牛乳");
+    assertEquals(saved[0].is_user_confirmed, true);
+  },
+);
+
+Deno.test(
+  "confirmed corrections are read beyond the first database page",
+  async () => {
+    const rows = Array.from({ length: 201 }, (_, index) => ({
+      transaction_type: "expense" as const,
+      match_key: `item ${index}`,
+      category_name: "groceries",
+      use_count: 1,
+      last_used_at: null,
+      is_user_confirmed: true,
+    }));
+    const requested: number[] = [];
+    const query = {
+      select: (_: string) => query,
+      eq: (_: string, __: unknown) => query,
+      order: (_: string) => query,
+      range: async (start: number, end: number) => {
+        requested.push(start);
+        return { data: rows.slice(start, end + 1), error: null };
+      },
+    };
+    const result = await fetchConfirmedCategoryPreferences({
+      supabase: { from: (_: string) => query },
+      userId: "user-1",
+    });
+    assertEquals(result.length, 201);
+    assertEquals(requested, [0, 200]);
+  },
+);
 
 Deno.test("category: sanitizeCategoryName accepts safe custom category", () => {
   assertEquals(sanitizeCategoryName("Coffee & Tea"), "coffee & tea");
@@ -62,7 +147,7 @@ Deno.test(
     const allowed = new Set(["groceries", "rent"]);
     assertEquals(
       withSilencedConsoleWarn(() =>
-        coerceCategoryToAllowed("my custom", allowed)
+        coerceCategoryToAllowed("my custom", allowed),
       ),
       "other",
     );

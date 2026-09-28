@@ -9,8 +9,7 @@
  *  1. Apply explicit remap on the initial guess → track if remap matched
  *  2. Apply learned preferences on the BASE guess (not remapped)
  *  3. Merge: use remap result if remap matched, else use preference result
- *  4. Apply remap AGAIN after preference application (for non-locked rows)
- *  5. Coerce final category to the user's allowed category set
+ *  4. Coerce final category to the user's allowed category set
  */
 
 import {
@@ -19,6 +18,8 @@ import {
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
   fetchUserCategoryPreferences,
+  fetchConfirmedCategoryPreferences,
+  matchConfirmedCategoryPreference,
   fetchUserCategoryRemaps,
   mergeAllowedCategories,
   applyCategoryRemap,
@@ -35,6 +36,7 @@ export interface CategoryContext {
   allowedExpenseSet: Set<string>;
   allowedIncomeSet: Set<string>;
   preferences: UserCategoryPreferenceRow[];
+  confirmedPreferences?: UserCategoryPreferenceRow[];
   remaps: UserCategoryRemapRow[];
 }
 
@@ -45,27 +47,36 @@ export async function loadCategoryContext(params: {
   supabase: SupabaseClient;
   userId: string;
 }): Promise<CategoryContext> {
-  const [customCategories, hiddenCategories, preferences, remaps] =
-    await Promise.all([
-      fetchUserCustomCategories({
-        supabase: params.supabase,
-        userId: params.userId,
-      }),
-      fetchUserHiddenCategories({
-        supabase: params.supabase,
-        userId: params.userId,
-      }),
-      fetchUserCategoryPreferences({
-        supabase: params.supabase,
-        userId: params.userId,
-        limit: 100,
-      }),
-      fetchUserCategoryRemaps({
-        supabase: params.supabase,
-        userId: params.userId,
-        limit: 120,
-      }),
-    ]);
+  const [
+    customCategories,
+    hiddenCategories,
+    preferences,
+    confirmedPreferences,
+    remaps,
+  ] = await Promise.all([
+    fetchUserCustomCategories({
+      supabase: params.supabase,
+      userId: params.userId,
+    }),
+    fetchUserHiddenCategories({
+      supabase: params.supabase,
+      userId: params.userId,
+    }),
+    fetchUserCategoryPreferences({
+      supabase: params.supabase,
+      userId: params.userId,
+      limit: 100,
+    }),
+    fetchConfirmedCategoryPreferences({
+      supabase: params.supabase,
+      userId: params.userId,
+    }),
+    fetchUserCategoryRemaps({
+      supabase: params.supabase,
+      userId: params.userId,
+      limit: 120,
+    }),
+  ]);
 
   const { allowedExpenseSet, allowedIncomeSet } = mergeAllowedCategories({
     customCategories,
@@ -76,6 +87,7 @@ export async function loadCategoryContext(params: {
     allowedExpenseSet,
     allowedIncomeSet,
     preferences,
+    confirmedPreferences,
     remaps,
   };
 }
@@ -100,6 +112,16 @@ export function resolveCategory(params: {
 }): string {
   const { initialGuess, description, transactionType, ctx } = params;
   const { allowedExpenseSet, allowedIncomeSet, preferences, remaps } = ctx;
+
+  const allowed =
+    transactionType === "income" ? allowedIncomeSet : allowedExpenseSet;
+  const confirmed = matchConfirmedCategoryPreference({
+    description,
+    transactionType,
+    preferences: ctx.confirmedPreferences ?? [],
+    allowed,
+  });
+  if (confirmed) return confirmed;
 
   // ── Step 1: Apply explicit remap on the initial guess ─────────────────
   const normalizedSource = normalizeStoredUserCategory(initialGuess);
@@ -126,23 +148,10 @@ export function resolveCategory(params: {
   });
 
   // ── Step 3: Merge — remap wins if it matched, otherwise preference ────
-  const afterMerge = remapMatched
-    ? afterRemap
-    : preferredItem.category;
+  const afterMerge = remapMatched ? afterRemap : preferredItem.category;
 
-  // ── Step 4: Apply remap AGAIN after preferences (for non-locked rows) ─
-  const afterSecondRemap = applyCategoryRemap({
-    categoryName: afterMerge,
-    transactionType,
-    remaps,
-    allowedExpenseCategories: allowedExpenseSet,
-    allowedIncomeCategories: allowedIncomeSet,
-  });
-
-  // ── Step 5: Coerce to the user's allowed category set ─────────────────
-  const allowed =
-    transactionType === "income" ? allowedIncomeSet : allowedExpenseSet;
-  const finalCategory = coerceCategoryToAllowed(afterSecondRemap, allowed);
+  // Never remap the result: reverse mappings are independent substitutions.
+  const finalCategory = coerceCategoryToAllowed(afterMerge, allowed);
 
   return finalCategory;
 }

@@ -17,6 +17,8 @@ import {
   applyCategoryRemap,
   ensureUserCategory,
   fetchUserCategoryRemaps,
+  fetchConfirmedCategoryPreferences,
+  matchConfirmedCategoryPreference,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
 import {
@@ -84,6 +86,7 @@ interface RequestBody {
   userId?: string; // User ID (optional when request originates from GPT)
   amount: number; // Amount in major units
   category: string; // Category name
+  categoryAlreadyResolved?: boolean; // Category finalized by analysis
   currency: string; // ISO currency code
   date: string; // ISO date (YYYY-MM-DD) or ISO datetime (YYYY-MM-DDTHH:mm:ss)
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
@@ -192,8 +195,8 @@ Deno.serve(async (req: Request) => {
         ? null
         : typeof body.merchantStructuredName === "string" &&
             body.merchantStructuredName.trim().length > 0
-        ? body.merchantStructuredName.trim().slice(0, 255)
-        : normalizedMerchant;
+          ? body.merchantStructuredName.trim().slice(0, 255)
+          : normalizedMerchant;
     const normalizedIdempotencyKey = normalizeClientMutationKey(body);
 
     const normalizedDate = normalizeCalendarDateString(body.date);
@@ -424,19 +427,27 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Unable to resolve user identity", 400);
     }
 
-    try {
-      const remaps = await fetchUserCategoryRemaps({
-        supabase,
-        userId,
-        limit: 120,
-      });
-      effectiveCategory = applyCategoryRemap({
-        categoryName: resolvedCategory,
-        transactionType: "expense",
-        remaps,
-      });
-    } catch (error) {
-      console.error("[save-expense] Failed to apply category remaps:", error);
+    if (body.categoryAlreadyResolved !== true) {
+      try {
+        const [remaps, confirmedPreferences] = await Promise.all([
+          fetchUserCategoryRemaps({ supabase, userId, limit: 120 }),
+          fetchConfirmedCategoryPreferences({ supabase, userId }),
+        ]);
+        effectiveCategory =
+          matchConfirmedCategoryPreference({
+            description: body.description ?? null,
+            transactionType: "expense",
+            preferences: confirmedPreferences,
+          }) ??
+          applyCategoryRemap({
+            categoryName: resolvedCategory,
+            transactionType: "expense",
+            remaps,
+          });
+      } catch (error) {
+        console.error("[save-expense] Failed to apply category remaps:", error);
+        throw error;
+      }
     }
 
     console.log("[save-expense] Effective category after remaps:", {

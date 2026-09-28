@@ -105,10 +105,12 @@ Deno.test(
             requests.push(request);
             return Promise.resolve({
               response: {
-                functionCalls: () => [{
-                  name: "categorize_transactions",
-                  args: { categories: ["restaurants"] },
-                }],
+                functionCalls: () => [
+                  {
+                    name: "categorize_transactions",
+                    args: { categories: ["restaurants"] },
+                  },
+                ],
               },
             });
           },
@@ -286,7 +288,7 @@ Deno.test(
 
     const text = guidance.join("\n");
     assertStringIncludes(text, '"uber eats" -> takeout & delivery');
-    assertStringIncludes(text, "dining -> restaurants");
+    assertEquals(text.includes("dining -> restaurants"), false);
     assertEquals(text.includes("not allowed"), false);
   },
 );

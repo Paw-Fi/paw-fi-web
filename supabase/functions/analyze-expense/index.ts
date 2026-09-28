@@ -15,18 +15,14 @@ import {
   runEnrichedTransactionAnalysis,
 } from "../shared/analyzed-merchant-enrichment.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
-import {
-  type CategoryContext,
-  resolveCategory,
-} from "../shared/category-resolution.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import {
+  fetchConfirmedCategoryPreferences,
   fetchUserCategoryPreferences,
   fetchUserCategoryRemaps,
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
   mergeAllowedCategories,
-  normalizeStoredUserCategory,
   UserCategoryPreferenceRow,
   UserCategoryRemapRow,
 } from "../shared/user-categories.ts";
@@ -48,14 +44,6 @@ const categoryPreferencesCache = new Map<
   string,
   {
     preferences: UserCategoryPreferenceRow[];
-    expiresAt: number;
-  }
->();
-
-const categoryRemapsCache = new Map<
-  string,
-  {
-    remaps: UserCategoryRemapRow[];
     expiresAt: number;
   }
 >();
@@ -119,8 +107,8 @@ function mapProgressEvent(
 
 function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
   const hasImage = Boolean(body.image);
-  const hasAttachments = Array.isArray(body.attachments) &&
-    body.attachments.length > 0;
+  const hasAttachments =
+    Array.isArray(body.attachments) && body.attachments.length > 0;
   return hasImage && !hasAttachments;
 }
 
@@ -128,10 +116,11 @@ function formatBreakdownAmount(item: any): string {
   const amount = Number(item?.amount);
   if (!Number.isFinite(amount)) return "";
   const formatted = amount.toFixed(2);
-  const symbol = typeof item?.currencySymbol === "string" &&
-      item.currencySymbol.trim().length > 0
-    ? item.currencySymbol.trim()
-    : "";
+  const symbol =
+    typeof item?.currencySymbol === "string" &&
+    item.currencySymbol.trim().length > 0
+      ? item.currencySymbol.trim()
+      : "";
   const currency =
     typeof item?.currency === "string" && item.currency.trim().length > 0
       ? item.currency.trim()
@@ -144,9 +133,8 @@ function formatBreakdownAmount(item: any): string {
 function buildReceiptBreakdown(items: any[]): string[] {
   return items
     .map((item) => {
-      const desc = typeof item?.description === "string"
-        ? item.description.trim()
-        : "";
+      const desc =
+        typeof item?.description === "string" ? item.description.trim() : "";
       const amountText = formatBreakdownAmount(item);
       if (!amountText && !desc) return "";
       if (!amountText) return desc;
@@ -159,7 +147,7 @@ function buildReceiptBreakdown(items: any[]): string[] {
 function pickReceiptDescription(items: any[]): string {
   const candidates = items
     .map((item) =>
-      typeof item?.description === "string" ? item.description.trim() : ""
+      typeof item?.description === "string" ? item.description.trim() : "",
     )
     .filter((value) => value.length > 0);
   if (candidates.length === 0) return "Receipt";
@@ -240,9 +228,10 @@ function collapseReceiptItems(
   // into a single expense instead of returning one item per transaction row.
   if (!hasExplicitReceiptSignals(items)) return items;
 
-  const filteredItems = items.length > 1
-    ? items.filter((item) => !isTotalLike(item?.description))
-    : items;
+  const filteredItems =
+    items.length > 1
+      ? items.filter((item) => !isTotalLike(item?.description))
+      : items;
   const workingItems = filteredItems.length > 0 ? filteredItems : items;
 
   const totalAmount = workingItems.reduce((sum, item) => {
@@ -258,15 +247,15 @@ function collapseReceiptItems(
       .map((item) =>
         typeof item?.currency === "string"
           ? item.currency.trim().toUpperCase()
-          : ""
+          : "",
       )
       .filter((currency) => currency.length > 0),
   );
   if (resolvedCurrencies.size > 1) return items;
 
   const breakdown = buildReceiptBreakdown(workingItems);
-  const category = resolveReceiptCategory(workingItems) || primary.category ||
-    "other";
+  const category =
+    resolveReceiptCategory(workingItems) || primary.category || "other";
   const description = pickReceiptDescription(workingItems);
   const merchant =
     typeof primary?.merchant === "string" && primary.merchant.trim().length > 0
@@ -284,8 +273,8 @@ function collapseReceiptItems(
       type,
       amount: Number(totalAmount.toFixed(2)),
       category,
-      currency: resolvedCurrencies.values().next().value || body.currency ||
-        "USD",
+      currency:
+        resolvedCurrencies.values().next().value || body.currency || "USD",
       currencySymbol: primary.currencySymbol || "$",
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
       ...(primary.transactionTime
@@ -297,7 +286,7 @@ function collapseReceiptItems(
         ? { merchantUrl: primary.merchantUrl }
         : {}),
       ...(typeof primary?.merchantCountry === "string" &&
-          primary.merchantCountry
+      primary.merchantCountry
         ? { merchantCountry: primary.merchantCountry }
         : {}),
       breakdown,
@@ -362,11 +351,9 @@ function getElapsedMs(startedAt: number): number {
 
 function logStage(stage: string, startedAt: number) {
   console.log(
-    `[analyze-expense][timing] stage=${stage} elapsed_ms=${
-      getElapsedMs(
-        startedAt,
-      )
-    }`,
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(
+      startedAt,
+    )}`,
   );
 }
 
@@ -454,81 +441,14 @@ async function getCategoryPreferencesCached(params: {
   return [...preferences];
 }
 
-async function getCategoryRemapsCached(params: {
+async function getCategoryRemaps(params: {
   supabase: any;
   userId: string;
 }): Promise<UserCategoryRemapRow[]> {
-  const now = Date.now();
-  const cached = categoryRemapsCache.get(params.userId);
-  if (cached && cached.expiresAt > now) {
-    return [...cached.remaps];
-  }
-
-  const remaps = await fetchUserCategoryRemaps({
+  return fetchUserCategoryRemaps({
     supabase: params.supabase,
     userId: params.userId,
     limit: 80,
-  });
-
-  categoryRemapsCache.set(params.userId, {
-    remaps,
-    expiresAt: now + PREFERENCE_CACHE_TTL_MS,
-  });
-
-  return [...remaps];
-}
-
-function applyFinalUserCategoryMapping(params: {
-  items: any[];
-  allowedExpenseCategories: string[];
-  allowedIncomeCategories: string[];
-  preferences: UserCategoryPreferenceRow[];
-  remaps: UserCategoryRemapRow[];
-}): any[] {
-  if (!Array.isArray(params.items) || params.items.length === 0) {
-    return params.items;
-  }
-
-  const ctx: CategoryContext = {
-    allowedExpenseSet: new Set(
-      params.allowedExpenseCategories.map((c) =>
-        normalizeStoredUserCategory(c)
-      ),
-    ),
-    allowedIncomeSet: new Set(
-      params.allowedIncomeCategories.map((c) => normalizeStoredUserCategory(c)),
-    ),
-    preferences: params.preferences,
-    remaps: params.remaps,
-  };
-
-  const sourceItems = params.items.map((item) => ({ ...item }));
-  return sourceItems.map((item) => {
-    const transactionType = item?.type === "income" ? "income" : "expense";
-    const category = resolveCategory({
-      initialGuess:
-        typeof item?.category === "string" && item.category.trim().length > 0
-          ? item.category
-          : "other",
-      description: typeof item?.description === "string"
-        ? item.description
-        : null,
-      transactionType,
-      ctx,
-    });
-
-    return {
-      ...item,
-      category,
-      categoryReasonCodes: Array.from(
-        new Set([
-          ...(Array.isArray(item?.categoryReasonCodes)
-            ? item.categoryReasonCodes.map((code: unknown) => String(code))
-            : []),
-          "final_user_category_mapping",
-        ]),
-      ),
-    };
   });
 }
 
@@ -560,14 +480,7 @@ function createSSEStream(
             merchantContext,
             onProgress,
             transformItems: (items) => {
-              const finalItems = applyFinalUserCategoryMapping({
-                items,
-                allowedExpenseCategories: body.allowedExpenseCategories ?? [],
-                allowedIncomeCategories: body.allowedIncomeCategories ?? [],
-                preferences: body.categoryPreferences ?? [],
-                remaps: body.categoryRemaps ?? [],
-              });
-              return collapseReceiptItems(finalItems, body) ?? finalItems;
+              return collapseReceiptItems(items, body) ?? items;
             },
           }),
           180000,
@@ -614,10 +527,10 @@ function createSSEStream(
             stream: true,
             hasImage: !!body.image,
             hasAudio: !!body.audio,
-            hasAttachments: Array.isArray(body.attachments) &&
-              body.attachments.length > 0,
-            hasText: typeof body.text === "string" &&
-              body.text.trim().length > 0,
+            hasAttachments:
+              Array.isArray(body.attachments) && body.attachments.length > 0,
+            hasText:
+              typeof body.text === "string" && body.text.trim().length > 0,
           },
         });
         const message = error instanceof Error ? error.message : String(error);
@@ -684,8 +597,8 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } = await supabaseAuthed.auth
-      .getUser();
+    const { data: userData, error: userErr } =
+      await supabaseAuthed.auth.getUser();
     logStage("auth_get_user", requestStartedAt);
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
@@ -699,15 +612,15 @@ Deno.serve(async (req: Request) => {
     body.preferredTimezone = undefined;
     const preferredCurrencyReader = SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-          detectSessionInUrl: false,
-        },
-        global: {
-          headers: { "X-Client-Info": "moneko-analyze-expense" },
-        },
-      })
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+            detectSessionInUrl: false,
+          },
+          global: {
+            headers: { "X-Client-Info": "moneko-analyze-expense" },
+          },
+        })
       : supabaseAuthed;
     const logoDevSecretKey = Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "";
     body.currency = await loadLatestUserPreferredCurrency({
@@ -752,7 +665,7 @@ Deno.serve(async (req: Request) => {
           supabase: supabaseAuthed,
           userId: callerId,
         }),
-        getCategoryRemapsCached({
+        getCategoryRemaps({
           supabase: supabaseAuthed,
           userId: callerId,
         }),
@@ -782,7 +695,7 @@ Deno.serve(async (req: Request) => {
           supabase: supabaseAuthed,
           userId: callerId,
         }),
-        getCategoryRemapsCached({
+        getCategoryRemaps({
           supabase: supabaseAuthed,
           userId: callerId,
         }),
@@ -793,6 +706,14 @@ Deno.serve(async (req: Request) => {
       body.categoryRemaps = remaps;
       logStage("category_context_retry", requestStartedAt);
     }
+
+    // Never serve a stale cached correction after a user edits a category.
+    body.confirmedCategoryPreferences = await fetchConfirmedCategoryPreferences(
+      {
+        supabase: supabaseAuthed,
+        userId: callerId,
+      },
+    );
 
     // In household mode, provide the household member list to the model so it can
     // reliably resolve payer/splits by userId (without exposing IDs to end users).
@@ -813,15 +734,15 @@ Deno.serve(async (req: Request) => {
         const canAdminRead = !!SUPABASE_SERVICE_ROLE_KEY;
         const reader = canAdminRead
           ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!, {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false,
-              detectSessionInUrl: false,
-            },
-            global: {
-              headers: { "X-Client-Info": "moneko-analyze-expense" },
-            },
-          })
+              auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+                detectSessionInUrl: false,
+              },
+              global: {
+                headers: { "X-Client-Info": "moneko-analyze-expense" },
+              },
+            })
           : supabaseAuthed;
 
         const { data: members, error: membersError } = await reader
@@ -872,15 +793,8 @@ Deno.serve(async (req: Request) => {
             preferredTimezone: body.preferredTimezone,
           },
           transformItems: (items) => {
-            const mappedItems = applyFinalUserCategoryMapping({
-              items,
-              allowedExpenseCategories: body.allowedExpenseCategories ?? [],
-              allowedIncomeCategories: body.allowedIncomeCategories ?? [],
-              preferences: body.categoryPreferences ?? [],
-              remaps: body.categoryRemaps ?? [],
-            });
             logStage("final_category_mapping", requestStartedAt);
-            return collapseReceiptItems(mappedItems, body) ?? mappedItems;
+            return collapseReceiptItems(items, body) ?? items;
           },
         }),
         140000,
@@ -898,8 +812,8 @@ Deno.serve(async (req: Request) => {
           stream: false,
           hasImage: !!body.image,
           hasAudio: !!body.audio,
-          hasAttachments: Array.isArray(body.attachments) &&
-            body.attachments.length > 0,
+          hasAttachments:
+            Array.isArray(body.attachments) && body.attachments.length > 0,
           hasText: typeof body.text === "string" && body.text.trim().length > 0,
         },
       });

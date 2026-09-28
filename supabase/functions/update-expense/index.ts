@@ -117,6 +117,7 @@ interface UpdateExpenseRequest {
     fromCategory: string;
     toCategory: string;
   };
+  confirmCategoryPreference?: boolean;
 }
 
 interface ErrorResponse {
@@ -329,11 +330,11 @@ Deno.serve(async (req: Request) => {
     const expenseId = body.expenseId ?? body.expense_id;
     const updates = (body as any).updates ?? {};
     const clientRecordId = body.clientRecordId?.trim() || null;
-    const clientMutationId = body.clientMutationId?.trim() ||
-      body.idempotencyKey?.trim() || null;
+    const clientMutationId =
+      body.clientMutationId?.trim() || body.idempotencyKey?.trim() || null;
 
-    const categoryRemapRaw = (body as any).categoryRemap ??
-      (body as any).category_remap;
+    const categoryRemapRaw =
+      (body as any).categoryRemap ?? (body as any).category_remap;
     const hasCategoryRemap = categoryRemapRaw != null;
 
     const detection = detectGptRequest(req);
@@ -488,7 +489,8 @@ Deno.serve(async (req: Request) => {
       explicitReSplitRequested: parsedReSplitRequest.value,
       splitUpdate: rawSplitUpdate,
     });
-    const hasSplitPayload = !!rawCustomSplits?.memberSplits?.length ||
+    const hasSplitPayload =
+      !!rawCustomSplits?.memberSplits?.length ||
       !!rawSplitUpdate?.memberSplits?.length;
 
     if (
@@ -942,7 +944,7 @@ Deno.serve(async (req: Request) => {
         if (ianaTimezone != null) {
           return (
             getTodayYyyyMmDdInIanaTimezone(ianaTimezone) ??
-              getTodayYyyyMmDdInOffset(0)
+            getTodayYyyyMmDdInOffset(0)
           );
         }
         return getTodayYyyyMmDdInOffset(0);
@@ -1130,8 +1132,8 @@ Deno.serve(async (req: Request) => {
       !hasSplitPayload
     ) {
       const remap = categoryRemapRaw as any;
-      const fromRaw = remap?.fromCategory ?? remap?.from_category ??
-        remap?.from;
+      const fromRaw =
+        remap?.fromCategory ?? remap?.from_category ?? remap?.from;
       const toRaw = remap?.toCategory ?? remap?.to_category ?? remap?.to;
 
       if (typeof fromRaw !== "string" || typeof toRaw !== "string") {
@@ -1141,10 +1143,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const fromCategory = sanitizeCategoryName(fromRaw) ??
-        normalizeCategoryForStorage(fromRaw);
-      const toCategory = sanitizeCategoryName(toRaw) ??
-        normalizeCategoryForStorage(toRaw);
+      const fromCategory =
+        sanitizeCategoryName(fromRaw) ?? normalizeCategoryForStorage(fromRaw);
+      const toCategory =
+        sanitizeCategoryName(toRaw) ?? normalizeCategoryForStorage(toRaw);
 
       if (!fromCategory || !toCategory) {
         return errorResponse(
@@ -1238,7 +1240,7 @@ Deno.serve(async (req: Request) => {
       if (existingRemap?.id) {
         const nextCount =
           typeof (existingRemap as any).use_count === "number" &&
-            Number.isFinite((existingRemap as any).use_count)
+          Number.isFinite((existingRemap as any).use_count)
             ? Math.max(1, Math.trunc((existingRemap as any).use_count) + 1)
             : 1;
 
@@ -1305,8 +1307,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Capture old values for notification payload
-    const oldAmountCents: number | null = (expense as any)?.amount_cents ??
-      null;
+    const oldAmountCents: number | null =
+      (expense as any)?.amount_cents ?? null;
     const oldCurrency: string | null = (expense as any)?.currency ?? null;
     const oldNote: string | null = (expense as any)?.raw_text ?? null;
     const oldCategory: string | null = (expense as any)?.category ?? null;
@@ -1337,12 +1339,12 @@ Deno.serve(async (req: Request) => {
     if (bodyHouseholdIdRaw != null && typeof bodyHouseholdIdRaw !== "string") {
       return errorResponse("householdId must be a string", "VALIDATION_ERROR");
     }
-    const bodyHouseholdIdValue = typeof bodyHouseholdIdRaw === "string"
-      ? bodyHouseholdIdRaw.trim()
-      : "";
-    const bodyHouseholdId = bodyHouseholdIdValue.length === 0
-      ? null
-      : sanitizeUuid(bodyHouseholdIdValue);
+    const bodyHouseholdIdValue =
+      typeof bodyHouseholdIdRaw === "string" ? bodyHouseholdIdRaw.trim() : "";
+    const bodyHouseholdId =
+      bodyHouseholdIdValue.length === 0
+        ? null
+        : sanitizeUuid(bodyHouseholdIdValue);
     if (bodyHouseholdIdValue.length > 0 && !bodyHouseholdId) {
       return errorResponse("Invalid householdId format", "VALIDATION_ERROR");
     }
@@ -1358,13 +1360,13 @@ Deno.serve(async (req: Request) => {
       Object.prototype.hasOwnProperty.call(updates, "household_id") ||
       Object.prototype.hasOwnProperty.call(updates, "householdId");
     const updatesHouseholdIdRaw = Object.prototype.hasOwnProperty.call(
-        updates,
-        "household_id",
-      )
+      updates,
+      "household_id",
+    )
       ? (updates as any).household_id
       : Object.prototype.hasOwnProperty.call(updates, "householdId")
-      ? (updates as any).householdId
-      : undefined;
+        ? (updates as any).householdId
+        : undefined;
     let updatesHouseholdId: string | null | undefined = undefined;
     if (updatesHasHouseholdId) {
       if (
@@ -1420,9 +1422,10 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Forbidden target household", "UNAUTHORIZED", 403);
       }
     }
-    const targetCurrency = typeof (updates as any).currency === "string"
-      ? (updates as any).currency
-      : validateCurrency((expense as any)?.currency ?? "USD");
+    const targetCurrency =
+      typeof (updates as any).currency === "string"
+        ? (updates as any).currency
+        : validateCurrency((expense as any)?.currency ?? "USD");
     const sameHouseholdScope = targetHouseholdId === expenseHouseholdId;
     let targetIsPortfolioHousehold = isPortfolioHousehold;
     if (targetHouseholdId && !sameHouseholdScope) {
@@ -1459,12 +1462,13 @@ Deno.serve(async (req: Request) => {
     const requestedAccountIdRaw = hasAccountId
       ? (updates as any).account_id
       : hasCamelAccountId
-      ? (updates as any).accountId
-      : undefined;
-    const requestedAccountId = requestedAccountIdRaw == null ||
-        String(requestedAccountIdRaw).trim().length === 0
-      ? null
-      : sanitizeUuid(String(requestedAccountIdRaw));
+        ? (updates as any).accountId
+        : undefined;
+    const requestedAccountId =
+      requestedAccountIdRaw == null ||
+      String(requestedAccountIdRaw).trim().length === 0
+        ? null
+        : sanitizeUuid(String(requestedAccountIdRaw));
 
     if (
       requestedAccountIdRaw != null &&
@@ -1510,7 +1514,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const shouldCleanupPreviousSplitGroup = !sameHouseholdScope &&
+    const shouldCleanupPreviousSplitGroup =
+      !sameHouseholdScope &&
       !!expenseHouseholdId &&
       !isPortfolioHousehold &&
       !!existingSplitGroupId;
@@ -1549,7 +1554,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const shouldCreateSplitGroup = !!targetHouseholdId &&
+    const shouldCreateSplitGroup =
+      !!targetHouseholdId &&
       !targetIsPortfolioHousehold &&
       (!existingSplitGroupId || !sameHouseholdScope) &&
       (bodyHouseholdId === targetHouseholdId || updatesHasHouseholdId);
@@ -1577,9 +1583,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const effectiveAmountCents = typeof updates.amount_cents === "number"
-        ? updates.amount_cents
-        : (((expense as any)?.amount_cents as number | null) ?? 0);
+      const effectiveAmountCents =
+        typeof updates.amount_cents === "number"
+          ? updates.amount_cents
+          : (((expense as any)?.amount_cents as number | null) ?? 0);
       const autoSplitSettings = await fetchHouseholdAutoSplitSettings(
         supabase,
         targetHouseholdId,
@@ -1629,7 +1636,8 @@ Deno.serve(async (req: Request) => {
     // This is separate from initial split group creation and is only allowed
     // when the expense already has a split_group_id and no lines have been
     // settled yet (to preserve settlement history correctness).
-    const hasValidSplitUpdatePayload = !!splitUpdate &&
+    const hasValidSplitUpdatePayload =
+      !!splitUpdate &&
       !!splitUpdate.memberSplits &&
       splitUpdate.memberSplits.length > 0;
     if (
@@ -1645,7 +1653,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const wantsSplitUpdate = !!targetHouseholdId &&
+    const wantsSplitUpdate =
+      !!targetHouseholdId &&
       sameHouseholdScope &&
       !targetIsPortfolioHousehold &&
       !!existingSplitGroupId &&
@@ -1720,8 +1729,8 @@ Deno.serve(async (req: Request) => {
 
       const existingLines = ((existingGroup as any).expense_split_lines ||
         []) as {
-          is_settled?: boolean;
-        }[];
+        is_settled?: boolean;
+      }[];
       const hasSettledLines = existingLines.some(
         (line) => line && line.is_settled === true,
       );
@@ -1752,11 +1761,13 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const effectiveAmountCents = typeof updates.amount_cents === "number"
-        ? updates.amount_cents
-        : (((expense as any)?.amount_cents as number | null) ?? 0);
+      const effectiveAmountCents =
+        typeof updates.amount_cents === "number"
+          ? updates.amount_cents
+          : (((expense as any)?.amount_cents as number | null) ?? 0);
 
-      const splitType = splitUpdate.splitType ||
+      const splitType =
+        splitUpdate.splitType ||
         ((existingGroup as any).split_type as CustomSplitsPayload["splitType"]);
 
       // Validate user IDs match all household members (same rule as initial creation)
@@ -1816,12 +1827,14 @@ Deno.serve(async (req: Request) => {
       let updatedSplitLines: any[] = [];
 
       if (splitType === "equal") {
-        const amountPerMember = members.length > 0
-          ? Math.floor(effectiveAmountCents / members.length)
-          : 0;
-        const remainder = members.length > 0
-          ? effectiveAmountCents - amountPerMember * members.length
-          : 0;
+        const amountPerMember =
+          members.length > 0
+            ? Math.floor(effectiveAmountCents / members.length)
+            : 0;
+        const remainder =
+          members.length > 0
+            ? effectiveAmountCents - amountPerMember * members.length
+            : 0;
         updatedSplitLines = members.map((member: any, index: number) => ({
           split_group_id: existingSplitGroupId,
           user_id: member.user_id,
@@ -1832,7 +1845,7 @@ Deno.serve(async (req: Request) => {
         }));
       } else if (splitType === "amount") {
         const cents = splitUpdate.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100))
+          Math.max(0, Math.round((split.amount || 0) * 100)),
         );
         const sumCents = cents.reduce((sum, v) => sum + v, 0);
         const diff = effectiveAmountCents - sumCents;
@@ -1866,9 +1879,8 @@ Deno.serve(async (req: Request) => {
         }));
       } else if (splitType === "shares") {
         const weights = splitUpdate.memberSplits.map((split) => {
-          const shares = typeof split.shares === "number"
-            ? Math.trunc(split.shares)
-            : 0;
+          const shares =
+            typeof split.shares === "number" ? Math.trunc(split.shares) : 0;
           return shares > 0 ? shares : 0;
         });
         const allocatedCents = allocateCentsByWeights(
@@ -1877,9 +1889,8 @@ Deno.serve(async (req: Request) => {
         );
         if (weights.reduce((sum, v) => sum + v, 0) > 0) {
           updatedSplitLines = splitUpdate.memberSplits.map((split, index) => {
-            const shares = typeof split.shares === "number"
-              ? Math.trunc(split.shares)
-              : 0;
+            const shares =
+              typeof split.shares === "number" ? Math.trunc(split.shares) : 0;
             return {
               split_group_id: existingSplitGroupId,
               user_id: split.userId,
@@ -1918,22 +1929,23 @@ Deno.serve(async (req: Request) => {
           description: Object.prototype.hasOwnProperty.call(updates, "raw_text")
             ? ((updates.raw_text as string | null) ?? null)
             : (((existingGroup as any).description as string | null) ?? null),
-          created_at: ((existingGroup as any).created_at as string | null) ??
+          created_at:
+            ((existingGroup as any).created_at as string | null) ??
             commitCreatedAt,
         },
         lines: updatedSplitLines.map((line) => ({
           split_group_id: existingSplitGroupId,
           user_id: String(line.user_id),
           amount_cents: Number(line.amount_cents ?? 0),
-          percentage: typeof line.percentage === "number"
-            ? line.percentage
-            : null,
+          percentage:
+            typeof line.percentage === "number" ? line.percentage : null,
           shares: typeof line.shares === "number" ? line.shares : null,
           is_settled: false,
           settled_at: null,
-          created_at: typeof line.created_at === "string"
-            ? line.created_at
-            : commitCreatedAt,
+          created_at:
+            typeof line.created_at === "string"
+              ? line.created_at
+              : commitCreatedAt,
         })),
         previousSplitGroupId: existingSplitGroupId,
         reSplitRequested: true,
@@ -1941,8 +1953,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Update payer on existing split group if requested
-    const targetSplitGroupId = createdSplitGroupId ??
-      (sameHouseholdScope ? existingSplitGroupId : null);
+    const targetSplitGroupId =
+      createdSplitGroupId ?? (sameHouseholdScope ? existingSplitGroupId : null);
 
     let cachedExistingGroupForPreservation: Record<string, unknown> | null =
       null;
@@ -1994,9 +2006,10 @@ Deno.serve(async (req: Request) => {
 
       const currentLines = ((group as any).expense_split_lines ||
         []) as StoredSplitLineRecord[];
-      const targetTotal = typeof updates.amount_cents === "number"
-        ? updates.amount_cents
-        : Number((group as any).total_amount_cents ?? 0);
+      const targetTotal =
+        typeof updates.amount_cents === "number"
+          ? updates.amount_cents
+          : Number((group as any).total_amount_cents ?? 0);
       const splitType = String((group as any).split_type) as
         | "equal"
         | "amount"
@@ -2019,9 +2032,9 @@ Deno.serve(async (req: Request) => {
         targetAmountCents: targetTotal,
         targetCurrency: String(updates.currency || (group as any).currency),
         targetDescription: Object.prototype.hasOwnProperty.call(
-            updates,
-            "raw_text",
-          )
+          updates,
+          "raw_text",
+        )
           ? ((updates.raw_text as string | null) ?? null)
           : (((group as any).description as string | null) ?? null),
         now,
@@ -2044,11 +2057,13 @@ Deno.serve(async (req: Request) => {
         let storedPayerIsCurrentMember = true;
         if (normalizedPayerUserId != null) {
           const storedGroup = await loadExistingGroupForPreservation();
-          storedPayerUserId = typeof storedGroup.payer_user_id === "string"
-            ? storedGroup.payer_user_id
-            : null;
+          storedPayerUserId =
+            typeof storedGroup.payer_user_id === "string"
+              ? storedGroup.payer_user_id
+              : null;
           const currentMemberIds = await loadCurrentMemberIds();
-          storedPayerIsCurrentMember = storedPayerUserId != null &&
+          storedPayerIsCurrentMember =
+            storedPayerUserId != null &&
             currentMemberIds.includes(storedPayerUserId);
         }
         const mutationDecision = resolveExistingSplitMutationDecision({
@@ -2081,15 +2096,16 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const isUpdatingExistingSplit = !!targetSplitGroupId &&
+    const isUpdatingExistingSplit =
+      !!targetSplitGroupId &&
       targetSplitGroupId === existingSplitGroupId &&
       sameHouseholdScope;
     if (isUpdatingExistingSplit && pendingSplitCommit) {
       const storedPayerUserId = pendingSplitCommit.group.payer_user_id;
       const effectivePayerUserId = normalizedPayerUserId ?? storedPayerUserId;
       const payerChanged = effectivePayerUserId !== storedPayerUserId;
-      const requiresCurrentMembership = pendingSplitCommit.reSplitRequested ||
-        payerChanged;
+      const requiresCurrentMembership =
+        pendingSplitCommit.reSplitRequested || payerChanged;
       let currentMemberIds: string[] = [];
 
       if (requiresCurrentMembership) {
@@ -2150,8 +2166,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const expenseRecord = expense as Record<string, unknown>;
-    const splitRpcOwnsStructuralFields = pendingSplitCommit != null ||
-      shouldCleanupPreviousSplitGroup;
+    const splitRpcOwnsStructuralFields =
+      pendingSplitCommit != null || shouldCleanupPreviousSplitGroup;
     const hasTargetAccountUpdate = Object.prototype.hasOwnProperty.call(
       updates,
       "account_id",
@@ -2203,32 +2219,33 @@ Deno.serve(async (req: Request) => {
       String(expenseRecord["provider_transaction_id"]).trim().length > 0;
 
     if (isProviderManagedExpense) {
-      const storedProviderFields = expenseRecord["provider_fields"] &&
-          typeof expenseRecord["provider_fields"] === "object"
-        ? (expenseRecord["provider_fields"] as Record<string, unknown>)
-        : null;
+      const storedProviderFields =
+        expenseRecord["provider_fields"] &&
+        typeof expenseRecord["provider_fields"] === "object"
+          ? (expenseRecord["provider_fields"] as Record<string, unknown>)
+          : null;
       const providerFields = {
         ...buildProviderFieldsFromExpenseRow(expenseRecord),
         ...(storedProviderFields ?? {}),
       };
 
       const visibleExpense = {
-        amount_cents: updates.amount_cents ?? expenseRecord["amount_cents"] ??
-          null,
+        amount_cents:
+          updates.amount_cents ?? expenseRecord["amount_cents"] ?? null,
         currency: updates.currency ?? expenseRecord["currency"] ?? null,
         date: updates.date ?? expenseRecord["date"] ?? null,
         category: updates.category ?? expenseRecord["category"] ?? null,
         raw_text: updates.raw_text ?? expenseRecord["raw_text"] ?? null,
         merchant: updates.merchant ?? expenseRecord["merchant"] ?? null,
         source: updates.source ?? expenseRecord["source"] ?? null,
-        is_recurring: updates.is_recurring ?? expenseRecord["is_recurring"] ??
-          false,
-        recurrence_rule: updates.recurrence_rule ??
-          expenseRecord["recurrence_rule"] ?? null,
-        account_id: (updates as any).account_id ??
-          expenseRecord["account_id"] ?? null,
-        household_id: targetHouseholdId ?? expenseRecord["household_id"] ??
-          null,
+        is_recurring:
+          updates.is_recurring ?? expenseRecord["is_recurring"] ?? false,
+        recurrence_rule:
+          updates.recurrence_rule ?? expenseRecord["recurrence_rule"] ?? null,
+        account_id:
+          (updates as any).account_id ?? expenseRecord["account_id"] ?? null,
+        household_id:
+          targetHouseholdId ?? expenseRecord["household_id"] ?? null,
       };
 
       updatePayload["user_overrides"] = computeBankExpenseUserOverrides({
@@ -2255,7 +2272,7 @@ Deno.serve(async (req: Request) => {
       const splitCommit = pendingSplitCommit;
       const isRecurringTemplate =
         (updates.is_recurring ?? expenseRecord["is_recurring"] ?? false) ===
-          true;
+        true;
       const commitSplit = isRecurringTemplate
         ? commitRecurringTemplateSplitRecordsWithPatch
         : commitHouseholdSplitRecordsWithPatch;
@@ -2281,9 +2298,10 @@ Deno.serve(async (req: Request) => {
         );
       }
     } else if (shouldCleanupPreviousSplitGroup && existingSplitGroupId) {
-      const targetAmountCents = typeof updates.amount_cents === "number"
-        ? updates.amount_cents
-        : Number((expense as any)?.amount_cents ?? 0);
+      const targetAmountCents =
+        typeof updates.amount_cents === "number"
+          ? updates.amount_cents
+          : Number((expense as any)?.amount_cents ?? 0);
       const { error: removePreviousSplitError } =
         await removeHouseholdSplitWithPatch({
           supabase,
@@ -2397,6 +2415,12 @@ Deno.serve(async (req: Request) => {
           transactionType: txType,
           categoryName: updatedCategory,
           descriptionText: updatedNote,
+          isUserConfirmed:
+            body.confirmCategoryPreference === true &&
+            updates.category !== undefined &&
+            String(expense.category ?? "")
+              .trim()
+              .toLowerCase() !== String(updatedCategory).trim().toLowerCase(),
         });
       }
     } catch (e) {
@@ -2425,28 +2449,30 @@ Deno.serve(async (req: Request) => {
       } catch (_) {}
 
       // Compute new values
-      const newAmountCents: number | null = (updates as any).amount_cents ??
+      const newAmountCents: number | null =
+        (updates as any).amount_cents ??
         (updatedExpense as any)?.amount_cents ??
         null;
-      const newCurrency: string | null = (updates as any).currency ??
+      const newCurrency: string | null =
+        (updates as any).currency ??
         (updatedExpense as any)?.currency ??
         oldCurrency;
-      const newNote: string | null = (updates as any).raw_text ??
-        (updatedExpense as any)?.raw_text ?? null;
-      const newCategory: string | null = (updates as any).category ??
-        (updatedExpense as any)?.category ?? null;
-      const newDate: string | null = (updates as any).date ??
-        (updatedExpense as any)?.date ?? null;
-      const newCreatedAt: string | null = (updates as any).created_at ??
+      const newNote: string | null =
+        (updates as any).raw_text ?? (updatedExpense as any)?.raw_text ?? null;
+      const newCategory: string | null =
+        (updates as any).category ?? (updatedExpense as any)?.category ?? null;
+      const newDate: string | null =
+        (updates as any).date ?? (updatedExpense as any)?.date ?? null;
+      const newCreatedAt: string | null =
+        (updates as any).created_at ??
         (updatedExpense as any)?.created_at ??
         null;
 
       const transactionType =
         ((expense as any)?.type as string | null | undefined)?.toLowerCase() ??
-          "expense";
-      const eventType = transactionType == "income"
-        ? "income_edited"
-        : "expense_edited";
+        "expense";
+      const eventType =
+        transactionType == "income" ? "income_edited" : "expense_edited";
 
       const { error: notifyError } = await supabase.rpc(
         "notify_household_members_expense",
@@ -2473,7 +2499,7 @@ Deno.serve(async (req: Request) => {
             updated_fields: Object.keys(updates),
             is_recurring:
               ((updates as any).is_recurring as boolean | undefined) ??
-                (updatedExpense as any)?.is_recurring === true,
+              (updatedExpense as any)?.is_recurring === true,
           },
         },
       );
@@ -2517,8 +2543,8 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (merchantError) throw merchantError;
       (updatedExpense as any).merchant_domain = merchant?.domain ?? null;
-      (updatedExpense as any).merchant_logo_url = merchant?.logo_identifier ??
-        null;
+      (updatedExpense as any).merchant_logo_url =
+        merchant?.logo_identifier ?? null;
     } else {
       (updatedExpense as any).merchant_domain = null;
       (updatedExpense as any).merchant_logo_url = null;
