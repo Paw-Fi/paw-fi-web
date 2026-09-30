@@ -94,7 +94,7 @@ Deno.test(
       unconfirmFunction,
       "unconfirm_recurring_occurrence_v1",
     );
-    assertStringIncludes(listFunction, "list_recurring_occurrences_v1");
+    assertStringIncludes(listFunction, "list_recurring_occurrences_v2");
   },
 );
 

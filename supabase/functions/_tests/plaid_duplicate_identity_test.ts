@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import {
   assertEquals,
   assertStringIncludes,
@@ -48,7 +49,11 @@ Deno.test("equal authoritative persistent IDs are duplicates", () => {
 Deno.test("mixed persistent-ID availability is ambiguous, not distinct", () => {
   assertEquals(
     classifyPlaidDuplicateIdentity({
-      selected: { ...existing, persistentAccountId: null },
+      selected: {
+        ...existing,
+        providerAccountId: "new-account-id",
+        persistentAccountId: null,
+      },
       existing,
       phase: "authoritative",
     }),
@@ -75,6 +80,24 @@ Deno.test("matching provider IDs are duplicates when persistent identity is inco
   );
 });
 
+Deno.test("matching provider IDs remain authoritative when fallback metadata differs", () => {
+  for (
+    const metadata of [
+      { institutionId: "ins_2" },
+      { currency: "EUR" },
+    ]
+  ) {
+    assertEquals(
+      classifyPlaidDuplicateIdentity({
+        selected: { ...existing, ...metadata, persistentAccountId: null },
+        existing: { ...existing, persistentAccountId: null },
+        phase: "authoritative",
+      }),
+      "duplicate",
+    );
+  }
+});
+
 Deno.test("Link metadata creates a candidate rather than a false definitive match", () => {
   assertEquals(
     classifyPlaidDuplicateIdentity({
@@ -98,6 +121,7 @@ Deno.test("different institutions do not match fallback signatures", () => {
     classifyPlaidDuplicateIdentity({
       selected: {
         ...existing,
+        providerAccountId: "new-account-id",
         persistentAccountId: null,
         institutionId: "ins_2",
       },
@@ -113,6 +137,7 @@ Deno.test("different currencies do not match authoritative fallback signatures",
     classifyPlaidDuplicateIdentity({
       selected: {
         ...existing,
+        providerAccountId: "new-account-id",
         persistentAccountId: null,
         currency: "EUR",
       },

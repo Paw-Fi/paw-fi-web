@@ -59,10 +59,9 @@ const payload = {
   provider_fields: {
     ...providerFields,
     optional_provider_value: undefined,
-    template_fields: {
-      recurrence_rule: templateFields.recurrence_rule,
-      ...templateFields,
-    },
+    template_fields: Object.fromEntries(
+      Object.entries(templateFields).reverse(),
+    ),
   },
   ...templateFields,
   updated_at: "2026-08-02T20:00:00.000Z",
@@ -86,3 +85,37 @@ Deno.test("changed Plaid recurring templates still persist", () => {
   });
   assertEquals(changed?.amount_cents, 1499);
 });
+
+Deno.test(
+  "early bank payments do not shift the established recurring anchor",
+  () => {
+    const nextRule = {
+      ...templateFields.recurrence_rule,
+      anchor_date: "2026-10-02",
+      provider_hint: { last_date: "2026-09-02" },
+    };
+    const changed = mergePlaidRecurringTemplatePayload(existing, {
+      ...payload,
+      date: "2026-10-02",
+      recurrence_rule: nextRule,
+      provider_fields: {
+        ...providerFields,
+        transaction_ids: ["transaction-1", "transaction-2"],
+        template_fields: {
+          ...templateFields,
+          date: "2026-10-02",
+          recurrence_rule: nextRule,
+        },
+      },
+    });
+    assertEquals(changed?.date, templateFields.date);
+    assertEquals(
+      (changed?.recurrence_rule as Record<string, unknown>).anchor_date,
+      "2026-09-01",
+    );
+    assertEquals(
+      (changed?.provider_fields as Record<string, unknown>).transaction_ids,
+      ["transaction-1", "transaction-2"],
+    );
+  },
+);

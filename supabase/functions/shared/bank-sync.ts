@@ -910,6 +910,43 @@ export function mergePlaidRecurringTemplatePayload(
     : null;
   const userOverrides = existing.user_overrides || {};
   const merged = { ...providerPayload };
+  const previousRule = existing.recurrence_rule as
+    | Record<
+      string,
+      unknown
+    >
+    | null;
+  const nextRule = providerPayload.recurrence_rule as
+    | Record<
+      string,
+      unknown
+    >
+    | null;
+  if (
+    previousRule?.frequency === nextRule?.frequency &&
+    (previousRule?.interval ?? 1) === (nextRule?.interval ?? 1) &&
+    typeof previousRule?.anchor_date === "string" &&
+    typeof existing.date === "string"
+  ) {
+    // Bank payment/prediction dates are evidence, not a new nominal schedule.
+    merged.date = existing.date;
+    merged.recurrence_rule = {
+      ...nextRule,
+      anchor_date: previousRule.anchor_date,
+    };
+    const fields = (providerPayload.provider_fields ?? {}) as Record<
+      string,
+      unknown
+    >;
+    merged.provider_fields = {
+      ...fields,
+      template_fields: {
+        ...((fields.template_fields as Record<string, unknown>) ?? {}),
+        date: existing.date,
+        recurrence_rule: merged.recurrence_rule,
+      },
+    };
+  }
 
   for (const field of PLAID_RECURRING_TEMPLATE_VISIBLE_FIELDS) {
     const hasExplicitOverride = Object.prototype.hasOwnProperty.call(

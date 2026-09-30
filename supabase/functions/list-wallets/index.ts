@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { readWalletLedgerPages } from "../shared/wallet-ledger-pages.ts";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
@@ -103,8 +104,7 @@ Deno.serve(async (req: Request) => {
       );
     }
     const selectedCurrency = normalizeCurrency(body.currency);
-    const selectedCurrencies =
-      normalizeCurrencies(body.currencies) ??
+    const selectedCurrencies = normalizeCurrencies(body.currencies) ??
       (selectedCurrency ? [selectedCurrency] : null);
     if (body.currency && !selectedCurrency) {
       return jsonResponse(
@@ -120,10 +120,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(
         {
           success: false,
-          error:
-            body.currencies.length > 20
-              ? "Too many currencies"
-              : "Invalid currencies",
+          error: body.currencies.length > 20
+            ? "Too many currencies"
+            : "Invalid currencies",
           code: "VALIDATION_ERROR",
         },
         400,
@@ -241,21 +240,27 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true, data: [] });
     }
 
-    const { data: expenseRows } = await supabase
-      .from("expenses")
-      .select(
-        "account_id, amount_cents, type, is_recurring, currency, analytics_is_final",
-      )
-      .in("account_id", accountIds)
-      .eq("is_recurring", false)
-      .lte("date", new Date().toISOString().slice(0, 10))
-      .is("deleted_at", null);
+    const expenseRows = await readWalletLedgerPages((afterId) => {
+      let query = supabase
+        .from("expenses")
+        .select(
+          "id, account_id, amount_cents, type, is_recurring, currency, analytics_is_final",
+        )
+        .in("account_id", accountIds)
+        .eq("is_recurring", false)
+        .lte("date", new Date().toISOString().slice(0, 10))
+        .is("deleted_at", null)
+        .order("id", { ascending: true }).limit(500);
+      if (afterId) query = query.gt("id", afterId);
+      return query;
+    });
 
     const expenseOut: Record<string, number> = {};
     const incomeIn: Record<string, number> = {};
     for (const row of (expenseRows ?? []) as any[]) {
-      if (row.is_recurring === true || row.analytics_is_final === false)
+      if (row.is_recurring === true || row.analytics_is_final === false) {
         continue;
+      }
       const accountId = row.account_id as string;
       const walletCurrency = accountCurrencyById.get(accountId);
       const rowCurrency = String(row.currency ?? "")
@@ -271,14 +276,24 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { data: transferOutRows } = await supabase
-      .from("account_transfers")
-      .select("from_account_id, amount_cents, currency")
-      .in("from_account_id", accountIds);
-    const { data: transferInRows } = await supabase
-      .from("account_transfers")
-      .select("to_account_id, amount_cents, currency")
-      .in("to_account_id", accountIds);
+    const transferOutRows = await readWalletLedgerPages((afterId) => {
+      let query = supabase
+        .from("account_transfers")
+        .select("id, from_account_id, amount_cents, currency")
+        .in("from_account_id", accountIds)
+        .order("id", { ascending: true }).limit(500);
+      if (afterId) query = query.gt("id", afterId);
+      return query;
+    });
+    const transferInRows = await readWalletLedgerPages((afterId) => {
+      let query = supabase
+        .from("account_transfers")
+        .select("id, to_account_id, amount_cents, currency")
+        .in("to_account_id", accountIds)
+        .order("id", { ascending: true }).limit(500);
+      if (afterId) query = query.gt("id", afterId);
+      return query;
+    });
 
     const transferOut: Record<string, number> = {};
     for (const row of (transferOutRows ?? []) as any[]) {
@@ -288,8 +303,8 @@ Deno.serve(async (req: Request) => {
         .trim()
         .toUpperCase();
       if (walletCurrency && rowCurrency !== walletCurrency) continue;
-      transferOut[key] =
-        (transferOut[key] ?? 0) + Number(row.amount_cents || 0);
+      transferOut[key] = (transferOut[key] ?? 0) +
+        Number(row.amount_cents || 0);
     }
 
     const transferIn: Record<string, number> = {};
@@ -327,8 +342,7 @@ Deno.serve(async (req: Request) => {
     const payload = (accounts ?? []).map((row: any) => {
       const accountId = row.id as string;
       const opening = Number(row.opening_balance_cents || 0);
-      const fallbackBalanceCents =
-        opening +
+      const fallbackBalanceCents = opening +
         (incomeIn[accountId] ?? 0) -
         (expenseOut[accountId] ?? 0) +
         (transferIn[accountId] ?? 0) -

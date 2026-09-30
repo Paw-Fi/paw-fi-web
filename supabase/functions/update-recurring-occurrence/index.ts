@@ -1,4 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import {
+  isRecurringOccurrenceRequestBody,
+  recurringOccurrenceDatabaseFailure,
+} from "../shared/recurring-occurrence-errors.ts";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
@@ -52,18 +56,35 @@ Deno.serve(async (req) => {
     );
   }
   try {
-    const body: RequestBody = await req.json();
+    let parsed: unknown;
+    try {
+      parsed = await req.json();
+    } catch {
+      return json({
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: "Invalid JSON request",
+      }, 400);
+    }
+    if (!isRecurringOccurrenceRequestBody(parsed)) {
+      return json({
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: "Invalid request",
+      }, 400);
+    }
+    const body = parsed as RequestBody;
     const recurringId = validUuid(body.recurringId);
     const scheduledDate = normalizeCalendarDateString(
       body.scheduledOccurrenceDate ?? "",
     );
     const accountId = body.accountId == null ? null : validUuid(body.accountId);
-    const paidDate =
-      body.paidDate === undefined
-        ? null
-        : normalizeCalendarDateString(body.paidDate);
-    const amountCents =
-      body.amount === undefined ? null : Math.round(body.amount * 100);
+    const paidDate = body.paidDate === undefined
+      ? null
+      : normalizeCalendarDateString(body.paidDate);
+    const amountCents = body.amount === undefined
+      ? null
+      : Math.round(body.amount * 100);
     if (
       !recurringId ||
       !scheduledDate ||
@@ -113,23 +134,12 @@ Deno.serve(async (req) => {
       },
     );
     if (error) {
-      const code =
-        String(error.message).match(/OCCURRENCE_[A-Z_]+/)?.[0] ??
-        "OCCURRENCE_FAILED";
-      return json(
-        { success: false, code, error: error.message },
-        code === "OCCURRENCE_UNAUTHORIZED" ? 403 : 400,
-      );
+      const failure = recurringOccurrenceDatabaseFailure(error);
+      return json(failure.body, failure.status);
     }
     return json({ success: true, data });
-  } catch (error) {
-    return json(
-      {
-        success: false,
-        code: "VALIDATION_ERROR",
-        error: error instanceof Error ? error.message : "Invalid request",
-      },
-      400,
-    );
+  } catch {
+    const failure = recurringOccurrenceDatabaseFailure({});
+    return json(failure.body, failure.status);
   }
 });

@@ -1,5 +1,23 @@
 {
   "version": "5",
+  "specifiers": {
+    "npm:@electric-sql/pglite@0.3.14": "0.3.14",
+    "npm:@types/node@*": "22.15.15"
+  },
+  "npm": {
+    "@electric-sql/pglite@0.3.14": {
+      "integrity": "sha512-3DB258dhqdsArOI1fIt7cb9RpUOgcDg5hXWVgVHAeqVQ/qxtFy605QKs4gx6mFq3jWsSPqDN8TgSEsqC3OfV9Q=="
+    },
+    "@types/node@22.15.15": {
+      "integrity": "sha512-R5muMcZob3/Jjchn5LcO8jdKwSCbzqmPB6ruBxMcf9kbxtniZHP327s6C37iOfuw8mbKK3cAQa7sEl7afLrQ8A==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
+    "undici-types@6.21.0": {
+      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="
+    }
+  },
   "redirects": {
     "https://esm.sh/@pdf-lib/standard-fonts@^1.0.0?target=deno": "https://esm.sh/@pdf-lib/standard-fonts@1.0.0?target=deno",
     "https://esm.sh/@pdf-lib/upng@^1.0.1?target=deno": "https://esm.sh/@pdf-lib/upng@1.0.1?target=deno",

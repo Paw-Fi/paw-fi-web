@@ -1,4 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import {
+  isRecurringOccurrenceRequestBody,
+  recurringOccurrenceDatabaseFailure,
+} from "../shared/recurring-occurrence-errors.ts";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
@@ -12,16 +16,18 @@ const json = (body: unknown, status = 200) =>
   });
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST")
+  }
+  if (req.method !== "POST") {
     return json(
       { success: false, code: "METHOD_NOT_ALLOWED", error: "Use POST." },
       405,
     );
+  }
   const url = Deno.env.get("SUPABASE_URL");
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key)
+  if (!url || !key) {
     return json(
       {
         success: false,
@@ -30,8 +36,26 @@ Deno.serve(async (req) => {
       },
       500,
     );
+  }
   try {
-    const body = await req.json();
+    let parsed: unknown;
+    try {
+      parsed = await req.json();
+    } catch {
+      return json({
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: "Invalid JSON request",
+      }, 400);
+    }
+    if (!isRecurringOccurrenceRequestBody(parsed)) {
+      return json({
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: "Invalid request",
+      }, 400);
+    }
+    const body = parsed;
     const recurringId =
       typeof body.recurringId === "string" && uuid.test(body.recurringId)
         ? body.recurringId
@@ -39,7 +63,7 @@ Deno.serve(async (req) => {
     const scheduledDate = normalizeCalendarDateString(
       body.scheduledOccurrenceDate ?? "",
     );
-    if (!recurringId || !scheduledDate)
+    if (!recurringId || !scheduledDate) {
       return json(
         {
           success: false,
@@ -48,6 +72,7 @@ Deno.serve(async (req) => {
         },
         400,
       );
+    }
     const supabase = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -57,7 +82,7 @@ Deno.serve(async (req) => {
       !auth.success ||
       typeof actorUserId !== "string" ||
       !uuid.test(actorUserId)
-    )
+    ) {
       return json(
         {
           success: false,
@@ -66,31 +91,19 @@ Deno.serve(async (req) => {
         },
         auth.statusCode ?? 401,
       );
+    }
     const { data, error } = await supabase.rpc("skip_recurring_occurrence_v1", {
       p_actor_user_id: actorUserId,
       p_recurring_id: recurringId,
       p_scheduled_occurrence_date: scheduledDate,
     });
-    if (error)
-      return json(
-        {
-          success: false,
-          code:
-            String(error.message).match(/OCCURRENCE_[A-Z_]+/)?.[0] ??
-            "OCCURRENCE_FAILED",
-          error: error.message,
-        },
-        400,
-      );
+    if (error) {
+      const failure = recurringOccurrenceDatabaseFailure(error);
+      return json(failure.body, failure.status);
+    }
     return json({ success: true, data });
-  } catch (error) {
-    return json(
-      {
-        success: false,
-        code: "VALIDATION_ERROR",
-        error: error instanceof Error ? error.message : "Invalid request",
-      },
-      400,
-    );
+  } catch {
+    const failure = recurringOccurrenceDatabaseFailure({});
+    return json(failure.body, failure.status);
   }
 });

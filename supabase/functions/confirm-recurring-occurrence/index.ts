@@ -3,6 +3,10 @@ import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { completeRecurringOccurrenceSplitMembers } from "../shared/recurring-occurrence-splits.ts";
+import {
+  isRecurringOccurrenceRequestBody,
+  recurringOccurrenceDatabaseFailure,
+} from "../shared/recurring-occurrence-errors.ts";
 
 interface RequestBody {
   userId?: string;
@@ -58,7 +62,24 @@ Deno.serve(async (req) => {
     );
   }
   try {
-    const body: RequestBody = await req.json();
+    let body: RequestBody;
+    try {
+      const parsed = await req.json();
+      if (!isRecurringOccurrenceRequestBody(parsed)) {
+        return response({
+          success: false,
+          code: "VALIDATION_ERROR",
+          error: "Invalid request",
+        }, 400);
+      }
+      body = parsed;
+    } catch {
+      return response({
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: "Invalid JSON request",
+      }, 400);
+    }
     const recurringId = validUuid(body.recurringId);
     const accountId = body.accountId == null ? null : validUuid(body.accountId);
     const clientRecordId = body.clientRecordId == null
@@ -122,14 +143,8 @@ Deno.serve(async (req) => {
         .eq("id", recurringId)
         .maybeSingle();
       if (recurringError) {
-        return response(
-          {
-            success: false,
-            code: "OCCURRENCE_FAILED",
-            error: recurringError.message,
-          },
-          400,
-        );
+        const failure = recurringOccurrenceDatabaseFailure(recurringError);
+        return response(failure.body, failure.status);
       }
       const householdId = recurring?.household_id;
       if (typeof householdId === "string" && householdId.length > 0) {
@@ -139,20 +154,22 @@ Deno.serve(async (req) => {
           .eq("household_id", householdId)
           .order("joined_at", { ascending: true });
         if (membersError) {
-          return response(
-            {
-              success: false,
-              code: "OCCURRENCE_FAILED",
-              error: membersError.message,
-            },
-            400,
-          );
+          const failure = recurringOccurrenceDatabaseFailure(membersError);
+          return response(failure.body, failure.status);
         }
-        customSplits = completeRecurringOccurrenceSplitMembers(
-          customSplits,
-          (members ?? []).map((member) => String(member.user_id)),
-          amountCents,
-        );
+        try {
+          customSplits = completeRecurringOccurrenceSplitMembers(
+            customSplits,
+            (members ?? []).map((member) => String(member.user_id)),
+            amountCents,
+          );
+        } catch (error) {
+          return response({
+            success: false,
+            code: "VALIDATION_ERROR",
+            error: error instanceof Error ? error.message : "Invalid split",
+          }, 400);
+        }
       }
     }
     const { data, error } = await supabase.rpc(
@@ -175,23 +192,18 @@ Deno.serve(async (req) => {
       },
     );
     if (error) {
-      const code = String(error.message ?? "OCCURRENCE_FAILED").match(
-        /OCCURRENCE_[A-Z_]+/,
-      )?.[0] ?? "OCCURRENCE_FAILED";
-      return response(
-        { success: false, code, error: error.message },
-        code === "OCCURRENCE_UNAUTHORIZED" ? 403 : 400,
-      );
+      const failure = recurringOccurrenceDatabaseFailure(error);
+      return response(failure.body, failure.status);
     }
     return response({ success: true, data });
-  } catch (error) {
+  } catch {
     return response(
       {
         success: false,
-        code: "VALIDATION_ERROR",
-        error: error instanceof Error ? error.message : "Invalid request",
+        code: "SERVER_ERROR",
+        error: "Temporary recurring occurrence failure",
       },
-      400,
+      503,
     );
   }
 });

@@ -214,6 +214,13 @@ export async function refreshPlaidRecurringTemplates(params: {
     ),
     source: "pattern",
   });
+  // Newly discovered streams link existing actuals; never create another expense.
+  await params.onStage?.("reconcile_occurrences");
+  const { error: occurrenceError } = await params.supabase.rpc(
+    "reconcile_bank_recurring_occurrences_v1",
+    { p_user_id: params.userId, p_bank_account_ids: bankAccountIds },
+  );
+  if (occurrenceError) throw occurrenceError;
   let source: RecurringRefreshResult["source"] = "pattern";
   if (providerCandidates.length > 0) {
     source = fallbackCandidates.length > 0 ? "hybrid" : "plaid";
