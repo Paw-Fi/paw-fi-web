@@ -28,6 +28,7 @@ interface WalletRow {
   linked_bank_account_id: string | null;
   exclude_from_analytics: boolean;
   current_balance_cents?: number;
+  has_provider_balance?: boolean;
 }
 
 interface WalletTransaction {
@@ -796,6 +797,7 @@ Deno.serve(async (req: Request) => {
           (expenseOut.get(wallet.id) ?? 0) +
           (transferIn.get(wallet.id) ?? 0) -
           (transferOut.get(wallet.id) ?? 0);
+        wallet.has_provider_balance = false;
       }
 
       const linkedBankAccountIds = wallets
@@ -827,6 +829,7 @@ Deno.serve(async (req: Request) => {
             : null;
           if (providerBalance != null) {
             wallet.current_balance_cents = providerBalance;
+            wallet.has_provider_balance = true;
           }
         }
       }

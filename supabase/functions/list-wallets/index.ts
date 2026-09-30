@@ -341,6 +341,9 @@ Deno.serve(async (req: Request) => {
       return {
         ...row,
         current_balance_cents: currentBalanceCents,
+        has_provider_balance: row.linked_bank_account_id
+          ? providerBalanceByBankAccountId.has(row.linked_bank_account_id)
+          : false,
         transfer_summary: {
           total_in_cents: transferIn[accountId] ?? 0,
           total_out_cents: transferOut[accountId] ?? 0,
