@@ -3,6 +3,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { getAccountOrNull, sanitizeUuid } from "../shared/accounts.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
+import { normalizeWalletTransferTime } from "../shared/wallet-transfer-time.ts";
 
 interface RequestBody {
   fromAccountId: string;
@@ -10,6 +11,7 @@ interface RequestBody {
   amountCents: number;
   currency: string;
   date: string;
+  time?: string | null;
   note?: string;
   clientRecordId?: string;
   userId?: string;
@@ -82,6 +84,13 @@ Deno.serve(async (req: Request) => {
     if (!normalizedDate) {
       return jsonResponse(
         { success: false, error: "Invalid date", code: "VALIDATION_ERROR" },
+        400,
+      );
+    }
+    const time = normalizeWalletTransferTime(body.time);
+    if (time === undefined) {
+      return jsonResponse(
+        { success: false, error: "Invalid time", code: "VALIDATION_ERROR" },
         400,
       );
     }
@@ -172,9 +181,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const sameScope = (fromAccount.household_id == null &&
-      toAccount.household_id == null &&
-      fromAccount.user_id === toAccount.user_id) ||
+    const sameScope =
+      (fromAccount.household_id == null &&
+        toAccount.household_id == null &&
+        fromAccount.user_id === toAccount.user_id) ||
       (fromAccount.household_id != null &&
         fromAccount.household_id === toAccount.household_id);
 
@@ -235,6 +245,7 @@ Deno.serve(async (req: Request) => {
       amount_cents: amountCents,
       currency,
       date: normalizedDate,
+      time,
       note: body.note?.trim() || null,
       created_by_user_id: userId,
       household_id: fromAccount.household_id ?? null,
@@ -246,6 +257,7 @@ Deno.serve(async (req: Request) => {
       String(transfer.currency ?? "").toUpperCase() ===
         transferPayload.currency &&
       String(transfer.date ?? "") === transferPayload.date &&
+      (transfer.time ?? null) === transferPayload.time &&
       (transfer.note ?? null) === transferPayload.note &&
       (transfer.household_id ?? null) === transferPayload.household_id;
 

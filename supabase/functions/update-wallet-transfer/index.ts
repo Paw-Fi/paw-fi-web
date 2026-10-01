@@ -3,6 +3,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { getAccountOrNull, sanitizeUuid } from "../shared/accounts.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
+import { normalizeWalletTransferTime } from "../shared/wallet-transfer-time.ts";
 
 interface RequestBody {
   transferId: string;
@@ -11,6 +12,7 @@ interface RequestBody {
   amountCents: number;
   currency: string;
   date: string;
+  time?: string | null;
   note?: string | null;
   userId?: string;
 }
@@ -88,6 +90,13 @@ Deno.serve(async (req: Request) => {
     if (!normalizedDate) {
       return jsonResponse(
         { success: false, error: "Invalid date", code: "VALIDATION_ERROR" },
+        400,
+      );
+    }
+    const time = normalizeWalletTransferTime(body.time);
+    if (time === undefined) {
+      return jsonResponse(
+        { success: false, error: "Invalid time", code: "VALIDATION_ERROR" },
         400,
       );
     }
@@ -247,6 +256,8 @@ Deno.serve(async (req: Request) => {
         amount_cents: amountCents,
         currency,
         date: normalizedDate,
+        // Older clients omit time; only an explicit value/null may replace it.
+        ...(body.time !== undefined ? { time } : {}),
         note: body.note?.trim() || null,
       })
       .eq("id", transferId)
