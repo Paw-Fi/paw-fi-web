@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { HomeHeader } from "@/components/index/header";
 import { Timeline } from "@/components/ui/timeline";
 import { Coins, Landmark, Layers, Loader2 } from "lucide-react";
+import { useSearch } from "@tanstack/react-router";
 
 interface InProgressItem {
   title: string;
@@ -39,6 +40,25 @@ interface ChangelogEntry {
 }
 
 const changelogs: ChangelogEntry[] = [
+  {
+    title: "A Faster, Smoother Moneko",
+    date: "2026-10-01",
+    version: "4.1.0",
+    tags: ["Feature", "Wallet", "Recurring", "Performance", "Fix"],
+    description:
+      "Moneko 4.1.0 brings a faster, smoother experience across the app, with more dependable wallet updates, easier-to-review exports, and improvements to recurring payments.",
+    items: [
+      "Moneko feels faster: transaction history loads more smoothly, long lists are easier to browse, and your information refreshes more reliably when you return to the app",
+      "Wallet balances now update more reliably after transfers, and recent changes are less likely to disappear while your data refreshes",
+      "Choose a time for wallet transfers, and see transfer times more clearly in your activity",
+      "Exported spreadsheets now include more helpful transaction details, making it easier to review and understand your spending",
+      "Recurring payment confirmations are remembered more reliably, even if you retry or refresh the app",
+      "Set recurring payments to end further in the future when you need a longer schedule",
+      "Transaction history and recurring payment lists feel smoother to browse, with clearer grouping and more responsive updates",
+      "Added Armenian Dram (AMD) support for tracking money in Armenia's currency",
+      "iPhone Shortcuts now show a refreshed list of places to save transactions, and device notifications are more reliable",
+    ],
+  },
   {
     title: "Merchant Logos & iOS 27 Notification Capture",
     date: "2026-09-23",
@@ -733,6 +753,7 @@ const changelogs: ChangelogEntry[] = [
 
 export function ChangelogRouteComponent() {
   const prefersReducedMotion = useReducedMotion();
+  const { version: requestedVersion } = useSearch({ from: "/changelog" });
 
   const sortedChangelogs = React.useMemo(
     () =>
@@ -759,47 +780,74 @@ export function ChangelogRouteComponent() {
         </div>
       ),
       content: (
-        <Card className="border-border/70 bg-card/80 group-hover:border-primary/20 relative overflow-hidden p-6 shadow-[0_10px_30px_-20px_hsl(var(--foreground)/0.35)] backdrop-blur-xl transition-all duration-300 sm:p-8">
-          <div className="via-foreground/20 pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent" />
-          <div className="flex flex-col gap-6">
-            <header className="space-y-4">
-              <h2 className="text-foreground max-w-[26ch] text-2xl font-semibold tracking-tight sm:text-3xl">
-                {changelog.title}
-              </h2>
-              {changelog.tags && changelog.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {changelog.tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="border-border/70 bg-secondary/50 text-secondary-foreground rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.04em]"
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </header>
+        <div
+          id={
+            changelog.version
+              ? `changelog-version-${changelog.version}`
+              : undefined
+          }
+          className="scroll-mt-24"
+        >
+          <Card
+            className={`border-border/70 bg-card/80 group-hover:border-primary/20 relative overflow-hidden p-6 shadow-[0_10px_30px_-20px_hsl(var(--foreground)/0.35)] backdrop-blur-xl transition-all duration-300 sm:p-8 ${
+              changelog.version === requestedVersion
+                ? "ring-primary/50 ring-2"
+                : ""
+            }`}
+          >
+            <div className="via-foreground/20 pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent" />
+            <div className="flex flex-col gap-6">
+              <header className="space-y-4">
+                <h2 className="text-foreground max-w-[26ch] text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {changelog.title}
+                </h2>
+                {changelog.tags && changelog.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {changelog.tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="border-border/70 bg-secondary/50 text-secondary-foreground rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.04em]"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </header>
 
-            <p className="text-muted-foreground max-w-[75ch] text-[15px] leading-7 sm:text-base">
-              {changelog.description}
-            </p>
+              <p className="text-muted-foreground max-w-[75ch] text-[15px] leading-7 sm:text-base">
+                {changelog.description}
+              </p>
 
-            <Separator className="bg-border/70" />
+              <Separator className="bg-border/70" />
 
-            <ul className="text-foreground/90 list-none space-y-3.5 pl-0 text-sm sm:text-[15px]">
-              {changelog.items.map((item, i) => (
-                <li key={i} className="group/item flex items-start gap-3.5">
-                  <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
-                  <span className="text-foreground/85 leading-6">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Card>
+              <ul className="text-foreground/90 list-none space-y-3.5 pl-0 text-sm sm:text-[15px]">
+                {changelog.items.map((item, i) => (
+                  <li key={i} className="group/item flex items-start gap-3.5">
+                    <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
+                    <span className="text-foreground/85 leading-6">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Card>
+        </div>
       ),
     }));
-  }, [sortedChangelogs]);
+  }, [requestedVersion, sortedChangelogs]);
+
+  React.useEffect(() => {
+    if (!requestedVersion) return;
+
+    const target = document.getElementById(
+      `changelog-version-${requestedVersion}`,
+    );
+    target?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [prefersReducedMotion, requestedVersion]);
 
   return (
     <>

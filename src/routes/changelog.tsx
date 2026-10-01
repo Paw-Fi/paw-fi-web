@@ -4,6 +4,9 @@ import { seo } from "@/utils/seo";
 // @ts-ignore
 
 export const Route = createFileRoute("/changelog")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    version: typeof search.version === "string" ? search.version : undefined,
+  }),
   component: lazyRouteComponent(
     () => import("@/components/performance/changelog-route-component"),
     "ChangelogRouteComponent",
