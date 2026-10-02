@@ -1,0 +1,117 @@
+{
+  "date": "2026-10-02",
+  "stripeWritesPerformed": 0,
+  "catalogVersion": 4,
+  "automaticFxRefresh": {
+    "endpoint": "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json",
+    "transport": "curl",
+    "generation": "Fetch latest rates on every run; persist validated snapshot with generated prices",
+    "dryRun": "Fetch latest rates and preview without saving",
+    "check": "Validate saved snapshot/output without a network request",
+    "liveFetchDate": "2026-10-02",
+    "requiredRates": 43,
+    "refreshRegressionTestsPassed": 4
+  },
+  "liveDryRun": {
+    "validatedAmounts": 129,
+    "changedAmounts": 119,
+    "unchangedAmounts": 10,
+    "fixedOverridesIncludingEurReferences": 9,
+    "regionalOverrides": 0,
+    "validationFailures": 0,
+    "replacementMultiCurrencyPriceObjects": 3,
+    "monthly": { "validated": 43, "changed": 39, "unchanged": 4 },
+    "yearly": { "validated": 43, "changed": 40, "unchanged": 3 },
+    "lifetime": { "validated": 43, "changed": 40, "unchanged": 3 },
+    "existingScaleErrors": 9,
+    "existingNonFixedOutsideToleranceWithoutScaleErrors": 75,
+    "newNonFixedOutsideTolerance": 0
+  },
+  "tests": {
+    "completeWebNodeSuite": {
+      "passed": 73,
+      "failed": 0,
+      "command": "node --experimental-strip-types --test tests/*.test.mjs"
+    },
+    "targetedEdgePricingAndHistoricalLifetime": {
+      "passed": 13,
+      "failed": 0,
+      "command": "deno test --allow-env supabase/functions/_tests/regional_pricing_test.ts supabase/functions/_tests/regional_checkout_test.ts supabase/functions/_tests/stripe_invoice_lifetime_resolution_test.ts"
+    },
+    "targetedMobilePricing": {
+      "passed": 16,
+      "failed": 0,
+      "command": "flutter test test/features/subscription/data/regional_pricing_test.dart --reporter expanded"
+    },
+    "completeFlutterSuite": {
+      "passed": 2409,
+      "failed": 6,
+      "command": "flutter test --reporter expanded",
+      "fullOutput": "/Users/charles/.local/share/opencode/tool-output/tool_0fe658790001fKCuugHfs7qvbx",
+      "previousFullOutput": "/Users/charles/.local/share/opencode/tool-output/tool_0fe4dd33b001N2gCZOwIiKN5F3",
+      "unrelatedFailures": [
+        {
+          "file": "test/features/insights/presentation/pages/browse_page_test.dart",
+          "test": "BrowsePage renders original categorized cards without description",
+          "output": "Expected: exactly one matching candidate; Actual: Found 0 widgets with text Financial health",
+          "evidence": "Test and Browse implementation are untouched. Identical failure is present in earlier complete-suite output tool_0f6702d49001KsdERqqLUePsh0 at lines 530-550."
+        },
+        {
+          "file": "test/features/home/presentation/widgets/ai_correction_sheet_test.dart",
+          "test": "custom answer accepts multilingual financial corrections",
+          "output": "Expected: '合計は70です'; Actual: <null>",
+          "evidence": "This pre-existing untracked user-work test and its AI correction sheet are not modified by this task. The test imports only Flutter and interactive AI analysis/correction widgets, not regional pricing."
+        },
+        {
+          "file": "test/features/pockets/presentation/state/monthly_intro_insights_test.dart",
+          "test": "evaluateMonthlyIntroInsights Scenario 1: Rollover carry-over has top priority",
+          "output": "Expected: You're starting September with €230 extra; Actual: You're starting €230 with September extra",
+          "evidence": "Test and Pocket/localization implementation are untouched. Identical failure is present in earlier complete-suite output tool_0f6702d49001KsdERqqLUePsh0 at lines 1515-1520."
+        },
+        {
+          "file": "test/features/pockets/presentation/state/monthly_intro_insights_test.dart",
+          "test": "evaluateMonthlyIntroInsights Scenario 2: Pocket overspent adjustment when rollover is zero",
+          "output": "Expected: contains Dining ran €74 above plan last month; Actual: September ran Dining above plan last month. We can adjust €74 around how you actually spend.",
+          "evidence": "Test and Pocket/localization implementation are untouched. Identical failure is present in earlier complete-suite output tool_0f6702d49001KsdERqqLUePsh0 at lines 1534-1536."
+        },
+        {
+          "file": "test/features/wallets/presentation/providers/wallets_input_coalescing_test.dart",
+          "test": "loading wallets_input_coalescing_test.dart",
+          "output": "test/features/wallets/presentation/providers/wallets_input_coalescing_test.dart:50:7: Error: Undefined name 'appPreferredTimezoneProvider'. Compilation failed.",
+          "evidence": "The test and its imports are untouched. It references a timezone provider without the declaring provider import. Pricing changes cannot define or remove that symbol. The same error is reported by the project-wide Flutter analyzer."
+        },
+        {
+          "file": "test/features/recurring/presentation/widgets/add_recurring_sheet_test.dart",
+          "test": "Displays floating recurring icon badge on top of category/merchant icon",
+          "output": "Expected: exactly one matching candidate; Actual: Found 0 widgets with icon IconData(U+F00F7)",
+          "evidence": "Test and recurring editor are untouched. Identical failure is present in earlier complete-suite output tool_0f6702d49001KsdERqqLUePsh0 at lines 3628-3647."
+        }
+      ]
+    }
+  },
+  "coverage": {
+    "scope": "regional-pricing-model.mjs, regional-pricing-audit.mjs, sync-regional-pricing-to-stripe.mjs",
+    "linesPercent": 89.71,
+    "branchesPercent": 80,
+    "functionsPercent": 97.18
+  },
+  "analysis": {
+    "focusedPricingTypeScriptErrors": 0,
+    "projectTypeScriptErrors": 182,
+    "projectTypeScriptBaselineErrors": 182,
+    "newProjectTypeScriptErrors": 0,
+    "baselineMethod": "TypeScript Compiler API with a virtual compiler-host overlay replacing src/lib/regional-pricing.ts and src/data/regional-pricing.generated.ts with git HEAD versions; all 182 diagnostics exactly identical.",
+    "touchedFlutterFilesIssues": 0,
+    "projectFlutterIssues": 34,
+    "projectFlutterIssuesScope": "All findings are outside the three touched subscription pricing files; includes the undefined wallet-test provider above.",
+    "lint": "Deno lint checked all 16 touched JS/TS files successfully; only Deno-specific no-window excluded because src/lib/regional-pricing.ts runs in a browser. Repository ESLint executable/dependencies are not installed.",
+    "generatedOutputCheck": "Passed exact formatter-normalized byte comparison",
+    "gitDiffWhitespaceCheck": "Passed in web and mobile"
+  },
+  "production": {
+    "pricingValidationReady": true,
+    "wholeRepositoryGreen": false,
+    "publishBeforeConsumerDeployment": true,
+    "procedure": "Review the complete live JSON/CSV diff, then explicitly run node scripts/sync-regional-pricing-to-stripe.mjs --apply --allow-live. Publish all three v4 Prices before deploying generated v4 web/Edge/mobile consumers. Old lookup keys and existing subscriptions remain intact."
+  }
+}

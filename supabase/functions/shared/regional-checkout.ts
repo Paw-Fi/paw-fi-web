@@ -27,18 +27,20 @@ export function resolveRegionalCheckoutMarket({
   country?: unknown;
   currency?: unknown;
 }): RegionalCheckoutSelection {
-  const normalizedCountry = typeof country === "string"
-    ? country.trim().toUpperCase()
-    : DEFAULT_CHECKOUT_COUNTRY;
+  const normalizedCountry =
+    typeof country === "string"
+      ? country.trim().toUpperCase()
+      : DEFAULT_CHECKOUT_COUNTRY;
 
   if (!isSupportedRegionalPricingCountry(normalizedCountry)) {
     throw new Error("Unsupported checkout country");
   }
 
   const market = getRegionalPricingMarket(normalizedCountry);
-  const normalizedCurrency = typeof currency === "string"
-    ? currency.trim().toUpperCase()
-    : market.currencyCode;
+  const normalizedCurrency =
+    typeof currency === "string"
+      ? currency.trim().toUpperCase()
+      : market.currencyCode;
 
   if (!isSupportedRegionalCurrency(normalizedCurrency)) {
     throw new Error("Unsupported checkout currency");
@@ -99,6 +101,6 @@ export function getRegionalCheckoutAmount(
   billingInterval: string | undefined,
   market: RegionalPricingMarket,
 ): number {
-  if (plan === "lifetime") return market.lifetime;
+  if (plan === "lifetime") return market.lifetimePromo;
   return billingInterval === "yearly" ? market.yearly : market.monthly;
 }

@@ -1,17 +1,81 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { format, resolveConfig } from "prettier";
+import {
+  regenerateCatalog,
+  generatePricingRows,
+  assertValidPricingRows,
+} from "./regional-pricing-model.mjs";
+import { fetchLatestPricingPolicy } from "./regional-pricing-fx.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(scriptDirectory, "..");
 const workspaceRoot = path.dirname(webRoot);
 const catalogPath = path.join(webRoot, "config/regional-pricing.json");
 const checkOnly = process.argv.includes("--check");
+const dryRun = process.argv.includes("--dry-run");
+if (checkOnly && dryRun)
+  throw new Error("--check cannot be combined with --dry-run");
+for (const argument of process.argv.slice(2)) {
+  if (!["--check", "--dry-run"].includes(argument))
+    throw new Error(`Unknown argument '${argument}'`);
+}
 
-const catalogSource = await readFile(catalogPath, "utf8");
-const catalog = JSON.parse(catalogSource);
+const policyPath = path.join(webRoot, "config/regional-pricing-policy.json");
+const savedPolicySource = await readFile(policyPath, "utf8");
+const savedPolicy = JSON.parse(savedPolicySource);
+const policy = checkOnly
+  ? savedPolicy
+  : await fetchLatestPricingPolicy(savedPolicy);
+const policySource = checkOnly
+  ? savedPolicySource
+  : await format(JSON.stringify(policy), {
+      ...(await resolveConfig(policyPath)),
+      filepath: policyPath,
+    });
+if (!checkOnly)
+  console.log(
+    `Fetched latest EUR FX rates with curl: ${policy.fx.date}, ${Object.keys(policy.fx.rates).length} currencies (${policy.fx.source})`,
+  );
+const previousCatalogSource = await readFile(catalogPath, "utf8");
+const previousCatalog = JSON.parse(previousCatalogSource);
+const catalog = regenerateCatalog(previousCatalog, policy);
+const catalogSource = await format(JSON.stringify(catalog), {
+  ...(await resolveConfig(catalogPath)),
+  filepath: catalogPath,
+});
 const sourceHash = createHash("sha256").update(catalogSource).digest("hex");
+const policyHash = createHash("sha256").update(policySource).digest("hex");
+const pricingRows = generatePricingRows(policy);
+assertValidPricingRows(pricingRows, policy);
+if (dryRun) {
+  console.table(
+    pricingRows.map((row) => ({
+      plan: row.plan,
+      currency: row.currency,
+      eurReference: row.reference,
+      rawFx: row.rawFx,
+      majorPrice: row.majorAmount,
+      stripeAmount: row.stripeAmount,
+      eurEquivalent: row.eurEquivalent,
+      differencePercent: row.differencePercent,
+      status: row.override ? `${row.override} override` : "OK",
+    })),
+  );
+  console.log(
+    "Validated 129 plan/currency prices; no files or Stripe prices changed.",
+  );
+  process.exit(0);
+}
+if (checkOnly && JSON.stringify(previousCatalog) !== JSON.stringify(catalog)) {
+  throw new Error(
+    "Regional pricing catalog is stale; run node scripts/generate-regional-pricing.mjs",
+  );
+}
 
 function fail(message) {
   throw new Error(`Invalid regional pricing catalog: ${message}`);
@@ -90,6 +154,7 @@ const serializedMarkets = Object.fromEntries(
       monthly: market.monthly,
       yearly: market.yearly,
       lifetime: market.lifetime,
+      lifetimePromo: market.lifetimePromo,
       compareAtMonthly: market.compareAtMonthly,
       compareAtYearly: market.compareAtYearly,
     },
@@ -105,7 +170,7 @@ function dartString(value) {
 const dartMarkets = Object.entries(serializedMarkets)
   .map(
     ([marketId, market]) =>
-      `  ${dartString(marketId)}: RegionalPricingMarket(\n    id: ${dartString(market.id)},\n    currencyCode: ${dartString(market.currencyCode)},\n    locale: ${dartString(market.locale)},\n    minorUnits: ${market.minorUnits},\n    monthly: ${market.monthly},\n    yearly: ${market.yearly},\n    lifetime: ${market.lifetime},\n    compareAtMonthly: ${market.compareAtMonthly},\n    compareAtYearly: ${market.compareAtYearly},\n  ),`,
+      `  ${dartString(marketId)}: RegionalPricingMarket(\n    id: ${dartString(market.id)},\n    currencyCode: ${dartString(market.currencyCode)},\n    locale: ${dartString(market.locale)},\n    minorUnits: ${market.minorUnits},\n    monthly: ${market.monthly},\n    yearly: ${market.yearly},\n    lifetime: ${market.lifetime},\n    lifetimePromo: ${market.lifetimePromo},\n    compareAtMonthly: ${market.compareAtMonthly},\n    compareAtYearly: ${market.compareAtYearly},\n  ),`,
   )
   .join("\n");
 const dartCountries = Object.entries(countryToMarket)
@@ -121,7 +186,16 @@ const dartOutput = `// GENERATED FILE. Edit ../moneko-web/config/regional-pricin
 const outputs = [
   {
     outputPath: path.join(webRoot, "src/data/regional-pricing.generated.ts"),
-    content: tsOutput,
+    content:
+      tsOutput
+        .replace(
+          "Edit config/regional-pricing.json and run npm run pricing:generate.",
+          "Edit config/regional-pricing-policy.json for amounts; run node scripts/generate-regional-pricing.mjs.",
+        )
+        .replace(
+          "  readonly lifetime: number;",
+          "  readonly lifetime: number;\n  readonly lifetimePromo: number;",
+        ) + `\n// Pricing policy SHA-256: ${policyHash}\n`,
     exactCheck: false,
   },
   {
@@ -129,7 +203,16 @@ const outputs = [
       webRoot,
       "supabase/functions/shared/regional-pricing.generated.ts",
     ),
-    content: tsOutput,
+    content:
+      tsOutput
+        .replace(
+          "Edit config/regional-pricing.json and run npm run pricing:generate.",
+          "Edit config/regional-pricing-policy.json for amounts; run node scripts/generate-regional-pricing.mjs.",
+        )
+        .replace(
+          "  readonly lifetime: number;",
+          "  readonly lifetime: number;\n  readonly lifetimePromo: number;",
+        ) + `\n// Pricing policy SHA-256: ${policyHash}\n`,
     exactCheck: false,
   },
   {
@@ -137,18 +220,53 @@ const outputs = [
       workspaceRoot,
       "moneko-mobile/lib/features/subscription/data/regional_pricing.generated.dart",
     ),
-    content: dartOutput,
+    content:
+      dartOutput
+        .replace(
+          "    required this.lifetime,",
+          "    required this.lifetime,\n    required this.lifetimePromo,",
+        )
+        .replace(
+          "  final int lifetime;",
+          "  final int lifetime;\n  final int lifetimePromo;",
+        ) + `\n// Pricing policy SHA-256: ${policyHash}\n`,
     exactCheck: false,
   },
 ];
 
+const formattedOutputs = await Promise.all(
+  outputs.map(async (output) => {
+    if (output.outputPath.endsWith(".dart")) {
+      const result = spawnSync(
+        "dart",
+        ["format", "--output=show", "--summary=none"],
+        { input: output.content, encoding: "utf8" },
+      );
+      if (result.error || result.status !== 0)
+        throw new Error(
+          `Dart formatter failed: ${result.error?.message ?? result.stderr}`,
+        );
+      return { ...output, content: result.stdout };
+    }
+    return {
+      ...output,
+      content: await format(output.content, {
+        ...(await resolveConfig(output.outputPath)),
+        filepath: output.outputPath,
+      }),
+    };
+  }),
+);
+// Complete all validation before writing any output.
+if (!checkOnly) {
+  await writeFile(policyPath, policySource);
+  await writeFile(catalogPath, catalogSource);
+}
 let stale = false;
-for (const { outputPath, content, exactCheck } of outputs) {
+for (const { outputPath, content } of formattedOutputs) {
   if (checkOnly) {
     const existing = await readFile(outputPath, "utf8").catch(() => "");
-    const isCurrent = exactCheck
-      ? existing === content
-      : existing.includes(`// Source SHA-256: ${sourceHash}`);
+    const isCurrent = existing === content;
     if (!isCurrent) {
       stale = true;
       console.error(`Stale generated pricing file: ${outputPath}`);

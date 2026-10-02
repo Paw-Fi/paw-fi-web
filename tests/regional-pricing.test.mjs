@@ -20,11 +20,11 @@ test("regional catalog resolves local and fallback markets", () => {
   assert.equal(getRegionalPricingMarket("unknown").currencyCode, "USD");
 });
 
-test("GBP matches App Store exports and EUR/USD use canonical Stripe amounts", () => {
+test("GBP is EUR-referenced and EUR/USD retain canonical Stripe amounts", () => {
   const gbp = getRegionalPricingMarket("GB");
   assert.deepEqual(
     { monthly: gbp.monthly, yearly: gbp.yearly, lifetime: gbp.lifetime },
-    { monthly: 399, yearly: 2499, lifetime: 8999 },
+    { monthly: 399, yearly: 2599, lifetime: 8570 },
   );
   assert.equal(getRegionalPricingMarket("ME").monthly, 499);
   assert.equal(getRegionalPricingMarket("AF").monthly, 1099);

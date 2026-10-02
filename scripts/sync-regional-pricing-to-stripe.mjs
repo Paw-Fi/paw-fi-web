@@ -2,12 +2,26 @@
 
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import dotenv from "dotenv";
 import Stripe from "stripe";
+import {
+  assertCatalogMatchesPolicy,
+  generatePricingRows,
+  assertValidPricingRows,
+  stripeCurrencyExponent,
+  readStripeUnitAmount,
+} from "./regional-pricing-model.mjs";
+import {
+  buildPricingAudit,
+  printPricingAudit,
+  summarizePricingAudit,
+  pricingAuditCsv,
+} from "./regional-pricing-audit.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
@@ -95,6 +109,11 @@ export function buildCatalogMarkets(catalog) {
       if (!/^[a-z]{3}$/.test(currency)) {
         fail(`${id}.currencyCode must be a three-letter currency code`);
       }
+      if (
+        market.minorUnits !== stripeCurrencyExponent(currency.toUpperCase())
+      ) {
+        fail(`${id}.minorUnits does not match Stripe's charge exponent`);
+      }
       return {
         id,
         currency,
@@ -166,7 +185,7 @@ export function buildMultiCurrencyPlanPricing(catalogPricing, target) {
 export function resolvePriceTargets(environment) {
   return PRICE_TARGETS.map((target) => {
     const productEnvironmentName = target.productEnvironmentNames.find((name) =>
-      environment[name]?.trim()
+      environment[name]?.trim(),
     );
     const configuredProductId = productEnvironmentName
       ? environment[productEnvironmentName].trim()
@@ -177,16 +196,18 @@ export function resolvePriceTargets(environment) {
       );
     }
 
-    const templatePriceEnvironmentName = target.templatePriceEnvironmentNames
-      .find((name) => environment[name]?.trim());
+    const templatePriceEnvironmentName =
+      target.templatePriceEnvironmentNames.find((name) =>
+        environment[name]?.trim(),
+      );
     const templatePriceId = templatePriceEnvironmentName
       ? environment[templatePriceEnvironmentName].trim()
       : "";
     if (!configuredProductId && !templatePriceId) {
       fail(
-        `${target.label}: set one of ${
-          target.productEnvironmentNames.join(", ")
-        }` +
+        `${target.label}: set one of ${target.productEnvironmentNames.join(
+          ", ",
+        )}` +
           ` (preferred), or ${target.templatePriceEnvironmentNames.join(", ")}`,
       );
     }
@@ -207,12 +228,8 @@ function productId(price) {
   return typeof price.product === "string" ? price.product : price.product?.id;
 }
 
-function stripeUnitAmount(value) {
-  if (Number.isInteger(value?.unit_amount)) return value.unit_amount;
-  if (/^\d+$/.test(value?.unit_amount_decimal ?? "")) {
-    return Number(value.unit_amount_decimal);
-  }
-  return null;
+export function stripeUnitAmount(value) {
+  return readStripeUnitAmount(value);
 }
 
 export function validateTemplatePrice(target, price, expectedLivemode) {
@@ -225,6 +242,20 @@ export function validateTemplatePrice(target, price, expectedLivemode) {
   }
   if (price.type !== target.expectedType) {
     issues.push(`expected ${target.expectedType}, received ${price.type}`);
+  }
+  if (
+    price.transform_quantity ||
+    price.custom_unit_amount ||
+    price.tiers_mode
+  ) {
+    issues.push("unexpected transformed, custom or tiered pricing");
+  }
+  if (
+    target.expectedInterval &&
+    ((price.recurring?.interval_count ?? 1) !== 1 ||
+      (price.recurring?.usage_type ?? "licensed") !== "licensed")
+  ) {
+    issues.push("expected a single licensed billing interval");
   }
   if (
     target.expectedInterval !== null &&
@@ -264,23 +295,24 @@ export function validateRegionalStripePrice({
   }
   if (String(price.currency).toLowerCase() !== pricing.defaultCurrency) {
     issues.push(
-      `expected default currency ${pricing.defaultCurrency.toUpperCase()}, received ${
-        String(price.currency).toUpperCase()
-      }`,
+      `expected default currency ${pricing.defaultCurrency.toUpperCase()}, received ${String(
+        price.currency,
+      ).toUpperCase()}`,
     );
   }
 
   const actualCurrencies = new Set([
     String(price.currency).toLowerCase(),
     ...Object.keys(price.currency_options ?? {}).map((value) =>
-      value.toLowerCase()
+      value.toLowerCase(),
     ),
   ]);
   const expectedCurrencies = Object.keys(pricing.currencyAmounts);
   for (const currency of expectedCurrencies) {
-    const actualAmount = currency === pricing.defaultCurrency
-      ? stripeUnitAmount(price)
-      : stripeUnitAmount(price.currency_options?.[currency]);
+    const actualAmount =
+      currency === pricing.defaultCurrency
+        ? stripeUnitAmount(price)
+        : stripeUnitAmount(price.currency_options?.[currency]);
     const expectedAmount = pricing.currencyAmounts[currency];
     if (actualAmount !== expectedAmount) {
       issues.push(
@@ -303,11 +335,18 @@ function parseArguments(argv) {
     envPath: defaultEnvPath,
     envPathWasExplicit: false,
     help: false,
+    reportPath: null,
+    dryRun: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--apply") options.apply = true;
-    else if (argument === "--allow-live") options.allowLive = true;
+    else if (argument === "--dry-run") options.dryRun = true;
+    else if (argument === "--report") {
+      if (!argv[index + 1] || argv[index + 1].startsWith("--"))
+        fail("--report requires a JSON path");
+      options.reportPath = path.resolve(argv[++index]);
+    } else if (argument === "--allow-live") options.allowLive = true;
     else if (argument === "--help" || argument === "-h") options.help = true;
     else if (argument === "--env-file") {
       const value = argv[index + 1];
@@ -319,6 +358,8 @@ function parseArguments(argv) {
       fail(`Unknown argument '${argument}'`);
     }
   }
+  if (options.apply && options.dryRun)
+    fail("--dry-run cannot be combined with --apply");
   return options;
 }
 
@@ -326,8 +367,8 @@ function printHelp() {
   console.log(`Create or verify exactly three Stripe multi-currency Prices.
 
 Usage:
-  npm run pricing:stripe:plan [-- --env-file <path>]
-  npm run pricing:stripe:sync [-- --env-file <path>] [--allow-live]
+  node scripts/sync-regional-pricing-to-stripe.mjs --dry-run [--report <path>] [--env-file <path>]
+  node scripts/sync-regional-pricing-to-stripe.mjs --apply [--env-file <path>] [--allow-live]
 
 Safety:
   - Plan mode performs Stripe reads only.
@@ -388,30 +429,86 @@ async function findPriceByLookupKey(stripe, lookupKey) {
   });
 }
 
-export async function main(argv = process.argv.slice(2)) {
+export async function reconcileProductDefault(
+  stripe,
+  price,
+  previous,
+  configuration,
+) {
+  const product = await stripe.products.retrieve(configuration.productId);
+  const currentId =
+    typeof product.default_price === "string"
+      ? product.default_price
+      : product.default_price?.id;
+  if (currentId === price.id) return;
+  if (
+    currentId &&
+    currentId !== previous?.id &&
+    currentId !== configuration.defaultPriceId
+  ) {
+    fail(
+      `${configuration.productId} default Price changed or is unrelated; refusing to overwrite it`,
+    );
+  }
+  await stripe.products.update(configuration.productId, {
+    default_price: price.id,
+  });
+}
+
+export async function publishRegionalPrice(
+  stripe,
+  item,
+  parameters,
+  configuration,
+) {
+  const digest = createHash("sha256")
+    .update(JSON.stringify(parameters))
+    .digest("hex");
+  const price = await stripe.prices.create(parameters, {
+    idempotencyKey: `moneko-pricing-${digest}`,
+  });
+  await reconcileProductDefault(stripe, price, item.previous, configuration);
+  return price;
+}
+
+export async function main(argv = process.argv.slice(2), dependencies = {}) {
   const options = parseArguments(argv);
   if (options.help) {
     printHelp();
     return;
   }
 
-  if (existsSync(options.envPath)) {
+  if (!dependencies.environment && existsSync(options.envPath)) {
     dotenv.config({ path: options.envPath, quiet: true });
-  } else if (options.envPathWasExplicit) {
+  } else if (!dependencies.environment && options.envPathWasExplicit) {
     fail(`Environment file not found: ${options.envPath}`);
   }
 
-  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
+  const environment = dependencies.environment ?? process.env;
+  const secretKey = environment.STRIPE_SECRET_KEY?.trim();
   if (!secretKey) fail("STRIPE_SECRET_KEY is required");
   const stripeMode = resolveStripeMode(secretKey);
   if (options.apply && stripeMode === "live" && !options.allowLive) {
     fail("Live Stripe writes require the additional --allow-live flag");
   }
 
-  const catalogSource = await readFile(catalogPath, "utf8");
-  const catalogPricing = buildCatalogMarkets(JSON.parse(catalogSource));
+  const catalogSource =
+    dependencies.catalogSource ?? (await readFile(catalogPath, "utf8"));
+  const catalog = JSON.parse(catalogSource);
+  const policy =
+    dependencies.policy ??
+    JSON.parse(
+      await readFile(
+        path.join(projectRoot, "config/regional-pricing-policy.json"),
+        "utf8",
+      ),
+    );
+  const pricingRows = generatePricingRows(policy);
+  assertValidPricingRows(pricingRows, policy);
+  assertCatalogMatchesPolicy(catalog, policy);
+  const catalogPricing = buildCatalogMarkets(catalog);
   const catalogHash = createHash("sha256").update(catalogSource).digest("hex");
-  const targets = resolvePriceTargets(process.env);
+  const targets = resolvePriceTargets(environment);
   const desiredPrices = targets.map((target) => ({
     target,
     pricing: buildMultiCurrencyPlanPricing(catalogPricing, target),
@@ -421,7 +518,7 @@ export async function main(argv = process.argv.slice(2)) {
     ),
   }));
 
-  const stripe = new Stripe(secretKey);
+  const stripe = dependencies.stripeClient ?? new Stripe(secretKey);
   const expectedLivemode = stripeMode === "live";
   const targetConfigurations = new Map();
   for (const target of targets) {
@@ -436,9 +533,9 @@ export async function main(argv = process.argv.slice(2)) {
       );
       if (templateIssues.length > 0) {
         fail(
-          `${target.label} fallback Price is invalid: ${
-            templateIssues.join("; ")
-          }`,
+          `${target.label} fallback Price is invalid: ${templateIssues.join(
+            "; ",
+          )}`,
         );
       }
       resolvedProductId = productId(template);
@@ -452,9 +549,40 @@ export async function main(argv = process.argv.slice(2)) {
     if (productIssues.length > 0) {
       fail(`${target.label} Product is invalid: ${productIssues.join("; ")}`);
     }
+    const defaultPriceId =
+      typeof product.default_price === "string"
+        ? product.default_price
+        : product.default_price?.id;
+    if (defaultPriceId) {
+      const defaultPrice = await stripe.prices.retrieve(defaultPriceId, {
+        expand: ["currency_options"],
+      });
+      const issues = validateTemplatePrice(
+        target,
+        defaultPrice,
+        expectedLivemode,
+      );
+      if (
+        productId(defaultPrice) !== resolvedProductId ||
+        (defaultPrice.metadata?.moneko_plan_target &&
+          defaultPrice.metadata.moneko_plan_target !== target.id)
+      ) {
+        issues.push("default Price belongs to a different Product or plan");
+      }
+      if (issues.length)
+        fail(
+          `${target.label} Product default is invalid: ${issues.join("; ")}`,
+        );
+      taxBehavior ??= ["inclusive", "exclusive"].includes(
+        defaultPrice.tax_behavior,
+      )
+        ? defaultPrice.tax_behavior
+        : undefined;
+    }
     targetConfigurations.set(target.id, {
       productId: resolvedProductId,
       taxBehavior,
+      defaultPriceId,
     });
   }
 
@@ -469,19 +597,75 @@ export async function main(argv = process.argv.slice(2)) {
   const inspected = await Promise.all(
     desiredPrices.map(async (desired) => {
       const existing = await findPriceByLookupKey(stripe, desired.lookupKey);
+      let previous = null;
+      // Inspect the most recent published catalog, not invented UI values.
+      for (
+        let version = catalogPricing.catalogVersion - 1;
+        !previous && version >= 1;
+        version--
+      ) {
+        previous = await findPriceByLookupKey(
+          stripe,
+          buildRegionalPriceLookupKey(version, desired.target.id),
+        );
+      }
+      const configuration = targetConfigurations.get(desired.target.id);
+      if (!previous && configuration.defaultPriceId) {
+        previous = await stripe.prices.retrieve(configuration.defaultPriceId, {
+          expand: ["currency_options"],
+        });
+      }
+      if (!previous && desired.target.templatePriceId) {
+        previous = await stripe.prices.retrieve(
+          desired.target.templatePriceId,
+          { expand: ["currency_options"] },
+        );
+      }
+      const current = existing ?? previous;
       const issues = existing
         ? validateRegionalStripePrice({
-          target: desired.target,
-          pricing: desired.pricing,
-          price: existing,
-          expectedProductId: targetConfigurations.get(desired.target.id)
-            .productId,
-          expectedLivemode,
-        })
+            target: desired.target,
+            pricing: desired.pricing,
+            price: existing,
+            expectedProductId: targetConfigurations.get(desired.target.id)
+              .productId,
+            expectedLivemode,
+          })
         : [];
-      return { ...desired, existing, issues };
+      return { ...desired, existing, previous, current, issues };
     }),
   );
+
+  const audit = buildPricingAudit(
+    pricingRows,
+    inspected.map((item) => ({ ...item, previous: item.current })),
+    policy,
+  );
+  const summary = summarizePricingAudit(audit);
+  printPricingAudit(audit, summary);
+  if (options.reportPath) {
+    await writeFile(
+      options.reportPath,
+      `${JSON.stringify(
+        {
+          catalogVersion: catalogPricing.catalogVersion,
+          fx: { source: policy.fx.source, date: policy.fx.date },
+          summary,
+          rows: audit,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    await writeFile(`${options.reportPath}.csv`, pricingAuditCsv(audit));
+    await writeFile(
+      `${options.reportPath}.changes.csv`,
+      pricingAuditCsv(audit, true),
+    );
+  }
+  assertValidPricingRows(pricingRows, policy);
+  if (summary.validationFailures)
+    fail("Audit validation failed; no Stripe writes allowed");
 
   const mismatches = inspected.filter((item) => item.issues.length > 0);
   if (mismatches.length > 0) {
@@ -501,10 +685,12 @@ export async function main(argv = process.argv.slice(2)) {
   if (!options.apply) {
     console.log("No Stripe writes were made.");
     if (stripeMode === "test") {
-      console.log("Run npm run pricing:stripe:sync to create test Prices.");
+      console.log(
+        "Run node scripts/sync-regional-pricing-to-stripe.mjs --apply to create test Prices.",
+      );
     } else {
       console.log(
-        "Run npm run pricing:stripe:sync -- --allow-live to create live Prices.",
+        "Run node scripts/sync-regional-pricing-to-stripe.mjs --apply --allow-live to create live Prices.",
       );
     }
     return;
@@ -522,8 +708,28 @@ export async function main(argv = process.argv.slice(2)) {
     );
     parameters.metadata.moneko_pricing_catalog_sha256 = catalogHash;
     parameters.metadata.moneko_currency_count = String(currencyCount);
-    await stripe.prices.create(parameters);
+    parameters.metadata.moneko_pricing_policy_version = String(
+      policy.pricingVersion,
+    );
+    parameters.metadata.moneko_fx_date = policy.fx.date;
+    parameters.metadata.moneko_fx_source = policy.fx.source;
+    parameters.metadata.moneko_price_amount_units = "stripe_charge_minor_units";
+    await publishRegionalPrice(
+      stripe,
+      item,
+      parameters,
+      targetConfigurations.get(item.target.id),
+    );
     console.log(`Created ${item.lookupKey}`);
+  }
+  // Recover a previous interrupted run that created a Price before updating its Product.
+  for (const item of inspected.filter((item) => item.existing)) {
+    await reconcileProductDefault(
+      stripe,
+      item.existing,
+      item.previous,
+      targetConfigurations.get(item.target.id),
+    );
   }
 
   console.log(
@@ -531,7 +737,8 @@ export async function main(argv = process.argv.slice(2)) {
   );
 }
 
-const isMainModule = process.argv[1] &&
+const isMainModule =
+  process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMainModule) {

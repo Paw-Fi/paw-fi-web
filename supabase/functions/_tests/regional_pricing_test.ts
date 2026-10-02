@@ -20,8 +20,8 @@ Deno.test("regional pricing catalog is safe for checkout", () => {
   assertEquals(getRegionalPricingMarket("US").currencyCode, "USD");
   assertEquals(getRegionalPricingMarket("invalid").currencyCode, "USD");
   assertEquals(getRegionalPricingMarket("GB").monthly, 399);
-  assertEquals(getRegionalPricingMarket("GB").yearly, 2499);
-  assertEquals(getRegionalPricingMarket("GB").lifetime, 8999);
+  assertEquals(getRegionalPricingMarket("GB").yearly, 2599);
+  assertEquals(getRegionalPricingMarket("GB").lifetimePromo, 5999);
   assertEquals(getRegionalPricingMarket("ME").monthly, 499);
   assertEquals(getRegionalPricingMarket("AF").monthly, 1099);
   assertEquals(isSupportedRegionalCurrency("gbp"), true);

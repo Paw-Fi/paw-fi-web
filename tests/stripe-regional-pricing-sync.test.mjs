@@ -10,6 +10,9 @@ import {
   resolvePriceTargets,
   validateRegionalStripePrice,
   validateTargetProduct,
+  publishRegionalPrice,
+  reconcileProductDefault,
+  stripeUnitAmount,
 } from "../scripts/sync-regional-pricing-to-stripe.mjs";
 import { getRegionalStripePriceLookupKey } from "../src/data/regional-pricing.generated.ts";
 
@@ -19,6 +22,7 @@ const catalog = {
   markets: {
     usd: {
       currencyCode: "USD",
+      minorUnits: 2,
       monthly: 1099,
       yearly: 7999,
       lifetime: 14999,
@@ -26,6 +30,7 @@ const catalog = {
     },
     eur: {
       currencyCode: "EUR",
+      minorUnits: 2,
       monthly: 999,
       yearly: 7499,
       lifetime: 13999,
@@ -57,14 +62,14 @@ test("workspace catalog can produce exactly three multi-currency Prices", async 
     { id: "lifetime", label: "Lifetime", amountKey: "lifetimePromo" },
   ];
   const prices = targets.map((target) =>
-    buildMultiCurrencyPlanPricing(catalogPricing, target)
+    buildMultiCurrencyPlanPricing(catalogPricing, target),
   );
 
   assert.equal(prices.length, 3);
   assert.equal(Object.keys(prices[0].currencyAmounts).length, 43);
 });
 
-test("lifetime v3 Price uses the catalog promotional IDR amount", async () => {
+test("lifetime Price serializes the regenerated promotional IDR amount", async () => {
   const workspaceCatalog = JSON.parse(
     await readFile(new URL("../config/regional-pricing.json", import.meta.url)),
   );
@@ -87,8 +92,12 @@ test("lifetime v3 Price uses the catalog promotional IDR amount", async () => {
     ),
   });
 
-  assert.equal(parameters.lookup_key, "moneko_lifetime_v3");
-  assert.equal(parameters.currency_options.idr.unit_amount, 1049000);
+  assert.equal(parameters.lookup_key, "moneko_lifetime_v4");
+  assert.equal(
+    parameters.currency_options.idr.unit_amount,
+    workspaceCatalog.markets.idr.lifetimePromo,
+  );
+  assert.ok(parameters.currency_options.idr.unit_amount > 100000000);
 });
 
 test("yearly pricing charges the annual catalog price upfront", () => {
@@ -125,6 +134,7 @@ test("same-currency regional amount conflicts are rejected", () => {
   const conflictingCatalog = structuredClone(catalog);
   conflictingCatalog.markets.usd_lower = {
     currencyCode: "USD",
+    minorUnits: 2,
     monthly: 399,
     yearly: 2499,
     lifetime: 8999,
@@ -138,6 +148,83 @@ test("same-currency regional amount conflicts are rejected", () => {
       ),
     /USD: 399 \(usd_lower\) vs 1099 \(usd\)|USD: 1099 \(usd\) vs 399 \(usd_lower\)/,
   );
+});
+
+test("Stripe decimal amount strings permit integral decimals, never fractions", () => {
+  assert.equal(stripeUnitAmount({ unit_amount_decimal: "499.000000" }), 499);
+  assert.equal(stripeUnitAmount({ unit_amount_decimal: "499.5" }), null);
+  assert.equal(stripeUnitAmount({ unit_amount_decimal: "0" }), null);
+});
+
+test("publisher uses deterministic idempotency and reconciles Product default", async () => {
+  const calls = [];
+  const configuration = { productId: "prod_plus", defaultPriceId: "price_old" };
+  const item = {
+    lookupKey: "moneko_plus_monthly_v4",
+    previous: { id: "price_old" },
+  };
+  const parameters = {
+    product: "prod_plus",
+    currency: "usd",
+    unit_amount: 1099,
+    lookup_key: item.lookupKey,
+  };
+  const stripe = {
+    prices: {
+      create: (params, options) => {
+        calls.push([params, options]);
+        return Promise.resolve({ id: "price_new" });
+      },
+    },
+    products: {
+      retrieve: () => Promise.resolve({ default_price: "price_old" }),
+      update: (...args) => {
+        calls.push(args);
+        return Promise.resolve();
+      },
+    },
+  };
+  await publishRegionalPrice(stripe, item, parameters, configuration);
+  assert.match(calls[0][1].idempotencyKey, /^moneko-pricing-/);
+  assert.deepEqual(calls[1], ["prod_plus", { default_price: "price_new" }]);
+  const firstKey = calls[0][1].idempotencyKey;
+  calls.length = 0;
+  await publishRegionalPrice(stripe, item, parameters, configuration);
+  assert.equal(calls[0][1].idempotencyKey, firstKey);
+});
+
+test("default reconciliation recovers interrupted creation and rejects unrelated pointers", async () => {
+  let updates = 0;
+  const configuration = { productId: "prod_plus" };
+  const stripe = {
+    products: {
+      retrieve: () => Promise.resolve({ default_price: "price_old" }),
+      update: () => {
+        updates++;
+        return Promise.resolve();
+      },
+    },
+  };
+  await reconcileProductDefault(
+    stripe,
+    { id: "price_new" },
+    { id: "price_old" },
+    configuration,
+  );
+  assert.equal(updates, 1);
+  stripe.products.retrieve = () =>
+    Promise.resolve({ default_price: "price_unrelated" });
+  await assert.rejects(
+    () =>
+      reconcileProductDefault(
+        stripe,
+        { id: "price_new" },
+        { id: "price_old" },
+        configuration,
+      ),
+    /default.*changed|unrelated/i,
+  );
+  assert.equal(updates, 1);
 });
 
 test("CLI and generated runtime use one lookup key per plan", () => {

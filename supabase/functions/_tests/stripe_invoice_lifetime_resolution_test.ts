@@ -86,7 +86,7 @@ Deno.test(
         "moneko_lifetime_promo_v2",
       );
 
-      assertEquals(getLifetimeStripePriceLookupKey(), "moneko_lifetime_v3");
+      assertEquals(getLifetimeStripePriceLookupKey(), "moneko_lifetime_v4");
     }),
 );
 
@@ -100,7 +100,7 @@ Deno.test(
             {
               price: {
                 id: "price_regional_lifetime",
-                lookup_key: "moneko_lifetime_v3",
+                lookup_key: "moneko_lifetime_v4",
               },
             },
           ],
@@ -109,6 +109,26 @@ Deno.test(
 
       assertEquals(resolved, { plan: "lifetime", interval: null });
     }),
+);
+
+Deno.test("invoice plan resolution: preserves v3 Lifetime purchases", () =>
+  withEnv(() => {
+    assertEquals(
+      resolveInvoicePlanFromLinePrices({
+        lines: {
+          data: [
+            {
+              price: {
+                id: "price_previous_lifetime",
+                lookup_key: "moneko_lifetime_v3",
+              },
+            },
+          ],
+        },
+      }),
+      { plan: "lifetime", interval: null },
+    );
+  }),
 );
 
 Deno.test(
