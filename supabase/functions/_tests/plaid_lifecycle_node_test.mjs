@@ -86,6 +86,8 @@ function query(result, onInsert = () => {}, onUpdate = () => {}) {
     select() { return builder; }, eq() { return builder; }, is() { return builder; },
     or() { return builder; }, in() { return builder; }, order() { return builder; },
     limit() { return builder; }, neq() { return builder; },
+    not() { return builder; }, lt() { return builder; }, lte() { return builder; },
+    delete() { return builder; },
     contains() { return builder; },
     insert(row) { onInsert(row); return builder; },
     update(row) { onUpdate(row); return builder; },
@@ -217,4 +219,17 @@ test("Plaid processor treats disconnect's terminal job cancellation as a success
   assert.equal(response.body.failed, 0);
   assert.equal(response.body.succeeded, 1);
   assert.equal(job.status, "failed");
+});
+
+test("Plaid retention uses the audit table's actual started_at column", async () => {
+  const columns = [];
+  const invoke = await handler("plaid-maintenance", {
+    from: (table) => {
+      const builder = query(null);
+      if (table === "bank_sync_audit") builder.lt = (column) => { columns.push(column); return builder; };
+      return builder;
+    },
+  });
+  assert.equal((await invoke({ action: "cleanup_retention" })).status, 200);
+  assert.deepEqual(columns, ["started_at"]);
 });

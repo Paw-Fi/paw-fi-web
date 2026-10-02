@@ -95,3 +95,107 @@ for (const [name, change] of [
     }
   });
 }
+
+const ambiguityFix = "20261002103000_defer_ambiguous_bank_recurring_cycles.sql";
+
+async function syncFixture() {
+  const db = await fixture();
+  await db.exec(await migration(fix));
+  await db.exec(`create function public.apply_plaid_sync_batch_v2_legacy(
+    p_user_id uuid, p_bank_connection_id uuid, p_expected_cursor_generation integer,
+    p_next_cursor text, p_expense_inserts jsonb, p_expense_updates jsonb,
+    p_removed_provider_transaction_ids text[], p_removed_bank_account_ids uuid[],
+    p_processed_bank_account_ids uuid[], p_account_upserts jsonb,
+    p_inactive_bank_account_ids uuid[], p_raw_transactions jsonb, p_sync_status jsonb,
+    p_is_ready boolean, p_recurring_refresh_required boolean, p_lock_token uuid, p_audit_id uuid
+  ) returns jsonb language plpgsql as $$ begin
+    update public.bank_connections set cursor=p_next_cursor where id=p_bank_connection_id;
+    return jsonb_build_object('inserted_records','[]'::jsonb);
+  end; $$`);
+  const original = await migration("20260930160000_reconcile_bank_recurring_occurrences.sql");
+  const start = original.indexOf("create or replace function public.apply_plaid_sync_batch_v2(");
+  await db.exec(original.slice(start, original.indexOf("$$;", start) + 3));
+  await db.exec(await migration(ambiguityFix));
+  await db.exec(`update expenses set recurrence_rule=
+    '{"frequency":"monthly","anchor_date":"2024-09-08","projection_enabled":false}'
+    where id='${series}'`);
+  return db;
+}
+
+async function syncReconcile(db) {
+  return db.query("select public.reconcile_bank_recurring_occurrences_for_sync_v1($1,null,null) as count", [user]);
+}
+
+test("bank cycle ambiguity: sync preserves the payment without inventing a scheduled cycle", async () => {
+  const db = await syncFixture();
+  try {
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 0 }]);
+    assert.deepEqual((await db.query(`select amount_cents::int as cents,currency,date::text,parent_recurring_id,
+      provider_fields->'recurring_reconciliation' as review from expenses where id=$1`, [imported])).rows,
+      [{ cents: 11760, currency: "CAD", date: "2024-09-23", parent_recurring_id: null,
+        review: { status: "needs_review", reason: "ambiguous_bank_cycle", recurring_id: series } }]);
+    assert.deepEqual((await db.query("select count(*)::int as count from recurring_occurrences")).rows, [{ count: 0 }]);
+    const before = (await db.query("select updated_at from expenses where id=$1", [imported])).rows;
+    await syncReconcile(db);
+    assert.deepEqual((await db.query("select updated_at from expenses where id=$1", [imported])).rows, before);
+    await assert.rejects(reconcile(db), /OCCURRENCE_AMBIGUOUS_BANK_CYCLE/);
+  } finally { await db.close(); }
+});
+
+test("bank cycle ambiguity: atomic sync commits its cursor and still reconciles unrelated payments", async () => {
+  const db = await syncFixture();
+  try {
+    const other = idForCycleTest();
+    await db.query(`insert into expenses(id,user_id,account_id,bank_account_id,provider,provider_transaction_id,date,amount_cents,currency,type)
+      values ($1,$2,$3,$4,'plaid','pending-payment','2024-09-08',9000,'CAD','expense')`, [other,user,wallet,bank]);
+    await db.query(`select public.apply_plaid_sync_batch_v2($1,$2,0,'after','[]','[]','{}','{}',$3,
+      '[]','{}','[]','{}',true,true,$4,null)`, [user,connection,[bank],idForCycleTest()]);
+    assert.deepEqual((await db.query("select cursor from bank_connections")).rows, [{ cursor: "after" }]);
+    assert.deepEqual((await db.query("select actual_transaction_id,scheduled_occurrence_date::text from recurring_occurrences")).rows,
+      [{ actual_transaction_id: other, scheduled_occurrence_date: "2024-09-08" }]);
+    assert.deepEqual((await db.query("select count(*)::int as count,sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null")).rows,
+      [{ count: 2, cents: 20760 }]);
+  } finally { await db.close(); }
+});
+
+function idForCycleTest() { return "00000000-0000-4000-8000-000000000098"; }
+
+test("bank cycle ambiguity: a corrected provider date resolves and clears the durable review marker", async () => {
+  const db = await syncFixture();
+  try {
+    await syncReconcile(db);
+    await db.query("update expenses set date='2024-09-22' where id=$1", [imported]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
+    assert.deepEqual((await db.query("select parent_recurring_id,provider_fields ? 'recurring_reconciliation' as has_review from expenses where id=$1", [imported])).rows,
+      [{ parent_recurring_id: series, has_review: false }]);
+    await db.exec(await migration(ambiguityFix));
+  } finally { await db.close(); }
+});
+
+test("bank cycle ambiguity: sync-only deferral never suppresses account-scope failures", async () => {
+  const db = await syncFixture();
+  try {
+    await db.query("update bank_connections set user_id=$1", [idForCycleTest()]);
+    await assert.rejects(syncReconcile(db), /OCCURRENCE_ACCOUNT_SCOPE_MISMATCH/);
+    assert.deepEqual((await db.query("select provider_fields ? 'recurring_reconciliation' as has_review from expenses where id=$1", [imported])).rows, [{ has_review: false }]);
+  } finally { await db.close(); }
+});
+
+test("bank cycle ambiguity: another tied payment cannot block adoption of an unambiguous manual occurrence", async () => {
+  const db = await syncFixture();
+  try {
+    const manualId = "00000000-0000-4000-8000-000000000097";
+    await db.query(`insert into expenses(id,user_id,account_id,date,amount_cents,currency,type,parent_recurring_id,
+      scheduled_occurrence_date,recurring_confirmed_at,recurring_confirmation_source)
+      values ($1,$2,$3,'2024-09-08',9000,'CAD','expense',$4,'2024-09-08',now(),'user')`, [manualId,user,wallet,series]);
+    await db.query(`insert into recurring_occurrences(recurring_id,scheduled_occurrence_date,status,confirmation_source,
+      actual_transaction_id,paid_date,amount_cents,currency,confirmed_at,confirmed_by_user_id)
+      values ($1,'2024-09-08','confirmed','user',$2,'2024-09-08',9000,'CAD',now(),$3)`, [series,manualId,user]);
+    await db.query(`insert into expenses(id,user_id,account_id,bank_account_id,provider,provider_transaction_id,date,amount_cents,currency,type)
+      values ($1,$2,$3,$4,'plaid','pending-payment','2024-09-08',9000,'CAD','expense')`, [idForCycleTest(),user,wallet,bank]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
+    assert.deepEqual((await db.query("select actual_transaction_id from recurring_occurrences")).rows, [{ actual_transaction_id: manualId }]);
+    assert.deepEqual((await db.query("select count(*)::int as count,sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null")).rows,
+      [{ count: 2, cents: 20760 }]);
+  } finally { await db.close(); }
+});

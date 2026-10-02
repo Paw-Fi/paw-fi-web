@@ -597,7 +597,7 @@ async function cleanupRetentionData(
   const { error: auditError } = await supabase
     .from("bank_sync_audit")
     .delete()
-    .lt("created_at", auditCutoff);
+    .lt("started_at", auditCutoff);
 
   if (auditError) {
     throw auditError;

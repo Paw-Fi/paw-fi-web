@@ -74,15 +74,36 @@ async function fixture(role = "owner", shared = true) {
   return db;
 }
 
-async function complete(db, shared = true) {
+async function complete(db, shared = true, metadata = {}) {
   return db.query(`select public.complete_plaid_update_mode_v2($1,$2,$3,'reconnect',$4,$5,
-    array['deselected'],'{}','accounts_updated',null,null) as completed`, [
+    array['deselected'],$6,'accounts_updated',null,null) as completed`, [
     shared ? actor : user, connection, session, shared ? household : null,
     JSON.stringify([{ id: selected, user_id: user, bank_connection_id: connection, provider: "plaid",
       plaid_account_id: "selected-new", provider_account_id: "selected-new", name: "Selected", currency: "CAD",
       provider_balance_current_cents: 0 }]),
+    JSON.stringify(metadata),
   ]);
 }
+
+test("Plaid update SQL: stale Link metadata cannot erase newer webhook completeness", async () => {
+  const db = await fixture();
+  try {
+    await db.exec(await migration("20261002105000_preserve_plaid_update_sync_metadata.sql"));
+    await db.query("update bank_connections set metadata=$1", [JSON.stringify({
+      plaid_sync_status: { initial_update_complete: true, historical_update_complete: true },
+      initial_update_complete: true, historical_update_complete: true,
+      sync_status_updated_at: "newer-webhook", server_marker: "preserve",
+    })]);
+    await complete(db, true, { plaid_sync_status: { initial_update_complete: false, historical_update_complete: false },
+      initial_update_complete: false, historical_update_complete: false,
+      sync_status_updated_at: "stale-link", institution_name: "Updated Institution" });
+    assert.deepEqual((await db.query("select metadata from bank_connections")).rows, [{ metadata: {
+      plaid_sync_status: { initial_update_complete: true, historical_update_complete: true },
+      initial_update_complete: true, historical_update_complete: true,
+      sync_status_updated_at: "newer-webhook", server_marker: "preserve", institution_name: "Updated Institution",
+    } }]);
+  } finally { await db.close(); }
+});
 
 for (const [label, role, shared] of [["personal owner", "owner", false], ["household owner", "owner", true], ["household admin", "admin", true]]) {
   test(`Plaid update SQL: ${label} commits reactivation, deselection, session and queue atomically`, async () => {

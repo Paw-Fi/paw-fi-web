@@ -1233,6 +1233,7 @@ async function syncConnection(params: {
       error,
       context: {
         phase: "sync_connection",
+        sync_database_phase: syncDatabasePhase,
         error_code: errorCode,
       },
     });

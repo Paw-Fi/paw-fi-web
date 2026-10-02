@@ -815,7 +815,7 @@ Deno.test(
 );
 
 Deno.test(
-  "bank recurring: reconnect with changed account and stream IDs preserves one payment",
+  "bank recurring: changed identities never auto-merge without explicit continuity",
   async () => {
     let db = await fixture();
     try {
@@ -855,7 +855,439 @@ Deno.test(
       sum(amount_cents)::int as financial_effect_cents from expenses
       where not is_recurring and deleted_at is null`)
         ).rows,
-        [{ active_actuals: 1, financial_effect_cents: 11760 }],
+        [{ active_actuals: 2, financial_effect_cents: 23520 }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+const replacementSeries = "00000000-0000-4000-8000-000000000014";
+const replacementBank = "00000000-0000-4000-8000-000000000013";
+const associationMigrationUrl = new URL(
+  "../../migrations/20261002110000_associate_recurring_series.sql",
+  import.meta.url,
+);
+
+async function associationFixture() {
+  const db = await fixture();
+  await db.exec(`
+    create table auth.users(id uuid primary key);
+    insert into auth.users values ('${user}');
+    create table households(id uuid primary key);
+    create table household_members(household_id uuid, user_id uuid, role text);
+    alter table bank_accounts add column provider text default 'plaid',
+      add column currency text default 'CAD', add column status text default 'active';
+    alter table bank_connections add column provider text default 'plaid',
+      add column status text default 'active', add column item_status text default 'active',
+      add column removed_at timestamptz;
+    alter table accounts add column linked_bank_account_id uuid;
+    delete from bank_accounts where id='${bank}';
+    update expenses set idempotency_key='old-stream' where id='${series}';
+  `);
+  await manual(db);
+  await db.exec(`
+    insert into bank_accounts(id,user_id,bank_connection_id,type)
+      values ('${replacementBank}','${user}','${connection}','credit');
+    update accounts set linked_bank_account_id='${replacementBank}' where id='${wallet}';
+    insert into expenses select (jsonb_populate_record(null::expenses, to_jsonb(e) || jsonb_build_object(
+      'id','${replacementSeries}', 'idempotency_key','new-stream',
+      'provider_fields',jsonb_build_object('source','plaid_recurring_template','provider','plaid',
+        'bank_account_id','${replacementBank}','template_identity','new-stream',
+        'transaction_ids',jsonb_build_array('new-payment'))))).*
+      from expenses e where id='${series}';
+    insert into expenses(id,user_id,account_id,bank_account_id,provider,provider_transaction_id,
+      date,amount_cents,currency,type,merchant,raw_provider_payload)
+      values ('${imported}','${user}','${wallet}','${replacementBank}','plaid','new-payment',
+        '2024-09-23',11760,'CAD','expense','Telus Pre-auth',
+        '{"transaction_id":"new-payment","pending":false,"amount":117.60,"personal_finance_category":{"primary":"GENERAL_SERVICES","confidence_level":"VERY_HIGH"}}');
+    select reconcile_bank_recurring_occurrences_v1('${user}',array['${replacementSeries}']::uuid[],null);
+  `);
+  await db.exec(await Deno.readTextFile(associationMigrationUrl));
+  return db;
+}
+
+async function associate(
+  db: PGlite,
+  payments: unknown = [
+    { importedTransactionId: imported, canonicalTransactionId: actual },
+  ],
+  actor = user,
+) {
+  return db.query<{ result: Record<string, unknown> }>(
+    "select associate_recurring_series($1,$2,$3,$4::jsonb) as result",
+    [actor, series, replacementSeries, JSON.stringify(payments)],
+  );
+}
+
+Deno.test(
+  "associate recurring series: explicit continuity preserves manual IDs and survives retry/restart",
+  async () => {
+    let db = await associationFixture();
+    try {
+      assertEquals((await associate(db)).rows[0].result.duplicate, false);
+      await assertOnePayment(db, actual);
+      assertEquals((await associate(db)).rows[0].result.duplicate, true);
+      assertEquals(
+        (
+          await db.query(
+            `select idempotency_key from expenses where id='${series}'`,
+          )
+        ).rows,
+        [{ idempotency_key: "new-stream" }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select deleted_reason from expenses where id='${replacementSeries}'`,
+          )
+        ).rows,
+        [{ deleted_reason: "recurring_series_associated" }],
+      );
+      const persisted = await db.dumpDataDir("none");
+      await db.close();
+      db = new PGlite({ loadDataDir: persisted });
+      await associate(db);
+      await reconcile(db);
+      await assertOnePayment(db, actual);
+      assertEquals(
+        (
+          await db.query(
+            `select confirmation_source,confirmed_by_user_id from recurring_occurrences where recurring_id='${series}'`,
+          )
+        ).rows,
+        [{ confirmation_source: "user", confirmed_by_user_id: user }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+for (const [name, patch, actor, payments, error] of [
+  [
+    "unauthorized actor",
+    "",
+    "00000000-0000-4000-8000-000000000099",
+    null,
+    "ASSOCIATION_UNAUTHORIZED",
+  ],
+  [
+    "different native currency",
+    `update expenses set currency='USD' where id='${replacementSeries}'`,
+    user,
+    null,
+    "ASSOCIATION_SCOPE_MISMATCH",
+  ],
+  [
+    "different wallet",
+    `update expenses set account_id=null where id='${replacementSeries}'`,
+    user,
+    null,
+    "ASSOCIATION_WALLET_MISMATCH",
+  ],
+  [
+    "missing explicit payment mapping",
+    "",
+    user,
+    [],
+    "ASSOCIATION_PAYMENT_REVIEW_REQUIRED",
+  ],
+  [
+    "protected import split",
+    `update expenses set split_group_id='${series}' where id='${imported}'`,
+    user,
+    null,
+    "ASSOCIATION_PAYMENT_CONFLICT",
+  ],
+] as const) {
+  Deno.test(
+    `associate recurring series: ${name} rolls back the whole association`,
+    async () => {
+      const db = await associationFixture();
+      try {
+        if (patch) await db.exec(patch);
+        await assertRejects(
+          () =>
+            payments == null
+              ? associate(db, undefined, actor)
+              : associate(db, payments, actor),
+          Error,
+          error,
+        );
+        assertEquals(
+          (
+            await db.query(
+              "select count(*)::int as count from recurring_series_associations",
+            )
+          ).rows,
+          [{ count: 0 }],
+        );
+        assertEquals(
+          (
+            await db.query(
+              `select provider,deleted_at from expenses where id='${actual}'`,
+            )
+          ).rows,
+          [{ provider: null, deleted_at: null }],
+        );
+        assertEquals(
+          (
+            await db.query(
+              `select deleted_at from expenses where id='${imported}'`,
+            )
+          ).rows,
+          [{ deleted_at: null }],
+        );
+      } finally {
+        await db.close();
+      }
+    },
+  );
+}
+
+Deno.test(
+  "associate recurring series: a changed retry payload cannot overwrite a completed association",
+  async () => {
+    const db = await associationFixture();
+    try {
+      await associate(db);
+      await assertRejects(
+        () => associate(db, []),
+        Error,
+        "ASSOCIATION_RETRY_CONFLICT",
+      );
+      await assertOnePayment(db, actual);
+      await assertRejects(
+        () =>
+          db.exec(
+            `update expenses set deleted_at=null,deleted_reason=null where id='${replacementSeries}'`,
+          ),
+        Error,
+        "ASSOCIATION_REPLACEMENT_RETIRED",
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "associate recurring series: explicit manual financial overrides and canonical user fields survive",
+  async () => {
+    const db = await associationFixture();
+    try {
+      await db.exec(`update expenses set user_overrides='{"amount_cents":11760,"date":"2024-09-24"}',
+      merchant='My confirmed merchant' where id='${actual}';
+      update expenses set amount_cents=13000 where id='${imported}'`);
+      await associate(db);
+      assertEquals(
+        (
+          await db.query(`select amount_cents::int as cents,date::text,merchant,recurring_confirmation_source
+      from expenses where id='${actual}'`)
+        ).rows,
+        [
+          {
+            cents: 11760,
+            date: "2024-09-24",
+            merchant: "My confirmed merchant",
+            recurring_confirmation_source: "user",
+          },
+        ],
+      );
+      assertEquals(
+        (
+          await db.query(`select actual_transaction_id,amount_cents::int as cents,paid_date::text
+      from recurring_occurrences where recurring_id='${series}'`)
+        ).rows,
+        [
+          {
+            actual_transaction_id: actual,
+            cents: 11760,
+            paid_date: "2024-09-24",
+          },
+        ],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "associate recurring series: late reconciliation failure rolls back keys, tombstones and adoption",
+  async () => {
+    const db = await associationFixture();
+    try {
+      await db.exec(`update expenses set provider_fields=jsonb_set(provider_fields,'{transaction_ids}',
+      '["new-payment","conflicting-income"]') where id='${replacementSeries}';
+      insert into expenses(id,user_id,account_id,bank_account_id,provider,provider_transaction_id,date,amount_cents,currency,type)
+      values ('00000000-0000-4000-8000-000000000096','${user}','${wallet}','${replacementBank}',
+        'plaid','conflicting-income','2024-09-24',100,'CAD','income')`);
+      await assertRejects(
+        () => associate(db),
+        Error,
+        "OCCURRENCE_ACCOUNT_SCOPE_MISMATCH",
+      );
+      assertEquals(
+        (
+          await db.query(
+            "select count(*)::int as count from recurring_series_associations",
+          )
+        ).rows,
+        [{ count: 0 }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select provider,deleted_at from expenses where id='${actual}'`,
+          )
+        ).rows,
+        [{ provider: null, deleted_at: null }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select deleted_at,idempotency_key from expenses where id='${replacementSeries}'`,
+          )
+        ).rows,
+        [{ deleted_at: null, idempotency_key: "new-stream" }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select deleted_at,provider_transaction_id from expenses where id='${imported}'`,
+          )
+        ).rows,
+        [{ deleted_at: null, provider_transaction_id: "new-payment" }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "associate recurring series: shared admin access is current and its audit does not block actor deletion",
+  async () => {
+    const db = await associationFixture();
+    const actorId = "00000000-0000-4000-8000-000000000095";
+    const householdId = "00000000-0000-4000-8000-000000000094";
+    try {
+      await db.exec(`insert into auth.users values ('${actorId}');
+      insert into households values ('${householdId}');
+      insert into household_members values ('${householdId}','${actorId}','member');
+      update expenses set household_id='${householdId}';
+      update accounts set household_id='${householdId}';
+      update bank_connections set household_id='${householdId}'`);
+      await assertRejects(
+        () => associate(db, undefined, actorId),
+        Error,
+        "ASSOCIATION_UNAUTHORIZED",
+      );
+      await db.exec(
+        `update household_members set role='admin' where user_id='${actorId}'`,
+      );
+      await associate(db, undefined, actorId);
+      await assertOnePayment(db, actual);
+      await db.exec(`delete from auth.users where id='${actorId}'`);
+      assertEquals(
+        (
+          await db.query(
+            "select actor_user_id from recurring_series_associations",
+          )
+        ).rows,
+        [{ actor_user_id: null }],
+      );
+      assertEquals(
+        (
+          await db.query(`select has_function_privilege('authenticated',
+      'public.associate_recurring_series(uuid,uuid,uuid,jsonb)','EXECUTE') as can_execute,
+      has_table_privilege('authenticated','public.recurring_series_associations','SELECT') as can_read`)
+        ).rows,
+        [{ can_execute: false, can_read: false }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "associate recurring series: the explicit contract is independent of the bank provider",
+  async () => {
+    const db = await associationFixture();
+    try {
+      await db.exec(`update expenses set provider_fields=provider_fields ||
+      '{"source":"bank_recurring_template","provider":"test_provider"}' where is_recurring;
+      update expenses set provider='test_provider' where id='${imported}';
+      update bank_accounts set provider='test_provider';
+      update bank_connections set provider='test_provider'`);
+      await associate(db);
+      assertEquals(
+        (
+          await db.query(
+            `select provider,parent_recurring_id from expenses where id='${actual}'`,
+          )
+        ).rows,
+        [{ provider: "test_provider", parent_recurring_id: series }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select count(*)::int as count from expenses where not is_recurring and deleted_at is null`,
+          )
+        ).rows,
+        [{ count: 1 }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "associate recurring series: overlapping submissions produce one durable association",
+  async () => {
+    const db = await associationFixture();
+    try {
+      const results = await Promise.all([associate(db), associate(db)]);
+      assertEquals(
+        results.map((result) => result.rows[0].result.duplicate),
+        [false, true],
+      );
+      assertEquals(
+        (
+          await db.query(
+            "select count(*)::int as count from recurring_series_associations",
+          )
+        ).rows,
+        [{ count: 1 }],
+      );
+      await assertOnePayment(db, actual);
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "associate recurring series: explicit IDs work without label or cadence similarity",
+  async () => {
+    const db = await associationFixture();
+    try {
+      await db.exec(`update expenses set merchant='銀行の新しい表記',raw_text='ชำระเงิน',
+      recurrence_rule='{"frequency":"weekly","anchor_date":"2024-09-24"}' where id='${replacementSeries}'`);
+      await associate(db);
+      await assertOnePayment(db, actual);
+      assertEquals(
+        (
+          await db.query(
+            `select recurrence_rule->>'frequency' as frequency from expenses where id='${series}'`,
+          )
+        ).rows,
+        [{ frequency: "monthly" }],
       );
     } finally {
       await db.close();

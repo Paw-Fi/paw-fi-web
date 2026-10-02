@@ -118,7 +118,7 @@ export async function refreshPlaidRecurringTemplates(params: {
               accountByProviderId,
               linkedWalletsByBankAccountId: params.linkedWalletsByBankAccountId,
               updatedDatetime: recurring.updated_datetime ?? null,
-            })
+            }),
           )
           .filter(
             (candidate): candidate is PlaidRecurringTemplateCandidate =>
@@ -153,12 +153,11 @@ export async function refreshPlaidRecurringTemplates(params: {
   }
 
   await params.onStage?.("detect_ledger_candidates");
-  const detectedFallbackCandidates = await detectLedgerRecurringCandidates(
-    params,
-  );
+  const detectedFallbackCandidates =
+    await detectLedgerRecurringCandidates(params);
   providerCandidates = providerCandidates.map((providerCandidate) => {
     const ledgerCandidate = detectedFallbackCandidates.find((candidate) =>
-      sameRecurringSeries(candidate, providerCandidate)
+      sameRecurringSeries(candidate, providerCandidate),
     );
     if (!ledgerCandidate) return providerCandidate;
     const projectionEnabled =
@@ -180,7 +179,7 @@ export async function refreshPlaidRecurringTemplates(params: {
   const fallbackCandidates = detectedFallbackCandidates.filter(
     (candidate) =>
       !providerCandidates.some((providerCandidate) =>
-        sameRecurringSeries(candidate, providerCandidate)
+        sameRecurringSeries(candidate, providerCandidate),
       ),
   );
   const candidates = [...providerCandidates, ...fallbackCandidates];
@@ -217,7 +216,7 @@ export async function refreshPlaidRecurringTemplates(params: {
   // Newly discovered streams link existing actuals; never create another expense.
   await params.onStage?.("reconcile_occurrences");
   const { error: occurrenceError } = await params.supabase.rpc(
-    "reconcile_bank_recurring_occurrences_v1",
+    "reconcile_bank_recurring_occurrences_for_sync_v1",
     { p_user_id: params.userId, p_bank_account_ids: bankAccountIds },
   );
   if (occurrenceError) throw occurrenceError;
@@ -266,7 +265,7 @@ async function retireMissingGeneratedTemplates(params: {
         source: params.source,
         bankAccountIds: accountIds,
         activeKeys: params.activeKeys,
-      })
+      }),
     )
     .map((row) => row.id as string);
   if (retiredIds.length === 0) return;
@@ -275,9 +274,10 @@ async function retireMissingGeneratedTemplates(params: {
     .from("expenses")
     .update({
       deleted_at: new Date().toISOString(),
-      deleted_reason: params.source === "plaid"
-        ? "provider_recurring_retired"
-        : "provider_inference_retired",
+      deleted_reason:
+        params.source === "plaid"
+          ? "provider_recurring_retired"
+          : "provider_inference_retired",
       updated_at: new Date().toISOString(),
     })
     .in("id", retiredIds);
@@ -435,12 +435,14 @@ function providerStreamCandidate(params: {
   if (!anchorDate) return null;
   const linkedWallet = params.linkedWalletsByBankAccountId.get(account.id);
   const label = stream.merchant_name || stream.description || null;
-  const categoryName = stream.personal_finance_category?.detailed || primary ||
-    null;
-  const type = params.type === "income" && account.type === "credit"
-    ? "expense"
-    : params.type;
-  const projectionEnabled = frequency.frequency !== "semi_monthly" &&
+  const categoryName =
+    stream.personal_finance_category?.detailed || primary || null;
+  const type =
+    params.type === "income" && account.type === "credit"
+      ? "expense"
+      : params.type;
+  const projectionEnabled =
+    frequency.frequency !== "semi_monthly" &&
     isProjectionSafePfc(
       type,
       primary,
@@ -570,15 +572,15 @@ async function detectLedgerRecurringCandidates(params: {
       latest,
       accountById.get(latest.bank_account_id)?.type,
     );
-    const projectionEnabled = pattern.frequency !== "semi_monthly" &&
+    const projectionEnabled =
+      pattern.frequency !== "semi_monthly" &&
       isProjectionSafeAnalyticsClass(
         latest.analytics_class,
         latest.classification_review_state,
       );
     const intervalPart = pattern.interval ? `:${pattern.interval}` : "";
     candidates.push({
-      idempotencyKey:
-        `bank-recurring:v1:pattern:${identity}:${pattern.frequency}${intervalPart}`,
+      idempotencyKey: `bank-recurring:v1:pattern:${identity}:${pattern.frequency}${intervalPart}`,
       userId: params.userId,
       householdId: params.householdId,
       accountId: linkedWallet?.id ?? latest.account_id ?? null,
@@ -616,7 +618,7 @@ async function detectLedgerRecurringCandidates(params: {
         transaction_ids: amountCluster
           .map((row) => row.provider_transaction_id)
           .filter((transactionId): transactionId is string =>
-            Boolean(transactionId)
+            Boolean(transactionId),
           ),
       },
     });
@@ -635,8 +637,8 @@ function recurringTypeForLedgerRow(
     return "expense";
   }
   return ["income", "transfer_in", "loan_disbursement"].includes(
-      row.analytics_class || "",
-    ) || row.type === "income"
+    row.analytics_class || "",
+  ) || row.type === "income"
     ? "income"
     : "expense";
 }
@@ -704,9 +706,10 @@ function detectPattern(rows: LedgerRecurringRow[]): DetectedPattern | null {
     const matches = gaps.filter(
       (gap) => gap >= pattern.min && gap <= pattern.max,
     );
-    const averageGap = matches.length === 0
-      ? 0
-      : matches.reduce((sum, gap) => sum + gap, 0) / matches.length;
+    const averageGap =
+      matches.length === 0
+        ? 0
+        : matches.reduce((sum, gap) => sum + gap, 0) / matches.length;
     if (
       pattern.frequency === "semi_monthly" &&
       (averageGap < 14 || averageGap > 16)
@@ -751,7 +754,7 @@ function sameRecurringSeries(
   if (Math.abs(left.amountCents - right.amountCents) > tolerance) return false;
   return (
     recurrenceFrequencyKey(left.recurrenceRule) ===
-      recurrenceFrequencyKey(right.recurrenceRule)
+    recurrenceFrequencyKey(right.recurrenceRule)
   );
 }
 
@@ -765,7 +768,7 @@ export function deduplicatePlaidRecurringCandidates(
         (existingCandidate) =>
           existingCandidate.idempotencyKey === candidate.idempotencyKey ||
           sameRecurringSeries(existingCandidate, candidate),
-      )
+      ),
     );
     if (group) {
       group.push(candidate);
@@ -776,7 +779,7 @@ export function deduplicatePlaidRecurringCandidates(
   return groups
     .map((group) => mergePlaidRecurringCandidateGroup(group))
     .sort((left, right) =>
-      left.idempotencyKey.localeCompare(right.idempotencyKey)
+      left.idempotencyKey.localeCompare(right.idempotencyKey),
     );
 }
 
@@ -792,7 +795,7 @@ function mergePlaidRecurringCandidateGroup(
   const transactionIds = Array.from(
     new Set(
       sorted.flatMap((candidate) =>
-        Array.from(recurringTransactionIds(candidate))
+        Array.from(recurringTransactionIds(candidate)),
       ),
     ),
   ).sort();
@@ -810,10 +813,10 @@ function mergePlaidRecurringCandidateGroup(
       transaction_ids: transactionIds,
       ...(hasDirectionConflict
         ? {
-          projection_enabled: false,
-          analytics_class: "unknown",
-          provider_direction_conflict: true,
-        }
+            projection_enabled: false,
+            analytics_class: "unknown",
+            provider_direction_conflict: true,
+          }
         : {}),
     },
   };
@@ -833,11 +836,9 @@ function recurringTransactionIds(
 }
 
 function recurrenceFrequencyKey(rule: Record<string, unknown>): string {
-  return `${String(rule.frequency || "").toLowerCase()}:${
-    Number(
-      rule.interval || 1,
-    )
-  }`;
+  return `${String(rule.frequency || "").toLowerCase()}:${Number(
+    rule.interval || 1,
+  )}`;
 }
 
 function nextProjectionAnchor(params: {
@@ -932,9 +933,10 @@ function isRecentPattern(lastDate: string, pattern: DetectedPattern): boolean {
     now.getUTCDate(),
   );
   const ageDays = Math.floor((today - parsed.getTime()) / 86400000);
-  const allowedAge = pattern.interval && pattern.interval > 1
-    ? Math.ceil(pattern.cadenceDays * 1.3)
-    : maximumAgeDays[pattern.frequency];
+  const allowedAge =
+    pattern.interval && pattern.interval > 1
+      ? Math.ceil(pattern.cadenceDays * 1.3)
+      : maximumAgeDays[pattern.frequency];
   return ageDays <= allowedAge;
 }
 
