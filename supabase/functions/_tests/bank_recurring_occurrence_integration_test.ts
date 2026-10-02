@@ -32,7 +32,7 @@ async function fixture(realWriter = false) {
       $$select jsonb_build_object('role', coalesce(current_setting('test.role', true), 'service_role'))$$;
     create table public.accounts(id uuid primary key, user_id uuid, household_id uuid,
       currency text, is_archived boolean default false);
-    create table public.bank_accounts(id uuid primary key, user_id uuid, household_id uuid,
+    create table public.bank_accounts(id uuid primary key, user_id uuid,
       bank_connection_id uuid, type text);
     create table public.bank_connections(id uuid primary key, user_id uuid, household_id uuid, cursor text);
     create table public.expenses(
@@ -79,7 +79,7 @@ async function fixture(realWriter = false) {
     create table public.recurring_transaction_reminders_sent(expense_id uuid, occurrence_date date);
     create table public.notification_events(event_type text, is_sent boolean, payload jsonb);
     insert into public.accounts values ('${wallet}', '${user}', null, 'CAD', false);
-    insert into public.bank_accounts(id,user_id,type) values ('${bank}', '${user}', 'credit');
+    insert into public.bank_accounts(id,user_id,bank_connection_id,type) values ('${bank}', '${user}', '${connection}', 'credit');
     insert into public.bank_connections values ('${connection}', '${user}', null, 'before');
     insert into public.expenses(id,user_id,account_id,date,amount_cents,currency,type,merchant,is_recurring,recurrence_rule,provider_fields)
     values ('${series}', '${user}', '${wallet}', '2024-09-24', 11760, 'CAD', 'expense', 'Telus Pre-auth', true,
@@ -130,12 +130,10 @@ async function fixture(realWriter = false) {
       import.meta.url,
     ),
   );
-  for (
-    const name of [
-      "classify_plaid_transaction_v1",
-      "set_expense_analytics_classification_v1",
-    ]
-  ) {
+  for (const name of [
+    "classify_plaid_transaction_v1",
+    "set_expense_analytics_classification_v1",
+  ]) {
     const start = classification.indexOf(
       `create or replace function public.${name}`,
     );
@@ -234,6 +232,14 @@ async function fixture(realWriter = false) {
       ),
     ),
   );
+  await db.exec(
+    await Deno.readTextFile(
+      new URL(
+        "../../migrations/20261002090000_fix_bank_recurring_connection_scope.sql",
+        import.meta.url,
+      ),
+    ),
+  );
   return db;
 }
 
@@ -252,102 +258,121 @@ async function importPayment(db: PGlite, pending = false) {
     }',
       '2024-09-23', 11760, 'CAD', 'expense', ${pending}, ${!pending},
       '{"transaction_id":"${
-      pending ? "pending-payment" : "bank-payment"
-    }","pending":${pending},"amount":117.60,"personal_finance_category":{"primary":"GENERAL_SERVICES","confidence_level":"VERY_HIGH"}}');`,
+        pending ? "pending-payment" : "bank-payment"
+      }","pending":${pending},"amount":117.60,"personal_finance_category":{"primary":"GENERAL_SERVICES","confidence_level":"VERY_HIGH"}}');`,
   );
 }
 
-Deno.test("bank recurring: new manual actual has fresh sync timestamps and no bank payment aliases", async () => {
-  const db = await fixture();
-  try {
-    await db.exec(
-      `update expenses set created_at='2000-01-01', updated_at='2000-01-01',
+Deno.test(
+  "bank recurring: new manual actual has fresh sync timestamps and no bank payment aliases",
+  async () => {
+    const db = await fixture();
+    try {
+      await db.exec(
+        `update expenses set created_at='2000-01-01', updated_at='2000-01-01',
       provider_pending_transaction_id='stale-pending',
       provider_posted_from_pending_transaction_id='stale-posted' where id='${series}'`,
-    );
-    await manual(db);
-    const result = await db.query(
-      `select created_at > '2000-01-01'::timestamptz as fresh_created,
+      );
+      await manual(db);
+      const result = await db.query(
+        `select created_at > '2000-01-01'::timestamptz as fresh_created,
       updated_at > '2000-01-01'::timestamptz as fresh_updated,
       provider_pending_transaction_id, provider_posted_from_pending_transaction_id
       from expenses where id='${actual}'`,
-    );
-    assertEquals(result.rows, [{
-      fresh_created: true,
-      fresh_updated: true,
-      provider_pending_transaction_id: null,
-      provider_posted_from_pending_transaction_id: null,
-    }]);
-  } finally {
-    await db.close();
-  }
-});
+      );
+      assertEquals(result.rows, [
+        {
+          fresh_created: true,
+          fresh_updated: true,
+          provider_pending_transaction_id: null,
+          provider_posted_from_pending_transaction_id: null,
+        },
+      ]);
+    } finally {
+      await db.close();
+    }
+  },
+);
 
-Deno.test("bank recurring: next future manual confirmation stays idempotent under current guards", async () => {
-  const db = await fixture();
-  try {
-    await db.exec(`update expenses set date=current_date+10,
+Deno.test(
+  "bank recurring: next future manual confirmation stays idempotent under current guards",
+  async () => {
+    const db = await fixture();
+    try {
+      await db.exec(`update expenses set date=current_date+10,
       recurrence_rule=jsonb_build_object('frequency','monthly','anchor_date',(current_date+10)::text,
       'projection_enabled',false) where id='${series}'`);
-    for (let i = 0; i < 2; i++) {
-      await db.query(
-        `select public.confirm_recurring_occurrence_v1('${user}', '${series}',
+      for (let i = 0; i < 2; i++) {
+        await db.query(
+          `select public.confirm_recurring_occurrence_v1('${user}', '${series}',
         current_date+10, current_date+10, 11760, '${wallet}', 'Telus Pre-auth', '',
         null, null, false, '${actual}', 'future-confirmation')`,
+        );
+      }
+      assertEquals(
+        (
+          await db.query(
+            `select count(*)::int as count from expenses where not is_recurring`,
+          )
+        ).rows,
+        [{ count: 1 }],
       );
+      assertEquals(
+        (
+          await db.query(
+            `select count(*)::int as count from recurring_occurrences where status='confirmed'`,
+          )
+        ).rows,
+        [{ count: 1 }],
+      );
+    } finally {
+      await db.close();
     }
-    assertEquals(
-      (await db.query(
-        `select count(*)::int as count from expenses where not is_recurring`,
-      )).rows,
-      [{ count: 1 }],
-    );
-    assertEquals(
-      (await db.query(
-        `select count(*)::int as count from recurring_occurrences where status='confirmed'`,
-      )).rows,
-      [{ count: 1 }],
-    );
-  } finally {
-    await db.close();
-  }
-});
+  },
+);
 
-Deno.test("bank recurring: disconnected imported history is reused by manual confirmation", async () => {
-  const db = await fixture();
-  try {
-    await importPayment(db);
-    await db.exec(`update expenses set bank_account_id = null,
+Deno.test(
+  "bank recurring: disconnected imported history is reused by manual confirmation",
+  async () => {
+    const db = await fixture();
+    try {
+      await importPayment(db);
+      await db.exec(`update expenses set bank_account_id = null,
       provider_fields = jsonb_build_object('bank_account_id', '${bank}')
       where id = '${imported}'; delete from bank_accounts where id = '${bank}'`);
-    await manual(db);
-    await manual(db);
-    // Missing bank metadata must not invent a spending classification.
-    await assertOnePayment(db, imported, 0);
-  } finally {
-    await db.close();
-  }
-});
+      await manual(db);
+      await manual(db);
+      // Missing bank metadata must not invent a spending classification.
+      await assertOnePayment(db, imported, 0);
+    } finally {
+      await db.close();
+    }
+  },
+);
 
-Deno.test("bank recurring: normalized semi-monthly cadence reconciles without blocking sync", async () => {
-  const db = await fixture();
-  try {
-    await db.exec(`update expenses set recurrence_rule =
+Deno.test(
+  "bank recurring: normalized semi-monthly cadence reconciles without blocking sync",
+  async () => {
+    const db = await fixture();
+    try {
+      await db.exec(`update expenses set recurrence_rule =
       '{"frequency":"semi_monthly","anchor_date":"2024-09-24","projection_enabled":false}'
       where id = '${series}'`);
-    await importPayment(db);
-    await reconcile(db);
-    await assertOnePayment(db, imported);
-    assertEquals(
-      (await db.query(`select public.bank_recurring_cycle_date_v1(
-      '{"frequency":"semi_monthly","anchor_date":"2024-09-24"}', '2024-10-10')::text as cycle`))
-        .rows,
-      [{ cycle: "2024-10-09" }],
-    );
-  } finally {
-    await db.close();
-  }
-});
+      await importPayment(db);
+      await reconcile(db);
+      await assertOnePayment(db, imported);
+      assertEquals(
+        (
+          await db.query(`select public.bank_recurring_cycle_date_v1(
+      '{"frequency":"semi_monthly","anchor_date":"2024-09-24"}', '2024-10-10')::text as cycle`)
+        ).rows,
+        [{ cycle: "2024-10-09" }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
 
 async function reconcile(db: PGlite) {
   return db.query(
@@ -451,124 +476,136 @@ Deno.test(
 );
 
 for (const manuallyConfirmed of [false, true]) {
-  Deno.test(`bank recurring: real planner/writer pending-posted and webhook replay manual=${manuallyConfirmed}`, async () => {
-    const db = await fixture(true);
-    try {
-      if (manuallyConfirmed) await manual(db);
-      const pending: PlaidTransaction = {
-        transaction_id: "pending-payment",
-        account_id: "provider-account",
-        name: "Telus Pre-auth",
-        amount: 117.60,
-        iso_currency_code: "CAD",
-        date: "2024-09-23",
-        pending: true,
-        personal_finance_category: {
-          primary: "GENERAL_SERVICES",
-          detailed: "GENERAL_SERVICES_OTHER_GENERAL_SERVICES",
-          confidence_level: "VERY_HIGH",
-        },
-      };
-      async function apply(
-        transaction: PlaidTransaction,
-        removePending = false,
-      ) {
-        const existing = await db.query<ExistingExpenseProjectionRow>(
-          "select * from expenses where provider='plaid' and bank_account_id=$1 and deleted_at is null",
-          [bank],
-        );
-        const generation = (await db.query<{ cursor_generation: number }>(
-          "select cursor_generation from bank_connections where id=$1",
-          [connection],
-        )).rows[0].cursor_generation;
-        const record = {
-          ...mapPlaidTransactionToExpense({
-            userId: user,
-            bankAccountId: bank,
-            defaultCurrency: "CAD",
-            accountType: "credit",
-            transaction,
-          }),
-          account_id: wallet,
+  Deno.test(
+    `bank recurring: real planner/writer pending-posted and webhook replay manual=${manuallyConfirmed}`,
+    async () => {
+      const db = await fixture(true);
+      try {
+        if (manuallyConfirmed) await manual(db);
+        const pending: PlaidTransaction = {
+          transaction_id: "pending-payment",
+          account_id: "provider-account",
+          name: "Telus Pre-auth",
+          amount: 117.6,
+          iso_currency_code: "CAD",
+          date: "2024-09-23",
+          pending: true,
+          personal_finance_category: {
+            primary: "GENERAL_SERVICES",
+            detailed: "GENERAL_SERVICES_OTHER_GENERAL_SERVICES",
+            confidence_level: "VERY_HIGH",
+          },
         };
-        const plan = buildBankExpenseMutationPlan({
-          records: [record],
-          transactions: [transaction],
-          existingRows: existing.rows,
-          providerPendingTransactionIds: new Map(
-            transaction.pending_transaction_id
-              ? [[
-                transaction.transaction_id,
-                transaction.pending_transaction_id,
-              ]]
-              : [],
-          ),
-          cursorGeneration: generation,
-        });
-        await db.query(
-          `select apply_plaid_sync_batch_v2($1,$2,$3,'after',$4,$5,$6,$7,$7,
-          '[]','{}','[]','{}',true,true,$8,null)`,
-          [
-            user,
-            connection,
-            generation,
-            JSON.stringify(plan.inserts),
-            JSON.stringify(plan.updates),
-            removePending ? [pending.transaction_id] : [],
+        async function apply(
+          transaction: PlaidTransaction,
+          removePending = false,
+        ) {
+          const existing = await db.query<ExistingExpenseProjectionRow>(
+            "select * from expenses where provider='plaid' and bank_account_id=$1 and deleted_at is null",
             [bank],
-            actual,
-          ],
-        );
-        return plan;
-      }
-      await apply(pending);
-      const canonical = (await db.query<{ actual_transaction_id: string }>(
-        "select actual_transaction_id from recurring_occurrences",
-      )).rows[0].actual_transaction_id;
-      if (manuallyConfirmed) assertEquals(canonical, actual);
-      await assertOnePayment(db, canonical);
-      const posted = {
-        ...pending,
-        transaction_id: "bank-payment",
-        pending_transaction_id: pending.transaction_id,
-        pending: false,
-        date: "2024-09-25",
-        amount: 118.60,
-      };
-      const plan = await apply(posted, true);
-      assertEquals(plan.inserts.length, 0);
-      assertEquals(plan.updates[0].id, canonical);
-      await apply(posted, true); // A fresh webhook replay uses the same canonical row.
-      const rows = await db.query(
-        `select actual_transaction_id, paid_date::text,
+          );
+          const generation = (
+            await db.query<{ cursor_generation: number }>(
+              "select cursor_generation from bank_connections where id=$1",
+              [connection],
+            )
+          ).rows[0].cursor_generation;
+          const record = {
+            ...mapPlaidTransactionToExpense({
+              userId: user,
+              bankAccountId: bank,
+              defaultCurrency: "CAD",
+              accountType: "credit",
+              transaction,
+            }),
+            account_id: wallet,
+          };
+          const plan = buildBankExpenseMutationPlan({
+            records: [record],
+            transactions: [transaction],
+            existingRows: existing.rows,
+            providerPendingTransactionIds: new Map(
+              transaction.pending_transaction_id
+                ? [
+                    [
+                      transaction.transaction_id,
+                      transaction.pending_transaction_id,
+                    ],
+                  ]
+                : [],
+            ),
+            cursorGeneration: generation,
+          });
+          await db.query(
+            `select apply_plaid_sync_batch_v2($1,$2,$3,'after',$4,$5,$6,$7,$7,
+          '[]','{}','[]','{}',true,true,$8,null)`,
+            [
+              user,
+              connection,
+              generation,
+              JSON.stringify(plan.inserts),
+              JSON.stringify(plan.updates),
+              removePending ? [pending.transaction_id] : [],
+              [bank],
+              actual,
+            ],
+          );
+          return plan;
+        }
+        await apply(pending);
+        const canonical = (
+          await db.query<{ actual_transaction_id: string }>(
+            "select actual_transaction_id from recurring_occurrences",
+          )
+        ).rows[0].actual_transaction_id;
+        if (manuallyConfirmed) assertEquals(canonical, actual);
+        await assertOnePayment(db, canonical);
+        const posted = {
+          ...pending,
+          transaction_id: "bank-payment",
+          pending_transaction_id: pending.transaction_id,
+          pending: false,
+          date: "2024-09-25",
+          amount: 118.6,
+        };
+        const plan = await apply(posted, true);
+        assertEquals(plan.inserts.length, 0);
+        assertEquals(plan.updates[0].id, canonical);
+        await apply(posted, true); // A fresh webhook replay uses the same canonical row.
+        const rows = await db.query(
+          `select actual_transaction_id, paid_date::text,
         scheduled_occurrence_date::text, amount_cents::int from recurring_occurrences`,
-      );
-      assertEquals(rows.rows, [{
-        actual_transaction_id: canonical,
-        paid_date: "2024-09-25",
-        scheduled_occurrence_date: "2024-09-24",
-        amount_cents: 11860,
-      }]);
-      assertEquals(
-        (await db.query(`select count(*)::int as count,
-        sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null`))
-          .rows,
-        [{ count: 1, cents: 11860 }],
-      );
-      await assertRejects(
-        () =>
-          db.query(
-            `select apply_plaid_sync_batch_v2($1,$2,0,'stale',
+        );
+        assertEquals(rows.rows, [
+          {
+            actual_transaction_id: canonical,
+            paid_date: "2024-09-25",
+            scheduled_occurrence_date: "2024-09-24",
+            amount_cents: 11860,
+          },
+        ]);
+        assertEquals(
+          (
+            await db.query(`select count(*)::int as count,
+        sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null`)
+          ).rows,
+          [{ count: 1, cents: 11860 }],
+        );
+        await assertRejects(
+          () =>
+            db.query(
+              `select apply_plaid_sync_batch_v2($1,$2,0,'stale',
         '[]','[]','{}','{}',$3,'[]','{}','[]','{}',true,true,$4,null)`,
-            [user, connection, [bank], actual],
-          ),
-        Error,
-        "cursor generation changed",
-      );
-    } finally {
-      await db.close();
-    }
-  });
+              [user, connection, [bank], actual],
+            ),
+          Error,
+          "cursor generation changed",
+        );
+      } finally {
+        await db.close();
+      }
+    },
+  );
 }
 
 Deno.test(
@@ -734,13 +771,11 @@ Deno.test(
   async () => {
     const db = await fixture();
     try {
-      for (
-        const [anchor, paid, expected] of [
-          ["2026-09-24", "2026-09-23", "2026-09-24"],
-          ["2026-09-24", "2026-08-25", "2026-08-24"],
-          ["2026-01-31", "2026-02-27", "2026-02-28"],
-        ]
-      ) {
+      for (const [anchor, paid, expected] of [
+        ["2026-09-24", "2026-09-23", "2026-09-24"],
+        ["2026-09-24", "2026-08-25", "2026-08-24"],
+        ["2026-01-31", "2026-02-27", "2026-02-28"],
+      ]) {
         const result = await db.query(
           "select bank_recurring_cycle_date_v1($1::jsonb,$2::date)::text as cycle",
           [JSON.stringify({ frequency: "monthly", anchor_date: anchor }), paid],
@@ -779,24 +814,28 @@ Deno.test(
   },
 );
 
-Deno.test("bank recurring: reconnect with changed account and stream IDs preserves one payment", async () => {
-  let db = await fixture();
-  try {
-    await db.exec(`delete from bank_accounts where id='${bank}'`);
-    await manual(db);
-    const persisted = await db.dumpDataDir("none");
-    await db.close();
-    db = new PGlite({ loadDataDir: persisted });
-    await manual(db); // An interrupted/lost response must reuse the saved actual.
-    assertEquals(
-      (await db.query(`select actual_transaction_id from recurring_occurrences
-        where recurring_id='${series}' and status='confirmed'`)).rows,
-      [{ actual_transaction_id: actual }],
-    );
-    const reconnectedBank = "00000000-0000-4000-8000-000000000013";
-    const reconnectedSeries = "00000000-0000-4000-8000-000000000014";
-    await db.exec(`
-      insert into bank_accounts(id,user_id,type) values ('${reconnectedBank}','${user}','credit');
+Deno.test(
+  "bank recurring: reconnect with changed account and stream IDs preserves one payment",
+  async () => {
+    let db = await fixture();
+    try {
+      await db.exec(`delete from bank_accounts where id='${bank}'`);
+      await manual(db);
+      const persisted = await db.dumpDataDir("none");
+      await db.close();
+      db = new PGlite({ loadDataDir: persisted });
+      await manual(db); // An interrupted/lost response must reuse the saved actual.
+      assertEquals(
+        (
+          await db.query(`select actual_transaction_id from recurring_occurrences
+        where recurring_id='${series}' and status='confirmed'`)
+        ).rows,
+        [{ actual_transaction_id: actual }],
+      );
+      const reconnectedBank = "00000000-0000-4000-8000-000000000013";
+      const reconnectedSeries = "00000000-0000-4000-8000-000000000014";
+      await db.exec(`
+      insert into bank_accounts(id,user_id,bank_connection_id,type) values ('${reconnectedBank}','${user}','${connection}','credit');
       insert into expenses select (jsonb_populate_record(null::expenses,
         to_jsonb(e) || jsonb_build_object('id','${reconnectedSeries}',
         'provider_fields',jsonb_build_object('source','plaid_recurring_template',
@@ -810,24 +849,29 @@ Deno.test("bank recurring: reconnect with changed account and stream IDs preserv
         '{"pending":false,"amount":117.60,"personal_finance_category":{"primary":"GENERAL_SERVICES","confidence_level":"VERY_HIGH"}}');
       select public.reconcile_bank_recurring_occurrences_v1('${user}',null,null);
     `);
-    assertEquals(
-      (await db.query(`select count(*)::int as active_actuals,
+      assertEquals(
+        (
+          await db.query(`select count(*)::int as active_actuals,
       sum(amount_cents)::int as financial_effect_cents from expenses
-      where not is_recurring and deleted_at is null`)).rows,
-      [{ active_actuals: 1, financial_effect_cents: 11760 }],
-    );
-  } finally {
-    await db.close();
-  }
-});
+      where not is_recurring and deleted_at is null`)
+        ).rows,
+        [{ active_actuals: 1, financial_effect_cents: 11760 }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
 
-Deno.test("bank recurring: a second genuine stream payment is not merged into the confirmed cycle", async () => {
-  const db = await fixture();
-  try {
-    await importPayment(db);
-    await reconcile(db);
-    const second = "00000000-0000-4000-8000-000000000015";
-    await db.exec(`
+Deno.test(
+  "bank recurring: a second genuine stream payment is not merged into the confirmed cycle",
+  async () => {
+    const db = await fixture();
+    try {
+      await importPayment(db);
+      await reconcile(db);
+      const second = "00000000-0000-4000-8000-000000000015";
+      await db.exec(`
       update expenses set provider_fields = jsonb_set(provider_fields, '{transaction_ids}',
         '["bank-payment", "second-genuine-payment"]') where id='${series}';
       insert into expenses select (jsonb_populate_record(null::expenses, to_jsonb(e) ||
@@ -837,62 +881,79 @@ Deno.test("bank recurring: a second genuine stream payment is not merged into th
           'recurring_confirmed_at',null, 'recurring_confirmation_source',null))).*
       from expenses e where id='${imported}';
     `);
-    await reconcile(db);
-    await reconcile(db);
-    assertEquals(
-      (await db.query(`select count(*)::int as active_actuals,
+      await reconcile(db);
+      await reconcile(db);
+      assertEquals(
+        (
+          await db.query(`select count(*)::int as active_actuals,
       sum(amount_cents)::int as financial_effect_cents,
       sum(amount_cents*analytics_spending_multiplier)::int as spent_cents from expenses
-      where not is_recurring and deleted_at is null`)).rows,
-      [{
-        active_actuals: 2,
-        financial_effect_cents: 23520,
-        spent_cents: 23520,
-      }],
-    );
-    assertEquals(
-      (await db.query(`select actual_transaction_id from recurring_occurrences
-      where recurring_id='${series}' and status='confirmed'`)).rows,
-      [{ actual_transaction_id: imported }],
-    );
-    assertEquals(
-      (await db.query(
-        `select parent_recurring_id from expenses where id='${second}'`,
-      )).rows,
-      [{ parent_recurring_id: null }],
-    );
-  } finally {
-    await db.close();
-  }
-});
+      where not is_recurring and deleted_at is null`)
+        ).rows,
+        [
+          {
+            active_actuals: 2,
+            financial_effect_cents: 23520,
+            spent_cents: 23520,
+          },
+        ],
+      );
+      assertEquals(
+        (
+          await db.query(`select actual_transaction_id from recurring_occurrences
+      where recurring_id='${series}' and status='confirmed'`)
+        ).rows,
+        [{ actual_transaction_id: imported }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select parent_recurring_id from expenses where id='${second}'`,
+          )
+        ).rows,
+        [{ parent_recurring_id: null }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
 
-Deno.test("bank recurring: an import cannot silently move a manual payment to another wallet", async () => {
-  const db = await fixture();
-  try {
-    await manual(db);
-    const otherWallet = "00000000-0000-4000-8000-000000000016";
-    await db.exec(
-      `insert into accounts values ('${otherWallet}', '${user}', null, 'CAD', false);
+Deno.test(
+  "bank recurring: an import cannot silently move a manual payment to another wallet",
+  async () => {
+    const db = await fixture();
+    try {
+      await manual(db);
+      const otherWallet = "00000000-0000-4000-8000-000000000016";
+      await db.exec(
+        `insert into accounts values ('${otherWallet}', '${user}', null, 'CAD', false);
       update expenses set account_id='${otherWallet}' where id='${actual}'`,
-    );
-    await importPayment(db);
-    await assertRejects(
-      () => reconcile(db),
-      Error,
-      "OCCURRENCE_RECONCILIATION_CONFLICT",
-    );
-    assertEquals(
-      (await db.query(
-        `select account_id, provider from expenses where id='${actual}'`,
-      )).rows,
-      [{ account_id: otherWallet, provider: null }],
-    );
-    assertEquals(
-      (await db.query(`select deleted_at from expenses where id='${imported}'`))
-        .rows,
-      [{ deleted_at: null }],
-    );
-  } finally {
-    await db.close();
-  }
-});
+      );
+      await importPayment(db);
+      await assertRejects(
+        () => reconcile(db),
+        Error,
+        "OCCURRENCE_RECONCILIATION_CONFLICT",
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select account_id, provider from expenses where id='${actual}'`,
+          )
+        ).rows,
+        [{ account_id: otherWallet, provider: null }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            `select deleted_at from expenses where id='${imported}'`,
+          )
+        ).rows,
+        [{ deleted_at: null }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);

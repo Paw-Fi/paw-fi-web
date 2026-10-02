@@ -514,7 +514,6 @@ async function enforceLifecyclePolicies(
             .from("bank_connections")
             .update({
               warning_sent_at: now.toISOString(),
-              item_status: "pending_removal",
               updated_at: now.toISOString(),
             })
             .eq("id", connection.id);

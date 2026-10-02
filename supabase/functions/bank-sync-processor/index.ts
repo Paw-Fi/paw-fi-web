@@ -355,26 +355,8 @@ Deno.serve(async (req) => {
               connection: connection as BankConnection,
               removalReason: "subscription_entitlement_expired",
             });
-            const { data: completedRows, error: completeError } = await supabase
-              .from("bank_sync_jobs")
-              .update({
-                status: "completed",
-                processing_started_at: null,
-                updated_at: new Date().toISOString(),
-                processed_at: new Date().toISOString(),
-                last_error_code: null,
-                last_error_at: null,
-              })
-              .eq("id", job.id)
-              .eq("status", "processing")
-              .contains("payload", { processor_id: processorId })
-              .select("id");
-            if (completeError) throw completeError;
-            if (!completedRows?.length) {
-              throw new Error(
-                "Lost sync job ownership after entitlement removal",
-              );
-            }
+            // Removal cleanup already cancels every pending/processing sync
+            // job. That terminal handoff must not be retried as a lost claim.
             results.succeeded++;
             results.processed++;
             continue;

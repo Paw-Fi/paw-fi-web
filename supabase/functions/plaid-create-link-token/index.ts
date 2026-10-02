@@ -146,8 +146,9 @@ Deno.serve(async (req) => {
     let connectionCountryCode: string | undefined;
     let resolvedConnectionHouseholdId: string | null = null;
     let resolvedConnectionId = body.connectionId?.trim() || undefined;
-    let modeUsed = body.mode ??
-      (resolvedConnectionId != null ? "update" : "new");
+    let modeUsed: "new" | "update" | "reconnect" = resolvedConnectionId
+      ? "update"
+      : "new";
     let relinkState = body.updateReason?.trim() || undefined;
 
     const requestedInstitutionId = body.institutionId?.trim();
@@ -166,8 +167,8 @@ Deno.serve(async (req) => {
       duplicateQuery = targetHouseholdId
         ? duplicateQuery.eq("household_id", targetHouseholdId)
         : duplicateQuery
-          .eq("user_id", authResult.userId)
-          .is("household_id", null);
+            .eq("user_id", authResult.userId)
+            .is("household_id", null);
 
       const { data: duplicateConnection, error: duplicateError } =
         await duplicateQuery
@@ -182,9 +183,10 @@ Deno.serve(async (req) => {
       if (duplicateConnection?.id) {
         resolvedConnectionId = duplicateConnection.id;
         relinkState = duplicateConnection.relink_state?.trim() || relinkState;
-        modeUsed = duplicateConnection.status === "needs_reauth"
-          ? "reconnect"
-          : "update";
+        modeUsed =
+          duplicateConnection.status === "needs_reauth"
+            ? "reconnect"
+            : "update";
       }
     }
 
@@ -304,7 +306,8 @@ Deno.serve(async (req) => {
         );
       }
 
-      const encryptedToken = connection.access_token_encrypted ||
+      const encryptedToken =
+        connection.access_token_encrypted ||
         connection.plaid_access_token_encrypted;
       if (!encryptedToken) {
         return new Response(
@@ -320,9 +323,13 @@ Deno.serve(async (req) => {
       }
       accessToken = await decryptSecret(encryptedToken);
       resolvedConnectionHouseholdId = connection.household_id ?? null;
+      modeUsed =
+        connection.status === "needs_reauth" || body.mode === "reconnect"
+          ? "reconnect"
+          : "update";
 
-      connectionCountryCode = connection.country_code?.trim().toUpperCase() ||
-        undefined;
+      connectionCountryCode =
+        connection.country_code?.trim().toUpperCase() || undefined;
       relinkState = connection.relink_state?.trim() || relinkState;
     }
 
@@ -330,7 +337,7 @@ Deno.serve(async (req) => {
       isConvertedPaidUser: accessState.isConvertedPaidUser,
       enableRecurringTransactionsProduct:
         Deno.env.get("PLAID_ENABLE_RECURRING_FOR_PAID")?.toLowerCase() ===
-          "true",
+        "true",
     });
 
     const countryCode = resolvePlaidCountryCode({
@@ -368,8 +375,8 @@ Deno.serve(async (req) => {
         nonce: linkCompletionNonce,
         mode: modeUsed,
         expires_at: response.expiration,
-        target_household_id: resolvedConnectionHouseholdId ??
-          targetHouseholdId ?? null,
+        target_household_id:
+          resolvedConnectionHouseholdId ?? targetHouseholdId ?? null,
         selected_account_ids: [],
       });
 
@@ -387,9 +394,8 @@ Deno.serve(async (req) => {
         updateReason: relinkState || null,
         modeUsed,
         linkCompletionNonce,
-        updateCompletionNonce: accessToken && resolvedConnectionId
-          ? linkCompletionNonce
-          : null,
+        updateCompletionNonce:
+          accessToken && resolvedConnectionId ? linkCompletionNonce : null,
       }),
       {
         status: 200,

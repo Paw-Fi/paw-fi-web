@@ -614,6 +614,7 @@ async function applyPlaidAccountRevokedWebhook(params: {
   connection: {
     id: string;
     metadata?: unknown;
+    item_status?: string | null;
   };
   accountId?: string | null;
 }): Promise<void> {
