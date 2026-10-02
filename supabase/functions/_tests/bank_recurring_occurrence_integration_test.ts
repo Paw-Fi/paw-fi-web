@@ -240,6 +240,16 @@ async function fixture(realWriter = false) {
       ),
     ),
   );
+  for (const name of [
+    "20261002103000_defer_ambiguous_bank_recurring_cycles.sql",
+    "20261002113000_review_incompatible_recurring_bank_rows.sql",
+  ]) {
+    await db.exec(
+      await Deno.readTextFile(
+        new URL(`../../migrations/${name}`, import.meta.url),
+      ),
+    );
+  }
   return db;
 }
 
@@ -1288,6 +1298,94 @@ Deno.test(
           )
         ).rows,
         [{ frequency: "monthly" }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "bank recurring scope: real credit-payment writer commits native direction without income or spending inflation",
+  async () => {
+    const db = await fixture(true);
+    try {
+      const transaction: PlaidTransaction = {
+        transaction_id: "bank-payment",
+        account_id: "provider-account",
+        name: "Structured bank payment",
+        amount: -117.6,
+        iso_currency_code: "CAD",
+        date: "2024-09-23",
+        pending: false,
+        personal_finance_category: {
+          primary: "TRANSFER_IN",
+          detailed: "TRANSFER_IN_ACCOUNT_TRANSFER",
+          confidence_level: "VERY_HIGH",
+        },
+      };
+      const record = {
+        ...mapPlaidTransactionToExpense({
+          userId: user,
+          bankAccountId: bank,
+          defaultCurrency: "CAD",
+          accountType: "credit",
+          transaction,
+        }),
+        account_id: wallet,
+      };
+      assertEquals(record.type, "income");
+      const plan = buildBankExpenseMutationPlan({
+        records: [record],
+        transactions: [transaction],
+        existingRows: [],
+        providerPendingTransactionIds: new Map(),
+        cursorGeneration: 0,
+      });
+      await db.query(
+        `select apply_plaid_sync_batch_v2($1,$2,0,'after',$3,'[]','{}','{}',$4,
+      '[]','{}','[]','{}',true,true,$5,null)`,
+        [
+          user,
+          connection,
+          JSON.stringify(plan.inserts.map((row) => ({ ...row, id: imported }))),
+          [bank],
+          actual,
+        ],
+      );
+      assertEquals(
+        (
+          await db.query(`select type,amount_cents::int as cents,currency,
+      analytics_counts_toward_income,analytics_spending_multiplier,parent_recurring_id,
+      provider_fields #>> '{recurring_reconciliation,reason}' as reason from expenses where id='${imported}'`)
+        ).rows,
+        [
+          {
+            type: "income",
+            cents: 11760,
+            currency: "CAD",
+            analytics_counts_toward_income: false,
+            analytics_spending_multiplier: 0,
+            parent_recurring_id: null,
+            reason: "transaction_direction_mismatch",
+          },
+        ],
+      );
+      assertEquals(
+        (
+          await db.query(
+            "select cursor,cursor_generation from bank_connections",
+          )
+        ).rows,
+        [{ cursor: "after", cursor_generation: 1 }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            "select count(*)::int as count from recurring_occurrences",
+          )
+        ).rows,
+        [{ count: 0 }],
       );
     } finally {
       await db.close();

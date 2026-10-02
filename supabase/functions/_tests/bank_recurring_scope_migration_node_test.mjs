@@ -160,6 +160,110 @@ test("bank cycle ambiguity: atomic sync commits its cursor and still reconciles 
 
 function idForCycleTest() { return "00000000-0000-4000-8000-000000000098"; }
 
+const scopeReviewFix = "20261002113000_review_incompatible_recurring_bank_rows.sql";
+async function scopeReviewFixture() {
+  const db = await syncFixture();
+  await db.exec(await migration(scopeReviewFix));
+  await db.query("update expenses set date='2024-09-08' where id=$1", [imported]);
+  return db;
+}
+
+for (const [name, change, reason, expectedType, expectedCurrency, expectedWallet, expectedCents, strictReason] of [
+  ["liability payment direction", `update expenses set type='income' where id='${imported}'`, "transaction_direction_mismatch", "income", "CAD", wallet, 11760, "transaction_direction_mismatch"],
+  ["foreign native currency", `update expenses set currency='USD',account_id=null where id='${imported}'`, "native_currency_mismatch", "expense", "USD", null, 11760, "native_currency_mismatch"],
+  ["zero-value bank row", `update expenses set amount_cents=0 where id='${imported}'`, "zero_amount_bank_row", "expense", "CAD", wallet, 0, "non_positive_amount"],
+]) {
+  test(`recurring scope review: valid ${name} cannot abort the atomic bank batch`, async () => {
+    const db = await scopeReviewFixture();
+    try {
+      await db.exec(change);
+      await db.query(`select public.apply_plaid_sync_batch_v2($1,$2,0,'after','[]','[]','{}','{}',$3,
+        '[]','{}','[]','{}',true,true,$4,null)`, [user,connection,[bank],idForCycleTest()]);
+      assert.deepEqual((await db.query("select cursor from bank_connections")).rows, [{ cursor: "after" }]);
+      assert.deepEqual((await db.query(`select amount_cents::int as cents,type,currency,account_id,parent_recurring_id,
+        provider_fields->'recurring_reconciliation' as review from expenses where id=$1`, [imported])).rows,
+        [{ cents: expectedCents, type: expectedType, currency: expectedCurrency, account_id: expectedWallet, parent_recurring_id: null,
+          review: { status: "needs_review", reason, recurring_id: series } }]);
+      assert.deepEqual((await db.query("select count(*)::int as count from recurring_occurrences")).rows, [{ count: 0 }]);
+      await assert.rejects(reconcile(db), (error) => error.code === "P0001"
+        && error.message === "OCCURRENCE_ACCOUNT_SCOPE_MISMATCH"
+        && JSON.parse(error.detail).reconciliation_scope_reason === strictReason);
+    } finally { await db.close(); }
+  });
+}
+
+for (const [name, change, reason] of [
+  ["bank owner or Space", `update bank_connections set user_id='${id(99)}'; update expenses set type='income' where id='${imported}'`, "bank_owner_or_space_mismatch"],
+  ["privacy", `update bank_connections set household_id='${id(20)}'; update expenses set household_id='${id(20)}'; update expenses set privacy_scope='balances_only',type='income' where id='${imported}'`, "privacy_scope_mismatch"],
+  ["disconnected wallet", `update expenses set bank_account_id=null,account_id=null,provider_fields=jsonb_build_object('bank_account_id','${bank}'),type='income' where id='${imported}'`, "disconnected_wallet_mismatch"],
+  ["negative amount", `update expenses set amount_cents=-1 where id='${imported}'`, "non_positive_amount"],
+  ["already linked direction", `update expenses set type='income',parent_recurring_id='${series}',scheduled_occurrence_date='2024-09-08' where id='${imported}'`, "transaction_direction_mismatch"],
+]) {
+  test(`recurring scope review: ${name} remains a diagnosed hard failure`, async () => {
+    const db = await scopeReviewFixture();
+    try {
+      await db.exec(change);
+      await assert.rejects(syncReconcile(db), (error) => error.code === "P0001"
+        && error.message === "OCCURRENCE_ACCOUNT_SCOPE_MISMATCH"
+        && JSON.parse(error.detail).reconciliation_scope_reason === reason);
+      assert.deepEqual((await db.query("select provider_fields ? 'recurring_reconciliation' as has_review from expenses where id=$1", [imported])).rows,
+        [{ has_review: false }]);
+    } finally { await db.close(); }
+  });
+}
+
+test("recurring scope review: corrected data resolves and clears its own review marker", async () => {
+  const db = await scopeReviewFixture();
+  try {
+    await db.query("update expenses set type='income' where id=$1", [imported]);
+    await syncReconcile(db);
+    await db.query("update expenses set type='expense' where id=$1", [imported]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
+    assert.deepEqual((await db.query("select provider_fields ? 'recurring_reconciliation' as has_review,parent_recurring_id from expenses where id=$1", [imported])).rows,
+      [{ has_review: false, parent_recurring_id: series }]);
+    await db.exec(await migration(scopeReviewFix));
+  } finally { await db.close(); }
+});
+
+test("recurring scope review: an incompatible payment cannot become a competing manual adoption", async () => {
+  const db = await scopeReviewFixture();
+  try {
+    const manualId = id(97);
+    await db.query("update expenses set type='income' where id=$1", [imported]);
+    await db.query(`insert into expenses(id,user_id,account_id,date,amount_cents,currency,type,parent_recurring_id,
+      scheduled_occurrence_date,recurring_confirmed_at,recurring_confirmation_source)
+      values ($1,$2,$3,'2024-09-08',9000,'CAD','expense',$4,'2024-09-08',now(),'user')`, [manualId,user,wallet,series]);
+    await db.query(`insert into recurring_occurrences(recurring_id,scheduled_occurrence_date,status,confirmation_source,
+      actual_transaction_id,paid_date,amount_cents,currency,confirmed_at,confirmed_by_user_id)
+      values ($1,'2024-09-08','confirmed','user',$2,'2024-09-08',9000,'CAD',now(),$3)`, [series,manualId,user]);
+    await db.query(`insert into expenses(id,user_id,account_id,bank_account_id,provider,provider_transaction_id,date,amount_cents,currency,type)
+      values ($1,$2,$3,$4,'plaid','pending-payment','2024-09-08',9000,'CAD','expense')`, [id(98),user,wallet,bank]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
+    assert.deepEqual((await db.query("select actual_transaction_id from recurring_occurrences")).rows, [{ actual_transaction_id: manualId }]);
+    assert.deepEqual((await db.query("select count(*)::int as count,sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null")).rows,
+      [{ count: 2, cents: 20760 }]);
+  } finally { await db.close(); }
+});
+
+test("recurring scope review: competing template identities remain unlinked until disambiguated", async () => {
+  const db = await scopeReviewFixture();
+  try {
+    const otherSeries = id(99);
+    await db.query("update expenses set type='income' where id=$1", [imported]);
+    await db.query(`insert into expenses select (jsonb_populate_record(null::expenses,
+      to_jsonb(e) || jsonb_build_object('id',$1::text,'type','income'))).* from expenses e where id=$2`, [otherSeries,series]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 0 }]);
+    assert.deepEqual((await db.query("select count(*)::int as count from recurring_occurrences")).rows, [{ count: 0 }]);
+    assert.deepEqual((await db.query("select provider_fields #>> '{recurring_reconciliation,reason}' as reason from expenses where id=$1", [imported])).rows,
+      [{ reason: "ambiguous_bank_series" }]);
+    await assert.rejects(db.query("select reconcile_bank_recurring_occurrences_v1($1,$2,null)", [user,[otherSeries]]), /OCCURRENCE_AMBIGUOUS_BANK_SERIES/);
+    await db.query("update expenses set deleted_at=now() where id=$1", [series]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
+    assert.deepEqual((await db.query("select parent_recurring_id,provider_fields ? 'recurring_reconciliation' as has_review from expenses where id=$1", [imported])).rows,
+      [{ parent_recurring_id: otherSeries, has_review: false }]);
+  } finally { await db.close(); }
+});
+
 test("bank cycle ambiguity: a corrected provider date resolves and clears the durable review marker", async () => {
   const db = await syncFixture();
   try {
