@@ -34,7 +34,10 @@ import { enrichAnalyzedMerchantItems } from "../shared/merchant-analysis.ts";
 import { VALID_CURRENCIES } from "../shared/currency-validator.ts";
 import { formatDateInTimeZone } from "../shared/bot/date-utils.ts";
 
+import { applyAiCaptureDefaults, type AiCaptureDefaults, parseAiCaptureDefaults } from "../shared/ai-capture-defaults.ts";
+
 interface InteractiveAnalyzeBody extends AnalyzeRequestBody {
+  captureContext?: unknown;
   interactive?: unknown;
   accountId?: string;
 }
@@ -627,14 +630,16 @@ Deno.serve(async (req: Request) => {
 
     let body: InteractiveAnalyzeBody;
     let interactive: InteractiveRequest | null;
+    let captureDefaults: AiCaptureDefaults | null;
     try {
       body = await req.json();
+      captureDefaults = parseAiCaptureDefaults(body.captureContext);
       interactive = parseInteractiveRequest(body.interactive);
       if (interactive) parseInteractiveSource(body);
     } catch (_error) {
       return errorResponse("Invalid analysis request", 400);
     }
-    const interactiveDefaultCurrency = body.currency?.trim().toUpperCase();
+    const interactiveDefaultCurrency = captureDefaults?.currency ?? body.currency?.trim().toUpperCase();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -714,6 +719,8 @@ Deno.serve(async (req: Request) => {
         contact?.preferred_timezone,
       );
     }
+
+    body = applyAiCaptureDefaults(body, captureDefaults);
 
     // Load per-user custom categories + learned preferences for category assignment
     try {
