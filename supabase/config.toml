@@ -163,3 +163,6 @@ verify_jwt = false
 
 [functions.email-import-review-submit]
 verify_jwt = false
+
+[functions.email-import-sender-verify]
+verify_jwt = false

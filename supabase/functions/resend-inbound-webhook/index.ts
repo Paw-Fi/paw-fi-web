@@ -14,9 +14,9 @@ import {
   filterSupportedImportAttachments,
   normalizeEmailAddress,
   resolveInboundEmailText,
-  resolveNewestSenderOwner,
   shouldProcessInboundRecipients,
 } from "../shared/email-import.ts";
+import { resolveVerifiedSenderAccountIds } from "../shared/email-sender-verification.ts";
 import { createEmailImportAccountResolver } from "../shared/email-import-account.ts";
 import { type AnalyzeRequestBody } from "../shared/analyze-core.ts";
 import {
@@ -44,7 +44,6 @@ import {
   applyOwnedInboundEventUpdate,
   buildEmailImportDebugTraceId,
   type InboundEventLeaseOwner,
-  resolveDuplicateWebhookStatusCode,
 } from "../shared/email-import-event-state.ts";
 import { saveTransactionsBatchInternal } from "../save-transactions-batch/index.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -125,6 +124,8 @@ interface AttachmentProcessingResult {
   items?: Array<Record<string, unknown>>;
 }
 
+class RetryableInboundError extends Error {}
+
 type InboundEventStatus =
   | "received"
   | "processing"
@@ -148,18 +149,18 @@ interface ExistingInboundEvent {
 
 type ClaimInboundEventResult =
   | {
-    kind: "claimed";
-    owner: InboundEventLeaseOwner;
-    recovered: boolean;
-  }
+      kind: "claimed";
+      owner: InboundEventLeaseOwner;
+      recovered: boolean;
+    }
   | {
-    kind: "duplicate";
-    rowId: string | null;
-    status: InboundEventStatus | null;
-    processedAt: string | null;
-    inProgress: boolean;
-    reason: string;
-  };
+      kind: "duplicate";
+      rowId: string | null;
+      status: InboundEventStatus | null;
+      processedAt: string | null;
+      inProgress: boolean;
+      reason: string;
+    };
 
 function chunkDiagnosticText(value: string): string[] {
   return value.match(/[\s\S]{1,450}/g) ?? [];
@@ -206,8 +207,8 @@ function resolveImportInboxEmails(): string[] {
 }
 
 const IMPORT_INBOX_EMAILS = resolveImportInboxEmails();
-const PRIMARY_IMPORT_INBOX_EMAIL = IMPORT_INBOX_EMAILS[0] ||
-  DEFAULT_IMPORT_INBOX_EMAIL;
+const PRIMARY_IMPORT_INBOX_EMAIL =
+  IMPORT_INBOX_EMAILS[0] || DEFAULT_IMPORT_INBOX_EMAIL;
 const buildFollowupEmail = createFollowupEmailBuilder({
   appTransactionsUrl: APP_TRANSACTIONS_URL,
   importInboxEmail: PRIMARY_IMPORT_INBOX_EMAIL,
@@ -222,7 +223,7 @@ function shouldProcessInboundToConfiguredInboxes(
   recipients?: string[] | null,
 ): boolean {
   return IMPORT_INBOX_EMAILS.some((inbox) =>
-    shouldProcessInboundRecipients(recipients ?? undefined, inbox)
+    shouldProcessInboundRecipients(recipients ?? undefined, inbox),
   );
 }
 
@@ -234,10 +235,9 @@ function ensureSoftDeadline(startedAtMs: number, stage: string): void {
 }
 
 function matchesRetryableFailurePattern(message: string): boolean {
-  return /(SOFT_DEADLINE_EXCEEDED|EMAIL_IMPORT_AI_DECISION_MALFORMED_RESULT|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i
-    .test(
-      message,
-    );
+  return /(SOFT_DEADLINE_EXCEEDED|EMAIL_IMPORT_AI_DECISION_MALFORMED_RESULT|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i.test(
+    message,
+  );
 }
 
 function isRetryableAnalyzeFailure(result: {
@@ -257,6 +257,7 @@ function isRetryableAnalyzeFailure(result: {
 }
 
 function isRetryableAttachmentError(error: unknown): boolean {
+  if (error instanceof RetryableInboundError) return true;
   const message = error instanceof Error ? error.message : String(error);
   return matchesRetryableFailurePattern(message);
 }
@@ -292,20 +293,18 @@ function summarizeMerchantEnrichment(items: unknown): Array<{
   if (!Array.isArray(items)) return [];
   return items.map((item: any, index: number) => ({
     index,
-    merchantDetected: typeof item?.merchant === "string" &&
-      item.merchant.trim().length > 0,
-    merchantId: typeof item?.merchant_id === "string"
-      ? item.merchant_id
-      : null,
-    merchantDomain: typeof item?.merchant_domain === "string"
-      ? item.merchant_domain
-      : null,
+    merchantDetected:
+      typeof item?.merchant === "string" && item.merchant.trim().length > 0,
+    merchantId: typeof item?.merchant_id === "string" ? item.merchant_id : null,
+    merchantDomain:
+      typeof item?.merchant_domain === "string" ? item.merchant_domain : null,
     structuredMerchantDetected:
       typeof item?.merchant_structured_name === "string" &&
       item.merchant_structured_name.trim().length > 0,
-    resolutionSource: typeof item?.merchant_resolution_source === "string"
-      ? item.merchant_resolution_source
-      : null,
+    resolutionSource:
+      typeof item?.merchant_resolution_source === "string"
+        ? item.merchant_resolution_source
+        : null,
     candidateCount: Array.isArray(item?.merchant_candidates)
       ? item.merchant_candidates.length
       : 0,
@@ -366,10 +365,9 @@ function errorResponse(message: string, status = 400, code?: string) {
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      .test(
-        trimmed,
-      )
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    trimmed,
+  )
     ? trimmed
     : null;
 }
@@ -393,6 +391,7 @@ async function claimInboundEvent(params: {
   normalizedSenderEmail: string;
   svixId: string | null;
   svixTimestamp: string | null;
+  deliveryUserId: string | null;
 }): Promise<ClaimInboundEventResult> {
   const {
     supabase,
@@ -401,6 +400,7 @@ async function claimInboundEvent(params: {
     normalizedSenderEmail,
     svixId,
     svixTimestamp,
+    deliveryUserId,
   } = params;
   const lockExpiresAt = addMillisecondsIso(
     validPositiveInt(PROCESSING_LEASE_MS, 180000),
@@ -410,6 +410,8 @@ async function claimInboundEvent(params: {
     .from("email_import_events")
     .insert({
       provider_email_id: emailId,
+      delivery_user_id: deliveryUserId,
+      user_id: deliveryUserId,
       sender_email: senderEmail,
       normalized_sender_email: normalizedSenderEmail,
       status: "processing",
@@ -426,9 +428,10 @@ async function claimInboundEvent(params: {
       kind: "claimed",
       owner: {
         rowId: data.id as string,
-        attemptCount: typeof data.processing_attempt_count === "number"
-          ? data.processing_attempt_count
-          : 1,
+        attemptCount:
+          typeof data.processing_attempt_count === "number"
+            ? data.processing_attempt_count
+            : 1,
       },
       recovered: false,
     };
@@ -438,7 +441,11 @@ async function claimInboundEvent(params: {
     throw new Error(error?.message || "Failed to claim inbound event");
   }
 
-  const existing = await getInboundEventByEmailId({ supabase, emailId });
+  const existing = await getInboundEventByEmailId({
+    supabase,
+    emailId,
+    deliveryUserId,
+  });
   if (!existing) {
     return {
       kind: "duplicate",
@@ -492,6 +499,7 @@ async function claimInboundEvent(params: {
     await finalizeInboundEventById({
       supabase,
       rowId: existing.id,
+      userId: deliveryUserId,
       status: "failed",
       errorText: "MAX_PROCESSING_ATTEMPTS_EXCEEDED",
     });
@@ -544,14 +552,15 @@ async function claimInboundEvent(params: {
 
 function mapInboundEventRow(row: any): ExistingInboundEvent | null {
   const statusCandidate = typeof row?.status === "string" ? row.status : null;
-  const status: InboundEventStatus | null = statusCandidate === "received" ||
-      statusCandidate === "processing" ||
-      statusCandidate === "awaiting_review" ||
-      statusCandidate === "ignored" ||
-      statusCandidate === "processed" ||
-      statusCandidate === "failed"
-    ? statusCandidate
-    : null;
+  const status: InboundEventStatus | null =
+    statusCandidate === "received" ||
+    statusCandidate === "processing" ||
+    statusCandidate === "awaiting_review" ||
+    statusCandidate === "ignored" ||
+    statusCandidate === "processed" ||
+    statusCandidate === "failed"
+      ? statusCandidate
+      : null;
 
   if (!row?.id || !status) return null;
 
@@ -560,37 +569,40 @@ function mapInboundEventRow(row: any): ExistingInboundEvent | null {
     status,
     user_id: typeof row.user_id === "string" ? row.user_id : null,
     error_text: typeof row.error_text === "string" ? row.error_text : null,
-    processed_at: typeof row.processed_at === "string"
-      ? row.processed_at
-      : null,
+    processed_at:
+      typeof row.processed_at === "string" ? row.processed_at : null,
     created_at: typeof row.created_at === "string" ? row.created_at : null,
-    processing_attempt_count: typeof row.processing_attempt_count === "number"
-      ? Math.max(0, Math.trunc(row.processing_attempt_count))
-      : 0,
-    lock_expires_at: typeof row.lock_expires_at === "string"
-      ? row.lock_expires_at
-      : null,
-    last_svix_id: typeof row.last_svix_id === "string"
-      ? row.last_svix_id
-      : null,
-    last_svix_timestamp: typeof row.last_svix_timestamp === "string"
-      ? row.last_svix_timestamp
-      : null,
+    processing_attempt_count:
+      typeof row.processing_attempt_count === "number"
+        ? Math.max(0, Math.trunc(row.processing_attempt_count))
+        : 0,
+    lock_expires_at:
+      typeof row.lock_expires_at === "string" ? row.lock_expires_at : null,
+    last_svix_id:
+      typeof row.last_svix_id === "string" ? row.last_svix_id : null,
+    last_svix_timestamp:
+      typeof row.last_svix_timestamp === "string"
+        ? row.last_svix_timestamp
+        : null,
   };
 }
 
 async function getInboundEventByEmailId(params: {
   supabase: any;
   emailId: string;
+  deliveryUserId: string | null;
 }): Promise<ExistingInboundEvent | null> {
-  const { supabase, emailId } = params;
-  const { data, error } = await supabase
+  const { supabase, emailId, deliveryUserId } = params;
+  let query = supabase
     .from("email_import_events")
     .select(
       "id, status, user_id, error_text, processed_at, created_at, processing_attempt_count, lock_expires_at, last_svix_id, last_svix_timestamp",
     )
-    .eq("provider_email_id", emailId)
-    .maybeSingle();
+    .eq("provider_email_id", emailId);
+  query = deliveryUserId
+    ? query.eq("delivery_user_id", deliveryUserId)
+    : query.is("delivery_user_id", null);
+  const { data, error } = await query.maybeSingle();
 
   if (error || !data) return null;
   return mapInboundEventRow(data);
@@ -757,55 +769,35 @@ async function updateInboundEvent(params: {
 async function resolveOwnerBySender(params: {
   supabase: any;
   normalizedSenderEmail: string;
+  userId: string | null;
+  receivedAt: string;
 }): Promise<ResolvedOwner | null> {
-  const { supabase, normalizedSenderEmail } = params;
-
-  const [{ data: matchingUsers }, { data: whitelistRows }] = await Promise.all([
-    supabase
-      .from("users")
-      .select("id, email, full_name, created_at")
-      .eq("email", normalizedSenderEmail),
-    supabase
-      .from("email_import_sender_whitelist")
-      .select("user_id, created_at")
-      .eq("normalized_sender_email", normalizedSenderEmail),
-  ]);
-
-  const candidates = [
-    ...(Array.isArray(matchingUsers)
-      ? matchingUsers.map((row: any) => ({
-        userId: String(row.id),
+  const { supabase, normalizedSenderEmail, userId, receivedAt } = params;
+  if (
+    !userId ||
+    !(
+      await resolveVerifiedSenderAccountIds(
+        supabase,
         normalizedSenderEmail,
-        createdAt: typeof row.created_at === "string" ? row.created_at : null,
-        source: "default" as const,
-      }))
-      : []),
-    ...(Array.isArray(whitelistRows)
-      ? whitelistRows.map((row: any) => ({
-        userId: String(row.user_id),
-        normalizedSenderEmail,
-        createdAt: typeof row.created_at === "string" ? row.created_at : null,
-        source: "whitelist" as const,
-      }))
-      : []),
-  ];
+        receivedAt,
+      )
+    ).includes(userId)
+  )
+    return null;
 
-  const resolved = resolveNewestSenderOwner(candidates);
-  if (!resolved) return null;
-
-  const [{ data: user }, { data: contact, error: contactError }] = await Promise
-    .all([
+  const [{ data: user }, { data: contact, error: contactError }] =
+    await Promise.all([
       supabase
         .from("users")
         .select("email, full_name")
-        .eq("id", resolved.userId)
+        .eq("id", userId)
         .maybeSingle(),
       supabase
         .from("user_contacts")
         .select(
           "email_import_enabled, email_import_household_id, email_import_is_portfolio, email_import_account_id, preferred_currency, preferred_timezone",
         )
-        .eq("user_id", resolved.userId)
+        .eq("user_id", userId)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -817,28 +809,31 @@ async function resolveOwnerBySender(params: {
       error: contactError,
       context: {
         operation: "user_contacts.select_email_import_settings",
-        userId: resolved.userId,
+        userId,
       },
     });
+    throw contactError;
   }
 
-  const defaultEmail = normalizeEmailAddress(user?.email) ||
-    normalizedSenderEmail;
+  const defaultEmail =
+    normalizeEmailAddress(user?.email) || normalizedSenderEmail;
   const accountId = sanitizeUuid(contact?.email_import_account_id ?? null);
 
   return {
-    userId: resolved.userId,
+    userId,
     fullName: typeof user?.full_name === "string" ? user.full_name : null,
     defaultEmail,
     enabled: contact?.email_import_enabled === true,
-    preferredCurrency: typeof contact?.preferred_currency === "string" &&
-        contact.preferred_currency.trim().length > 0
-      ? contact.preferred_currency.trim().toUpperCase()
-      : "USD",
-    preferredTimezone: typeof contact?.preferred_timezone === "string" &&
-        contact.preferred_timezone.trim().length > 0
-      ? contact.preferred_timezone.trim()
-      : null,
+    preferredCurrency:
+      typeof contact?.preferred_currency === "string" &&
+      contact.preferred_currency.trim().length > 0
+        ? contact.preferred_currency.trim().toUpperCase()
+        : "USD",
+    preferredTimezone:
+      typeof contact?.preferred_timezone === "string" &&
+      contact.preferred_timezone.trim().length > 0
+        ? contact.preferred_timezone.trim()
+        : null,
     householdId: sanitizeUuid(contact?.email_import_household_id ?? null),
     isPortfolio: contact?.email_import_is_portfolio === true,
     accountId,
@@ -854,7 +849,7 @@ function hasVerifiedSender(headers?: Record<string, string>): boolean {
         "authentication-results",
         "arc-authentication-results",
         "received-spf",
-      ].includes(entry[0].toLowerCase())
+      ].includes(entry[0].toLowerCase()),
     )
     .map((entry) => entry[1].toLowerCase())
     .join(" ");
@@ -991,7 +986,7 @@ function boundedReviewEvidence(
     candidate.merchant,
     candidate.description,
     ...issues.flatMap((issue) =>
-      (issue.choices ?? []).map((choice) => choice.evidence)
+      (issue.choices ?? []).map((choice) => choice.evidence),
     ),
   ]
     .filter(
@@ -1004,7 +999,7 @@ function boundedReviewEvidence(
       terms.flatMap(
         (term) =>
           sourceText.match(new RegExp(`.{0,180}${term}.{0,180}`, "i"))?.[0] ??
-            [],
+          [],
       ),
     ),
   )
@@ -1028,16 +1023,18 @@ function sortImportedTransactions(
     const rightAmount = Number(right.amount ?? 0);
     if (leftAmount !== rightAmount) return leftAmount - rightAmount;
 
-    const leftDescription = typeof left.description === "string"
-      ? left.description
-      : typeof left.merchant === "string"
-      ? left.merchant
-      : "";
-    const rightDescription = typeof right.description === "string"
-      ? right.description
-      : typeof right.merchant === "string"
-      ? right.merchant
-      : "";
+    const leftDescription =
+      typeof left.description === "string"
+        ? left.description
+        : typeof left.merchant === "string"
+          ? left.merchant
+          : "";
+    const rightDescription =
+      typeof right.description === "string"
+        ? right.description
+        : typeof right.merchant === "string"
+          ? right.merchant
+          : "";
     return leftDescription.localeCompare(rightDescription);
   });
 }
@@ -1182,7 +1179,8 @@ async function sendFcmV1Notification(params: {
   if (!FIREBASE_PROJECT_ID) return false;
 
   try {
-    const isWeb = typeof platform === "string" &&
+    const isWeb =
+      typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
     const message = {
       message: {
@@ -1216,16 +1214,16 @@ async function sendFcmV1Notification(params: {
         },
         ...(isWeb
           ? {
-            webpush: {
-              data: {
-                ...data,
-                deep_link: data.deep_link || "moneko://home",
+              webpush: {
+                data: {
+                  ...data,
+                  deep_link: data.deep_link || "moneko://home",
+                },
+                fcm_options: {
+                  link: APP_URL,
+                },
               },
-              fcm_options: {
-                link: APP_URL,
-              },
-            },
-          }
+            }
           : {}),
       },
     };
@@ -1276,12 +1274,10 @@ async function sendImportProcessedNotification(params: {
   if (!accessToken) return;
 
   const title = `Your files are ready!`;
-  const body = `${savedCount} ${
-    pluralize(
-      savedCount,
-      "transaction",
-    )
-  } have been added to your account`;
+  const body = `${savedCount} ${pluralize(
+    savedCount,
+    "transaction",
+  )} have been added to your account`;
   const data = {
     event_type: "email_import_processed",
     notification_type: "email_import_processed",
@@ -1300,7 +1296,7 @@ async function sendImportProcessedNotification(params: {
         data,
         accessToken,
         platform: device.platform ?? undefined,
-      })
+      }),
     ),
   );
 }
@@ -1320,24 +1316,19 @@ async function sendImportReviewRequiredNotification(params: {
   if (!accessToken) return;
 
   const title = "Action needed: review your import";
-  const body = savedCount > 0
-    ? `${savedCount} ${
-      pluralize(
-        savedCount,
-        "transaction",
-      )
-    } added. ${reviewCount} ${
-      pluralize(
-        reviewCount,
-        "transaction",
-      )
-    } need your review. Tap to review.`
-    : `${reviewCount} ${
-      pluralize(
-        reviewCount,
-        "transaction",
-      )
-    } need your review. Tap to review.`;
+  const body =
+    savedCount > 0
+      ? `${savedCount} ${pluralize(
+          savedCount,
+          "transaction",
+        )} added. ${reviewCount} ${pluralize(
+          reviewCount,
+          "transaction",
+        )} need your review. Tap to review.`
+      : `${reviewCount} ${pluralize(
+          reviewCount,
+          "transaction",
+        )} need your review. Tap to review.`;
   const data = {
     event_type: "email_import_review_required",
     notification_type: "email_import_review_required",
@@ -1358,7 +1349,7 @@ async function sendImportReviewRequiredNotification(params: {
         data,
         accessToken,
         platform: device.platform ?? undefined,
-      })
+      }),
     ),
   );
 }
@@ -1421,7 +1412,6 @@ export async function handleResendInboundWebhook(
   const requiredServiceRoleKey = SUPABASE_SERVICE_ROLE_KEY!;
   const requiredGeminiApiKey = GEMINI_API_KEY!;
   const requiredWebhookSecret = RESEND_WEBHOOK_SECRET!;
-  const processingStartedAtMs = Date.now();
   const svixId = req.headers.get("svix-id");
   const svixTimestamp = req.headers.get("svix-timestamp");
   const svixSignature = req.headers.get("svix-signature");
@@ -1493,166 +1483,283 @@ export async function handleResendInboundWebhook(
     },
   });
 
-  const claim = await claimInboundEvent({
-    supabase,
-    emailId: emailData.email_id,
-    senderEmail,
-    normalizedSenderEmail: senderEmail,
-    svixId,
-    svixTimestamp,
-  });
-  if (claim.kind === "duplicate") {
-    const duplicatePayload = {
-      success: true,
-      duplicate: true,
-      status: claim.status,
-      in_progress: claim.inProgress,
-      processed_at: claim.processedAt,
-      reason: claim.reason,
-    };
-    return jsonResponse(
-      duplicatePayload,
-      resolveDuplicateWebhookStatusCode(claim.inProgress),
+  const receivedAt =
+    emailData.created_at || event.created_at || new Date().toISOString();
+  let recipientIds: string[];
+  try {
+    recipientIds = await resolveVerifiedSenderAccountIds(
+      supabase,
+      senderEmail,
+      receivedAt,
+    );
+  } catch (_) {
+    return errorResponse(
+      "Unable to resolve verified receipt destinations",
+      503,
+      "SERVER_ERROR",
     );
   }
-  const leaseOwner = claim.owner;
-
-  const processingPromise = (async () => {
-    const backgroundStartedAtMs = Date.now();
-    let currentStage = "started";
-    const setStage = (
-      stage: string,
-      detail?: Record<string, unknown>,
-    ): void => {
-      currentStage = stage;
-      console.log("[resend-inbound-webhook] background stage", {
-        emailId: emailData.email_id,
-        stage,
-        elapsedMs: Date.now() - backgroundStartedAtMs,
-        ...(detail ?? {}),
-      });
-    };
-    const heartbeat = setInterval(() => {
-      console.log("[resend-inbound-webhook] background heartbeat", {
-        emailId: emailData.email_id,
-        stage: currentStage,
-        elapsedMs: Date.now() - backgroundStartedAtMs,
-        attemptCount: leaseOwner.attemptCount,
-      });
-    }, 30000);
-
-    console.log("[resend-inbound-webhook] background processing started", {
+  const deliveryResults: Array<Record<string, unknown>> = [];
+  let deliveryFailed = false;
+  for (const deliveryUserId of recipientIds.length ? recipientIds : [null]) {
+    const claim = await claimInboundEvent({
+      supabase,
       emailId: emailData.email_id,
-      recovered: claim.recovered,
-      attemptCount: leaseOwner.attemptCount,
-      merchantEnrichment: {
-        logoDevConfigured: LOGO_DEV_SECRET_KEY.length > 0,
-        autoResolveCandidates: true,
-      },
+      senderEmail,
+      normalizedSenderEmail: senderEmail,
+      svixId,
+      svixTimestamp,
+      deliveryUserId,
     });
+    if (claim.kind === "duplicate") {
+      const duplicatePayload = {
+        success: true,
+        duplicate: true,
+        status: claim.status,
+        in_progress: claim.inProgress,
+        processed_at: claim.processedAt,
+        reason: claim.reason,
+      };
+      deliveryResults.push(duplicatePayload);
+      if (claim.inProgress) deliveryFailed = true;
+      continue;
+    }
+    const leaseOwner = claim.owner;
+    const processingStartedAtMs = Date.now();
 
-    try {
-      setStage("owner_lookup_start");
-      ensureSoftDeadline(processingStartedAtMs, "owner_lookup");
-      const owner = await resolveOwnerBySender({
-        supabase,
-        normalizedSenderEmail: senderEmail,
-      });
-      setStage("owner_lookup_complete", {
-        resolvedUserId: owner?.userId ?? null,
-        enabled: owner?.enabled ?? null,
-      });
+    const processingPromise = (async () => {
+      const backgroundStartedAtMs = Date.now();
+      let currentStage = "started";
+      const setStage = (
+        stage: string,
+        detail?: Record<string, unknown>,
+      ): void => {
+        currentStage = stage;
+        console.log("[resend-inbound-webhook] background stage", {
+          emailId: emailData.email_id,
+          stage,
+          elapsedMs: Date.now() - backgroundStartedAtMs,
+          ...(detail ?? {}),
+        });
+      };
+      const heartbeat = setInterval(() => {
+        console.log("[resend-inbound-webhook] background heartbeat", {
+          emailId: emailData.email_id,
+          stage: currentStage,
+          elapsedMs: Date.now() - backgroundStartedAtMs,
+          attemptCount: leaseOwner.attemptCount,
+        });
+      }, 30000);
 
-      console.log("[resend-inbound-webhook] owner lookup", {
+      console.log("[resend-inbound-webhook] background processing started", {
         emailId: emailData.email_id,
-        senderEmail,
-        resolvedUserId: owner?.userId ?? null,
-        enabled: owner?.enabled ?? null,
-        householdId: owner?.householdId ?? null,
-        isPortfolio: owner?.isPortfolio ?? null,
-        accountId: owner?.accountId ?? null,
-      });
-
-      if (!owner) {
-        const unavailable = buildUnavailableEmail({
-          senderEmail,
-          reason: importUnavailableReasons.senderNotWhitelisted,
-        });
-        await updateInboundEvent({
-          supabase,
-          owner: leaseOwner,
-          status: "ignored",
-          errorText: "SENDER_NOT_WHITELISTED",
-        });
-        try {
-          await sendEmail({
-            to: senderEmail,
-            from: EMAIL_FROM,
-            subject: unavailable.subject,
-            html: unavailable.html,
-            text: unavailable.text,
-          });
-        } catch (sideEffectError) {
-          console.error(
-            "[resend-inbound-webhook] unavailable email failed after finalization",
-            sideEffectError,
-          );
-        }
-        return jsonResponse({ success: true, ignored: true });
-      }
-
-      if (!owner.enabled) {
-        const unavailable = buildUnavailableEmail({
-          senderEmail,
-          reason: importUnavailableReasons.importDisabled,
-        });
-        await updateInboundEvent({
-          supabase,
-          owner: leaseOwner,
-          userId: owner.userId,
-          status: "ignored",
-          errorText: "EMAIL_IMPORT_DISABLED",
-        });
-        try {
-          await sendEmail({
-            to: senderEmail,
-            from: EMAIL_FROM,
-            subject: unavailable.subject,
-            html: unavailable.html,
-            text: unavailable.text,
-          });
-        } catch (sideEffectError) {
-          console.error(
-            "[resend-inbound-webhook] unavailable email failed after finalization",
-            sideEffectError,
-          );
-        }
-        return jsonResponse({ success: true, ignored: true });
-      }
-
-      const resolveImportAccountId = createEmailImportAccountResolver({
-        supabase,
-        userId: owner.userId,
-        householdId: owner.householdId,
-        accountId: owner.accountId,
+        recovered: claim.recovered,
+        attemptCount: leaseOwner.attemptCount,
+        merchantEnrichment: {
+          logoDevConfigured: LOGO_DEV_SECRET_KEY.length > 0,
+          autoResolveCandidates: true,
+        },
       });
 
       try {
-        const subscription = await loadLatestSubscriptionForUser(
+        setStage("owner_lookup_start");
+        ensureSoftDeadline(processingStartedAtMs, "owner_lookup");
+        const owner = await resolveOwnerBySender({
           supabase,
-          owner.userId,
-        );
-        if (!hasPlusEntitlement(subscription)) {
+          normalizedSenderEmail: senderEmail,
+          userId: deliveryUserId,
+          receivedAt,
+        });
+        setStage("owner_lookup_complete", {
+          resolvedUserId: owner?.userId ?? null,
+          enabled: owner?.enabled ?? null,
+        });
+
+        console.log("[resend-inbound-webhook] owner lookup", {
+          emailId: emailData.email_id,
+          senderEmail,
+          resolvedUserId: owner?.userId ?? null,
+          enabled: owner?.enabled ?? null,
+          householdId: owner?.householdId ?? null,
+          isPortfolio: owner?.isPortfolio ?? null,
+          accountId: owner?.accountId ?? null,
+        });
+
+        if (!owner) {
           const unavailable = buildUnavailableEmail({
             senderEmail,
-            reason: importUnavailableReasons.subscriptionRequired,
+            reason: importUnavailableReasons.senderNotWhitelisted,
+          });
+          await updateInboundEvent({
+            supabase,
+            owner: leaseOwner,
+            status: "ignored",
+            errorText: "SENDER_NOT_WHITELISTED",
+          });
+          if (recipientIds.length <= 1)
+            try {
+              await sendEmail({
+                to: senderEmail,
+                from: EMAIL_FROM,
+                subject: unavailable.subject,
+                html: unavailable.html,
+                text: unavailable.text,
+              });
+            } catch (sideEffectError) {
+              console.error(
+                "[resend-inbound-webhook] unavailable email failed after finalization",
+                sideEffectError,
+              );
+            }
+          return jsonResponse({ success: true, ignored: true });
+        }
+
+        if (!owner.enabled) {
+          const unavailable = buildUnavailableEmail({
+            senderEmail,
+            reason: importUnavailableReasons.importDisabled,
           });
           await updateInboundEvent({
             supabase,
             owner: leaseOwner,
             userId: owner.userId,
             status: "ignored",
-            errorText: "SUBSCRIPTION_REQUIRED",
+            errorText: "EMAIL_IMPORT_DISABLED",
+          });
+          if (recipientIds.length <= 1)
+            try {
+              await sendEmail({
+                to: senderEmail,
+                from: EMAIL_FROM,
+                subject: unavailable.subject,
+                html: unavailable.html,
+                text: unavailable.text,
+              });
+            } catch (sideEffectError) {
+              console.error(
+                "[resend-inbound-webhook] unavailable email failed after finalization",
+                sideEffectError,
+              );
+            }
+          return jsonResponse({
+            success: true,
+            ignored: true,
+            reason: "EMAIL_IMPORT_DISABLED",
+          });
+        }
+
+        const resolveImportAccountId = createEmailImportAccountResolver({
+          supabase,
+          userId: owner.userId,
+          householdId: owner.householdId,
+          accountId: owner.accountId,
+        });
+
+        try {
+          const subscription = await loadLatestSubscriptionForUser(
+            supabase,
+            owner.userId,
+          );
+          if (!hasPlusEntitlement(subscription)) {
+            const unavailable = buildUnavailableEmail({
+              senderEmail,
+              reason: importUnavailableReasons.subscriptionRequired,
+            });
+            await updateInboundEvent({
+              supabase,
+              owner: leaseOwner,
+              userId: owner.userId,
+              status: "ignored",
+              errorText: "SUBSCRIPTION_REQUIRED",
+            });
+            if (recipientIds.length <= 1)
+              try {
+                await sendEmail({
+                  to: senderEmail,
+                  from: EMAIL_FROM,
+                  subject: unavailable.subject,
+                  html: unavailable.html,
+                  text: unavailable.text,
+                });
+              } catch (sideEffectError) {
+                console.error(
+                  "[resend-inbound-webhook] subscription email failed after finalization",
+                  sideEffectError,
+                );
+              }
+            return jsonResponse({
+              success: true,
+              ignored: true,
+              reason: "SUBSCRIPTION_REQUIRED",
+            });
+          }
+        } catch (subscriptionError) {
+          await reportEdgeFunctionError({
+            functionName: "resend-inbound-webhook",
+            error: subscriptionError,
+            context: {
+              operation: "subscriptions.select_entitlement",
+              userId: owner.userId,
+            },
+          });
+          await markInboundEventRetryableFailure({
+            supabase,
+            owner: leaseOwner,
+            userId: owner.userId,
+            errorText: "SUBSCRIPTION_CHECK_FAILED",
+          });
+          return jsonResponse(
+            { success: false, error: "Failed to verify subscription" },
+            500,
+          );
+        }
+
+        setStage("initial_heartbeat_start");
+        await heartbeatInboundEvent({
+          supabase,
+          owner: leaseOwner,
+          svixId,
+          svixTimestamp,
+        });
+        setStage("initial_heartbeat_complete");
+        ensureSoftDeadline(processingStartedAtMs, "resend_fetch_metadata");
+
+        setStage("resend_fetch_metadata_start");
+        const [emailContentResult, attachmentListResponse] = await Promise.all([
+          fetchResendJson(`/emails/receiving/${emailData.email_id}`),
+          fetchResendJson(`/emails/receiving/${emailData.email_id}/attachments`)
+            .then((value) => ({ data: value, error: null }))
+            .catch((error) => ({ data: null, error })),
+        ]);
+        setStage("resend_fetch_metadata_complete", {
+          attachmentFetchFailed: attachmentListResponse.error != null,
+        });
+
+        console.log("[resend-inbound-webhook] fetched email metadata", {
+          emailId: emailData.email_id,
+          hasText:
+            typeof (emailContentResult as { text?: string | null })?.text ===
+            "string",
+          attachmentFetchFailed: attachmentListResponse.error != null,
+        });
+
+        const emailContent = emailContentResult as {
+          text?: string;
+          html?: string;
+          headers?: Record<string, string>;
+        } | null;
+
+        if (!hasVerifiedSender(emailContent?.headers)) {
+          const unavailable = buildUnavailableEmail({
+            senderEmail,
+            reason: importUnavailableReasons.senderNotVerified,
+          });
+          await updateInboundEvent({
+            supabase,
+            owner: leaseOwner,
+            userId: owner.userId,
+            status: "ignored",
+            errorText: "SENDER_NOT_VERIFIED",
           });
           try {
             await sendEmail({
@@ -1664,472 +1771,203 @@ export async function handleResendInboundWebhook(
             });
           } catch (sideEffectError) {
             console.error(
-              "[resend-inbound-webhook] subscription email failed after finalization",
+              "[resend-inbound-webhook] unavailable email failed after finalization",
               sideEffectError,
             );
           }
           return jsonResponse({ success: true, ignored: true });
         }
-      } catch (subscriptionError) {
-        await reportEdgeFunctionError({
-          functionName: "resend-inbound-webhook",
-          error: subscriptionError,
-          context: {
-            operation: "subscriptions.select_entitlement",
-            userId: owner.userId,
-          },
-        });
-        await updateInboundEvent({
-          supabase,
-          owner: leaseOwner,
-          userId: owner.userId,
-          status: "failed",
-          errorText: "SUBSCRIPTION_CHECK_FAILED",
-        });
-        return jsonResponse(
-          { success: false, error: "Failed to verify subscription" },
-          500,
-        );
-      }
 
-      setStage("initial_heartbeat_start");
-      await heartbeatInboundEvent({
-        supabase,
-        owner: leaseOwner,
-        svixId,
-        svixTimestamp,
-      });
-      setStage("initial_heartbeat_complete");
-      ensureSoftDeadline(processingStartedAtMs, "resend_fetch_metadata");
-
-      setStage("resend_fetch_metadata_start");
-      const [emailContentResult, attachmentListResponse] = await Promise.all([
-        fetchResendJson(`/emails/receiving/${emailData.email_id}`),
-        fetchResendJson(`/emails/receiving/${emailData.email_id}/attachments`)
-          .then((value) => ({ data: value, error: null }))
-          .catch((error) => ({ data: null, error })),
-      ]);
-      setStage("resend_fetch_metadata_complete", {
-        attachmentFetchFailed: attachmentListResponse.error != null,
-      });
-
-      console.log("[resend-inbound-webhook] fetched email metadata", {
-        emailId: emailData.email_id,
-        hasText:
-          typeof (emailContentResult as { text?: string | null })?.text ===
-            "string",
-        attachmentFetchFailed: attachmentListResponse.error != null,
-      });
-
-      const emailContent = emailContentResult as {
-        text?: string;
-        html?: string;
-        headers?: Record<string, string>;
-      } | null;
-
-      if (!hasVerifiedSender(emailContent?.headers)) {
-        const unavailable = buildUnavailableEmail({
-          senderEmail,
-          reason: importUnavailableReasons.senderNotVerified,
-        });
-        await updateInboundEvent({
-          supabase,
-          owner: leaseOwner,
-          userId: owner.userId,
-          status: "ignored",
-          errorText: "SENDER_NOT_VERIFIED",
-        });
-        try {
-          await sendEmail({
-            to: senderEmail,
-            from: EMAIL_FROM,
-            subject: unavailable.subject,
-            html: unavailable.html,
-            text: unavailable.text,
-          });
-        } catch (sideEffectError) {
-          console.error(
-            "[resend-inbound-webhook] unavailable email failed after finalization",
-            sideEffectError,
+        if (
+          attachmentListResponse.error != null &&
+          !emailContent?.text &&
+          !emailContent?.html
+        ) {
+          throw new Error("ATTACHMENT_FETCH_FAILED");
+        }
+        if (attachmentListResponse.error != null) {
+          console.warn(
+            "[resend-inbound-webhook] attachment list unavailable; processing email body only",
+            { emailId: emailData.email_id },
           );
         }
-        return jsonResponse({ success: true, ignored: true });
-      }
 
-      if (
-        attachmentListResponse.error != null &&
-        !emailContent?.text &&
-        !emailContent?.html
-      ) {
-        throw new Error("ATTACHMENT_FETCH_FAILED");
-      }
-      if (attachmentListResponse.error != null) {
-        console.warn(
-          "[resend-inbound-webhook] attachment list unavailable; processing email body only",
-          { emailId: emailData.email_id },
-        );
-      }
-
-      const supportedAttachments = filterSupportedImportAttachments(
-        Array.isArray((attachmentListResponse.data as any)?.data)
-          ? (attachmentListResponse.data as any).data
-          : [],
-      ).slice(0, MAX_SUPPORTED_ATTACHMENTS);
-      const resolvedEmailBody = resolveInboundEmailText({
-        text: emailContent?.text,
-        html: emailContent?.html,
-      });
-      const emailBodyText = resolvedEmailBody.text;
-
-      console.log("[resend-inbound-webhook] supported attachments", {
-        emailId: emailData.email_id,
-        attachmentCount: supportedAttachments.length,
-        emailBodyTextLength: emailBodyText.length,
-        emailBodySource: resolvedEmailBody.source,
-        attachments: supportedAttachments.map((attachment) => ({
-          filename: attachment.filename,
-          contentType: attachment.contentType,
-          sizeBytes: attachment.sizeBytes,
-        })),
-      });
-
-      if (supportedAttachments.length === 0 && !emailBodyText) {
-        const unavailable = buildUnavailableEmail({
-          senderEmail,
-          reason: importUnavailableReasons.noSupportedContent,
+        const supportedAttachments = filterSupportedImportAttachments(
+          Array.isArray((attachmentListResponse.data as any)?.data)
+            ? (attachmentListResponse.data as any).data
+            : [],
+        ).slice(0, MAX_SUPPORTED_ATTACHMENTS);
+        const resolvedEmailBody = resolveInboundEmailText({
+          text: emailContent?.text,
+          html: emailContent?.html,
         });
-        await updateInboundEvent({
-          supabase,
-          owner: leaseOwner,
-          userId: owner.userId,
-          status: "ignored",
-          errorText: "NO_SUPPORTED_IMPORT_CONTENT",
-        });
-        try {
-          await sendEmail({
-            to: senderEmail,
-            from: EMAIL_FROM,
-            subject: unavailable.subject,
-            html: unavailable.html,
-            text: unavailable.text,
-          });
-        } catch (sideEffectError) {
-          console.error(
-            "[resend-inbound-webhook] unavailable email failed after finalization",
-            sideEffectError,
-          );
-        }
-        return jsonResponse({ success: true, ignored: true });
-      }
+        const emailBodyText = resolvedEmailBody.text;
 
-      setStage("load_category_context_start");
-      const categoryContext = await loadCategoryContext({
-        supabase,
-        userId: owner.userId,
-      });
-      setStage("load_category_context_complete", {
-        expenseCategoryCount: categoryContext.allowedExpenseCategories.length,
-        incomeCategoryCount: categoryContext.allowedIncomeCategories.length,
-        preferenceCount: categoryContext.categoryPreferences.length,
-      });
-
-      const attachmentResults: AttachmentProcessingResult[] = [];
-      const analyzedItems: Array<Record<string, unknown>> = [];
-      let rejectedItemCount = 0;
-      const reviewCandidates: Array<{
-        candidate: Record<string, unknown>;
-        issues: unknown;
-        evidenceText: string;
-      }> = [];
-      const unresolvedAiItems: Array<{
-        item: Record<string, unknown>;
-        reasons: string[];
-      }> = [];
-
-      for (
-        let attachmentIndex = 0;
-        attachmentIndex < supportedAttachments.length;
-        attachmentIndex++
-      ) {
-        const attachment = supportedAttachments[attachmentIndex];
-        try {
-          setStage("attachment_start", {
-            attachmentIndex: attachmentIndex + 1,
-            attachmentCount: supportedAttachments.length,
+        console.log("[resend-inbound-webhook] supported attachments", {
+          emailId: emailData.email_id,
+          attachmentCount: supportedAttachments.length,
+          emailBodyTextLength: emailBodyText.length,
+          emailBodySource: resolvedEmailBody.source,
+          attachments: supportedAttachments.map((attachment) => ({
             filename: attachment.filename,
             contentType: attachment.contentType,
             sizeBytes: attachment.sizeBytes,
+          })),
+        });
+
+        if (supportedAttachments.length === 0 && !emailBodyText) {
+          const unavailable = buildUnavailableEmail({
+            senderEmail,
+            reason: importUnavailableReasons.noSupportedContent,
           });
-          ensureSoftDeadline(processingStartedAtMs, "attachment_processing");
-          setStage("attachment_heartbeat_start", {
-            filename: attachment.filename,
-          });
-          await heartbeatInboundEvent({
+          await updateInboundEvent({
             supabase,
             owner: leaseOwner,
-            svixId,
-            svixTimestamp,
-          });
-          setStage("attachment_heartbeat_complete", {
-            filename: attachment.filename,
-          });
-          console.log("[resend-inbound-webhook] processing attachment", {
-            emailId: emailData.email_id,
-            filename: attachment.filename,
-            contentType: attachment.contentType,
-            sizeBytes: attachment.sizeBytes,
-          });
-          if (
-            attachment.sizeBytes != null &&
-            attachment.sizeBytes > MAX_SUPPORTED_ATTACHMENT_BYTES
-          ) {
-            attachmentResults.push({
-              filename: attachment.filename,
-              success: false,
-              itemCount: 0,
-              error:
-                "Attachment is too large. The current limit is 20 MB per file.",
-            });
-            continue;
-          }
-
-          setStage("attachment_download_start", {
-            filename: attachment.filename,
-          });
-          const response = await fetchWithTimeout(
-            attachment.downloadUrl,
-            {},
-            NETWORK_TIMEOUT_MS,
-          );
-          setStage("attachment_download_response", {
-            filename: attachment.filename,
-            status: response.status,
-            contentLength: response.headers.get("content-length") ?? null,
-          });
-          if (!response.ok) {
-            throw new Error(
-              `Failed to download attachment (${response.status})`,
-            );
-          }
-          const contentLengthHeader = response.headers.get("content-length") ||
-            "";
-          const contentLength = Number.parseInt(contentLengthHeader, 10);
-          if (
-            Number.isFinite(contentLength) &&
-            contentLength > MAX_SUPPORTED_ATTACHMENT_BYTES
-          ) {
-            attachmentResults.push({
-              filename: attachment.filename,
-              success: false,
-              itemCount: 0,
-              error:
-                "Attachment is too large. The current limit is 20 MB per file.",
-            });
-            continue;
-          }
-          setStage("attachment_read_bytes_start", {
-            filename: attachment.filename,
-          });
-          const bytes = new Uint8Array(await response.arrayBuffer());
-          setStage("attachment_read_bytes_complete", {
-            filename: attachment.filename,
-            bytesLength: bytes.length,
-          });
-          if (bytes.length > MAX_SUPPORTED_ATTACHMENT_BYTES) {
-            attachmentResults.push({
-              filename: attachment.filename,
-              success: false,
-              itemCount: 0,
-              error:
-                "Attachment is too large. The current limit is 20 MB per file.",
-            });
-            continue;
-          }
-          const analyzeBody: AnalyzeRequestBody = {
             userId: owner.userId,
-            date: (
-              emailData.created_at ||
-              event.created_at ||
-              new Date().toISOString()
-            ).slice(0, 10),
-            currency: owner.preferredCurrency,
-            attachments: [
-              {
-                filename: attachment.filename,
-                contentType: attachment.contentType,
-                data: encodeBase64(bytes),
-              },
-            ],
-            allowedExpenseCategories: categoryContext.allowedExpenseCategories,
-            allowedIncomeCategories: categoryContext.allowedIncomeCategories,
-            categoryPreferences: categoryContext.categoryPreferences,
-          };
-
-          setStage("attachment_analyze_start", {
-            filename: attachment.filename,
-            bytesLength: bytes.length,
+            status: "ignored",
+            errorText: "NO_SUPPORTED_IMPORT_CONTENT",
           });
-          const result = await runEnrichedTransactionAnalysis({
-            body: analyzeBody,
-            apiKey: requiredGeminiApiKey,
-            merchantContext: {
-              supabase,
-              userId: owner.userId,
-              logoDevSecretKey: LOGO_DEV_SECRET_KEY,
-              preferredTimezone: owner.preferredTimezone ?? undefined,
-              autoResolveCandidates: true,
-            },
-            onProgress: (progress) => {
-              console.log("[resend-inbound-webhook] analyze progress", {
-                emailId: emailData.email_id,
-                filename: attachment.filename,
-                elapsedMs: Date.now() - backgroundStartedAtMs,
-                type: progress.type,
-                current: progress.current ?? null,
-                total: progress.total ?? null,
-                message: progress.message ?? null,
-              });
-            },
-          });
-          setStage("attachment_analyze_complete", {
-            filename: attachment.filename,
-            success: result.success,
-            itemCount: Array.isArray(result.items) ? result.items.length : 0,
-            status: result.status ?? null,
-            code: result.code ?? null,
-          });
-          const resultCurrencies = Array.isArray(result.items)
-            ? Array.from(
-              new Set(
-                result.items
-                  .map((item) =>
-                    typeof item?.currency === "string"
-                      ? item.currency.trim().toUpperCase()
-                      : ""
-                  )
-                  .filter((currency) => currency.length > 0),
-              ),
-            )
-            : [];
-          console.log("[resend-inbound-webhook] analyze result", {
-            emailId: emailData.email_id,
-            filename: attachment.filename,
-            success: result.success,
-            itemCount: Array.isArray(result.items) ? result.items.length : 0,
-            requestCurrency: owner.preferredCurrency,
-            resultCurrencies,
-            status: result.status ?? null,
-            code: result.code ?? null,
-            error: result.success ? null : (result.error ?? null),
-            merchantEnrichment: summarizeMerchantEnrichment(result.items),
-          });
-          if (!result.success && isRetryableAnalyzeFailure(result)) {
-            throw new Error(
-              result.error ||
-                result.code ||
-                "RETRYABLE_ATTACHMENT_ANALYSIS_FAILURE",
+          try {
+            await sendEmail({
+              to: senderEmail,
+              from: EMAIL_FROM,
+              subject: unavailable.subject,
+              html: unavailable.html,
+              text: unavailable.text,
+            });
+          } catch (sideEffectError) {
+            console.error(
+              "[resend-inbound-webhook] unavailable email failed after finalization",
+              sideEffectError,
             );
           }
-          if (
-            !result.success ||
-            !Array.isArray(result.items) ||
-            result.items.length === 0
-          ) {
-            attachmentResults.push({
+          return jsonResponse({ success: true, ignored: true });
+        }
+
+        setStage("load_category_context_start");
+        const categoryContext = await loadCategoryContext({
+          supabase,
+          userId: owner.userId,
+        });
+        setStage("load_category_context_complete", {
+          expenseCategoryCount: categoryContext.allowedExpenseCategories.length,
+          incomeCategoryCount: categoryContext.allowedIncomeCategories.length,
+          preferenceCount: categoryContext.categoryPreferences.length,
+        });
+
+        const attachmentResults: AttachmentProcessingResult[] = [];
+        const analyzedItems: Array<Record<string, unknown>> = [];
+        let rejectedItemCount = 0;
+        const reviewCandidates: Array<{
+          candidate: Record<string, unknown>;
+          issues: unknown;
+          evidenceText: string;
+        }> = [];
+        const unresolvedAiItems: Array<{
+          item: Record<string, unknown>;
+          reasons: string[];
+        }> = [];
+
+        for (
+          let attachmentIndex = 0;
+          attachmentIndex < supportedAttachments.length;
+          attachmentIndex++
+        ) {
+          const attachment = supportedAttachments[attachmentIndex];
+          try {
+            setStage("attachment_start", {
+              attachmentIndex: attachmentIndex + 1,
+              attachmentCount: supportedAttachments.length,
               filename: attachment.filename,
-              success: false,
-              itemCount: 0,
-              error: result.error || "No transactions found",
+              contentType: attachment.contentType,
+              sizeBytes: attachment.sizeBytes,
             });
-            continue;
-          }
-
-          const mappedItems: Array<Record<string, unknown>> = [];
-          for (const item of result.items) {
-            const accountId = await resolveImportAccountId(item.currency);
-            mappedItems.push({
-              type: item.type,
-              amount: item.amount,
-              category: item.category,
-              currency: item.currency,
-              date: item.date,
-              ...(typeof item.description === "string" &&
-                  item.description.trim().length > 0
-                ? { description: item.description.trim() }
-                : {}),
-              ...(typeof item.merchant === "string" &&
-                  item.merchant.trim().length > 0
-                ? { merchant: item.merchant.trim() }
-                : {}),
-              ...(typeof item.merchant_id === "string"
-                ? { merchantId: item.merchant_id }
-                : {}),
-              ...(typeof item.merchant_structured_name === "string"
-                ? {
-                  merchantStructuredName: item.merchant_structured_name,
-                }
-                : {}),
-              ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
-                ? { breakdown: item.breakdown }
-                : {}),
-              ...(item.payerUserId ? { payerUserId: item.payerUserId } : {}),
-              ...(item.customSplits ? { customSplits: item.customSplits } : {}),
-              ...(accountId ? { accountId } : {}),
+            ensureSoftDeadline(processingStartedAtMs, "attachment_processing");
+            setStage("attachment_heartbeat_start", {
+              filename: attachment.filename,
             });
-          }
-
-          analyzedItems.push(...mappedItems);
-          attachmentResults.push({
-            filename: attachment.filename,
-            success: true,
-            itemCount: mappedItems.length,
-            items: mappedItems,
-          });
-          setStage("attachment_complete", {
-            filename: attachment.filename,
-            mappedItemCount: mappedItems.length,
-            aggregateItemCount: analyzedItems.length,
-          });
-        } catch (error) {
-          setStage("attachment_error", {
-            filename: attachment.filename,
-            retryable: isRetryableAttachmentError(error),
-            error: error instanceof Error ? error.message : String(error),
-          });
-          if (isRetryableAttachmentError(error)) {
-            throw error;
-          }
-          console.error(
-            "[resend-inbound-webhook] attachment processing failed",
-            {
+            await heartbeatInboundEvent({
+              supabase,
+              owner: leaseOwner,
+              svixId,
+              svixTimestamp,
+            });
+            setStage("attachment_heartbeat_complete", {
+              filename: attachment.filename,
+            });
+            console.log("[resend-inbound-webhook] processing attachment", {
               emailId: emailData.email_id,
               filename: attachment.filename,
-              error: error instanceof Error ? error.message : String(error),
-            },
-          );
-          attachmentResults.push({
-            filename: attachment.filename,
-            success: false,
-            itemCount: 0,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
+              contentType: attachment.contentType,
+              sizeBytes: attachment.sizeBytes,
+            });
+            if (
+              attachment.sizeBytes != null &&
+              attachment.sizeBytes > MAX_SUPPORTED_ATTACHMENT_BYTES
+            ) {
+              attachmentResults.push({
+                filename: attachment.filename,
+                success: false,
+                itemCount: 0,
+                error:
+                  "Attachment is too large. The current limit is 20 MB per file.",
+              });
+              continue;
+            }
 
-      if (emailBodyText) {
-        try {
-          setStage("email_body_analyze_start", {
-            textLength: emailBodyText.length,
-          });
-          ensureSoftDeadline(processingStartedAtMs, "email_body_processing");
-          await heartbeatInboundEvent({
-            supabase,
-            owner: leaseOwner,
-            svixId,
-            svixTimestamp,
-          });
-          const result = await runEnrichedTransactionAnalysis({
-            body: {
+            setStage("attachment_download_start", {
+              filename: attachment.filename,
+            });
+            const response = await fetchWithTimeout(
+              attachment.downloadUrl,
+              {},
+              NETWORK_TIMEOUT_MS,
+            );
+            setStage("attachment_download_response", {
+              filename: attachment.filename,
+              status: response.status,
+              contentLength: response.headers.get("content-length") ?? null,
+            });
+            if (!response.ok) {
+              throw new Error(
+                `Failed to download attachment (${response.status})`,
+              );
+            }
+            const contentLengthHeader =
+              response.headers.get("content-length") || "";
+            const contentLength = Number.parseInt(contentLengthHeader, 10);
+            if (
+              Number.isFinite(contentLength) &&
+              contentLength > MAX_SUPPORTED_ATTACHMENT_BYTES
+            ) {
+              attachmentResults.push({
+                filename: attachment.filename,
+                success: false,
+                itemCount: 0,
+                error:
+                  "Attachment is too large. The current limit is 20 MB per file.",
+              });
+              continue;
+            }
+            setStage("attachment_read_bytes_start", {
+              filename: attachment.filename,
+            });
+            const bytes = new Uint8Array(await response.arrayBuffer());
+            setStage("attachment_read_bytes_complete", {
+              filename: attachment.filename,
+              bytesLength: bytes.length,
+            });
+            if (bytes.length > MAX_SUPPORTED_ATTACHMENT_BYTES) {
+              attachmentResults.push({
+                filename: attachment.filename,
+                success: false,
+                itemCount: 0,
+                error:
+                  "Attachment is too large. The current limit is 20 MB per file.",
+              });
+              continue;
+            }
+            const analyzeBody: AnalyzeRequestBody = {
               userId: owner.userId,
               date: (
                 emailData.created_at ||
@@ -2137,175 +1975,100 @@ export async function handleResendInboundWebhook(
                 new Date().toISOString()
               ).slice(0, 10),
               currency: owner.preferredCurrency,
-              text: emailBodyText,
-              allowDeterministicTextFallback: false,
+              attachments: [
+                {
+                  filename: attachment.filename,
+                  contentType: attachment.contentType,
+                  data: encodeBase64(bytes),
+                },
+              ],
               allowedExpenseCategories:
                 categoryContext.allowedExpenseCategories,
               allowedIncomeCategories: categoryContext.allowedIncomeCategories,
               categoryPreferences: categoryContext.categoryPreferences,
-            },
-            apiKey: requiredGeminiApiKey,
-            merchantContext: {
-              supabase,
-              userId: owner.userId,
-              logoDevSecretKey: LOGO_DEV_SECRET_KEY,
-              preferredTimezone: owner.preferredTimezone ?? undefined,
-              autoResolveCandidates: true,
-            },
-          });
-          if (!result.success && isRetryableAnalyzeFailure(result)) {
-            const retryableError = new Error(
-              result.error ||
-                result.code ||
-                "RETRYABLE_EMAIL_BODY_ANALYSIS_FAILURE",
-            );
-            await reportEdgeFunctionError({
-              functionName: "resend-inbound-webhook",
-              error: retryableError,
-              context: {
-                operation: "email_body_analysis_retryable_failure",
-                providerEmailId: emailData.email_id,
-                emailBodySource: resolvedEmailBody.source,
-                resultCode: result.code || null,
-                resultStatus: result.status || null,
-              },
-            });
-            throw retryableError;
-          }
-          const analyzedBodyItems: any[] = Array.isArray(result.items)
-            ? result.items
-            : [];
-          console.log("[resend-inbound-webhook] email body merchant enrichment", {
-            emailId: emailData.email_id,
-            merchantEnrichment: summarizeMerchantEnrichment(result.items),
-          });
-          let bodyItems = analyzedBodyItems;
-          if (bodyItems.length > 0) {
-            // The extractor only proposes candidates. The multilingual AI
-            // reviewer is the sole authority for accept, repair, or review.
-            const extractedItems = bodyItems;
-            bodyItems = [];
-            for (const item of extractedItems) {
-              unresolvedAiItems.push({
-                item: item as unknown as Record<string, unknown>,
-                reasons: ["REQUIRES_AI_SEMANTIC_GROUNDING"],
-              });
-            }
-          }
-          if (
-            unresolvedAiItems.length > 0 ||
-            (bodyItems.length === 0 && reviewCandidates.length === 0)
-          ) {
-            let aiDecisions: ImportGroundingDecision[] = [];
-            try {
-              aiDecisions = await classifyEmailImportWithAi({
-                sourceText: emailBodyText,
-                receivedDate: emailData.created_at ||
-                  event.created_at ||
-                  new Date().toISOString(),
-                preferredCurrency: owner.preferredCurrency,
-                allowedExpenseCategories:
-                  categoryContext.allowedExpenseCategories,
-                allowedIncomeCategories:
-                  categoryContext.allowedIncomeCategories,
-                rejectedCandidates: unresolvedAiItems,
-              });
-            } catch (error) {
-              if (
-                shouldEscalateEmailImportAiFailure(unresolvedAiItems.length)
-              ) {
-                throw error;
-              }
-              console.info(
-                "[resend-inbound-webhook] no-candidate AI classifier unavailable",
-                { providerEmailId: emailData.email_id },
-              );
-            }
-            const decisionCounts = {
-              accept: 0,
-              autoRepair: 0,
-              review: 0,
-              reject: 0,
             };
-            for (const decision of aiDecisions) {
-              if (decision.kind === "accept") {
-                decisionCounts.accept += 1;
-                bodyItems.push(
-                  decision.transaction as unknown as (typeof bodyItems)[number],
-                );
-              } else if (decision.kind === "auto_repair") {
-                decisionCounts.autoRepair += 1;
-                bodyItems.push(
-                  decision.transaction as unknown as (typeof bodyItems)[number],
-                );
-              } else if (decision.kind === "review") {
-                decisionCounts.review += 1;
-                reviewCandidates.push({
-                  candidate: decision.candidate,
-                  issues: decision.issues,
-                  evidenceText: boundedReviewEvidence(
-                    emailBodyText,
-                    decision.candidate,
-                    decision.issues,
-                  ),
-                });
-              } else {
-                decisionCounts.reject += 1;
-                rejectedItemCount += 1;
-              }
-            }
-            if (aiDecisions.length === 0) {
-              rejectedItemCount += Math.max(1, unresolvedAiItems.length);
-            }
-            console.info(
-              "[resend-inbound-webhook] email import AI review classified",
-              {
-                providerEmailId: emailData.email_id,
-                decisionCounts,
-                rejectionReasonCodes: emailImportSafeRejectionCodes(
-                  aiDecisions,
-                ),
-              },
-            );
-            bodyItems = preserveAnalyzedMerchantIdentity({
-              items: bodyItems,
-              analyzedItems: analyzedBodyItems,
+
+            setStage("attachment_analyze_start", {
+              filename: attachment.filename,
+              bytesLength: bytes.length,
             });
-          }
-          if (bodyItems.length === 0) {
-            // A note accompanying a file is valid even when it does not
-            // describe another transaction, so only surface this result when
-            // the body was the sole import source.
-            if (supportedAttachments.length === 0) {
-              const failureMessage = result.error || "No transactions found";
-              console.info(
-                "[resend-inbound-webhook] email body contained no importable transaction",
-                {
-                  providerEmailId: emailData.email_id,
-                  resultCode: result.code || null,
-                },
+            const result = await runEnrichedTransactionAnalysis({
+              body: analyzeBody,
+              apiKey: requiredGeminiApiKey,
+              merchantContext: {
+                supabase,
+                userId: owner.userId,
+                logoDevSecretKey: LOGO_DEV_SECRET_KEY,
+                preferredTimezone: owner.preferredTimezone ?? undefined,
+                autoResolveCandidates: true,
+              },
+              onProgress: (progress) => {
+                console.log("[resend-inbound-webhook] analyze progress", {
+                  emailId: emailData.email_id,
+                  filename: attachment.filename,
+                  elapsedMs: Date.now() - backgroundStartedAtMs,
+                  type: progress.type,
+                  current: progress.current ?? null,
+                  total: progress.total ?? null,
+                  message: progress.message ?? null,
+                });
+              },
+            });
+            setStage("attachment_analyze_complete", {
+              filename: attachment.filename,
+              success: result.success,
+              itemCount: Array.isArray(result.items) ? result.items.length : 0,
+              status: result.status ?? null,
+              code: result.code ?? null,
+            });
+            const resultCurrencies = Array.isArray(result.items)
+              ? Array.from(
+                  new Set(
+                    result.items
+                      .map((item) =>
+                        typeof item?.currency === "string"
+                          ? item.currency.trim().toUpperCase()
+                          : "",
+                      )
+                      .filter((currency) => currency.length > 0),
+                  ),
+                )
+              : [];
+            console.log("[resend-inbound-webhook] analyze result", {
+              emailId: emailData.email_id,
+              filename: attachment.filename,
+              success: result.success,
+              itemCount: Array.isArray(result.items) ? result.items.length : 0,
+              requestCurrency: owner.preferredCurrency,
+              resultCurrencies,
+              status: result.status ?? null,
+              code: result.code ?? null,
+              error: result.success ? null : (result.error ?? null),
+              merchantEnrichment: summarizeMerchantEnrichment(result.items),
+            });
+            if (!result.success && isRetryableAnalyzeFailure(result)) {
+              throw new RetryableInboundError(
+                result.error ||
+                  result.code ||
+                  "RETRYABLE_ATTACHMENT_ANALYSIS_FAILURE",
               );
+            }
+            if (
+              !result.success ||
+              !Array.isArray(result.items) ||
+              result.items.length === 0
+            ) {
               attachmentResults.push({
-                filename: "Email body",
+                filename: attachment.filename,
                 success: false,
                 itemCount: 0,
-                error: failureMessage,
+                error: result.error || "No transactions found",
               });
+              continue;
             }
-          } else {
+
             const mappedItems: Array<Record<string, unknown>> = [];
-            for (const item of bodyItems) {
-              const clientCreatedAt =
-                typeof item.transactionTime === "string" &&
-                  owner.preferredTimezone
-                  ? localDateTimeToUtcIso({
-                    date: item.date,
-                    time: item.transactionTime,
-                    timeZone: owner.preferredTimezone,
-                    referenceInstant: emailData.created_at ||
-                      event.created_at || null,
-                  })
-                  : null;
+            for (const item of result.items) {
               const accountId = await resolveImportAccountId(item.currency);
               mappedItems.push({
                 type: item.type,
@@ -2314,11 +2077,11 @@ export async function handleResendInboundWebhook(
                 currency: item.currency,
                 date: item.date,
                 ...(typeof item.description === "string" &&
-                    item.description.trim().length > 0
+                item.description.trim().length > 0
                   ? { description: item.description.trim() }
                   : {}),
                 ...(typeof item.merchant === "string" &&
-                    item.merchant.trim().length > 0
+                item.merchant.trim().length > 0
                   ? { merchant: item.merchant.trim() }
                   : {}),
                 ...(typeof item.merchant_id === "string"
@@ -2326,8 +2089,8 @@ export async function handleResendInboundWebhook(
                   : {}),
                 ...(typeof item.merchant_structured_name === "string"
                   ? {
-                    merchantStructuredName: item.merchant_structured_name,
-                  }
+                      merchantStructuredName: item.merchant_structured_name,
+                    }
                   : {}),
                 ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
                   ? { breakdown: item.breakdown }
@@ -2336,141 +2099,605 @@ export async function handleResendInboundWebhook(
                 ...(item.customSplits
                   ? { customSplits: item.customSplits }
                   : {}),
-                ...(clientCreatedAt ? { clientCreatedAt } : {}),
                 ...(accountId ? { accountId } : {}),
               });
             }
+
             analyzedItems.push(...mappedItems);
             attachmentResults.push({
-              filename: "Email body",
+              filename: attachment.filename,
               success: true,
               itemCount: mappedItems.length,
               items: mappedItems,
             });
-          }
-          setStage("email_body_analyze_complete", {
-            success: result.success,
-            itemCount: Array.isArray(result.items) ? result.items.length : 0,
-          });
-        } catch (error) {
-          if (isRetryableAttachmentError(error)) throw error;
-          console.error(
-            "[resend-inbound-webhook] email body processing failed",
-            {
-              emailId: emailData.email_id,
+            setStage("attachment_complete", {
+              filename: attachment.filename,
+              mappedItemCount: mappedItems.length,
+              aggregateItemCount: analyzedItems.length,
+            });
+          } catch (error) {
+            setStage("attachment_error", {
+              filename: attachment.filename,
+              retryable: isRetryableAttachmentError(error),
               error: error instanceof Error ? error.message : String(error),
-            },
-          );
-          if (supportedAttachments.length === 0) {
-            await reportEdgeFunctionError({
-              functionName: "resend-inbound-webhook",
-              error,
-              context: {
-                operation: "email_body_processing_exception",
-                providerEmailId: emailData.email_id,
-                emailBodySource: resolvedEmailBody.source,
+            });
+            if (isRetryableAttachmentError(error)) {
+              throw error;
+            }
+            console.error(
+              "[resend-inbound-webhook] attachment processing failed",
+              {
+                emailId: emailData.email_id,
+                filename: attachment.filename,
+                error: error instanceof Error ? error.message : String(error),
               },
+            );
+            attachmentResults.push({
+              filename: attachment.filename,
+              success: false,
+              itemCount: 0,
+              error: error instanceof Error ? error.message : String(error),
             });
           }
-          attachmentResults.push({
-            filename: "Email body",
-            success: false,
-            itemCount: 0,
-            error: error instanceof Error ? error.message : String(error),
+        }
+
+        if (emailBodyText) {
+          try {
+            setStage("email_body_analyze_start", {
+              textLength: emailBodyText.length,
+            });
+            ensureSoftDeadline(processingStartedAtMs, "email_body_processing");
+            await heartbeatInboundEvent({
+              supabase,
+              owner: leaseOwner,
+              svixId,
+              svixTimestamp,
+            });
+            const result = await runEnrichedTransactionAnalysis({
+              body: {
+                userId: owner.userId,
+                date: (
+                  emailData.created_at ||
+                  event.created_at ||
+                  new Date().toISOString()
+                ).slice(0, 10),
+                currency: owner.preferredCurrency,
+                text: emailBodyText,
+                allowDeterministicTextFallback: false,
+                allowedExpenseCategories:
+                  categoryContext.allowedExpenseCategories,
+                allowedIncomeCategories:
+                  categoryContext.allowedIncomeCategories,
+                categoryPreferences: categoryContext.categoryPreferences,
+              },
+              apiKey: requiredGeminiApiKey,
+              merchantContext: {
+                supabase,
+                userId: owner.userId,
+                logoDevSecretKey: LOGO_DEV_SECRET_KEY,
+                preferredTimezone: owner.preferredTimezone ?? undefined,
+                autoResolveCandidates: true,
+              },
+            });
+            if (!result.success && isRetryableAnalyzeFailure(result)) {
+              const retryableError = new RetryableInboundError(
+                result.error ||
+                  result.code ||
+                  "RETRYABLE_EMAIL_BODY_ANALYSIS_FAILURE",
+              );
+              await reportEdgeFunctionError({
+                functionName: "resend-inbound-webhook",
+                error: retryableError,
+                context: {
+                  operation: "email_body_analysis_retryable_failure",
+                  providerEmailId: emailData.email_id,
+                  emailBodySource: resolvedEmailBody.source,
+                  resultCode: result.code || null,
+                  resultStatus: result.status || null,
+                },
+              });
+              throw retryableError;
+            }
+            const analyzedBodyItems: any[] = Array.isArray(result.items)
+              ? result.items
+              : [];
+            console.log(
+              "[resend-inbound-webhook] email body merchant enrichment",
+              {
+                emailId: emailData.email_id,
+                merchantEnrichment: summarizeMerchantEnrichment(result.items),
+              },
+            );
+            let bodyItems = analyzedBodyItems;
+            if (bodyItems.length > 0) {
+              // The extractor only proposes candidates. The multilingual AI
+              // reviewer is the sole authority for accept, repair, or review.
+              const extractedItems = bodyItems;
+              bodyItems = [];
+              for (const item of extractedItems) {
+                unresolvedAiItems.push({
+                  item: item as unknown as Record<string, unknown>,
+                  reasons: ["REQUIRES_AI_SEMANTIC_GROUNDING"],
+                });
+              }
+            }
+            if (
+              unresolvedAiItems.length > 0 ||
+              (bodyItems.length === 0 && reviewCandidates.length === 0)
+            ) {
+              let aiDecisions: ImportGroundingDecision[] = [];
+              try {
+                aiDecisions = await classifyEmailImportWithAi({
+                  sourceText: emailBodyText,
+                  receivedDate:
+                    emailData.created_at ||
+                    event.created_at ||
+                    new Date().toISOString(),
+                  preferredCurrency: owner.preferredCurrency,
+                  allowedExpenseCategories:
+                    categoryContext.allowedExpenseCategories,
+                  allowedIncomeCategories:
+                    categoryContext.allowedIncomeCategories,
+                  rejectedCandidates: unresolvedAiItems,
+                });
+              } catch (error) {
+                if (
+                  shouldEscalateEmailImportAiFailure(unresolvedAiItems.length)
+                ) {
+                  throw error;
+                }
+                console.info(
+                  "[resend-inbound-webhook] no-candidate AI classifier unavailable",
+                  { providerEmailId: emailData.email_id },
+                );
+              }
+              const decisionCounts = {
+                accept: 0,
+                autoRepair: 0,
+                review: 0,
+                reject: 0,
+              };
+              for (const decision of aiDecisions) {
+                if (decision.kind === "accept") {
+                  decisionCounts.accept += 1;
+                  bodyItems.push(
+                    decision.transaction as unknown as (typeof bodyItems)[number],
+                  );
+                } else if (decision.kind === "auto_repair") {
+                  decisionCounts.autoRepair += 1;
+                  bodyItems.push(
+                    decision.transaction as unknown as (typeof bodyItems)[number],
+                  );
+                } else if (decision.kind === "review") {
+                  decisionCounts.review += 1;
+                  reviewCandidates.push({
+                    candidate: decision.candidate,
+                    issues: decision.issues,
+                    evidenceText: boundedReviewEvidence(
+                      emailBodyText,
+                      decision.candidate,
+                      decision.issues,
+                    ),
+                  });
+                } else {
+                  decisionCounts.reject += 1;
+                  rejectedItemCount += 1;
+                }
+              }
+              if (aiDecisions.length === 0) {
+                rejectedItemCount += Math.max(1, unresolvedAiItems.length);
+              }
+              console.info(
+                "[resend-inbound-webhook] email import AI review classified",
+                {
+                  providerEmailId: emailData.email_id,
+                  decisionCounts,
+                  rejectionReasonCodes:
+                    emailImportSafeRejectionCodes(aiDecisions),
+                },
+              );
+              bodyItems = preserveAnalyzedMerchantIdentity({
+                items: bodyItems,
+                analyzedItems: analyzedBodyItems,
+              });
+            }
+            if (bodyItems.length === 0) {
+              // A note accompanying a file is valid even when it does not
+              // describe another transaction, so only surface this result when
+              // the body was the sole import source.
+              if (supportedAttachments.length === 0) {
+                const failureMessage = result.error || "No transactions found";
+                console.info(
+                  "[resend-inbound-webhook] email body contained no importable transaction",
+                  {
+                    providerEmailId: emailData.email_id,
+                    resultCode: result.code || null,
+                  },
+                );
+                attachmentResults.push({
+                  filename: "Email body",
+                  success: false,
+                  itemCount: 0,
+                  error: failureMessage,
+                });
+              }
+            } else {
+              const mappedItems: Array<Record<string, unknown>> = [];
+              for (const item of bodyItems) {
+                const clientCreatedAt =
+                  typeof item.transactionTime === "string" &&
+                  owner.preferredTimezone
+                    ? localDateTimeToUtcIso({
+                        date: item.date,
+                        time: item.transactionTime,
+                        timeZone: owner.preferredTimezone,
+                        referenceInstant:
+                          emailData.created_at || event.created_at || null,
+                      })
+                    : null;
+                const accountId = await resolveImportAccountId(item.currency);
+                mappedItems.push({
+                  type: item.type,
+                  amount: item.amount,
+                  category: item.category,
+                  currency: item.currency,
+                  date: item.date,
+                  ...(typeof item.description === "string" &&
+                  item.description.trim().length > 0
+                    ? { description: item.description.trim() }
+                    : {}),
+                  ...(typeof item.merchant === "string" &&
+                  item.merchant.trim().length > 0
+                    ? { merchant: item.merchant.trim() }
+                    : {}),
+                  ...(typeof item.merchant_id === "string"
+                    ? { merchantId: item.merchant_id }
+                    : {}),
+                  ...(typeof item.merchant_structured_name === "string"
+                    ? {
+                        merchantStructuredName: item.merchant_structured_name,
+                      }
+                    : {}),
+                  ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
+                    ? { breakdown: item.breakdown }
+                    : {}),
+                  ...(item.payerUserId
+                    ? { payerUserId: item.payerUserId }
+                    : {}),
+                  ...(item.customSplits
+                    ? { customSplits: item.customSplits }
+                    : {}),
+                  ...(clientCreatedAt ? { clientCreatedAt } : {}),
+                  ...(accountId ? { accountId } : {}),
+                });
+              }
+              analyzedItems.push(...mappedItems);
+              attachmentResults.push({
+                filename: "Email body",
+                success: true,
+                itemCount: mappedItems.length,
+                items: mappedItems,
+              });
+            }
+            setStage("email_body_analyze_complete", {
+              success: result.success,
+              itemCount: Array.isArray(result.items) ? result.items.length : 0,
+            });
+          } catch (error) {
+            if (isRetryableAttachmentError(error)) throw error;
+            console.error(
+              "[resend-inbound-webhook] email body processing failed",
+              {
+                emailId: emailData.email_id,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            );
+            if (supportedAttachments.length === 0) {
+              await reportEdgeFunctionError({
+                functionName: "resend-inbound-webhook",
+                error,
+                context: {
+                  operation: "email_body_processing_exception",
+                  providerEmailId: emailData.email_id,
+                  emailBodySource: resolvedEmailBody.source,
+                },
+              });
+            }
+            attachmentResults.push({
+              filename: "Email body",
+              success: false,
+              itemCount: 0,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        setStage("aggregate_analyze_complete", {
+          analyzedItemCount: analyzedItems.length,
+          attachmentResultCount: attachmentResults.length,
+        });
+        if (
+          !(
+            await resolveVerifiedSenderAccountIds(
+              supabase,
+              senderEmail,
+              receivedAt,
+            )
+          ).includes(owner.userId)
+        ) {
+          await updateInboundEvent({
+            supabase,
+            owner: leaseOwner,
+            userId: owner.userId,
+            status: "ignored",
+            errorText: "SENDER_AUTHORIZATION_REVOKED",
+          });
+          return jsonResponse({
+            success: true,
+            ignored: true,
+            reason: "SENDER_AUTHORIZATION_REVOKED",
           });
         }
-      }
-
-      setStage("aggregate_analyze_complete", {
-        analyzedItemCount: analyzedItems.length,
-        attachmentResultCount: attachmentResults.length,
-      });
-      console.log("[resend-inbound-webhook] aggregate analyze summary", {
-        emailId: emailData.email_id,
-        analyzedItemCount: analyzedItems.length,
-        analyzedCurrencies: Array.from(
-          new Set(
-            analyzedItems
-              .map((item) =>
-                typeof item.currency === "string"
-                  ? item.currency.trim().toUpperCase()
-                  : ""
-              )
-              .filter((currency) => currency.length > 0),
+        console.log("[resend-inbound-webhook] aggregate analyze summary", {
+          emailId: emailData.email_id,
+          analyzedItemCount: analyzedItems.length,
+          analyzedCurrencies: Array.from(
+            new Set(
+              analyzedItems
+                .map((item) =>
+                  typeof item.currency === "string"
+                    ? item.currency.trim().toUpperCase()
+                    : "",
+                )
+                .filter((currency) => currency.length > 0),
+            ),
           ),
-        ),
-        attachmentResults: attachmentResults.map((item) => ({
-          filename: item.filename,
-          success: item.success,
-          itemCount: item.itemCount,
-          error: item.error ?? null,
-        })),
-      });
-
-      if (analyzedItems.length === 0 && reviewCandidates.length === 0) {
-        const followup = buildFollowupEmail({
-          senderEmail,
-          subjectLine: emailData.subject || "",
-          savedCount: 0,
-          duplicateCount: 0,
-          failedCount: attachmentResults.length,
-          transactions: [],
-          attachmentResults,
+          attachmentResults: attachmentResults.map((item) => ({
+            filename: item.filename,
+            success: item.success,
+            itemCount: item.itemCount,
+            error: item.error ?? null,
+          })),
         });
-        await updateInboundEvent({
-          supabase,
-          owner: leaseOwner,
+
+        if (analyzedItems.length === 0 && reviewCandidates.length === 0) {
+          const followup = buildFollowupEmail({
+            senderEmail,
+            subjectLine: emailData.subject || "",
+            savedCount: 0,
+            duplicateCount: 0,
+            failedCount: attachmentResults.length,
+            transactions: [],
+            attachmentResults,
+          });
+          await updateInboundEvent({
+            supabase,
+            owner: leaseOwner,
+            userId: owner.userId,
+            status: "failed",
+            errorText: summarizeAttachmentFailures(attachmentResults),
+            result: {
+              emailSummary: {
+                providerEmailId: emailData.email_id,
+                senderEmail,
+                subjectLine: emailData.subject || "",
+                recipients: Array.isArray(emailData.to) ? emailData.to : [],
+                receivedAt: emailData.created_at || event.created_at || null,
+              },
+              attachmentResults,
+            },
+          });
+          try {
+            await sendEmail({
+              to: senderEmail,
+              from: EMAIL_FROM,
+              subject: followup.subject,
+              html: followup.html,
+              text: followup.text,
+            });
+          } catch (sideEffectError) {
+            console.error(
+              "[resend-inbound-webhook] follow-up email failed after finalization",
+              sideEffectError,
+            );
+          }
+          return jsonResponse({ success: true, failed: true });
+        }
+
+        const uniqueAnalyzedItems = deduplicateImportedTransactions({
+          items: analyzedItems,
           userId: owner.userId,
-          status: "failed",
-          errorText: summarizeAttachmentFailures(attachmentResults),
-          result: {
+          householdId: owner.householdId,
+          accountId: owner.accountId,
+        });
+        const sortedAnalyzedItems =
+          sortImportedTransactions(uniqueAnalyzedItems);
+        if (sortedAnalyzedItems.length !== analyzedItems.length) {
+          console.log(
+            "[resend-inbound-webhook] removed duplicate import items",
+            {
+              emailId: emailData.email_id,
+              duplicateCount: analyzedItems.length - sortedAnalyzedItems.length,
+            },
+          );
+        }
+
+        if (sortedAnalyzedItems.length === 0) {
+          const eventResult = {
             emailSummary: {
               providerEmailId: emailData.email_id,
               senderEmail,
               subjectLine: emailData.subject || "",
-              recipients: Array.isArray(emailData.to) ? emailData.to : [],
               receivedAt: emailData.created_at || event.created_at || null,
             },
+            importContext: {
+              householdId: owner.householdId,
+              isPortfolio: owner.isPortfolio,
+              accountId: owner.accountId,
+            },
+            savedCount: 0,
+            duplicateCount: 0,
+            needsReviewCount: reviewCandidates.length,
+            rejectedCount: rejectedItemCount,
+            failedCount: 0,
             attachmentResults,
-          },
-        });
-        try {
-          await sendEmail({
-            to: senderEmail,
-            from: EMAIL_FROM,
-            subject: followup.subject,
-            html: followup.html,
-            text: followup.text,
+          };
+          const review = await createInboundReview({
+            supabase,
+            eventId: leaseOwner.rowId,
+            eventAttemptCount: leaseOwner.attemptCount,
+            userId: owner.userId,
+            eventResult,
+            candidates: reviewCandidates,
           });
-        } catch (sideEffectError) {
-          console.error(
-            "[resend-inbound-webhook] follow-up email failed after finalization",
-            sideEffectError,
-          );
+          if (!review)
+            throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
+          const email = buildImportReviewRequiredEmail({
+            reviewUrl: `${APP_URL}/import-review/${review.reviewId}#${review.token}`,
+            savedCount: 0,
+            reviewCount: reviewCandidates.length,
+          });
+          try {
+            await sendEmail({
+              to: owner.defaultEmail,
+              from: EMAIL_FROM,
+              subject: email.subject,
+              html: email.html,
+              text: email.text,
+            });
+          } catch (error) {
+            await releaseInboundReviewAfterDeliveryFailure({
+              supabase,
+              reviewId: review.reviewId,
+              eventId: leaseOwner.rowId,
+              eventAttemptCount: leaseOwner.attemptCount,
+            });
+            await reportEdgeFunctionError({
+              functionName: "resend-inbound-webhook",
+              error,
+              context: {
+                operation: "email_import_review_delivery_failed",
+                providerEmailId: emailData.email_id,
+              },
+            });
+            console.error("[resend-inbound-webhook] review delivery failed", {
+              emailId: emailData.email_id,
+              message: error instanceof Error ? error.message : String(error),
+            });
+            throw error;
+          }
+          try {
+            await sendImportReviewRequiredNotification({
+              supabase,
+              owner,
+              reviewId: review.reviewId,
+              savedCount: 0,
+              reviewCount: reviewCandidates.length,
+            });
+          } catch (sideEffectError) {
+            console.error(
+              "[resend-inbound-webhook] review notification failed",
+              sideEffectError,
+            );
+          }
+          return jsonResponse({ success: true, awaitingReview: true });
         }
-        return jsonResponse({ success: true, failed: true });
-      }
 
-      const uniqueAnalyzedItems = deduplicateImportedTransactions({
-        items: analyzedItems,
-        userId: owner.userId,
-        householdId: owner.householdId,
-        accountId: owner.accountId,
-      });
-      const sortedAnalyzedItems = sortImportedTransactions(uniqueAnalyzedItems);
-      if (sortedAnalyzedItems.length !== analyzedItems.length) {
-        console.log("[resend-inbound-webhook] removed duplicate import items", {
-          emailId: emailData.email_id,
-          duplicateCount: analyzedItems.length - sortedAnalyzedItems.length,
+        ensureSoftDeadline(processingStartedAtMs, "save_transactions");
+        setStage("pre_save_heartbeat_start", {
+          transactionCount: sortedAnalyzedItems.length,
         });
-      }
+        await heartbeatInboundEvent({
+          supabase,
+          owner: leaseOwner,
+          svixId,
+          svixTimestamp,
+        });
+        setStage("pre_save_heartbeat_complete", {
+          transactionCount: sortedAnalyzedItems.length,
+        });
 
-      if (sortedAnalyzedItems.length === 0) {
+        setStage("save_transactions_start", {
+          transactionCount: sortedAnalyzedItems.length,
+        });
+        const saveResult = await saveTransactionsBatchInternal(
+          buildSyntheticRequest(),
+          {
+            debugTraceId: buildEmailImportDebugTraceId(emailData.email_id),
+            userId: owner.userId,
+            manualImportMode: true,
+            skipSemanticDuplicates: true,
+            ...(owner.householdId ? { householdId: owner.householdId } : {}),
+            ...(owner.householdId ? { isPortfolio: owner.isPortfolio } : {}),
+            transactions: sortedAnalyzedItems.map((item, index) => ({
+              ...item,
+              idempotencyKey: `email-import:${emailData.email_id}:${owner.userId}:${index}`,
+            })) as any,
+          },
+        );
+        setStage("save_transactions_complete", {
+          resultCount: saveResult.results.length,
+          succeeded: saveResult.summary.succeeded,
+          failed: saveResult.summary.failed,
+        });
+
+        console.log("[resend-inbound-webhook] batch save result", {
+          emailId: emailData.email_id,
+          resultCount: saveResult.results.length,
+          succeeded: saveResult.summary.succeeded,
+          failed: saveResult.summary.failed,
+          duplicateCount: saveResult.results.filter(
+            (item) => item.duplicate === true,
+          ).length,
+        });
+
+        const duplicateCount = saveResult.results.filter(
+          (item) => item.duplicate === true,
+        ).length;
+        const failedCount = saveResult.results.filter(
+          (item) => item.success === false && item.duplicate !== true,
+        ).length;
+        if (failedCount > 0) {
+          throw new RetryableInboundError("INCOMPLETE_EMAIL_IMPORT_BATCH_SAVE");
+        }
+        const savedCount = saveResult.results.filter(
+          (item) => item.success === true,
+        ).length;
+        const failureReasons = Array.from(
+          new Set(
+            saveResult.results
+              .filter(
+                (item) => item.success === false && item.duplicate !== true,
+              )
+              .map((item) => String(item.error || "").trim())
+              .filter((reason) => reason.length > 0),
+          ),
+        );
+        const savedTransactions = saveResult.results
+          .filter((item) => item.success === true)
+          .map((item) => sortedAnalyzedItems[item.index])
+          .filter((item): item is Record<string, unknown> => item != null);
+        const appTransactionsUrl = buildImportFollowupAppUrl(
+          saveResult.results,
+        );
+
+        const followup = buildFollowupEmail({
+          senderEmail,
+          subjectLine: emailData.subject || "",
+          savedCount,
+          duplicateCount,
+          failedCount,
+          failureReasons,
+          transactions: savedTransactions,
+          attachmentResults,
+          appTransactionsUrl,
+        });
         const eventResult = {
           emailSummary: {
             providerEmailId: emailData.email_id,
             senderEmail,
             subjectLine: emailData.subject || "",
+            recipients: Array.isArray(emailData.to) ? emailData.to : [],
             receivedAt: emailData.created_at || event.created_at || null,
           },
           importContext: {
@@ -2478,368 +2705,239 @@ export async function handleResendInboundWebhook(
             isPortfolio: owner.isPortfolio,
             accountId: owner.accountId,
           },
-          savedCount: 0,
-          duplicateCount: 0,
+          savedCount,
+          duplicateCount,
           needsReviewCount: reviewCandidates.length,
           rejectedCount: rejectedItemCount,
-          failedCount: 0,
+          failedCount,
+          failureReasons,
           attachmentResults,
         };
-        const review = await createInboundReview({
-          supabase,
-          eventId: leaseOwner.rowId,
-          eventAttemptCount: leaseOwner.attemptCount,
-          userId: owner.userId,
-          eventResult,
-          candidates: reviewCandidates,
-        });
-        if (!review) throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
-        const email = buildImportReviewRequiredEmail({
-          reviewUrl:
-            `${APP_URL}/import-review/${review.reviewId}#${review.token}`,
-          savedCount: 0,
-          reviewCount: reviewCandidates.length,
-        });
-        try {
-          await sendEmail({
-            to: owner.defaultEmail,
-            from: EMAIL_FROM,
-            subject: email.subject,
-            html: email.html,
-            text: email.text,
-          });
-        } catch (error) {
-          await releaseInboundReviewAfterDeliveryFailure({
-            supabase,
-            reviewId: review.reviewId,
-            eventId: leaseOwner.rowId,
-            eventAttemptCount: leaseOwner.attemptCount,
-          });
-          await reportEdgeFunctionError({
-            functionName: "resend-inbound-webhook",
-            error,
-            context: {
-              operation: "email_import_review_delivery_failed",
-              providerEmailId: emailData.email_id,
-            },
-          });
-          console.error("[resend-inbound-webhook] review delivery failed", {
-            emailId: emailData.email_id,
-            message: error instanceof Error ? error.message : String(error),
-          });
-          throw error;
+        const review =
+          reviewCandidates.length > 0
+            ? await createInboundReview({
+                supabase,
+                eventId: leaseOwner.rowId,
+                eventAttemptCount: leaseOwner.attemptCount,
+                userId: owner.userId,
+                eventResult,
+                candidates: reviewCandidates,
+              })
+            : null;
+        if (reviewCandidates.length > 0 && !review) {
+          throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
         }
-        try {
-          await sendImportReviewRequiredNotification({
-            supabase,
-            owner,
-            reviewId: review.reviewId,
-            savedCount: 0,
-            reviewCount: reviewCandidates.length,
-          });
-        } catch (sideEffectError) {
-          console.error(
-            "[resend-inbound-webhook] review notification failed",
-            sideEffectError,
-          );
-        }
-        return jsonResponse({ success: true, awaitingReview: true });
-      }
-
-      ensureSoftDeadline(processingStartedAtMs, "save_transactions");
-      setStage("pre_save_heartbeat_start", {
-        transactionCount: sortedAnalyzedItems.length,
-      });
-      await heartbeatInboundEvent({
-        supabase,
-        owner: leaseOwner,
-        svixId,
-        svixTimestamp,
-      });
-      setStage("pre_save_heartbeat_complete", {
-        transactionCount: sortedAnalyzedItems.length,
-      });
-
-      setStage("save_transactions_start", {
-        transactionCount: sortedAnalyzedItems.length,
-      });
-      const saveResult = await saveTransactionsBatchInternal(
-        buildSyntheticRequest(),
-        {
-          debugTraceId: buildEmailImportDebugTraceId(emailData.email_id),
-          userId: owner.userId,
-          manualImportMode: true,
-          skipSemanticDuplicates: true,
-          ...(owner.householdId ? { householdId: owner.householdId } : {}),
-          ...(owner.householdId ? { isPortfolio: owner.isPortfolio } : {}),
-          transactions: sortedAnalyzedItems as any,
-        },
-      );
-      setStage("save_transactions_complete", {
-        resultCount: saveResult.results.length,
-        succeeded: saveResult.summary.succeeded,
-        failed: saveResult.summary.failed,
-      });
-
-      console.log("[resend-inbound-webhook] batch save result", {
-        emailId: emailData.email_id,
-        resultCount: saveResult.results.length,
-        succeeded: saveResult.summary.succeeded,
-        failed: saveResult.summary.failed,
-        duplicateCount: saveResult.results.filter(
-          (item) => item.duplicate === true,
-        ).length,
-      });
-
-      const duplicateCount = saveResult.results.filter(
-        (item) => item.duplicate === true,
-      ).length;
-      const failedCount = saveResult.results.filter(
-        (item) => item.success === false && item.duplicate !== true,
-      ).length;
-      const savedCount = saveResult.results.filter(
-        (item) => item.success === true,
-      ).length;
-      const failureReasons = Array.from(
-        new Set(
-          saveResult.results
-            .filter((item) => item.success === false && item.duplicate !== true)
-            .map((item) => String(item.error || "").trim())
-            .filter((reason) => reason.length > 0),
-        ),
-      );
-      const savedTransactions = saveResult.results
-        .filter((item) => item.success === true)
-        .map((item) => sortedAnalyzedItems[item.index])
-        .filter((item): item is Record<string, unknown> => item != null);
-      const appTransactionsUrl = buildImportFollowupAppUrl(saveResult.results);
-
-      const followup = buildFollowupEmail({
-        senderEmail,
-        subjectLine: emailData.subject || "",
-        savedCount,
-        duplicateCount,
-        failedCount,
-        failureReasons,
-        transactions: savedTransactions,
-        attachmentResults,
-        appTransactionsUrl,
-      });
-      const eventResult = {
-        emailSummary: {
-          providerEmailId: emailData.email_id,
-          senderEmail,
-          subjectLine: emailData.subject || "",
-          recipients: Array.isArray(emailData.to) ? emailData.to : [],
-          receivedAt: emailData.created_at || event.created_at || null,
-        },
-        importContext: {
-          householdId: owner.householdId,
-          isPortfolio: owner.isPortfolio,
-          accountId: owner.accountId,
-        },
-        savedCount,
-        duplicateCount,
-        needsReviewCount: reviewCandidates.length,
-        rejectedCount: rejectedItemCount,
-        failedCount,
-        failureReasons,
-        attachmentResults,
-      };
-      const review = reviewCandidates.length > 0
-        ? await createInboundReview({
-          supabase,
-          eventId: leaseOwner.rowId,
-          eventAttemptCount: leaseOwner.attemptCount,
-          userId: owner.userId,
-          eventResult,
-          candidates: reviewCandidates,
-        })
-        : null;
-      if (reviewCandidates.length > 0 && !review) {
-        throw new Error("EMAIL_IMPORT_REVIEW_MISSING_CANDIDATES");
-      }
-      setStage("finalize_processed_start", {
-        savedCount,
-        duplicateCount,
-        failedCount,
-      });
-      if (reviewCandidates.length === 0) {
-        await updateInboundEvent({
-          supabase,
-          owner: leaseOwner,
-          userId: owner.userId,
-          status: "processed",
-          result: eventResult,
-        });
-      }
-      setStage("finalize_processed_complete", {
-        savedCount,
-        duplicateCount,
-        failedCount,
-      });
-
-      if (reviewCandidates.length > 0) {
-        const email = buildImportReviewRequiredEmail({
-          reviewUrl: `${APP_URL}/import-review/${review!.reviewId}#${
-            review!.token
-          }`,
-          savedCount,
-          reviewCount: reviewCandidates.length,
-        });
-        try {
-          await sendEmail({
-            to: owner.defaultEmail,
-            from: EMAIL_FROM,
-            subject: email.subject,
-            html: email.html,
-            text: email.text,
-          });
-        } catch (error) {
-          await releaseInboundReviewAfterDeliveryFailure({
-            supabase,
-            reviewId: review!.reviewId,
-            eventId: leaseOwner.rowId,
-            eventAttemptCount: leaseOwner.attemptCount,
-          });
-          await reportEdgeFunctionError({
-            functionName: "resend-inbound-webhook",
-            error,
-            context: {
-              operation: "email_import_review_delivery_failed",
-              providerEmailId: emailData.email_id,
-            },
-          });
-          console.error("[resend-inbound-webhook] review delivery failed", {
-            emailId: emailData.email_id,
-            message: error instanceof Error ? error.message : String(error),
-          });
-          throw error;
-        }
-        try {
-          await sendImportReviewRequiredNotification({
-            supabase,
-            owner,
-            reviewId: review!.reviewId,
-            savedCount,
-            reviewCount: reviewCandidates.length,
-          });
-        } catch (sideEffectError) {
-          console.error(
-            "[resend-inbound-webhook] review notification failed",
-            sideEffectError,
-          );
-        }
-      }
-
-      if (reviewCandidates.length === 0) {
-        try {
-          ensureSoftDeadline(processingStartedAtMs, "send_followup_email");
-          setStage("send_followup_email_start");
-          await sendEmail({
-            to: owner.defaultEmail,
-            from: EMAIL_FROM,
-            subject: followup.subject,
-            html: followup.html,
-            text: followup.text,
-          });
-          setStage("send_followup_email_complete");
-        } catch (sideEffectError) {
-          setStage("send_followup_email_error", {
-            error: sideEffectError instanceof Error
-              ? sideEffectError.message
-              : String(sideEffectError),
-          });
-          console.error(
-            "[resend-inbound-webhook] follow-up email failed after finalization",
-            sideEffectError,
-          );
-        }
-      }
-
-      if (reviewCandidates.length === 0) {
-        try {
-          ensureSoftDeadline(processingStartedAtMs, "push_notification");
-          setStage("push_notification_start");
-          await sendImportProcessedNotification({
-            supabase,
-            owner,
-            senderEmail,
-            savedCount,
-          });
-          setStage("push_notification_complete");
-        } catch (sideEffectError) {
-          setStage("push_notification_error", {
-            error: sideEffectError instanceof Error
-              ? sideEffectError.message
-              : String(sideEffectError),
-          });
-          console.error(
-            "[resend-inbound-webhook] push notification failed after finalization",
-            sideEffectError,
-          );
-        }
-      }
-
-      return jsonResponse({
-        success: true,
-        data: {
+        setStage("finalize_processed_start", {
           savedCount,
           duplicateCount,
           failedCount,
-        },
-      });
-    } catch (error) {
-      setStage("background_error", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      console.error("[resend-inbound-webhook] failed", error);
-      try {
-        await markInboundEventRetryableFailure({
-          supabase,
-          owner: leaseOwner,
-          errorText: error instanceof Error ? error.message : String(error),
         });
-      } catch (updateError) {
-        console.error(
-          "[resend-inbound-webhook] failed to mark retryable failure",
-          updateError,
+        if (reviewCandidates.length === 0) {
+          await updateInboundEvent({
+            supabase,
+            owner: leaseOwner,
+            userId: owner.userId,
+            status: "processed",
+            result: eventResult,
+          });
+        }
+        setStage("finalize_processed_complete", {
+          savedCount,
+          duplicateCount,
+          failedCount,
+        });
+
+        if (reviewCandidates.length > 0) {
+          const email = buildImportReviewRequiredEmail({
+            reviewUrl: `${APP_URL}/import-review/${review!.reviewId}#${
+              review!.token
+            }`,
+            savedCount,
+            reviewCount: reviewCandidates.length,
+          });
+          try {
+            await sendEmail({
+              to: owner.defaultEmail,
+              from: EMAIL_FROM,
+              subject: email.subject,
+              html: email.html,
+              text: email.text,
+            });
+          } catch (error) {
+            await releaseInboundReviewAfterDeliveryFailure({
+              supabase,
+              reviewId: review!.reviewId,
+              eventId: leaseOwner.rowId,
+              eventAttemptCount: leaseOwner.attemptCount,
+            });
+            await reportEdgeFunctionError({
+              functionName: "resend-inbound-webhook",
+              error,
+              context: {
+                operation: "email_import_review_delivery_failed",
+                providerEmailId: emailData.email_id,
+              },
+            });
+            console.error("[resend-inbound-webhook] review delivery failed", {
+              emailId: emailData.email_id,
+              message: error instanceof Error ? error.message : String(error),
+            });
+            throw error;
+          }
+          try {
+            await sendImportReviewRequiredNotification({
+              supabase,
+              owner,
+              reviewId: review!.reviewId,
+              savedCount,
+              reviewCount: reviewCandidates.length,
+            });
+          } catch (sideEffectError) {
+            console.error(
+              "[resend-inbound-webhook] review notification failed",
+              sideEffectError,
+            );
+          }
+        }
+
+        if (reviewCandidates.length === 0) {
+          try {
+            ensureSoftDeadline(processingStartedAtMs, "send_followup_email");
+            setStage("send_followup_email_start");
+            await sendEmail({
+              to: owner.defaultEmail,
+              from: EMAIL_FROM,
+              subject: followup.subject,
+              html: followup.html,
+              text: followup.text,
+            });
+            setStage("send_followup_email_complete");
+          } catch (sideEffectError) {
+            setStage("send_followup_email_error", {
+              error:
+                sideEffectError instanceof Error
+                  ? sideEffectError.message
+                  : String(sideEffectError),
+            });
+            console.error(
+              "[resend-inbound-webhook] follow-up email failed after finalization",
+              sideEffectError,
+            );
+          }
+        }
+
+        if (reviewCandidates.length === 0) {
+          try {
+            ensureSoftDeadline(processingStartedAtMs, "push_notification");
+            setStage("push_notification_start");
+            await sendImportProcessedNotification({
+              supabase,
+              owner,
+              senderEmail,
+              savedCount,
+            });
+            setStage("push_notification_complete");
+          } catch (sideEffectError) {
+            setStage("push_notification_error", {
+              error:
+                sideEffectError instanceof Error
+                  ? sideEffectError.message
+                  : String(sideEffectError),
+            });
+            console.error(
+              "[resend-inbound-webhook] push notification failed after finalization",
+              sideEffectError,
+            );
+          }
+        }
+
+        return jsonResponse({
+          success: true,
+          data: {
+            savedCount,
+            duplicateCount,
+            failedCount,
+          },
+        });
+      } catch (error) {
+        setStage("background_error", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        console.error("[resend-inbound-webhook] failed", error);
+        try {
+          await markInboundEventRetryableFailure({
+            supabase,
+            owner: leaseOwner,
+            userId: deliveryUserId,
+            errorText: error instanceof Error ? error.message : String(error),
+          });
+        } catch (updateError) {
+          console.error(
+            "[resend-inbound-webhook] failed to mark retryable failure",
+            updateError,
+          );
+        }
+        return errorResponse(
+          "Failed to process inbound email",
+          500,
+          "SERVER_ERROR",
         );
+      } finally {
+        clearInterval(heartbeat);
+        console.log("[resend-inbound-webhook] background processing finished", {
+          emailId: emailData.email_id,
+          finalStage: currentStage,
+          elapsedMs: Date.now() - backgroundStartedAtMs,
+          attemptCount: leaseOwner.attemptCount,
+        });
       }
-      return errorResponse(
-        "Failed to process inbound email",
-        500,
-        "SERVER_ERROR",
-      );
-    } finally {
-      clearInterval(heartbeat);
-      console.log("[resend-inbound-webhook] background processing finished", {
-        emailId: emailData.email_id,
-        finalStage: currentStage,
-        elapsedMs: Date.now() - backgroundStartedAtMs,
-        attemptCount: leaseOwner.attemptCount,
-      });
-    }
-  })();
+    })();
 
-  scheduleBackgroundTask(
-    processingPromise,
-    `email-import:${emailData.email_id}`,
+    scheduleBackgroundTask(
+      processingPromise,
+      `email-import:${emailData.email_id}`,
+    );
+
+    const response = await processingPromise;
+    if (response.status >= 400) deliveryFailed = true;
+    deliveryResults.push(await response.json());
+    console.log("[resend-inbound-webhook] completed account delivery", {
+      emailId: emailData.email_id,
+      rowId: leaseOwner.rowId,
+      attemptCount: leaseOwner.attemptCount,
+      recovered: claim.recovered,
+    });
+  }
+  if (
+    !deliveryFailed &&
+    deliveryResults.length > 1 &&
+    deliveryResults.every(
+      (result) =>
+        result.ignored === true &&
+        (result.reason === "EMAIL_IMPORT_DISABLED" ||
+          result.reason === "SUBSCRIPTION_REQUIRED"),
+    )
+  ) {
+    const unavailable = buildUnavailableEmail({
+      senderEmail,
+      reason: deliveryResults.some(
+        (result) => result.reason === "SUBSCRIPTION_REQUIRED",
+      )
+        ? importUnavailableReasons.subscriptionRequired
+        : importUnavailableReasons.importDisabled,
+    });
+    await sendEmail({
+      to: senderEmail,
+      from: EMAIL_FROM,
+      subject: unavailable.subject,
+      html: unavailable.html,
+      text: unavailable.text,
+    });
+  }
+  return jsonResponse(
+    { success: !deliveryFailed, deliveries: deliveryResults },
+    deliveryFailed ? 503 : 200,
   );
-
-  console.log("[resend-inbound-webhook] acknowledged webhook", {
-    emailId: emailData.email_id,
-    rowId: leaseOwner.rowId,
-    attemptCount: leaseOwner.attemptCount,
-    recovered: claim.recovered,
-  });
-
-  return jsonResponse({
-    success: true,
-    accepted: true,
-    processing: true,
-    recovered: claim.recovered,
-  });
 }
 
 if (import.meta.main) {

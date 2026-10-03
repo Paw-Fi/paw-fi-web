@@ -4,6 +4,12 @@ import { corsHeaders } from "../shared/cors.ts";
 import { assertAccountInScope } from "../shared/accounts.ts";
 import { normalizeEmailAddress } from "../shared/email-import.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { sendEmail } from "../shared/email-service.ts";
+import {
+  buildSenderVerificationEmail,
+  createSenderVerificationToken,
+  hashSenderVerificationToken,
+} from "../shared/email-sender-verification.ts";
 import {
   hasPlusEntitlement,
   jsonSubscriptionRequired,
@@ -20,10 +26,11 @@ interface RequestBody {
   isPortfolio?: boolean;
   accountId?: string | null;
   email?: string | null;
+  senderVerificationVersion?: number;
 }
 
 function sanitizeUuid(value?: string | null): string | null {
-  if (!value) return null;
+  if (typeof value !== "string" || !value) return null;
   const trimmed = value.trim();
   return UUID_REGEX.test(trimmed) ? trimmed : null;
 }
@@ -103,7 +110,9 @@ async function resolveUserSettings(params: {
 
   const { data: whitelistRows, error: whitelistError } = await supabase
     .from("email_import_sender_whitelist")
-    .select("id, sender_email, normalized_sender_email, created_at")
+    .select(
+      "id, sender_email, normalized_sender_email, created_at, verified_at",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
@@ -114,6 +123,7 @@ async function resolveUserSettings(params: {
   }
 
   return {
+    userId,
     enabled: contact?.email_import_enabled === true,
     scopeId: householdId ?? "personal",
     scopeName,
@@ -123,21 +133,27 @@ async function resolveUserSettings(params: {
     defaultEmail,
     whitelistEmails: Array.isArray(whitelistRows)
       ? whitelistRows.map((row: any) => ({
-        id: row.id,
-        email: row.sender_email,
-        normalizedEmail: row.normalized_sender_email,
-        createdAt: row.created_at,
-      }))
+          id: row.id,
+          email: row.sender_email,
+          normalizedEmail: row.normalized_sender_email,
+          createdAt: row.created_at,
+          verified: row.verified_at != null,
+          verifiedAt: row.verified_at,
+        }))
       : [],
   };
 }
 
-Deno.serve(async (req: Request) => {
+async function handleRequest(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "POST") {
-    return errorResponse("Method not allowed", 405, "METHOD_NOT_ALLOWED");
+    return errorResponse(
+      "This request isn't supported. Please update Moneko and try again.",
+      405,
+      "METHOD_NOT_ALLOWED",
+    );
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -145,7 +161,11 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-    return errorResponse("Server not configured", 500, "SERVER_ERROR");
+    return errorResponse(
+      "Email import is temporarily unavailable. Please try again later.",
+      500,
+      "SERVER_ERROR",
+    );
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -153,7 +173,11 @@ Deno.serve(async (req: Request) => {
     ? authHeader.slice("Bearer ".length).trim()
     : null;
   if (!bearerToken) {
-    return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+    return errorResponse(
+      "Your session has expired. Please sign in again to manage email import.",
+      401,
+      "UNAUTHORIZED",
+    );
   }
 
   const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -167,18 +191,21 @@ Deno.serve(async (req: Request) => {
     },
   });
 
-  const { data: authData, error: authError } = await authClient.auth.getUser(
-    bearerToken,
-  );
+  const { data: authData, error: authError } =
+    await authClient.auth.getUser(bearerToken);
   if (authError || !authData?.user?.id) {
-    return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+    return errorResponse(
+      "Your session has expired. Please sign in again to manage email import.",
+      401,
+      "UNAUTHORIZED",
+    );
   }
 
   const userId = authData.user.id;
   const authEmail = normalizeEmailAddress(authData.user.email);
   if (!authEmail) {
     return errorResponse(
-      "Your account email is missing",
+      "Your account doesn't have a valid email address. Please update your account email or contact support.",
       400,
       "DEFAULT_EMAIL_MISSING",
     );
@@ -188,11 +215,19 @@ Deno.serve(async (req: Request) => {
   try {
     payload = await req.json();
   } catch {
-    return errorResponse("Invalid JSON body", 400, "INVALID_JSON");
+    return errorResponse(
+      "We couldn't read this request. Please try again.",
+      400,
+      "INVALID_JSON",
+    );
   }
 
   if (!payload?.action) {
-    return errorResponse("action is required", 400, "VALIDATION_ERROR");
+    return errorResponse(
+      "We couldn't recognize this request. Please update Moneko and try again.",
+      400,
+      "VALIDATION_ERROR",
+    );
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -220,7 +255,11 @@ Deno.serve(async (req: Request) => {
       error: contactSelectError,
       context: { operation: "user_contacts.select_existing", userId },
     });
-    return errorResponse("Failed to load contact", 500, "SERVER_ERROR");
+    return errorResponse(
+      "We couldn't load your email import settings. Please try again.",
+      500,
+      "SERVER_ERROR",
+    );
   }
 
   if (payload.action === "get") {
@@ -235,7 +274,7 @@ Deno.serve(async (req: Request) => {
   if (payload.action === "update_settings") {
     if (typeof payload.enabled !== "boolean") {
       return errorResponse(
-        "enabled must be a boolean",
+        "Please choose whether email import is enabled and try again.",
         400,
         "VALIDATION_ERROR",
       );
@@ -260,7 +299,7 @@ Deno.serve(async (req: Request) => {
           context: { operation: "subscriptions.select_entitlement", userId },
         });
         return errorResponse(
-          "Failed to verify subscription",
+          "We couldn't check your Plus access. Please try again.",
           500,
           "SERVER_ERROR",
         );
@@ -268,8 +307,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const householdId = sanitizeUuid(payload.householdId ?? null);
-    if (payload.householdId && !householdId) {
-      return errorResponse("Invalid householdId", 400, "VALIDATION_ERROR");
+    if (
+      payload.householdId != null &&
+      payload.householdId !== "" &&
+      !householdId
+    ) {
+      return errorResponse(
+        "Please select a valid destination space.",
+        400,
+        "VALIDATION_ERROR",
+      );
     }
 
     const isPortfolio = payload.isPortfolio === true;
@@ -282,14 +329,14 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
       if (membershipError) {
         return errorResponse(
-          "Failed to verify household scope",
+          "We couldn't check access to the selected space. Please try again.",
           500,
           "SERVER_ERROR",
         );
       }
       if (!membership?.id) {
         return errorResponse(
-          "Unauthorized household scope",
+          "You no longer have access to this space. Please choose another destination.",
           403,
           "UNAUTHORIZED",
         );
@@ -297,8 +344,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const accountId = sanitizeUuid(payload.accountId ?? null);
-    if (payload.accountId && !accountId) {
-      return errorResponse("Invalid accountId", 400, "VALIDATION_ERROR");
+    if (payload.accountId != null && payload.accountId !== "" && !accountId) {
+      return errorResponse(
+        "Please select a valid destination wallet.",
+        400,
+        "VALIDATION_ERROR",
+      );
     }
     if (accountId) {
       const isInScope = await assertAccountInScope(supabase, accountId, {
@@ -307,7 +358,7 @@ Deno.serve(async (req: Request) => {
       });
       if (!isInScope) {
         return errorResponse(
-          "Selected wallet is not in the chosen space",
+          "This wallet doesn't belong to the selected space. Please choose a wallet in that space.",
           400,
           "ACCOUNT_SCOPE_MISMATCH",
         );
@@ -336,7 +387,11 @@ Deno.serve(async (req: Request) => {
             contactId: existingContact.id,
           },
         });
-        return errorResponse("Failed to update settings", 500, "SERVER_ERROR");
+        return errorResponse(
+          "We couldn't save your email import settings. Please try again.",
+          500,
+          "SERVER_ERROR",
+        );
       }
     } else {
       const { error: insertError } = await supabase
@@ -358,7 +413,11 @@ Deno.serve(async (req: Request) => {
             userId,
           },
         });
-        return errorResponse("Failed to create settings", 500, "SERVER_ERROR");
+        return errorResponse(
+          "We couldn't save your email import settings. Please try again.",
+          500,
+          "SERVER_ERROR",
+        );
       }
     }
 
@@ -373,74 +432,71 @@ Deno.serve(async (req: Request) => {
   if (payload.action === "add_whitelist") {
     const normalizedEmail = normalizeEmailAddress(payload.email);
     if (!normalizedEmail) {
-      return errorResponse("Invalid email", 400, "INVALID_EMAIL");
+      return errorResponse(
+        "Please enter a valid email address.",
+        400,
+        "INVALID_EMAIL",
+      );
     }
     if (normalizedEmail === authEmail) {
       return errorResponse(
-        "Your account email is already included by default",
+        "Your Moneko account email is already an allowed sender. No need to add it again.",
         409,
         "DEFAULT_EMAIL_ALREADY_INCLUDED",
       );
     }
 
-    const { data: matchingUsers, error: usersError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", normalizedEmail);
-    if (usersError) {
-      return errorResponse("Failed to validate email", 500, "SERVER_ERROR");
+    if (payload.senderVerificationVersion !== 1) {
+      return errorResponse(
+        "Please update Moneko to verify new email senders.",
+        426,
+        "CLIENT_UPDATE_REQUIRED",
+      );
+    }
+
+    const subscription = await loadLatestSubscriptionForUser(supabase, userId);
+    if (!hasPlusEntitlement(subscription)) {
+      return jsonResponse(jsonSubscriptionRequired("Email File Import"), 403);
+    }
+    const token = createSenderVerificationToken();
+    const { data: request, error: requestError } = await supabase.rpc(
+      "request_email_import_sender_verification",
+      {
+        p_user_id: userId,
+        p_email: normalizedEmail,
+        p_token_hash: await hashSenderVerificationToken(token),
+      },
+    );
+    if (requestError) throw requestError;
+    if (request?.status === "rate_limited") {
+      return errorResponse(
+        "Please wait before resending. You can request one link per minute, up to ten per hour.",
+        429,
+        "EMAIL_VERIFICATION_RATE_LIMIT",
+      );
     }
     if (
-      Array.isArray(matchingUsers) &&
-      matchingUsers.some((row: any) => row.id !== userId)
+      request?.status === "pending" &&
+      typeof request.verificationId === "string"
     ) {
-      return errorResponse(
-        "This email is already claimed by another account",
-        409,
-        "EMAIL_ALREADY_CLAIMED",
-      );
-    }
-
-    const { data: whitelistMatches, error: whitelistCheckError } =
-      await supabase
-        .from("email_import_sender_whitelist")
-        .select("id, user_id")
-        .eq("normalized_sender_email", normalizedEmail)
-        .order("created_at", { ascending: false });
-
-    if (whitelistCheckError) {
-      return errorResponse("Failed to validate email", 500, "SERVER_ERROR");
-    }
-
-    const ownedByOtherUser = Array.isArray(whitelistMatches)
-      ? whitelistMatches.some((row: any) => row.user_id !== userId)
-      : false;
-    if (ownedByOtherUser) {
-      return errorResponse(
-        "This email is already claimed by another account",
-        409,
-        "EMAIL_ALREADY_CLAIMED",
-      );
-    }
-
-    const alreadyExistsForUser = Array.isArray(whitelistMatches)
-      ? whitelistMatches.some((row: any) => row.user_id === userId)
-      : false;
-    if (!alreadyExistsForUser) {
-      const { error: insertError } = await supabase
-        .from("email_import_sender_whitelist")
-        .upsert(
-          {
-            user_id: userId,
-            sender_email: normalizedEmail,
-            normalized_sender_email: normalizedEmail,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "normalized_sender_email" },
+      const email = buildSenderVerificationEmail({
+        accountEmail: authEmail,
+        verificationUrl: `${SUPABASE_URL}/functions/v1/email-import-sender-verify#${token}`,
+      });
+      const sent = await sendEmail({
+        to: normalizedEmail,
+        ...email,
+        idempotencyKey: `email-sender-verification:${request.verificationId}`,
+      });
+      if (!sent.success) {
+        return errorResponse(
+          "Your sender is pending verification, but we couldn't send the email. Please wait one minute and resend it.",
+          503,
+          "VERIFICATION_EMAIL_FAILED",
         );
-      if (insertError) {
-        return errorResponse("Failed to add email", 500, "SERVER_ERROR");
       }
+    } else if (request?.status !== "already_verified") {
+      throw new Error("INVALID_SENDER_VERIFICATION_RESPONSE");
     }
 
     const settings = await resolveUserSettings({
@@ -454,11 +510,15 @@ Deno.serve(async (req: Request) => {
   if (payload.action === "remove_whitelist") {
     const normalizedEmail = normalizeEmailAddress(payload.email);
     if (!normalizedEmail) {
-      return errorResponse("Invalid email", 400, "INVALID_EMAIL");
+      return errorResponse(
+        "Please enter a valid email address.",
+        400,
+        "INVALID_EMAIL",
+      );
     }
     if (normalizedEmail === authEmail) {
       return errorResponse(
-        "Your account email cannot be removed",
+        "Your Moneko account email is always an allowed sender and can't be removed here.",
         400,
         "DEFAULT_EMAIL_IMMUTABLE",
       );
@@ -470,7 +530,11 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", userId)
       .eq("normalized_sender_email", normalizedEmail);
     if (deleteError) {
-      return errorResponse("Failed to remove email", 500, "SERVER_ERROR");
+      return errorResponse(
+        "We couldn't remove this sender. Please try again.",
+        500,
+        "SERVER_ERROR",
+      );
     }
 
     const settings = await resolveUserSettings({
@@ -481,5 +545,30 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true, data: settings });
   }
 
-  return errorResponse("Unsupported action", 400, "VALIDATION_ERROR");
+  return errorResponse(
+    "This email import action isn't supported. Please update Moneko and try again.",
+    400,
+    "VALIDATION_ERROR",
+  );
+}
+
+Deno.serve(async (req: Request) => {
+  try {
+    return await handleRequest(req);
+  } catch (error) {
+    try {
+      await reportEdgeFunctionError({
+        functionName: "email-import-settings",
+        error,
+        context: { operation: "unhandled_request" },
+      });
+    } catch (_) {
+      // Reporting failure must not prevent a safe response to the user.
+    }
+    return errorResponse(
+      "We couldn't complete this email import request. Please refresh your settings and try again.",
+      500,
+      "SERVER_ERROR",
+    );
+  }
 });
