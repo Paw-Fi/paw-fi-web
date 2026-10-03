@@ -27,11 +27,12 @@ import {
   UserCategoryRemapRow,
 } from "../shared/user-categories.ts";
 import { loadLatestUserPreferredCurrency } from "../shared/user-preferred-currency.ts";
-import { parseInteractiveRequest, type InteractiveRequest } from "../shared/interactive-transaction-contract.ts";
+import { parseInteractiveRequest, parseInteractiveSource, type InteractiveRequest } from "../shared/interactive-transaction-contract.ts";
 import { loadInteractiveTransactionContext } from "../shared/interactive-transaction-context.ts";
-import { runInteractiveTransactionAnalysis } from "../shared/interactive-transaction-analysis.ts";
+import { enrichVerifiedInteractiveItems, runInteractiveTransactionAnalysis } from "../shared/interactive-transaction-analysis.ts";
 import { enrichAnalyzedMerchantItems } from "../shared/merchant-analysis.ts";
 import { VALID_CURRENCIES } from "../shared/currency-validator.ts";
+import { formatDateInTimeZone } from "../shared/bot/date-utils.ts";
 
 interface InteractiveAnalyzeBody extends AnalyzeRequestBody {
   interactive?: unknown;
@@ -53,7 +54,7 @@ async function interactiveAnalysisResponse(
       defaultSpaceId: body.householdId || "personal",
       defaultWalletId: body.accountId || null,
       currency: defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency) ? defaultCurrency : body.currency || "USD",
-      date: body.date || new Date().toISOString().slice(0, 10),
+      date: body.date || formatDateInTimeZone(body.preferredTimezone),
       language: body.language || "en",
       preferredTimezone: body.preferredTimezone,
       expenseCategories: body.allowedExpenseCategories!,
@@ -62,7 +63,7 @@ async function interactiveAnalysisResponse(
     const result = await runInteractiveTransactionAnalysis({
       source: { text: body.text, audio: body.audio }, request, context,
     });
-    const items = result.requireCorrection ? [] : await enrichAnalyzedMerchantItems({ items: result.items, ...merchantContext });
+    const items = result.requireCorrection ? [] : await enrichVerifiedInteractiveItems(result.items, (items) => enrichAnalyzedMerchantItems({ items, ...merchantContext }));
     return { success: true, data: { ...result, items, isAnalyzed: !result.requireCorrection } };
   };
   if (!stream) {
@@ -629,12 +630,7 @@ Deno.serve(async (req: Request) => {
     try {
       body = await req.json();
       interactive = parseInteractiveRequest(body.interactive);
-      if (interactive && (body.image || body.attachments?.length ||
-        (!body.text?.trim() && !body.audio?.data) ||
-        (body.text?.length ?? 0) > 16000 || (body.audio?.data.length ?? 0) > 16000000 ||
-        (body.audio && !["audio/aac", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-m4a"].includes(body.audio.contentType)))) {
-        return errorResponse("Invalid interactive text or audio input", 400);
-      }
+      if (interactive) parseInteractiveSource(body);
     } catch (_error) {
       return errorResponse("Invalid analysis request", 400);
     }
