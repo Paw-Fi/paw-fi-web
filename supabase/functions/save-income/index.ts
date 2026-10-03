@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
+import { normalizeRecurrenceDueTime } from "../shared/recurrence-due-time.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   normalizeCategoryForStorage,
@@ -121,6 +122,7 @@ interface RequestBody {
     anchor_date: string;
     end_date?: string;
     interval?: number;
+    due_time?: string;
     reminder?: {
       // Optional reminder configuration (v1.6)
       enabled: boolean;
@@ -140,6 +142,7 @@ interface RequestBody {
     anchor_date: string;
     end_date?: string;
     interval?: number;
+    due_time?: string;
     reminder?: {
       // Optional reminder configuration (v1.6)
       enabled: boolean;
@@ -341,10 +344,22 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const normalizedDueTime =
+        body.recurrence_rule.due_time === undefined
+          ? undefined
+          : normalizeRecurrenceDueTime(body.recurrence_rule.due_time);
+      if (body.recurrence_rule.due_time !== undefined && !normalizedDueTime) {
+        return errorResponse(
+          "recurrence_rule.due_time must be a valid HH:mm:ss time",
+          400,
+        );
+      }
+
       body.recurrence_rule = {
         ...body.recurrence_rule,
         anchor_date: normalizedAnchorDate,
         ...(normalizedEndDate ? { end_date: normalizedEndDate } : {}),
+        ...(normalizedDueTime ? { due_time: normalizedDueTime } : {}),
       };
     }
 

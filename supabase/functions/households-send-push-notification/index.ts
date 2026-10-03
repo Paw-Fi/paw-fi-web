@@ -8,6 +8,7 @@ import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { sendUserEmail } from "../shared/email-service.ts";
 import { notificationTemplate } from "../shared/email-templates.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
+import { buildRecurringReminderNotification } from "../shared/recurring-reminder-notification.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
 import { resolveUserDisplayName as resolveEmailDisplayName } from "../shared/user-display-name.ts";
 import {
@@ -225,8 +226,8 @@ async function getRecipientSplitContext(
 }
 
 function getSettlementAmountCents(payload: Record<string, any>): number | null {
-  const rawAmount = payload.amount_cents ??
-    payload.amounts_before?.net_pay_cents;
+  const rawAmount =
+    payload.amount_cents ?? payload.amounts_before?.net_pay_cents;
   const amount = Number(rawAmount);
   if (!Number.isFinite(amount)) return null;
   const normalized = Math.abs(amount);
@@ -257,9 +258,8 @@ async function resolveUserDisplayName(userId?: string): Promise<string | null> {
       .eq("id", userId)
       .maybeSingle();
     if (error) return null;
-    const fullName = typeof data?.full_name === "string"
-      ? data.full_name.trim()
-      : "";
+    const fullName =
+      typeof data?.full_name === "string" ? data.full_name.trim() : "";
     if (fullName.length > 0) return fullName;
     const email = typeof data?.email === "string" ? data.email.trim() : "";
     return email.length > 0 ? email : null;
@@ -293,9 +293,10 @@ async function resolveSettlementNote(
       .limit(1)
       .maybeSingle();
     if (error) return null;
-    const note = typeof data?.settlement_note === "string"
-      ? data.settlement_note.trim()
-      : "";
+    const note =
+      typeof data?.settlement_note === "string"
+        ? data.settlement_note.trim()
+        : "";
     return note.length > 0 ? note : null;
   } catch (_) {
     return null;
@@ -306,12 +307,11 @@ async function enrichSettlementPayload(
   payload: Record<string, any>,
   householdId?: string,
 ): Promise<Record<string, any>> {
-  const actorId = payload.actor_user_id || payload.from_user_id ||
-    payload.settled_by_user_id;
+  const actorId =
+    payload.actor_user_id || payload.from_user_id || payload.settled_by_user_id;
   const otherUserId = payload.to_user_id;
-  const rawActorName = typeof payload.actor_name === "string"
-    ? payload.actor_name.trim()
-    : "";
+  const rawActorName =
+    typeof payload.actor_name === "string" ? payload.actor_name.trim() : "";
   const existingActorName =
     rawActorName && rawActorName.toLowerCase() !== "someone"
       ? rawActorName
@@ -333,9 +333,8 @@ async function enrichSettlementPayload(
     typeof otherUserId === "string"
   ) {
     const amountCents = getSettlementAmountCents(payload);
-    const currency = typeof payload.currency === "string"
-      ? payload.currency
-      : null;
+    const currency =
+      typeof payload.currency === "string" ? payload.currency : null;
     const resolved = await resolveSettlementNote({
       householdId,
       actorUserId: actorId,
@@ -491,9 +490,10 @@ async function sendFCMv1Notification(
 
   try {
     // Build deep link for navigation
-    const deepLink = data.deep_link ||
-      buildNotificationDeepLink(data.event_type, data);
-    const isWeb = typeof platform === "string" &&
+    const deepLink =
+      data.deep_link || buildNotificationDeepLink(data.event_type, data);
+    const isWeb =
+      typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
 
     // Enhanced data payload with deep link and click action
@@ -587,7 +587,8 @@ async function sendFCMv1Notification(
         const status = parsed?.error?.status || "";
         const message = parsed?.error?.message || "";
         const details = parsed?.error?.details || [];
-        const hasUnregistered = status === "NOT_FOUND" ||
+        const hasUnregistered =
+          status === "NOT_FOUND" ||
           details?.some((d: any) => d?.errorCode === "UNREGISTERED") ||
           /UNREGISTERED/i.test(message) ||
           /No matching registration token/i.test(message) ||
@@ -673,8 +674,8 @@ serve(async (req: Request) => {
     const raw = await req.json();
 
     // Database Webhooks envelope detection
-    const isDbWebhook = raw && typeof raw === "object" && "type" in raw &&
-      "record" in raw;
+    const isDbWebhook =
+      raw && typeof raw === "object" && "type" in raw && "record" in raw;
 
     const requestedEventId = isDbWebhook
       ? raw.record?.id
@@ -768,10 +769,11 @@ serve(async (req: Request) => {
       );
     }
 
-    const expiresAt = event_type === "pockets_month_review" &&
-        typeof payload.expires_at === "string"
-      ? Date.parse(payload.expires_at)
-      : Number.NaN;
+    const expiresAt =
+      event_type === "pockets_month_review" &&
+      typeof payload.expires_at === "string"
+        ? Date.parse(payload.expires_at)
+        : Number.NaN;
     if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
       await supabase
         .from("notification_events")
@@ -828,13 +830,14 @@ serve(async (req: Request) => {
     // This reminder has an email counterpart. Send it after claiming the event
     // so retries share the event-scoped idempotency key, even when no device is
     // registered or Firebase delivery needs the fallback worker.
-    const pocketReviewEmailSent = event_type === "pockets_month_review"
-      ? await sendPocketsMonthReviewEmail({
-        userId: user_id,
-        notificationEventId: notification_event_id,
-        cycleLabel: String(payload.financial_cycle_label || "this cycle"),
-      })
-      : false;
+    const pocketReviewEmailSent =
+      event_type === "pockets_month_review"
+        ? await sendPocketsMonthReviewEmail({
+            userId: user_id,
+            notificationEventId: notification_event_id,
+            cycleLabel: String(payload.financial_cycle_label || "this cycle"),
+          })
+        : false;
 
     // Check if FCM is configured
     if (!firebaseServiceAccount || !firebaseProjectId) {
@@ -902,7 +905,8 @@ serve(async (req: Request) => {
       );
     }
 
-    const isImmediateTransactionEvent = event_type === "expense_added" ||
+    const isImmediateTransactionEvent =
+      event_type === "expense_added" ||
       event_type === "expense_edited" ||
       event_type === "expense_deleted" ||
       event_type === "income_added" ||
@@ -996,13 +1000,14 @@ serve(async (req: Request) => {
         const startParts = prefs.nudge_quiet_hours_start.split(":");
         const endParts = prefs.nudge_quiet_hours_end.split(":");
 
-        const startMinutes = parseInt(startParts[0]) * 60 +
-          parseInt(startParts[1]);
+        const startMinutes =
+          parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
         const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
 
-        const inQuietHours = startMinutes < endMinutes
-          ? currentTime >= startMinutes && currentTime < endMinutes
-          : currentTime >= startMinutes || currentTime < endMinutes;
+        const inQuietHours =
+          startMinutes < endMinutes
+            ? currentTime >= startMinutes && currentTime < endMinutes
+            : currentTime >= startMinutes || currentTime < endMinutes;
 
         if (inQuietHours) {
           console.log("[send-push] Currently in quiet hours, will retry later");
@@ -1081,7 +1086,7 @@ serve(async (req: Request) => {
       tokens: devices.map((d: any) =>
         d.push_token
           ? `${d.push_token.slice(0, 8)}...${d.push_token.slice(-6)}`
-          : "null"
+          : "null",
       ),
       platform: devices.map((d: any) => d.platform),
     });
@@ -1156,9 +1161,10 @@ serve(async (req: Request) => {
         is_sent: sentCount > 0,
         sent_at: sentCount > 0 ? new Date().toISOString() : null,
         processing_started_at: null,
-        delivery_error: failedCount > 0
-          ? `Sent to ${sentCount}/${devices.length} devices`
-          : null,
+        delivery_error:
+          failedCount > 0
+            ? `Sent to ${sentCount}/${devices.length} devices`
+            : null,
       })
       .eq("id", notification_event_id);
 
@@ -1200,9 +1206,8 @@ serve(async (req: Request) => {
             retry_count: 1,
             last_retry_at: new Date().toISOString(),
             processing_started_at: null,
-            delivery_error: error instanceof Error
-              ? error.message
-              : String(error),
+            delivery_error:
+              error instanceof Error ? error.message : String(error),
           })
           .eq("id", activeNotificationEventId);
       }
@@ -1241,8 +1246,8 @@ function buildNotificationMessage(
     payload.actor_name ||
     "Someone") as string;
   const householdName = (payload.household_name || "your household") as string;
-  const isRecurring = payload.is_recurring === true ||
-    expenseData.is_recurring === true;
+  const isRecurring =
+    payload.is_recurring === true || expenseData.is_recurring === true;
   const recurringLabel = isRecurring ? "recurring " : "";
 
   switch (eventType) {
@@ -1250,15 +1255,15 @@ function buildNotificationMessage(
       const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
       const recurringCount = Number(payload.recurring_count ?? 0);
       if (batchCount > 1) {
-        const recurringSuffix = recurringCount > 0
-          ? recurringCount === batchCount
-            ? " (all recurring)"
-            : ` (${recurringCount} recurring)`
-          : "";
+        const recurringSuffix =
+          recurringCount > 0
+            ? recurringCount === batchCount
+              ? " (all recurring)"
+              : ` (${recurringCount} recurring)`
+            : "";
         return {
           title: actor,
-          body:
-            `added ${batchCount} expenses${recurringSuffix} to ${householdName}`,
+          body: `added ${batchCount} expenses${recurringSuffix} to ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
@@ -1277,11 +1282,11 @@ function buildNotificationMessage(
 
       const body = isSplit
         ? `split ${amount} ${recurringLabel}expense with you${
-          note ? `: ${note}` : ` in ${householdName}`
-        }`
+            note ? `: ${note}` : ` in ${householdName}`
+          }`
         : `added ${amount} ${recurringLabel}expense${
-          note ? `: ${note}` : ` to ${householdName}`
-        }`;
+            note ? `: ${note}` : ` to ${householdName}`
+          }`;
 
       return {
         title: actor,
@@ -1307,11 +1312,9 @@ function buildNotificationMessage(
         if (fields.indexOf("amount_cents") !== -1) {
           const oldC = Number(expenseData.old_amount_cents ?? 0);
           const newC = Number(expenseData.new_amount_cents ?? 0);
-          body = `changed expense amount from ${symbol}${
-            (oldC / 100).toFixed(
-              2,
-            )
-          } to ${symbol}${(newC / 100).toFixed(2)}`;
+          body = `changed expense amount from ${symbol}${(oldC / 100).toFixed(
+            2,
+          )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
           const newCat = String(expenseData.new_category ?? "");
           body = `changed expense category to ${newCat}`;
@@ -1343,15 +1346,15 @@ function buildNotificationMessage(
       const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
       const recurringCount = Number(payload.recurring_count ?? 0);
       if (batchCount > 1) {
-        const recurringSuffix = recurringCount > 0
-          ? recurringCount === batchCount
-            ? " (all recurring)"
-            : ` (${recurringCount} recurring)`
-          : "";
+        const recurringSuffix =
+          recurringCount > 0
+            ? recurringCount === batchCount
+              ? " (all recurring)"
+              : ` (${recurringCount} recurring)`
+            : "";
         return {
           title: actor,
-          body:
-            `deleted ${batchCount} expenses${recurringSuffix} from ${householdName}`,
+          body: `deleted ${batchCount} expenses${recurringSuffix} from ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
@@ -1361,8 +1364,7 @@ function buildNotificationMessage(
       const symbol = getCurrencySymbol(code);
       const cents = Number(expenseData.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-      const body =
-        `deleted ${amount} ${recurringLabel}expense from ${householdName}`;
+      const body = `deleted ${amount} ${recurringLabel}expense from ${householdName}`;
 
       return {
         title: actor,
@@ -1384,11 +1386,9 @@ function buildNotificationMessage(
 
       return {
         title: `${budgetName} Budget`,
-        body: `⚠️ ${percentage}% used - ${symbol}${
-          spentAmount.toFixed(
-            2,
-          )
-        } of ${symbol}${budgetAmount.toFixed(2)} spent in ${householdName}`,
+        body: `⚠️ ${percentage}% used - ${symbol}${spentAmount.toFixed(
+          2,
+        )} of ${symbol}${budgetAmount.toFixed(2)} spent in ${householdName}`,
         data: {
           budget_id: payload.budget_id || "",
           budget_name: budgetName,
@@ -1410,8 +1410,7 @@ function buildNotificationMessage(
 
       return {
         title: `${budgetName} Budget`,
-        body:
-          `🚨 Over budget! ${percentage}% used - ${symbol}${overAmount} over limit in ${householdName}`,
+        body: `🚨 Over budget! ${percentage}% used - ${symbol}${overAmount} over limit in ${householdName}`,
         data: {
           budget_id: payload.budget_id || "",
           budget_name: budgetName,
@@ -1491,15 +1490,15 @@ function buildNotificationMessage(
       const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
       const recurringCount = Number(payload.recurring_count ?? 0);
       if (batchCount > 1) {
-        const recurringSuffix = recurringCount > 0
-          ? recurringCount === batchCount
-            ? " (all recurring)"
-            : ` (${recurringCount} recurring)`
-          : "";
+        const recurringSuffix =
+          recurringCount > 0
+            ? recurringCount === batchCount
+              ? " (all recurring)"
+              : ` (${recurringCount} recurring)`
+            : "";
         return {
           title: actor,
-          body:
-            `added ${batchCount} income entries${recurringSuffix} to ${householdName}`,
+          body: `added ${batchCount} income entries${recurringSuffix} to ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
@@ -1538,11 +1537,9 @@ function buildNotificationMessage(
         if (fields.indexOf("amount_cents") !== -1) {
           const oldC = Number(expenseData.old_amount_cents ?? 0);
           const newC = Number(expenseData.new_amount_cents ?? 0);
-          body = `changed income amount from ${symbol}${
-            (oldC / 100).toFixed(
-              2,
-            )
-          } to ${symbol}${(newC / 100).toFixed(2)}`;
+          body = `changed income amount from ${symbol}${(oldC / 100).toFixed(
+            2,
+          )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
           const newCat = String(expenseData.new_category ?? "");
           body = `changed income category to ${newCat}`;
@@ -1577,9 +1574,10 @@ function buildNotificationMessage(
       const senderName = (payload.sender_name || "A member") as string;
       const customMessage = payload.message as string | undefined;
 
-      const body = customMessage && customMessage.trim().length > 0
-        ? customMessage
-        : `sent you a spending reminder for ${householdName}`;
+      const body =
+        customMessage && customMessage.trim().length > 0
+          ? customMessage
+          : `sent you a spending reminder for ${householdName}`;
 
       return {
         title: senderName,
@@ -1594,59 +1592,7 @@ function buildNotificationMessage(
     }
 
     case "recurring_reminder": {
-      const transactionType = (payload.type || "expense") as string;
-      const code = payload.currency as string | undefined;
-      const symbol = getCurrencySymbol(code);
-      const cents = Number(payload.amount_cents ?? 0);
-      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-      const category = (payload.category || "") as string;
-      const occurrenceDate = new Date(payload.occurrence_date as string);
-      const reminderValue = Number(payload.reminder_value ?? 1);
-      const reminderUnit = (payload.reminder_unit || "days") as string;
-
-      // Calculate time until due
-      const now = new Date();
-      const daysUntil = Math.ceil(
-        (occurrenceDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-      );
-
-      let timeframe = "";
-      if (daysUntil === 0) {
-        timeframe = "today";
-      } else if (daysUntil === 1) {
-        timeframe = "tomorrow";
-      } else if (daysUntil > 1) {
-        timeframe = `in ${daysUntil} days`;
-      } else {
-        timeframe = "soon"; // Shouldn't happen but just in case
-      }
-
-      // Cheerful tones for both, happier for income
-      const isIncome = transactionType === "income";
-      const capCategory = category
-        ? category.charAt(0).toUpperCase() + category.slice(1)
-        : undefined;
-      const title = isIncome ? "💰 Incoming Payment" : "🔔 Upcoming Expense";
-      const body = isIncome
-        ? `${
-          capCategory || "Income"
-        } of ${amount} arrives ${timeframe}. Confirm in the app now`
-        : `${
-          capCategory || "Expense"
-        } of ${amount} is due ${timeframe}. Confirm in the app now`;
-
-      return {
-        title,
-        body,
-        data: {
-          expense_id: payload.expense_id || "",
-          type: transactionType,
-          category: category,
-          amount: String(cents),
-          currency: code || "",
-          deep_link: `moneko://recurring/${payload.expense_id || ""}`,
-        },
-      };
+      return buildRecurringReminderNotification(payload);
     }
 
     case "log_expense_reminder": {
@@ -1669,13 +1615,13 @@ function buildNotificationMessage(
 
     case "capture_plus_required": {
       const captureSource = String(payload.capture_source || "");
-      const feature = captureSource === "ios_wallet_shortcut"
-        ? "Apple Pay capture"
-        : "Notification capture";
+      const feature =
+        captureSource === "ios_wallet_shortcut"
+          ? "Apple Pay capture"
+          : "Notification capture";
       return {
         title: "Moneko Plus required",
-        body:
-          `${feature} is available with an active Moneko Plus plan. Start a trial or subscribe to continue.`,
+        body: `${feature} is available with an active Moneko Plus plan. Start a trial or subscribe to continue.`,
         data: {
           capture_source: captureSource,
           pricing_url: PRICING_URL,
@@ -1703,13 +1649,12 @@ function buildNotificationMessage(
       // First-person toward the recipient: actor settled with you
       const note = getSettlementNote(payload);
       const title = actorName;
-      const baseBody = netPayCents > 0
-        ? `settled ${symbol}${
-          (netPayCents / 100).toFixed(
-            2,
-          )
-        } with you in ${householdName}`
-        : `settled up with you in ${householdName}`;
+      const baseBody =
+        netPayCents > 0
+          ? `settled ${symbol}${(netPayCents / 100).toFixed(
+              2,
+            )} with you in ${householdName}`
+          : `settled up with you in ${householdName}`;
       const body = note ? `${baseBody}: ${note}` : baseBody;
 
       return {
@@ -1734,8 +1679,7 @@ function buildNotificationMessage(
         data: {
           invite_id: payload.invite_id || "",
           household_id: payload.household_id || "",
-          deep_link:
-            `moneko://household/${payload.household_id}/settings?tab=2`,
+          deep_link: `moneko://household/${payload.household_id}/settings?tab=2`,
         },
       };
     }
@@ -1768,11 +1712,9 @@ function buildNotificationMessage(
           invite_id: payload.invite_id || "",
           invite_token: payload.invite_token || "",
           household_id: payload.household_id || "",
-          deep_link: `moneko://households/join?token=${
-            encodeURIComponent(
-              String(payload.invite_token || ""),
-            )
-          }`,
+          deep_link: `moneko://households/join?token=${encodeURIComponent(
+            String(payload.invite_token || ""),
+          )}`,
         },
       };
     }

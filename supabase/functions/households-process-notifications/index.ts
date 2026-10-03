@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
+import { buildRecurringReminderNotification } from "../shared/recurring-reminder-notification.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
 import { isServiceRoleRequest } from "../shared/notification-delivery.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
@@ -179,7 +180,8 @@ async function sendFCMv1Notification(
   try {
     const deepLink = data.deep_link || buildDeepLink(data.event_type, data);
     const webLink = buildWebLink(data.event_type, data);
-    const isWeb = typeof platform === "string" &&
+    const isWeb =
+      typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
 
     const message = {
@@ -219,16 +221,16 @@ async function sendFCMv1Notification(
         },
         ...(isWeb && deepLink
           ? {
-            webpush: {
-              data: {
-                ...data,
-                deep_link: deepLink,
+              webpush: {
+                data: {
+                  ...data,
+                  deep_link: deepLink,
+                },
+                fcm_options: {
+                  link: webLink,
+                },
               },
-              fcm_options: {
-                link: webLink,
-              },
-            },
-          }
+            }
           : {}),
       },
     };
@@ -344,19 +346,17 @@ function buildDeepLink(
 
     case "invite_reminder_invitee":
       return data.invite_token
-        ? `${appScheme}households/join?token=${
-          encodeURIComponent(
+        ? `${appScheme}households/join?token=${encodeURIComponent(
             data.invite_token,
-          )
-        }`
+          )}`
         : `${appScheme}home`;
 
     case "recurring_reminder":
       return data.recurring_id
         ? `${appScheme}recurring/${data.recurring_id}`
         : data.expense_id
-        ? `${appScheme}recurring/${data.expense_id}`
-        : `${appScheme}recurring`;
+          ? `${appScheme}recurring/${data.expense_id}`
+          : `${appScheme}recurring`;
 
     case "log_expense_reminder":
       return `${appScheme}expenses/log`;
@@ -625,18 +625,21 @@ serve(async (req) => {
         let body: string;
         let targetUserId: string | null = event.user_id;
         let messageData: Record<string, string> = {};
-        const payloadExpenseData = event.payload?.expense_data &&
-            typeof event.payload.expense_data === "object" &&
-            !Array.isArray(event.payload.expense_data)
-          ? event.payload.expense_data
-          : {};
-        const isRecurringEvent = event.payload?.is_recurring === true ||
+        const payloadExpenseData =
+          event.payload?.expense_data &&
+          typeof event.payload.expense_data === "object" &&
+          !Array.isArray(event.payload.expense_data)
+            ? event.payload.expense_data
+            : {};
+        const isRecurringEvent =
+          event.payload?.is_recurring === true ||
           payloadExpenseData.is_recurring === true;
 
         if (event.event_type === "pockets_month_review") {
-          const expiresAt = typeof event.payload?.expires_at === "string"
-            ? Date.parse(event.payload.expires_at)
-            : Number.NaN;
+          const expiresAt =
+            typeof event.payload?.expires_at === "string"
+              ? Date.parse(event.payload.expires_at)
+              : Number.NaN;
           if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
             await supabase
               .from("notification_events")
@@ -695,9 +698,10 @@ serve(async (req) => {
             const customMessage = (event.payload?.message || "") as string;
 
             title = "🔔 Household Reminder";
-            body = customMessage.trim().length > 0
-              ? `${senderName} reminded you in "${householdName}": ${customMessage.trim()}`
-              : `${senderName} reminded you about "${householdName}"`;
+            body =
+              customMessage.trim().length > 0
+                ? `${senderName} reminded you in "${householdName}": ${customMessage.trim()}`
+                : `${senderName} reminded you about "${householdName}"`;
             break;
           }
 
@@ -722,13 +726,13 @@ serve(async (req) => {
               const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "💸 Expenses Added";
-                const recurringSuffix = recurringCount > 0
-                  ? recurringCount === batchCount
-                    ? " (all recurring)"
-                    : ` (${recurringCount} recurring)`
-                  : "";
-                body =
-                  `${batchCount} expenses were added in your household${recurringSuffix}`;
+                const recurringSuffix =
+                  recurringCount > 0
+                    ? recurringCount === batchCount
+                      ? " (all recurring)"
+                      : ` (${recurringCount} recurring)`
+                    : "";
+                body = `${batchCount} expenses were added in your household${recurringSuffix}`;
               } else {
                 title = isRecurring
                   ? "🔁 New Recurring Expense Added"
@@ -759,13 +763,13 @@ serve(async (req) => {
               const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "🗑️ Expenses Deleted";
-                const recurringSuffix = recurringCount > 0
-                  ? recurringCount === batchCount
-                    ? " (all recurring)"
-                    : ` (${recurringCount} recurring)`
-                  : "";
-                body =
-                  `${batchCount} expenses were deleted in your household${recurringSuffix}`;
+                const recurringSuffix =
+                  recurringCount > 0
+                    ? recurringCount === batchCount
+                      ? " (all recurring)"
+                      : ` (${recurringCount} recurring)`
+                    : "";
+                body = `${batchCount} expenses were deleted in your household${recurringSuffix}`;
               } else {
                 title = isRecurring
                   ? "🔁 Recurring Expense Deleted"
@@ -783,13 +787,13 @@ serve(async (req) => {
             const isRecurring = isRecurringEvent;
             if (batchCount > 1) {
               title = "💰 Income Added";
-              const recurringSuffix = recurringCount > 0
-                ? recurringCount === batchCount
-                  ? " (all recurring)"
-                  : ` (${recurringCount} recurring)`
-                : "";
-              body =
-                `${batchCount} income entries were added in your household${recurringSuffix}`;
+              const recurringSuffix =
+                recurringCount > 0
+                  ? recurringCount === batchCount
+                    ? " (all recurring)"
+                    : ` (${recurringCount} recurring)`
+                  : "";
+              body = `${batchCount} income entries were added in your household${recurringSuffix}`;
             } else {
               title = isRecurring
                 ? "🔁 Recurring Income Added"
@@ -821,53 +825,19 @@ serve(async (req) => {
             const cents = Number(payloadExpenseData.amount_cents ?? 0);
             const amount = `${symbol}${(cents / 100).toFixed(2)}`;
             title = acknowledgerName;
-            body = `acknowledged your ${amount} ${
-              String(
-                payloadExpenseData.category || "income",
-              )
-            } income`;
+            body = `acknowledged your ${amount} ${String(
+              payloadExpenseData.category || "income",
+            )} income`;
             break;
           }
 
           case "recurring_reminder": {
-            const transactionType = (
-              event.payload?.type === "income" ? "income" : "expense"
-            ) as "income" | "expense";
-            const category = (event.payload?.category ||
-              payloadExpenseData.category ||
-              "") as string;
-            const symbol = getCurrencySymbol(
-              event.payload?.currency as string | undefined,
+            const recurringReminder = buildRecurringReminderNotification(
+              event.payload ?? {},
             );
-            const cents = Number(event.payload?.amount_cents ?? 0);
-            const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-            const occurrenceDate = new Date(
-              `${String(event.payload?.occurrence_date || "")}T00:00:00Z`,
-            );
-            const daysUntil = Number.isNaN(occurrenceDate.getTime())
-              ? null
-              : Math.ceil(
-                (occurrenceDate.getTime() - Date.now()) /
-                  (1000 * 60 * 60 * 24),
-              );
-            const timeframe = daysUntil === 0
-              ? "today"
-              : daysUntil === 1
-              ? "tomorrow"
-              : daysUntil != null && daysUntil > 1
-              ? `in ${daysUntil} days`
-              : "soon";
-
-            title = transactionType === "income"
-              ? "💰 Incoming Payment"
-              : "🔔 Upcoming Expense";
-            body = transactionType === "income"
-              ? `${
-                category || "Income"
-              } of ${amount} arrives ${timeframe}. Confirm in the app now`
-              : `${
-                category || "Expense"
-              } of ${amount} is due ${timeframe}. Confirm in the app now`;
+            title = recurringReminder.title;
+            body = recurringReminder.body;
+            messageData = recurringReminder.data;
             break;
           }
 
@@ -922,20 +892,22 @@ serve(async (req) => {
           case "budget_warn":
           case "budget_alert": {
             const percentage = Number(event.payload?.percentage_used ?? 0);
-            title = event.event_type === "budget_alert"
-              ? "Purr-suasive Nudge! 😸"
-              : "Budget Boop! 🐾";
-            body = event.event_type === "budget_alert"
-              ? `Your ${
-                String(event.payload?.currency || "")
-              } budget has reached ${
-                percentage.toFixed(0)
-              }%. Time to pause and review!`
-              : `Your ${
-                String(event.payload?.currency || "")
-              } budget has used ${
-                percentage.toFixed(0)
-              }%. Keep an eye on spending!`;
+            title =
+              event.event_type === "budget_alert"
+                ? "Purr-suasive Nudge! 😸"
+                : "Budget Boop! 🐾";
+            body =
+              event.event_type === "budget_alert"
+                ? `Your ${String(
+                    event.payload?.currency || "",
+                  )} budget has reached ${percentage.toFixed(
+                    0,
+                  )}%. Time to pause and review!`
+                : `Your ${String(
+                    event.payload?.currency || "",
+                  )} budget has used ${percentage.toFixed(
+                    0,
+                  )}%. Keep an eye on spending!`;
             break;
           }
 
@@ -959,8 +931,7 @@ serve(async (req) => {
                 is_sent: true,
                 sent_at: new Date().toISOString(),
                 processing_started_at: null,
-                error_message:
-                  `Unsupported push event type: ${event.event_type}`,
+                error_message: `Unsupported push event type: ${event.event_type}`,
               })
               .eq("id", event.id);
             continue;
@@ -1057,8 +1028,8 @@ serve(async (req) => {
           if (!isImmediateTransactionEvent) {
             if (isLogExpenseReminder) {
               const quietStart = Number.isFinite(
-                  Number(event.payload?.quiet_start),
-                )
+                Number(event.payload?.quiet_start),
+              )
                 ? Number(event.payload.quiet_start)
                 : 22;
               const quietEnd = Number.isFinite(Number(event.payload?.quiet_end))
@@ -1159,25 +1130,27 @@ serve(async (req) => {
         let eventSentCount = 0;
         let eventFailedCount = 0;
 
-        const payloadData = event.payload &&
-            typeof event.payload === "object" &&
-            !Array.isArray(event.payload)
-          ? Object.fromEntries(
-            Object.entries(event.payload).map(([k, v]) => [
-              k,
-              v != null && typeof v === "object"
-                ? JSON.stringify(v)
-                : String(v),
-            ]),
-          )
-          : {};
+        const payloadData =
+          event.payload &&
+          typeof event.payload === "object" &&
+          !Array.isArray(event.payload)
+            ? Object.fromEntries(
+                Object.entries(event.payload).map(([k, v]) => [
+                  k,
+                  v != null && typeof v === "object"
+                    ? JSON.stringify(v)
+                    : String(v),
+                ]),
+              )
+            : {};
         const normalizedPayloadData = normalizeNotificationPayloadData(
           payloadData,
           messageData,
         );
         const mergedData = {
           ...normalizedPayloadData,
-          deep_link: payloadData.deep_link ||
+          deep_link:
+            payloadData.deep_link ||
             messageData.deep_link ||
             buildDeepLink(event.event_type, {
               ...normalizedPayloadData,
@@ -1221,9 +1194,10 @@ serve(async (req) => {
             is_sent: eventSentCount > 0,
             sent_at: eventSentCount > 0 ? new Date().toISOString() : null,
             processing_started_at: null,
-            error_message: eventFailedCount > 0
-              ? `Failed to send to ${eventFailedCount} devices`
-              : null,
+            error_message:
+              eventFailedCount > 0
+                ? `Failed to send to ${eventFailedCount} devices`
+                : null,
             payload: {
               ...event.payload,
               sent_count: eventSentCount,
@@ -1252,9 +1226,8 @@ serve(async (req) => {
           },
         });
         failedCount++;
-        const errorMessage = error instanceof Error
-          ? error.message
-          : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         errors.push(`Event ${event.id}: ${errorMessage}`);
 
         // Update event with error

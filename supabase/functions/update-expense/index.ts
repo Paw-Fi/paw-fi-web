@@ -7,6 +7,7 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
+import { normalizeRecurrenceDueTime } from "../shared/recurrence-due-time.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { computeBankExpenseUserOverrides } from "../shared/bank-expense-projection.ts";
 import { classifyUserCategoryOverride } from "../shared/plaid-transaction-classification.ts";
@@ -79,6 +80,7 @@ interface UpdateExpenseRequest {
       anchor_date: string;
       end_date?: string;
       interval?: number;
+      due_time?: string;
       reminder?: {
         enabled: boolean;
         value: number;
@@ -844,6 +846,19 @@ Deno.serve(async (req: Request) => {
               "VALIDATION_ERROR",
             );
           }
+        }
+
+        if (updates.recurrence_rule.due_time !== undefined) {
+          const normalizedDueTime = normalizeRecurrenceDueTime(
+            updates.recurrence_rule.due_time,
+          );
+          if (!normalizedDueTime) {
+            return errorResponse(
+              "recurrence_rule.due_time must be a valid HH:mm:ss time",
+              "VALIDATION_ERROR",
+            );
+          }
+          updates.recurrence_rule.due_time = normalizedDueTime;
         }
       }
     }
