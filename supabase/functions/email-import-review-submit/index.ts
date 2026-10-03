@@ -11,6 +11,7 @@ import {
   hashEmailImportReviewToken,
   isValidReviewToken,
   resolveStoredReviewDecision,
+  reviewDecisionOptionIds,
   validateStoredReviewDecisions,
 } from "../shared/email-import-review.ts";
 import { sanitizeTransactionSourceGrounding } from "../shared/analyze-core.ts";
@@ -163,23 +164,17 @@ serve(async (request) => {
           .in("save_status", ["pending", "processing"]);
         continue;
       }
-      const optionIds =
-        item.save_status === "processing" &&
-        Array.isArray(item.selected_option_ids)
-          ? item.selected_option_ids
-          : decision.optionIds;
-      const transaction =
-        item.save_status === "processing" &&
-        item.resolved_transaction &&
-        typeof item.resolved_transaction === "object"
-          ? item.resolved_transaction
-          : resolveStoredReviewDecision({
-              candidate: item.candidate,
-              issues: item.issues,
-              optionIds,
-            });
-      const grounded =
-        transaction &&
+      const optionIds = reviewDecisionOptionIds({ item, decision });
+      const transaction = item.save_status === "processing" &&
+          item.resolved_transaction &&
+          typeof item.resolved_transaction === "object"
+        ? item.resolved_transaction
+        : resolveStoredReviewDecision({
+          candidate: item.candidate,
+          issues: item.issues,
+          optionIds,
+        });
+      const grounded = transaction &&
         sanitizeTransactionSourceGrounding({
           sourceText: item.evidence_text,
           item: transaction,
@@ -241,8 +236,8 @@ serve(async (request) => {
             save_status: resultItem.duplicate
               ? "duplicate"
               : resultItem.success
-                ? "saved"
-                : "failed",
+              ? "saved"
+              : "failed",
             save_result: resultItem,
             evidence_expires_at: new Date(
               Date.now() + 60 * 60 * 1000,
@@ -257,12 +252,11 @@ serve(async (request) => {
       .select("id, save_status")
       .eq("review_id", existing.id);
     const itemStatuses = (pending ?? []).map((item: any) => item.save_status);
-    const isDeclined =
-      itemStatuses.length > 0 &&
+    const isDeclined = itemStatuses.length > 0 &&
       itemStatuses.every((status: string) => status === "declined");
     const hasFailed = itemStatuses.includes("failed");
     const isTerminal = itemStatuses.every((status: string) =>
-      ["saved", "duplicate", "declined", "failed"].includes(status),
+      ["saved", "duplicate", "declined", "failed"].includes(status)
     );
     if (!isTerminal) {
       return new Response(JSON.stringify({ status: "processing" }), {
@@ -273,8 +267,8 @@ serve(async (request) => {
     const reviewStatus = isDeclined
       ? "declined"
       : hasFailed
-        ? "failed"
-        : "completed";
+      ? "failed"
+      : "completed";
     const { data: finalizedReview, error: finalizeError } = await supabase
       .from("email_import_reviews")
       .update({
@@ -383,7 +377,7 @@ async function inspectTerminal(
       expiresAt: review.expires_at,
       source: buildEmailImportReviewSource(event),
       items: (items ?? []).map((item: Record<string, unknown>) =>
-        buildEmailImportReviewItem(item),
+        buildEmailImportReviewItem(item)
       ),
     }),
     { headers },
@@ -399,9 +393,10 @@ function invalid(headers: Record<string, string>, status = 404) {
 function isUuid(value: unknown): value is string {
   return (
     typeof value === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(
+        value,
+      )
   );
 }
 

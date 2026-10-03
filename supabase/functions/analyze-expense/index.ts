@@ -27,6 +27,64 @@ import {
   UserCategoryRemapRow,
 } from "../shared/user-categories.ts";
 import { loadLatestUserPreferredCurrency } from "../shared/user-preferred-currency.ts";
+import { parseInteractiveRequest, type InteractiveRequest } from "../shared/interactive-transaction-contract.ts";
+import { loadInteractiveTransactionContext } from "../shared/interactive-transaction-context.ts";
+import { runInteractiveTransactionAnalysis } from "../shared/interactive-transaction-analysis.ts";
+import { enrichAnalyzedMerchantItems } from "../shared/merchant-analysis.ts";
+import { VALID_CURRENCIES } from "../shared/currency-validator.ts";
+
+interface InteractiveAnalyzeBody extends AnalyzeRequestBody {
+  interactive?: unknown;
+  accountId?: string;
+}
+
+async function interactiveAnalysisResponse(
+  body: InteractiveAnalyzeBody,
+  request: InteractiveRequest,
+  supabaseAuthed: Parameters<typeof loadInteractiveTransactionContext>[0]["supabase"],
+  merchantContext: MerchantAnalysisContext,
+  defaultCurrency: string | undefined,
+  stream: boolean,
+): Promise<Response> {
+  const run = async () => {
+    const context = await loadInteractiveTransactionContext({
+      supabase: supabaseAuthed,
+      userId: merchantContext.userId,
+      defaultSpaceId: body.householdId || "personal",
+      defaultWalletId: body.accountId || null,
+      currency: defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency) ? defaultCurrency : body.currency || "USD",
+      date: body.date || new Date().toISOString().slice(0, 10),
+      language: body.language || "en",
+      preferredTimezone: body.preferredTimezone,
+      expenseCategories: body.allowedExpenseCategories!,
+      incomeCategories: body.allowedIncomeCategories!,
+    });
+    const result = await runInteractiveTransactionAnalysis({
+      source: { text: body.text, audio: body.audio }, request, context,
+    });
+    const items = result.requireCorrection ? [] : await enrichAnalyzedMerchantItems({ items: result.items, ...merchantContext });
+    return { success: true, data: { ...result, items, isAnalyzed: !result.requireCorrection } };
+  };
+  if (!stream) {
+    return new Response(JSON.stringify(await awaitWithHardTimeout(run(), 140000, "Analysis timed out")), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const encoder = new TextEncoder();
+  return new Response(new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        controller.enqueue(encoder.encode(formatSSEEvent("progress", { stage: "started", message: "Checking transaction details..." })));
+        const result = await awaitWithHardTimeout(run(), 140000, "Analysis timed out");
+        controller.enqueue(encoder.encode(formatSSEEvent("complete", result)));
+      } catch (_) {
+        controller.enqueue(encoder.encode(formatSSEEvent("error", { success: false, code: "AI_TEMPORARILY_UNAVAILABLE", status: 503, error: "Unable to verify transaction details. Please retry." })));
+      } finally {
+        controller.close();
+      }
+    },
+  }), { headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+}
 
 const CATEGORY_CACHE_TTL_MS = 2 * 60 * 1000;
 const PREFERENCE_CACHE_TTL_MS = 60 * 1000;
@@ -566,12 +624,21 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const isStreamMode = url.searchParams.get("stream") === "true";
 
-    let body: AnalyzeRequestBody;
+    let body: InteractiveAnalyzeBody;
+    let interactive: InteractiveRequest | null;
     try {
       body = await req.json();
+      interactive = parseInteractiveRequest(body.interactive);
+      if (interactive && (body.image || body.attachments?.length ||
+        (!body.text?.trim() && !body.audio?.data) ||
+        (body.text?.length ?? 0) > 16000 || (body.audio?.data.length ?? 0) > 16000000 ||
+        (body.audio && !["audio/aac", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-m4a"].includes(body.audio.contentType)))) {
+        return errorResponse("Invalid interactive text or audio input", 400);
+      }
     } catch (_error) {
-      return errorResponse("Invalid JSON body", 400);
+      return errorResponse("Invalid analysis request", 400);
     }
+    const interactiveDefaultCurrency = body.currency?.trim().toUpperCase();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -714,6 +781,15 @@ Deno.serve(async (req: Request) => {
         userId: callerId,
       },
     );
+
+    if (interactive) {
+      return await interactiveAnalysisResponse(body, interactive, supabaseAuthed, {
+        supabase: preferredCurrencyReader,
+        userId: callerId,
+        logoDevSecretKey,
+        preferredTimezone: body.preferredTimezone,
+      }, interactiveDefaultCurrency, isStreamMode);
+    }
 
     // In household mode, provide the household member list to the model so it can
     // reliably resolve payer/splits by userId (without exposing IDs to end users).

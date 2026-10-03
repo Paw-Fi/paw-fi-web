@@ -59,12 +59,33 @@ export function isServiceRoleRequest(
   if (!apiKey) return false;
 
   return parseSecretKeys(secretKeysJson).some((secretKey) =>
-    constantTimeEqual(apiKey, secretKey),
+    constantTimeEqual(apiKey, secretKey)
   );
 }
 
 export function shouldSkipPushEvent(eventType: string) {
   return noPushEventTypes.has(eventType);
+}
+
+export function buildFcmDeliveryContent(
+  title: string,
+  body: string,
+  data: Record<string, string>,
+  isWeb: boolean,
+  imageUrl?: string,
+) {
+  if (!isWeb) {
+    return {
+      notification: {
+        title,
+        body,
+        ...(imageUrl ? { image: imageUrl } : {}),
+      },
+      data,
+    };
+  }
+  const webData: Record<string, string> = { ...data, title, body };
+  return { data: webData, webpush: { data: webData } };
 }
 
 export function buildNotificationDeepLink(
@@ -113,9 +134,11 @@ export function buildNotificationDeepLink(
       break;
     case "invite_reminder_invitee":
       if (data.invite_token) {
-        return `${appScheme}households/join?token=${encodeURIComponent(
-          data.invite_token,
-        )}`;
+        return `${appScheme}households/join?token=${
+          encodeURIComponent(
+            data.invite_token,
+          )
+        }`;
       }
       break;
     case "pockets_month_review":

@@ -4,13 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  AlertCircle,
-  ArrowRight,
-  Check,
-  FileText,
-  X,
-} from "lucide-react";
+import { AlertCircle, ArrowRight, Check, FileText, X } from "lucide-react";
 
 export const Route = createFileRoute("/import-review/$reviewId")({
   component: ImportReviewPage,
@@ -66,7 +60,8 @@ const MOBILE_USER_AGENT_PATTERN = /Android|iPhone|iPad|iPod/i;
 const attemptedAppLaunches = new Set<string>();
 
 function attemptMobileAppLaunch(reviewId: string, secret: string) {
-  const isMobile = MOBILE_USER_AGENT_PATTERN.test(navigator.userAgent) ||
+  const isMobile =
+    MOBILE_USER_AGENT_PATTERN.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (!isMobile) return;
 
@@ -83,6 +78,10 @@ function attemptMobileAppLaunch(reviewId: string, secret: string) {
 }
 
 function openMobileApp(reviewId: string, secret: string) {
+  window.location.href = `moneko://import-review/${reviewId}#${secret}`;
+}
+
+function openDesktopApp(reviewId: string, secret: string) {
   window.location.href = `moneko://import-review/${reviewId}#${secret}`;
 }
 
@@ -192,10 +191,10 @@ function ImportReviewPage() {
               ...(selections[`${item.id}:decline`] === "decline"
                 ? { decline: true }
                 : {
-                  optionIds: item.issues
-                    .map((issue) => selections[`${item.id}:${issue.field}`])
-                    .filter(Boolean),
-                }),
+                    optionIds: item.issues
+                      .map((issue) => selections[`${item.id}:${issue.field}`])
+                      .filter(Boolean),
+                  }),
             })),
           },
         },
@@ -228,26 +227,29 @@ function ImportReviewPage() {
       <ReviewShell>
         <div className="animate-pulse">
           <div className="mt-8 mb-16 md:mb-24">
-            <div className="h-12 w-64 rounded-xl bg-slate-100 dark:bg-slate-900 mb-6" />
+            <div className="mb-6 h-12 w-64 rounded-xl bg-slate-100 dark:bg-slate-900" />
             <div className="h-6 w-96 max-w-full rounded-lg bg-slate-50 dark:bg-slate-900/50" />
           </div>
-          
-          <div className="mb-20 py-8 border-y border-slate-100 dark:border-slate-800/60 grid grid-cols-1 md:grid-cols-3 gap-8">
-             <div className="h-12 bg-slate-50 dark:bg-slate-900 rounded-lg w-full" />
-             <div className="h-12 bg-slate-50 dark:bg-slate-900 rounded-lg w-full" />
-             <div className="h-12 bg-slate-50 dark:bg-slate-900 rounded-lg w-full" />
+
+          <div className="mb-20 grid grid-cols-1 gap-8 border-y border-slate-100 py-8 md:grid-cols-3 dark:border-slate-800/60">
+            <div className="h-12 w-full rounded-lg bg-slate-50 dark:bg-slate-900" />
+            <div className="h-12 w-full rounded-lg bg-slate-50 dark:bg-slate-900" />
+            <div className="h-12 w-full rounded-lg bg-slate-50 dark:bg-slate-900" />
           </div>
 
           <div className="space-y-24">
             {[1, 2].map((i) => (
-              <div key={i} className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 pb-24 border-b border-slate-100 dark:border-slate-800/60">
+              <div
+                key={i}
+                className="grid grid-cols-1 gap-12 border-b border-slate-100 pb-24 lg:grid-cols-12 lg:gap-8 dark:border-slate-800/60"
+              >
                 <div className="lg:col-span-5">
-                   <div className="h-8 w-48 bg-slate-100 dark:bg-slate-900 rounded-lg mb-6" />
-                   <div className="h-4 w-32 bg-slate-50 dark:bg-slate-900/50 rounded-lg" />
+                  <div className="mb-6 h-8 w-48 rounded-lg bg-slate-100 dark:bg-slate-900" />
+                  <div className="h-4 w-32 rounded-lg bg-slate-50 dark:bg-slate-900/50" />
                 </div>
                 <div className="lg:col-span-7">
-                   <div className="h-24 w-full bg-slate-50 dark:bg-slate-900 rounded-[2rem] mb-4" />
-                   <div className="h-24 w-full bg-slate-50 dark:bg-slate-900 rounded-[2rem]" />
+                  <div className="mb-4 h-24 w-full rounded-[2rem] bg-slate-50 dark:bg-slate-900" />
+                  <div className="h-24 w-full rounded-[2rem] bg-slate-50 dark:bg-slate-900" />
                 </div>
               </div>
             ))}
@@ -261,14 +263,15 @@ function ImportReviewPage() {
     return (
       <ReviewShell>
         <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-          <div className="w-24 h-24 mb-8 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-10 h-10 text-slate-500" strokeWidth={2} />
+          <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900">
+            <AlertCircle className="h-10 w-10 text-slate-500" strokeWidth={2} />
           </div>
           <h1 className="mb-4 text-4xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
             {requestError ? "Link Unavailable" : "Invalid Link"}
           </h1>
-          <p className="max-w-md text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
-            {requestError ?? "This secure link is invalid or has already been removed from this browser."}
+          <p className="max-w-md text-lg leading-relaxed text-slate-500 dark:text-slate-400">
+            {requestError ??
+              "This secure link is invalid or has already been removed from this browser."}
           </p>
         </div>
       </ReviewShell>
@@ -282,6 +285,7 @@ function ImportReviewPage() {
       <ReviewResult
         review={review}
         onOpenApp={() => openMobileApp(reviewId, token)}
+        onOpenDesktop={() => openDesktopApp(reviewId, token)}
       />
     );
   }
@@ -294,12 +298,13 @@ function ImportReviewPage() {
 
   return (
     <ReviewShell>
-      <div className="mb-16 md:mb-24 mt-8">
-        <h1 className="text-4xl md:text-5xl font-medium tracking-tight text-slate-900 dark:text-slate-50">
+      <div className="mt-8 mb-16 md:mb-24">
+        <h1 className="text-4xl font-medium tracking-tight text-slate-900 md:text-5xl dark:text-slate-50">
           Review Required
         </h1>
-        <p className="mt-4 max-w-xl text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
-          We need a few clarifications before we can save these transactions to your account.
+        <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate-500 dark:text-slate-400">
+          We need a few clarifications before we can save these transactions to
+          your account.
         </p>
       </div>
 
@@ -314,12 +319,18 @@ function ImportReviewPage() {
               key={item.id}
               className={cn(
                 "relative transition-all duration-500",
-                index !== review.items.length - 1 && "pb-24 border-b border-slate-100 dark:border-slate-800/60"
+                index !== review.items.length - 1 &&
+                  "border-b border-slate-100 pb-24 dark:border-slate-800/60",
               )}
             >
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8">
-                <div className={cn("lg:col-span-5 transition-opacity duration-300", isDeclined && "opacity-40 grayscale")}>
-                  <h2 className="text-lg font-medium text-slate-900 dark:text-white mb-6">
+              <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-8">
+                <div
+                  className={cn(
+                    "transition-opacity duration-300 lg:col-span-5",
+                    isDeclined && "opacity-40 grayscale",
+                  )}
+                >
+                  <h2 className="mb-6 text-lg font-medium text-slate-900 dark:text-white">
                     {item.summary}
                   </h2>
                   <TransactionContextCard transaction={item.transaction} />
@@ -329,12 +340,14 @@ function ImportReviewPage() {
                   <div className="flex flex-col gap-10">
                     {item.issues.map((issue) => (
                       <div key={issue.field}>
-                        <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+                        <h4 className="mb-4 text-xs font-semibold tracking-widest text-slate-400 uppercase dark:text-slate-500">
                           Confirm {issue.field}
                         </h4>
                         <div className="flex flex-col gap-3">
                           {issue.choices.map((choice) => {
-                            const isSelected = selections[`${item.id}:${issue.field}`] === choice.id;
+                            const isSelected =
+                              selections[`${item.id}:${issue.field}`] ===
+                              choice.id;
 
                             return (
                               <label
@@ -344,7 +357,7 @@ function ImportReviewPage() {
                                   isSelected && !isDeclined
                                     ? "bg-slate-900 dark:bg-slate-100"
                                     : "bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800",
-                                  isDeclined && "opacity-40 grayscale"
+                                  isDeclined && "opacity-40 grayscale",
                                 )}
                               >
                                 <input
@@ -366,7 +379,7 @@ function ImportReviewPage() {
                                       "text-base font-medium transition-colors",
                                       isSelected && !isDeclined
                                         ? "text-white dark:text-slate-900"
-                                        : "text-slate-900 dark:text-slate-100"
+                                        : "text-slate-900 dark:text-slate-100",
                                     )}
                                   >
                                     {choice.label}
@@ -377,21 +390,21 @@ function ImportReviewPage() {
                                         "mt-1.5 text-sm leading-relaxed transition-colors",
                                         isSelected && !isDeclined
                                           ? "text-slate-300 dark:text-slate-600"
-                                          : "text-slate-500 dark:text-slate-400"
+                                          : "text-slate-500 dark:text-slate-400",
                                       )}
                                     >
                                       {choice.evidence}
                                     </div>
                                   )}
                                 </div>
-                                <div className="flex h-6 w-6 shrink-0 items-center justify-center mt-0.5">
+                                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center">
                                   {isSelected && !isDeclined ? (
                                     <Check
                                       className="h-5 w-5 text-white dark:text-slate-900"
                                       strokeWidth={3}
                                     />
                                   ) : (
-                                    <div className="h-5 w-5 rounded-full border border-slate-300 dark:border-slate-700 group-hover:border-slate-400 dark:group-hover:border-slate-500 transition-colors" />
+                                    <div className="h-5 w-5 rounded-full border border-slate-300 transition-colors group-hover:border-slate-400 dark:border-slate-700 dark:group-hover:border-slate-500" />
                                   )}
                                 </div>
                               </label>
@@ -407,7 +420,7 @@ function ImportReviewPage() {
                           "group inline-flex cursor-pointer items-center gap-3 transition-colors",
                           isDeclined
                             ? "text-rose-600 dark:text-rose-400"
-                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
                         )}
                       >
                         <input
@@ -427,12 +440,14 @@ function ImportReviewPage() {
                             "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
                             isDeclined
                               ? "bg-rose-100 dark:bg-rose-900/30"
-                              : "bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
+                              : "bg-slate-100 group-hover:bg-slate-200 dark:bg-slate-800 dark:group-hover:bg-slate-700",
                           )}
                         >
                           <X className="h-4 w-4" strokeWidth={2.5} />
                         </div>
-                        <span className="text-sm font-medium">Discard this transaction</span>
+                        <span className="text-sm font-medium">
+                          Discard this transaction
+                        </span>
                       </label>
                     </div>
                   </div>
@@ -445,28 +460,42 @@ function ImportReviewPage() {
 
       {requestError && (
         <div className="mt-12 flex items-start gap-4 rounded-2xl bg-rose-50/50 p-6 dark:bg-rose-500/10">
-          <AlertCircle className="h-6 w-6 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
-          <p className="text-base font-medium text-rose-800 dark:text-rose-300 leading-relaxed" role="alert">
+          <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-rose-600 dark:text-rose-400" />
+          <p
+            className="text-base leading-relaxed font-medium text-rose-800 dark:text-rose-300"
+            role="alert"
+          >
             {requestError}
           </p>
         </div>
       )}
 
-      <div className="sticky bottom-8 mt-16 flex justify-end z-10 pointer-events-none">
+      <div className="pointer-events-none sticky bottom-8 z-10 mt-16 flex justify-end">
         <div className="pointer-events-auto">
           <Button
             size="lg"
             className={cn(
-              "rounded-full px-8 py-6 text-base font-medium shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-300",
+              "rounded-full px-8 py-6 text-base font-medium shadow-xl shadow-slate-200/50 transition-all duration-300 dark:shadow-none",
               isSubmitting && "cursor-wait opacity-80",
-              !complete && "opacity-50"
+              !complete && "opacity-50",
             )}
             disabled={!complete || isSubmitting}
             onClick={submit}
           >
             {isSubmitting ? "Importing..." : "Complete Import"}
-            {!isSubmitting && <ArrowRight className="ml-2 w-5 h-5" />}
+            {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
           </Button>
+          {!MOBILE_USER_AGENT_PATTERN.test(navigator.userAgent) && (
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full px-8"
+              disabled={isSubmitting}
+              onClick={() => openDesktopApp(reviewId, token)}
+            >
+              Open in Moneko Desktop
+            </Button>
+          )}
         </div>
       </div>
     </ReviewShell>
@@ -476,49 +505,71 @@ function ImportReviewPage() {
 function ReviewResult({
   review,
   onOpenApp,
+  onOpenDesktop,
 }: {
   review: Review;
   onOpenApp: () => void;
+  onOpenDesktop: () => void;
 }) {
   const isCompleted = review.status === "completed";
   const isExpired = review.status === "expired";
   const title = isCompleted
     ? "Import Completed"
     : review.status === "declined"
-    ? "Import Declined"
-    : isExpired
-    ? "Link Expired"
-    : "Import Failed";
+      ? "Import Declined"
+      : isExpired
+        ? "Link Expired"
+        : "Import Failed";
 
   return (
     <ReviewShell>
-      <div className="py-4 md:py-8 flex flex-col items-center text-center">
-        <div className={cn(
-          "size-12 mb-6 rounded-full flex items-center justify-center",
-          isCompleted ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-100 dark:bg-slate-900"
-        )}>
+      <div className="flex flex-col items-center py-4 text-center md:py-8">
+        <div
+          className={cn(
+            "mb-6 flex size-12 items-center justify-center rounded-full",
+            isCompleted
+              ? "bg-slate-900 dark:bg-slate-100"
+              : "bg-slate-100 dark:bg-slate-900",
+          )}
+        >
           {isCompleted ? (
-            <Check className="size-5 text-white dark:text-slate-900" strokeWidth={3} />
+            <Check
+              className="size-5 text-white dark:text-slate-900"
+              strokeWidth={3}
+            />
           ) : (
             <AlertCircle className="size-5 text-slate-500" strokeWidth={2} />
           )}
         </div>
-        <h1 className="text-4xl md:text-5xl font-medium tracking-tight text-slate-900 dark:text-slate-50 mb-6">
+        <h1 className="mb-6 text-4xl font-medium tracking-tight text-slate-900 md:text-5xl dark:text-slate-50">
           {title}
         </h1>
-        <p className="text-lg text-slate-500 max-w-md mx-auto leading-relaxed">
+        <p className="mx-auto max-w-md text-lg leading-relaxed text-slate-500">
           {resultCopy(review.status)}
         </p>
 
         {isCompleted && (
-          <Button
-            size="lg"
-            className="mt-12 rounded-full px-8 py-6 text-base font-medium"
-            onClick={onOpenApp}
-          >
-            Open Moneko
-            <ArrowRight className="ml-2 w-5 h-5" />
-          </Button>
+          <div className="mt-12 flex flex-wrap justify-center gap-3">
+            <Button
+              size="lg"
+              className="rounded-full px-8 py-6 text-base font-medium"
+              onClick={onOpenApp}
+            >
+              Open Moneko
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            {!MOBILE_USER_AGENT_PATTERN.test(navigator.userAgent) && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-full px-8 py-6 text-base font-medium"
+                onClick={onOpenDesktop}
+              >
+                Open in Moneko Desktop
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -526,26 +577,30 @@ function ReviewResult({
 
       {review.items.length > 0 && (
         <div className="mt-20">
-          <h2 className="text-xl font-medium tracking-tight text-slate-900 dark:text-white mb-8">
+          <h2 className="mb-8 text-xl font-medium tracking-tight text-slate-900 dark:text-white">
             Import Summary
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {review.items.map((item) => (
               <div
                 key={item.id}
-                className="p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-900/50 flex flex-col justify-between"
+                className="flex flex-col justify-between rounded-[2rem] bg-slate-50 p-8 dark:bg-slate-900/50"
               >
                 <TransactionContextCard transaction={item.transaction} />
                 <div className="mt-10 flex items-center gap-3 text-sm font-medium">
                   {item.saveStatus === "saved" ? (
                     <>
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                      <span className="text-slate-900 dark:text-slate-100">Logged successfully</span>
+                      <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      <span className="text-slate-900 dark:text-slate-100">
+                        Logged successfully
+                      </span>
                     </>
                   ) : (
                     <>
-                      <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                      <span className="text-slate-500 dark:text-slate-400">{resultItemLabel(item.saveStatus)}</span>
+                      <div className="h-2.5 w-2.5 rounded-full bg-slate-400" />
+                      <span className="text-slate-500 dark:text-slate-400">
+                        {resultItemLabel(item.saveStatus)}
+                      </span>
                     </>
                   )}
                 </div>
@@ -559,29 +614,42 @@ function ReviewResult({
 }
 
 function ReviewSourceCard({ source }: { source: ReviewSource }) {
-  const hasDetails = source?.senderEmail ||
+  const hasDetails =
+    source?.senderEmail ||
     source?.subjectLine ||
     source?.receivedAt ||
     source?.files?.length;
   if (!hasDetails) return null;
 
   return (
-    <div className="mb-20 grid grid-cols-1 md:grid-cols-3 gap-8 py-8 border-y border-slate-100 dark:border-slate-800/60">
+    <div className="mb-20 grid grid-cols-1 gap-8 border-y border-slate-100 py-8 md:grid-cols-3 dark:border-slate-800/60">
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Source</span>
-        <span className="text-base text-slate-900 dark:text-slate-100">{source.senderEmail || "Unknown Sender"}</span>
+        <span className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
+          Source
+        </span>
+        <span className="text-base text-slate-900 dark:text-slate-100">
+          {source.senderEmail || "Unknown Sender"}
+        </span>
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Date</span>
-        <span className="text-base text-slate-900 dark:text-slate-100">{source.receivedAt ? formatReviewDate(source.receivedAt) : "Unknown"}</span>
+        <span className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
+          Date
+        </span>
+        <span className="text-base text-slate-900 dark:text-slate-100">
+          {source.receivedAt ? formatReviewDate(source.receivedAt) : "Unknown"}
+        </span>
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">Documents</span>
-        <div className="flex flex-col gap-2 mt-1">
+        <span className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
+          Documents
+        </span>
+        <div className="mt-1 flex flex-col gap-2">
           {source.files?.map((file) => (
             <div key={file.name} className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{file.name}</span>
+              <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+              <span className="truncate text-sm text-slate-700 dark:text-slate-300">
+                {file.name}
+              </span>
             </div>
           ))}
         </div>
@@ -596,7 +664,8 @@ function TransactionContextCard({
   transaction: ReviewTransaction;
 }) {
   if (!transaction || Object.keys(transaction).length === 0) return null;
-  const title = transaction.merchant ||
+  const title =
+    transaction.merchant ||
     transaction.description ||
     "Transaction awaiting review";
   const details = [
@@ -612,24 +681,26 @@ function TransactionContextCard({
           {title}
         </h3>
         {typeof transaction.amount === "number" && (
-          <div className="text-xl font-medium text-slate-900 dark:text-slate-50 shrink-0">
+          <div className="shrink-0 text-xl font-medium text-slate-900 dark:text-slate-50">
             {formatReviewAmount(transaction.amount, transaction.currency)}
           </div>
         )}
       </div>
-      
+
       {transaction.description && transaction.description !== title && (
-        <p className="mt-3 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+        <p className="mt-3 text-base leading-relaxed text-slate-600 dark:text-slate-400">
           {transaction.description}
         </p>
       )}
-      
+
       {details.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-500">
           {details.map((detail, i) => (
             <span key={`${detail}-${i}`} className="flex items-center gap-4">
               <span>{detail}</span>
-              {i < details.length - 1 && <span className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />}
+              {i < details.length - 1 && (
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-200 dark:bg-slate-700" />
+              )}
             </span>
           ))}
         </div>
@@ -640,8 +711,8 @@ function TransactionContextCard({
 
 function ReviewShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-white font-sans dark:bg-slate-950 selection:bg-slate-100 dark:selection:bg-slate-800">
-      <main className="mx-auto max-w-4xl px-6 ">{children}</main>
+    <div className="min-h-screen bg-white font-sans selection:bg-slate-100 dark:bg-slate-950 dark:selection:bg-slate-800">
+      <main className="mx-auto max-w-4xl px-6">{children}</main>
     </div>
   );
 }
@@ -688,4 +759,3 @@ function titleCase(value: string) {
     .map((part) => part[0].toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
 }
-

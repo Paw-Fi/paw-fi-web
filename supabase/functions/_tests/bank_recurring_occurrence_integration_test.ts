@@ -243,6 +243,7 @@ async function fixture(realWriter = false) {
   for (const name of [
     "20261002103000_defer_ambiguous_bank_recurring_cycles.sql",
     "20261002113000_review_incompatible_recurring_bank_rows.sql",
+    "20261003050000_preserve_confirmed_bank_series_links.sql",
   ]) {
     await db.exec(
       await Deno.readTextFile(
@@ -1386,6 +1387,114 @@ Deno.test(
           )
         ).rows,
         [{ count: 0 }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+Deno.test(
+  "confirmed bank series: real provider correction survives competing template aliases without duplicate money",
+  async () => {
+    const db = await fixture(true);
+    try {
+      let transaction: PlaidTransaction = {
+        transaction_id: "bank-payment",
+        account_id: "provider-account",
+        name: "Provider transaction",
+        amount: 117.6,
+        iso_currency_code: "CAD",
+        date: "2024-09-23",
+        pending: false,
+        personal_finance_category: {
+          primary: "GENERAL_SERVICES",
+          detailed: "GENERAL_SERVICES_OTHER_GENERAL_SERVICES",
+          confidence_level: "VERY_HIGH",
+        },
+      };
+      async function apply(correction = false) {
+        const rows = await db.query<ExistingExpenseProjectionRow>(
+          "select * from expenses where provider='plaid' and deleted_at is null",
+        );
+        const generation = (
+          await db.query<{ cursor_generation: number }>(
+            "select cursor_generation from bank_connections",
+          )
+        ).rows[0].cursor_generation;
+        const record = {
+          ...mapPlaidTransactionToExpense({
+            userId: user,
+            bankAccountId: bank,
+            defaultCurrency: "CAD",
+            accountType: "credit",
+            transaction,
+          }),
+          account_id: wallet,
+        };
+        const plan = buildBankExpenseMutationPlan({
+          records: [record],
+          transactions: [transaction],
+          existingRows: rows.rows,
+          providerPendingTransactionIds: new Map(),
+          cursorGeneration: generation,
+        });
+        await db.query(
+          `select apply_plaid_sync_batch_v2($1,$2,$3,$4,$5,$6,'{}','{}',$7,'[]','{}','[]','{}',true,true,$8,null)`,
+          [
+            user,
+            connection,
+            generation,
+            correction ? "corrected" : "first",
+            JSON.stringify(
+              plan.inserts.map((row) => ({ ...row, id: imported })),
+            ),
+            JSON.stringify(plan.updates),
+            [bank],
+            actual,
+          ],
+        );
+      }
+      await apply();
+      await db.exec(`insert into expenses select (jsonb_populate_record(null::expenses,to_jsonb(e) ||
+      jsonb_build_object('id','00000000-0000-4000-8000-000000000090','idempotency_key','test:new-stream'))).* from expenses e where id='${series}'`);
+      await db.query(
+        "select reconcile_bank_recurring_occurrences_for_sync_v1($1,null,$2)",
+        [user, [bank]],
+      );
+      transaction = { ...transaction, date: "2024-09-25", amount: 127.6 };
+      await apply(true);
+      assertEquals(
+        (
+          await db.query(
+            "select recurring_id,actual_transaction_id,scheduled_occurrence_date::text,paid_date::text,amount_cents::int as cents from recurring_occurrences",
+          )
+        ).rows,
+        [
+          {
+            recurring_id: series,
+            actual_transaction_id: imported,
+            scheduled_occurrence_date: "2024-09-24",
+            paid_date: "2024-09-25",
+            cents: 12760,
+          },
+        ],
+      );
+      assertEquals(
+        (
+          await db.query(
+            "select count(*)::int as count,sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null",
+          )
+        ).rows,
+        [{ count: 1, cents: 12760 }],
+      );
+      assertEquals(
+        (
+          await db.query(
+            "select cursor,cursor_generation from bank_connections",
+          )
+        ).rows,
+        [{ cursor: "corrected", cursor_generation: 2 }],
       );
     } finally {
       await db.close();

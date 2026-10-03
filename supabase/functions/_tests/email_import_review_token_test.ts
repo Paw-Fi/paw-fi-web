@@ -11,6 +11,7 @@ import {
   createEmailImportReviewToken,
   hashEmailImportReviewToken,
   isValidReviewToken,
+  reviewDecisionOptionIds,
   validateStoredReviewDecisions,
 } from "../shared/email-import-review.ts";
 
@@ -184,5 +185,192 @@ Deno.test(
         optionIds: ["currency:USD", "type:expense"],
       },
     ]);
+  },
+);
+
+Deno.test("review retry accepts decisions for actionable items only", () => {
+  const issue = {
+    field: "currency",
+    choices: [
+      { id: "currency:USD", value: "USD" },
+      { id: "currency:EUR", value: "EUR" },
+    ],
+  };
+  const result = validateStoredReviewDecisions(
+    [
+      { id: "saved-item", issues: [issue], save_status: "saved" },
+      { id: "pending-item", issues: [issue], save_status: "pending" },
+    ],
+    [{ itemId: "pending-item", optionIds: ["currency:EUR"] }],
+  );
+
+  assertEquals(result, [
+    {
+      itemId: "pending-item",
+      decline: false,
+      optionIds: ["currency:EUR"],
+    },
+  ]);
+});
+
+Deno.test(
+  "review retry reuses a persisted processing choice and accepts legacy full payloads",
+  () => {
+    const issue = {
+      field: "currency",
+      choices: [
+        { id: "currency:USD", value: "USD" },
+        { id: "currency:EUR", value: "EUR" },
+      ],
+    };
+    const items = [
+      {
+        id: "processing-item",
+        issues: [issue],
+        save_status: "processing",
+        selected_option_ids: ["currency:USD"],
+      },
+      { id: "pending-item", issues: [issue], save_status: "pending" },
+    ];
+
+    assertEquals(
+      validateStoredReviewDecisions(items, [
+        { itemId: "pending-item", optionIds: ["currency:EUR"] },
+      ]),
+      [
+        {
+          itemId: "processing-item",
+          decline: false,
+          optionIds: ["currency:USD"],
+        },
+        {
+          itemId: "pending-item",
+          decline: false,
+          optionIds: ["currency:EUR"],
+        },
+      ],
+    );
+
+    assertEquals(
+      validateStoredReviewDecisions(items, [
+        { itemId: "processing-item", optionIds: ["currency:EUR"] },
+        { itemId: "pending-item", optionIds: ["currency:EUR"] },
+      ]),
+      [
+        {
+          itemId: "processing-item",
+          decline: false,
+          optionIds: ["currency:USD"],
+        },
+        {
+          itemId: "pending-item",
+          decline: false,
+          optionIds: ["currency:EUR"],
+        },
+      ],
+    );
+  },
+);
+
+Deno.test("review retry rejects malformed persisted choices and skipped pending items", () => {
+  const issue = {
+    field: "currency",
+    choices: [{ id: "currency:USD", value: "USD" }],
+  };
+  assertEquals(
+    validateStoredReviewDecisions(
+      [
+        {
+          id: "processing-item",
+          issues: [issue],
+          save_status: "processing",
+          selected_option_ids: ["currency:GBP"],
+        },
+      ],
+      [],
+    ),
+    null,
+  );
+  assertEquals(
+    validateStoredReviewDecisions(
+      [
+        { id: "pending-item", issues: [issue], save_status: "pending" },
+        { id: "saved-item", issues: [issue], save_status: "saved" },
+      ],
+      [{ itemId: "saved-item", optionIds: ["currency:USD"] }],
+    ),
+    null,
+  );
+});
+
+Deno.test("review retry can replace an empty processing selection", () => {
+  const issue = {
+    field: "currency",
+    choices: [{ id: "currency:USD", value: "USD" }],
+  };
+  assertEquals(
+    validateStoredReviewDecisions(
+      [
+        {
+          id: "processing-item",
+          issues: [issue],
+          save_status: "processing",
+          selected_option_ids: [],
+        },
+      ],
+      [{ itemId: "processing-item", optionIds: ["currency:USD"] }],
+    ),
+    [
+      {
+        itemId: "processing-item",
+        decline: false,
+        optionIds: ["currency:USD"],
+      },
+    ],
+  );
+});
+
+Deno.test(
+  "submit prefers validated persisted processing choices over request choices",
+  () => {
+    const issue = {
+      field: "currency",
+      choices: [
+        { id: "currency:USD", value: "USD" },
+        { id: "currency:EUR", value: "EUR" },
+      ],
+    };
+    assertEquals(
+      reviewDecisionOptionIds({
+        item: {
+          id: "processing-item",
+          issues: [issue],
+          save_status: "processing",
+          selected_option_ids: ["currency:USD"],
+        },
+        decision: {
+          itemId: "processing-item",
+          decline: false,
+          optionIds: ["currency:EUR"],
+        },
+      }),
+      ["currency:USD"],
+    );
+    assertEquals(
+      reviewDecisionOptionIds({
+        item: {
+          id: "processing-item",
+          issues: [issue],
+          save_status: "processing",
+          selected_option_ids: [],
+        },
+        decision: {
+          itemId: "processing-item",
+          decline: false,
+          optionIds: ["currency:EUR"],
+        },
+      }),
+      ["currency:EUR"],
+    );
   },
 );

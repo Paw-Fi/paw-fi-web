@@ -161,6 +161,7 @@ test("bank cycle ambiguity: atomic sync commits its cursor and still reconciles 
 function idForCycleTest() { return "00000000-0000-4000-8000-000000000098"; }
 
 const scopeReviewFix = "20261002113000_review_incompatible_recurring_bank_rows.sql";
+const confirmedLinkFix = "20261003050000_preserve_confirmed_bank_series_links.sql";
 async function scopeReviewFixture() {
   const db = await syncFixture();
   await db.exec(await migration(scopeReviewFix));
@@ -261,6 +262,103 @@ test("recurring scope review: competing template identities remain unlinked unti
     assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
     assert.deepEqual((await db.query("select parent_recurring_id,provider_fields ? 'recurring_reconciliation' as has_review from expenses where id=$1", [imported])).rows,
       [{ parent_recurring_id: otherSeries, has_review: false }]);
+  } finally { await db.close(); }
+});
+
+async function confirmedLinkFixture(otherSeries = id(99), applyFix = true) {
+  const db = await scopeReviewFixture();
+  await syncReconcile(db);
+  await db.query(`insert into expenses select (jsonb_populate_record(null::expenses,
+    to_jsonb(e) || jsonb_build_object('id',$1::text))).* from expenses e where id=$2`, [otherSeries,series]);
+  if (applyFix) await db.exec(await migration(confirmedLinkFix));
+  return db;
+}
+
+test("confirmed bank series: reproduces alias ambiguity against an already confirmed canonical payment", async () => {
+  const db = await confirmedLinkFixture(id(99), false);
+  try {
+    await assert.rejects(syncReconcile(db), /OCCURRENCE_AMBIGUOUS_BANK_SERIES/);
+    assert.deepEqual((await db.query("select parent_recurring_id from expenses where id=$1", [imported])).rows, [{ parent_recurring_id: series }]);
+  } finally { await db.close(); }
+});
+
+for (const otherSeries of [id(0), id(99)]) {
+  test(`confirmed bank series: refresh and atomic sync honor the stored link regardless of template order ${otherSeries}`, async () => {
+    const db = await confirmedLinkFixture(otherSeries);
+    try {
+      assert.deepEqual((await syncReconcile(db)).rows, [{ count: 0 }]);
+      await db.query(`select public.apply_plaid_sync_batch_v2($1,$2,0,'after','[]','[]','{}','{}',$3,
+        '[]','{}','[]','{}',true,true,$4,null)`, [user,connection,[bank],idForCycleTest()]);
+      assert.deepEqual((await db.query("select cursor from bank_connections")).rows, [{ cursor: "after" }]);
+      assert.deepEqual((await db.query("select recurring_id,actual_transaction_id from recurring_occurrences")).rows,
+        [{ recurring_id: series, actual_transaction_id: imported }]);
+      assert.deepEqual((await db.query("select count(*)::int as count,sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null")).rows,
+        [{ count: 1, cents: 11760 }]);
+      await assert.rejects(db.query("select reconcile_bank_recurring_occurrences_v1($1,$2,null)", [user,[otherSeries]]), /OCCURRENCE_AMBIGUOUS_BANK_SERIES/);
+      await db.exec(await migration(confirmedLinkFix));
+    } finally { await db.close(); }
+  });
+}
+
+test("confirmed bank series: posting corrections update the original occurrence without retargeting", async () => {
+  const db = await confirmedLinkFixture();
+  try {
+    await db.query("update expenses set amount_cents=12300,date='2024-09-09' where id=$1", [imported]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
+    assert.deepEqual((await db.query("select recurring_id,actual_transaction_id,amount_cents::int as cents,paid_date::text,scheduled_occurrence_date::text from recurring_occurrences")).rows,
+      [{ recurring_id: series, actual_transaction_id: imported, cents: 12300, paid_date: "2024-09-09", scheduled_occurrence_date: "2024-09-08" }]);
+  } finally { await db.close(); }
+});
+
+test("confirmed bank series: aliases cannot resurrect or steal payments from a retired parent", async () => {
+  const db = await confirmedLinkFixture();
+  try {
+    await db.query("update expenses set deleted_at=now(),deleted_reason='provider_recurring_retired' where id=$1", [series]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 0 }]);
+    assert.deepEqual((await db.query("select parent_recurring_id from expenses where id=$1", [imported])).rows, [{ parent_recurring_id: series }]);
+    assert.deepEqual((await db.query("select recurring_id,actual_transaction_id from recurring_occurrences")).rows,
+      [{ recurring_id: series, actual_transaction_id: imported }]);
+  } finally { await db.close(); }
+});
+
+for (const [name, change] of [
+  ["missing occurrence", "delete from recurring_occurrences"],
+  ["different occurrence date", "update recurring_occurrences set scheduled_occurrence_date='2024-09-09'"],
+  ["foreign parent owner", `update expenses set user_id='${id(98)}' where id='${series}'`],
+  ["foreign wallet owner", `update accounts set user_id='${id(98)}' where id='${wallet}'`],
+  ["different parent bank identity", `update expenses set provider_fields=jsonb_set(provider_fields,'{bank_account_id}',to_jsonb('${id(98)}'::text)) where id='${series}'`],
+]) {
+  test(`confirmed bank series: ${name} remains a blocking diagnosed conflict`, async () => {
+    const db = await confirmedLinkFixture();
+    try {
+      await db.exec(change);
+      await assert.rejects(syncReconcile(db), (error) => error.message === "OCCURRENCE_AMBIGUOUS_BANK_SERIES"
+        && JSON.parse(error.detail).recurring_reconciliation_reason === "unverified_existing_link");
+      assert.deepEqual((await db.query("select parent_recurring_id from expenses where id=$1", [imported])).rows, [{ parent_recurring_id: series }]);
+    } finally { await db.close(); }
+  });
+}
+
+test("confirmed bank series: another series's retired payment is not a competing manual payment", async () => {
+  const db = await confirmedLinkFixture();
+  try {
+    const activeSeries = id(99), manualId = id(97), incomingId = id(98);
+    await db.query("update expenses set deleted_at=now(),deleted_reason='provider_recurring_retired' where id=$1", [series]);
+    await db.query(`insert into expenses(id,user_id,account_id,date,amount_cents,currency,type,parent_recurring_id,
+      scheduled_occurrence_date,recurring_confirmed_at,recurring_confirmation_source)
+      values ($1,$2,$3,'2024-09-08',9000,'CAD','expense',$4,'2024-09-08',now(),'user')`, [manualId,user,wallet,activeSeries]);
+    await db.query(`insert into recurring_occurrences(recurring_id,scheduled_occurrence_date,status,confirmation_source,
+      actual_transaction_id,paid_date,amount_cents,currency,confirmed_at,confirmed_by_user_id)
+      values ($1,'2024-09-08','confirmed','user',$2,'2024-09-08',9000,'CAD',now(),$3)`, [activeSeries,manualId,user]);
+    await db.query(`insert into expenses(id,user_id,account_id,bank_account_id,provider,provider_transaction_id,date,amount_cents,currency,type)
+      values ($1,$2,$3,$4,'plaid','pending-payment','2024-09-08',9000,'CAD','expense')`, [incomingId,user,wallet,bank]);
+    assert.deepEqual((await syncReconcile(db)).rows, [{ count: 1 }]);
+    assert.deepEqual((await db.query("select recurring_id,actual_transaction_id from recurring_occurrences order by recurring_id")).rows,
+      [{ recurring_id: series, actual_transaction_id: imported }, { recurring_id: activeSeries, actual_transaction_id: manualId }]);
+    assert.deepEqual((await db.query("select count(*)::int as count,sum(amount_cents)::int as cents from expenses where not is_recurring and deleted_at is null")).rows,
+      [{ count: 2, cents: 20760 }]);
+    assert.deepEqual((await db.query("select has_function_privilege('authenticated','public.is_confirmed_bank_recurring_link_v1(uuid)','EXECUTE') as can_execute")).rows,
+      [{ can_execute: false }]);
   } finally { await db.close(); }
 });
 

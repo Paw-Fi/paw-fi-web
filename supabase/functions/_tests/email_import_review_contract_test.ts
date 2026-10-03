@@ -119,6 +119,8 @@ Deno.test("web review polls processing submissions", async () => {
   assertStringIncludes(route, "navigator.userAgent");
   assertStringIncludes(route, "moneko:import-review:app-launch:");
   assertStringIncludes(route, "Open Moneko");
+  assertStringIncludes(route, "Open in Moneko Desktop");
+  assertStringIncludes(route, "function openDesktopApp");
   assertStringIncludes(route, "review.source");
   assertStringIncludes(route, "item.transaction");
 });

@@ -36,6 +36,8 @@ interface StoredReviewIssue {
 interface StoredReviewItem {
   id: string;
   issues: StoredReviewIssue[];
+  save_status?: unknown;
+  selected_option_ids?: unknown;
 }
 
 interface ReviewDecisionInput {
@@ -192,11 +194,13 @@ export function validateStoredReviewDecisions(
   items: StoredReviewItem[],
   decisions: ReviewDecisionInput[],
 ): ValidatedReviewDecision[] | null {
-  if (decisions.length !== items.length) return null;
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  if (itemById.size !== items.length) return null;
   const decisionsByItem = new Map<string, ReviewDecisionInput>();
   for (const decision of decisions) {
     if (
       typeof decision.itemId !== "string" ||
+      !itemById.has(decision.itemId) ||
       decisionsByItem.has(decision.itemId)
     ) {
       return null;
@@ -204,8 +208,56 @@ export function validateStoredReviewDecisions(
     decisionsByItem.set(decision.itemId, decision);
   }
 
+  const terminalStatuses = new Set([
+    "saved",
+    "duplicate",
+    "declined",
+    "failed",
+  ]);
+  const resolvedProcessing = new Map<string, string[]>();
+  for (const item of items) {
+    if (item.save_status !== "processing") continue;
+    if (!Array.isArray(item.selected_option_ids)) continue;
+    const selectedOptionIds = item.selected_option_ids;
+    if (selectedOptionIds.length === 0 && item.issues.length > 0) continue;
+    if (
+      selectedOptionIds.some((value) => typeof value !== "string") ||
+      !normalizeStoredOptionIds(item, selectedOptionIds as string[])
+    ) {
+      return null;
+    }
+    resolvedProcessing.set(
+      item.id,
+      normalizeStoredOptionIds(item, selectedOptionIds as string[])!,
+    );
+  }
+
+  const actionableItems = items.filter(
+    (item) =>
+      !terminalStatuses.has(String(item.save_status ?? "pending")) &&
+      !resolvedProcessing.has(item.id),
+  );
+  // Mobile/Web legacy clients send one decision per item. Desktop may omit
+  // decisions already owned by a terminal or persisted processing result.
+  if (
+    decisions.length !== actionableItems.length &&
+    decisions.length !== items.length
+  ) {
+    return null;
+  }
+
   const validated: ValidatedReviewDecision[] = [];
   for (const item of items) {
+    if (terminalStatuses.has(String(item.save_status ?? "pending"))) continue;
+    const storedOptionIds = resolvedProcessing.get(item.id);
+    if (storedOptionIds) {
+      validated.push({
+        itemId: item.id,
+        decline: false,
+        optionIds: storedOptionIds,
+      });
+      continue;
+    }
     const decision = decisionsByItem.get(item.id);
     if (!decision) return null;
     if (decision.decline === true) {
@@ -241,6 +293,39 @@ export function validateStoredReviewDecisions(
     });
   }
   return validated;
+}
+
+function normalizeStoredOptionIds(
+  item: StoredReviewItem,
+  optionIds: string[],
+): string[] | null {
+  if (new Set(optionIds).size !== item.issues.length) return null;
+  const normalizedIds: string[] = [];
+  for (const issue of item.issues) {
+    const selected = issue.choices.filter((choice) =>
+      optionIds.includes(choice.id)
+    );
+    if (selected.length !== 1) return null;
+    normalizedIds.push(selected[0].id);
+  }
+  return normalizedIds;
+}
+
+export function reviewDecisionOptionIds(params: {
+  item: StoredReviewItem;
+  decision: ValidatedReviewDecision;
+}): string[] {
+  if (
+    params.item.save_status === "processing" &&
+    Array.isArray(params.item.selected_option_ids) &&
+    params.item.selected_option_ids.length === params.item.issues.length
+  ) {
+    return normalizeStoredOptionIds(
+      params.item,
+      params.item.selected_option_ids as string[],
+    ) ?? params.decision.optionIds;
+  }
+  return params.decision.optionIds;
 }
 
 export function resolveStoredReviewDecision(params: {

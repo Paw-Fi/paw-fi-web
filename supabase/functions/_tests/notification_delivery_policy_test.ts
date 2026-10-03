@@ -2,6 +2,7 @@
 
 import {
   buildBudgetNudgeData,
+  buildFcmDeliveryContent,
   buildNotificationDeepLink,
   isServiceRoleRequest,
   shouldSkipPushEvent,
@@ -10,6 +11,46 @@ import {
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
 }
+
+Deno.test("web push uses data-only messages with no invalid click URL", () => {
+  const result = buildFcmDeliveryContent(
+    "New expense",
+    "Alex added €12",
+    {
+      event_type: "expense_added",
+      deep_link: "moneko://expense/123",
+    },
+    true,
+  );
+  assert(!result.notification, "web push must remain data-only");
+  assert(result.data.title === "New expense", "web data needs a title");
+  assert(result.data.body === "Alex added €12", "web data needs a body");
+  assert(
+    result.webpush?.data.deep_link === "moneko://expense/123",
+    "web data must retain the desktop/mobile route hint",
+  );
+  assert(
+    !result.webpush || !("fcm_options" in result.webpush),
+    "a route hint must not be sent as FCM's HTTPS-only click URL",
+  );
+});
+
+Deno.test("native FCM payloads retain notification presentation and image", () => {
+  const result = buildFcmDeliveryContent(
+    "New expense",
+    "Alex added €12",
+    { event_type: "expense_added", deep_link: "moneko://expense/123" },
+    false,
+    "https://example.test/receipt.png",
+  );
+  assert(result.notification?.title === "New expense", "native title changed");
+  assert(result.notification?.body === "Alex added €12", "native body changed");
+  assert(
+    result.notification?.image === "https://example.test/receipt.png",
+    "native image was dropped",
+  );
+  assert(!("webpush" in result), "native payload must not add WebPush config");
+});
 
 Deno.test(
   "internal notification requests require the exact service role bearer",
