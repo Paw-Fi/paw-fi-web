@@ -243,6 +243,30 @@ export const Footer = () => {
             >
               Logos provided by Logo.dev
             </a>
+            <a
+              href="https://launchbuff.com/products/moneko-t4wtq7"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Featured on LaunchBuff"
+              className="mt-3 inline-block touch-manipulation"
+            >
+              <img
+                src="https://launchbuff.com/badge-featured-light.svg"
+                alt="Featured on LaunchBuff"
+                width="256"
+                height="80"
+                loading="lazy"
+                className="h-10 w-auto dark:hidden"
+              />
+              <img
+                src="https://launchbuff.com/badge-featured-dark.svg"
+                alt="Featured on LaunchBuff"
+                width="256"
+                height="80"
+                loading="lazy"
+                className="hidden h-10 w-auto dark:block"
+              />
+            </a>
           </div>
 
           {/* Social Icons */}
