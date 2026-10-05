@@ -1,1 +1,3 @@
-verify_jwt = true
+# The handler validates user JWTs through Supabase Auth and checks scope access.
+# Do not reject newer signing keys in the legacy gateway before it runs.
+verify_jwt = false

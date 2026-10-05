@@ -166,3 +166,7 @@ verify_jwt = false
 
 [functions.email-import-sender-verify]
 verify_jwt = false
+
+# list-wallets authenticates the bearer through Supabase Auth before scope reads.
+[functions.list-wallets]
+verify_jwt = false
