@@ -32,6 +32,9 @@ export const Footer = () => {
               <strong>Moneko</strong> helps you budget, track goals, and learn
               personal finance with calculators, guides, and app features.
             </p>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Moneko is operated by Twilight AI Inc.
+            </p>
           </div>
 
           {/* Quick Links */}
