@@ -42,7 +42,7 @@ Deno.test(
   () => {
     assertStringIncludes(
       classificationSource,
-      "const saved = await invokeWalletCapture({",
+      "await invokeWalletCapture({",
     );
     assertStringIncludes(
       classificationSource,

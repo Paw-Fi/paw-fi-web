@@ -8,6 +8,7 @@ import { buildBankExpenseMutationPlan } from "../shared/bank-expense-projection.
 import type { ExistingExpenseProjectionRow } from "../shared/bank-expense-projection.ts";
 import { mapPlaidTransactionToExpense } from "../shared/plaid-client.ts";
 import type { PlaidTransaction } from "../shared/plaid-client.ts";
+import { notificationRecurringConfirmationPayload } from "../shared/android-recurring-capture.ts";
 
 const user = "00000000-0000-4000-8000-000000000001";
 const wallet = "00000000-0000-4000-8000-000000000002";
@@ -259,6 +260,94 @@ async function manual(db: PGlite) {
     '${user}', '${series}', '2024-09-24', '2024-09-24', 11760,
     '${wallet}', 'Telus Pre-auth', 'Phone Bill', null, null, false, '${actual}', 'manual-1') as result`);
 }
+
+Deno.test("notification recurring: changed actual amount confirms one cycle without replacing the template", async () => {
+  const db = await fixture();
+  try {
+    await db.exec(
+      `update expenses set provider_fields='{}', merchant='佐藤商店' where id='${series}'`,
+    );
+    const request = `select public.confirm_recurring_occurrence_v1(
+      '${user}', '${series}', '2024-09-24', '2024-09-26', 12999,
+      '${wallet}', '佐藤商店', '月額料金の支払い完了', null, null, false,
+      '${actual}', 'notification-event|transaction') as result`;
+    for (const duplicate of [false, true]) {
+      const result =
+        (await db.query<{ result: Record<string, unknown> }>(request)).rows[0]
+          .result;
+      const payload = notificationRecurringConfirmationPayload({
+        success: true,
+        data: result,
+      });
+      assertEquals(payload.duplicate, duplicate);
+      const transaction = payload.data as Record<string, unknown>;
+      assertEquals(transaction.id, actual);
+      assertEquals(transaction.amount_cents, 12999);
+      assertEquals(transaction.date, "2024-09-26");
+      assertEquals(transaction.scheduled_occurrence_date, "2024-09-24");
+      assertEquals(transaction.is_recurring, false);
+    }
+    const template = (await db.query<
+      {
+        amount_cents: number;
+        is_recurring: boolean;
+        recurrence_rule: Record<string, unknown>;
+      }
+    >(
+      `select amount_cents,is_recurring,recurrence_rule from expenses where id='${series}'`,
+    )).rows[0];
+    assertEquals(template.amount_cents, 11760);
+    assertEquals(template.is_recurring, true);
+    assertEquals(template.recurrence_rule.excluded_dates, ["2024-09-24"]);
+    assertEquals(template.recurrence_rule.end_date, undefined);
+    assertEquals(
+      (await db.query<{ count: number }>(
+        "select count(*)::integer count from expenses",
+      )).rows[0].count,
+      2,
+    );
+    await assertRejects(
+      () => db.query(request.replace("12999", "14999")),
+      Error,
+      "OCCURRENCE_CONFLICT",
+    );
+    assertEquals(
+      (await db.query<{ count: number }>(
+        "select count(*)::integer count from expenses",
+      )).rows[0].count,
+      2,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+Deno.test("notification recurring: completed income confirms a native-currency actual", async () => {
+  const db = await fixture();
+  try {
+    await db.exec(
+      `update expenses set provider_fields='{}', type='income', merchant='مصدر الراتب' where id='${series}'`,
+    );
+    const result = (await db.query<{ result: Record<string, unknown> }>(
+      `select confirm_recurring_occurrence_v1(
+      '${user}', '${series}', '2024-09-24', '2024-09-24', 13500,
+      '${wallet}', 'مصدر الراتب', 'تم إيداع الراتب', null, null, false,
+      '${actual}', 'income-notification|transaction') result`,
+    )).rows[0].result;
+    const payload = notificationRecurringConfirmationPayload({
+      success: true,
+      data: result,
+    });
+    const transaction = payload.data as Record<string, unknown>;
+    assertEquals(transaction.type, "income");
+    assertEquals(transaction.currency, "CAD");
+    assertEquals(transaction.amount_cents, 13500);
+    assertEquals(transaction.analytics_counts_toward_income, true);
+    assertEquals(transaction.analytics_spending_multiplier, 0);
+  } finally {
+    await db.close();
+  }
+});
 
 async function importPayment(db: PGlite, pending = false) {
   await db.exec(

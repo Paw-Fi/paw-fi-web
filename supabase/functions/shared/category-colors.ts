@@ -626,11 +626,13 @@ export function getIncomeCategories(): string[] {
   return [...INCOME_CATEGORIES];
 }
 
-// Expense-only canonical categories (excludes income-focused categories and umbrella 'income')
+// Transfers can represent an external outgoing expense or incoming income.
 export function getExpenseCategories(): string[] {
   const incomeCategories: string[] = [...INCOME_CATEGORIES];
   return Array.from(ALLOWED_CATEGORIES)
-    .filter((category: string) => incomeCategories.indexOf(category) === -1)
+    .filter((category: string) =>
+      category === "transfers" || incomeCategories.indexOf(category) === -1
+    )
     .sort();
 }
 

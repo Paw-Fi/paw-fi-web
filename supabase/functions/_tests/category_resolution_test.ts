@@ -6,6 +6,50 @@ import {
   type CategoryContext,
   resolveCategory,
 } from "../shared/category-resolution.ts";
+import { mergeAllowedCategories } from "../shared/user-categories.ts";
+
+Deno.test("external transfer category survives expense and income resolution with user remaps authoritative", () => {
+  const allowed = mergeAllowedCategories({ customCategories: [] });
+  for (const transactionType of ["expense", "income"] as const) {
+    const ctx = makeContext({ ...allowed });
+    assertEquals(
+      resolveCategory({
+        initialGuess: "transfers",
+        description: "ส่งเงินให้ กานต์",
+        transactionType,
+        ctx,
+      }),
+      "transfers",
+    );
+    assertEquals(
+      resolveCategory({
+        initialGuess: "transfers",
+        description: "送金完了",
+        transactionType,
+        ctx: {
+          ...ctx,
+          remaps: [{
+            transaction_type: transactionType,
+            from_category_name: "transfers",
+            to_category_name: "other",
+            use_count: 1,
+            last_used_at: null,
+          }],
+        },
+      }),
+      "other",
+    );
+  }
+  const hidden = mergeAllowedCategories({
+    customCategories: [],
+    hiddenCategories: [{
+      category_name: "transfers",
+      transaction_type: "expense",
+    }],
+  });
+  assertEquals(hidden.allowedExpenseSet.has("transfers"), false);
+  assertEquals(hidden.allowedIncomeSet.has("transfers"), true);
+});
 
 function makeContext(
   overrides: Partial<CategoryContext> = {},

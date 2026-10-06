@@ -26,6 +26,7 @@ import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { isRetryableGeminiError } from "../shared/gemini-retry.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
+import { normalizeNotificationCounterparty } from "../shared/notification-capture-identity.ts";
 import { formatMoney } from "../shared/currency-symbols.ts";
 import {
   ensureUserCategory,
@@ -1325,22 +1326,7 @@ async function claimWalletCaptureIdempotencyKey(
 }
 
 function normalizeAndroidCaptureMerchantKey(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/https?:\/\/\S+/g, " ")
-    .replace(/\b(?:usd|eur|gbp|aud|cad|inr|rs)\b/g, " ")
-    .replace(/\b\d{1,4}(?:[.,]\d{2})?\b/g, " ")
-    .replace(
-      /\b(?:google|wallet|pay|card|visa|mastercard|debit|credit|purchase|payment|spent|paid|approved|transaction|notification|with|using|ending|account|bank)\b/g,
-      " ",
-    )
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim()
-    .split(" ")
-    .filter((part) => part.length > 1)
-    .slice(0, 6)
-    .join(" ");
+  return normalizeNotificationCounterparty(value);
 }
 
 function buildWalletCaptureScopeKey(

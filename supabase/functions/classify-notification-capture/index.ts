@@ -14,8 +14,10 @@ import {
   buildAndroidNotificationDependencyFailure,
   buildAndroidNotificationFailureResult,
   buildAndroidNotificationFieldProvenance,
+  buildNotificationCaptureTransaction,
   classifyAndroidNotification,
   httpStatusForAndroidNotificationFailure,
+  NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES,
 } from "../shared/android-notification-classifier.ts";
 import {
   assertAccountInScope,
@@ -25,9 +27,10 @@ import {
 } from "../shared/accounts.ts";
 import {
   type AndroidRecurringScheduleRow,
-  type AndroidSavedRecurringRow,
-  findAndroidRecurringCaptureMatch,
-  savedExpenseMatchesRecurringReplacement,
+  notificationRecurringConfirmationPayload,
+  type NotificationRecurringOccurrence,
+  resolveNotificationRecurringOccurrence,
+  scaleNotificationRecurringSplit,
 } from "../shared/android-recurring-capture.ts";
 import { loadCategoryContext } from "../shared/category-resolution.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -47,7 +50,6 @@ import {
   resolveWalletCaptureAccountForCurrency,
 } from "../shared/wallet-capture.ts";
 
-const MAX_REQUEST_BYTES = 32_000;
 const MAX_FIELD_LENGTH = 2_000;
 const MAX_TEXT_LINES = 20;
 const DEFAULT_HOURLY_AI_LIMIT = 60;
@@ -133,11 +135,11 @@ async function claimClassificationEvent(params: {
   contextHash: string;
 }): Promise<
   | {
-      status: "claimed";
-      id: string;
-      processingToken: string;
-      attemptNumber: number;
-    }
+    status: "claimed";
+    id: string;
+    processingToken: string;
+    attemptNumber: number;
+  }
   | { status: "cached"; result: Record<string, unknown> }
   | { status: "processing" }
   | { status: "rate_limited" }
@@ -156,8 +158,9 @@ async function claimClassificationEvent(params: {
     },
   );
   if (error) throw error;
-  const result =
-    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const result = data && typeof data === "object"
+    ? (data as Record<string, unknown>)
+    : {};
   if (result.status === "cached" && result.result) {
     return {
       status: "cached",
@@ -218,31 +221,36 @@ async function finalizeClassificationEvent(params: {
   if (!data) throw new Error("STALE_CLASSIFICATION_CLAIM");
 }
 
-function previousDate(date: string): string {
-  const parsed = new Date(`${date}T00:00:00.000Z`);
-  parsed.setUTCDate(parsed.getUTCDate() - 1);
-  return parsed.toISOString().slice(0, 10);
-}
-
 async function loadRecurringSchedules(params: {
   supabase: any;
   userId: string;
   householdId: string | null;
+  currency: string;
+  transactionType: string;
 }): Promise<AndroidRecurringScheduleRow[]> {
   let query = params.supabase
     .from("expenses")
     .select(
-      "id, date, amount_cents, currency, type, merchant, raw_text, account_id, recurrence_rule",
+      "id, date, amount_cents, currency, type, merchant, account_id, household_id, split_group_id, recurrence_rule",
     )
     .eq("user_id", params.userId)
+    .eq("currency", params.currency)
+    .eq("type", params.transactionType)
     .eq("is_recurring", true)
     .is("deleted_at", null);
   query = params.householdId
     ? query.eq("household_id", params.householdId)
     : query.is("household_id", null);
-  const { data, error } = await query.limit(250);
-  if (error) throw error;
-  return Array.isArray(data) ? (data as AndroidRecurringScheduleRow[]) : [];
+  const schedules: AndroidRecurringScheduleRow[] = [];
+  for (let offset = 0;; offset += 250) {
+    const { data, error } = await query.order("id").range(offset, offset + 249);
+    if (error) throw error;
+    if (!Array.isArray(data)) {
+      throw new Error("INVALID_RECURRING_CATALOG_RESPONSE");
+    }
+    schedules.push(...data);
+    if (data.length < 250) return schedules;
+  }
 }
 
 async function invokeWalletCapture(params: {
@@ -258,9 +266,11 @@ async function invokeWalletCapture(params: {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const internalKey = resolveAnyInternalFunctionKey();
-  const url = `${Deno.env.get(
-    "SUPABASE_URL",
-  )}/functions/v1/save-wallet-transaction`;
+  const url = `${
+    Deno.env.get(
+      "SUPABASE_URL",
+    )
+  }/functions/v1/save-wallet-transaction`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -279,38 +289,131 @@ async function invokeWalletCapture(params: {
       householdId: params.body.householdId,
       isPortfolio: params.body.isPortfolio === true,
       ...(params.accountId ? { accountId: params.accountId } : {}),
-      transaction: {
-        merchantName: params.classification.merchant,
-        merchantEntityType: params.classification.merchantEntityType,
-        type: params.classification.transactionType,
-        amount: params.classification.amount,
-        currency: params.classification.currency,
-        currencyEvidenceRaw: params.classification.currencyEvidenceRaw,
-        currencyEvidenceType:
-          params.classification.currencySource === "account_context"
-            ? "ai_account_context"
-            : params.classification.currencySource === "user_preference"
-              ? "ai_user_preference"
-              : "ai_notification_explicit",
-        currencyAmbiguous: params.classification.currencyAmbiguous,
-        accountCurrency: params.accountCurrency,
-        date: params.classification.date,
-        packageName: params.notification.packageName,
-        sourceAppLabel: params.notification.sourceAppLabel,
-        notificationKey: params.notification.notificationKey,
-        externalSourceId: params.notification.notificationKey,
-        notificationPostTime: params.notification.notificationPostTime,
-        note: params.classification.description,
-        categoryHint: params.classification.category,
-        isRecurring: params.classification.isRecurring,
-        recurrenceRule: params.classification.recurrenceRule,
-      },
+      transaction: buildNotificationCaptureTransaction(
+        params.notification,
+        // A completed payment is an actual, not a forecast-only template.
+        {
+          ...params.classification,
+          isRecurring: false,
+          recurrenceRule: undefined,
+        },
+        params.accountCurrency,
+      ),
     }),
   });
   const payload = await response.json().catch(() => ({}));
   return {
     response,
     payload: payload && typeof payload === "object" ? payload : {},
+  };
+}
+
+async function invokeNotificationRecurringConfirmation(params: {
+  supabase: any;
+  request: Request;
+  userId: string;
+  eventKey: string;
+  occurrence: NotificationRecurringOccurrence;
+  classification: AndroidNotificationClassification;
+  notification: AndroidNotificationInput;
+  accountId: string | null;
+}): Promise<{ response: Response; payload: Record<string, unknown> }> {
+  const { schedule, scheduledOccurrenceDate } = params.occurrence;
+  const idempotencyKey = `${params.eventKey}|transaction`;
+  // Recover a committed write when the classification acknowledgement failed.
+  // The exact event key is identity evidence; amount/name proximity is not.
+  const { data: prior, error: priorError } = await params.supabase
+    .from("recurring_occurrences")
+    .select("actual_transaction_id, status")
+    .eq("recurring_id", schedule.id)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+  if (priorError) throw priorError;
+  if (prior?.status === "confirmed" && prior.actual_transaction_id) {
+    const { data: transaction, error } = await params.supabase.from("expenses")
+      .select("*").eq("id", prior.actual_transaction_id)
+      .eq("user_id", params.userId).is("deleted_at", null).maybeSingle();
+    if (error) throw error;
+    if (!transaction) throw new Error("RECURRING_CONFIRMATION_RECOVERY_FAILED");
+    const payload = notificationRecurringConfirmationPayload({
+      success: true,
+      data: { duplicate: true, transaction },
+    });
+    return { response: jsonResponse(payload), payload };
+  }
+  let customSplits: unknown = null;
+  let payerUserId: string | null = null;
+  if (
+    schedule.household_id && schedule.split_group_id &&
+    schedule.type === "expense"
+  ) {
+    const { data: group, error: groupError } = await params.supabase
+      .from("expense_split_groups")
+      .select("payer_user_id, total_amount_cents, currency")
+      .eq("id", schedule.split_group_id).eq("expense_id", schedule.id)
+      .eq("household_id", schedule.household_id).maybeSingle();
+    if (groupError) throw groupError;
+    if (
+      !group || group.currency !== params.classification.currency ||
+      !sanitizeUuid(group.payer_user_id)
+    ) {
+      throw new Error("INVALID_RECURRING_SAVED_SPLIT");
+    }
+    const { data: lines, error: linesError } = await params.supabase
+      .from("expense_split_lines").select("user_id, amount_cents")
+      .eq("split_group_id", schedule.split_group_id).order("user_id");
+    if (linesError) throw linesError;
+    customSplits = scaleNotificationRecurringSplit(
+      lines ?? [],
+      group.total_amount_cents,
+      Math.round(params.classification.amount! * 100),
+    );
+    payerUserId = group.payer_user_id;
+  }
+  const internalKey = resolveAnyInternalFunctionKey();
+  const response = await fetch(
+    `${Deno.env.get("SUPABASE_URL")}/functions/v1/confirm-recurring-occurrence`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(internalKey ? buildInternalInvokeHeaders(internalKey) : {
+          Authorization: params.request.headers.get("Authorization") || "",
+          apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
+        }),
+      },
+      body: JSON.stringify({
+        userId: params.userId,
+        recurringId: schedule.id,
+        scheduledOccurrenceDate,
+        paidDate: params.classification.date,
+        amount: params.classification.amount,
+        accountId: params.accountId,
+        merchant: params.classification.merchant,
+        description: params.classification.description ?? "",
+        customSplits,
+        payerUserId,
+        updateFutureAmount: false,
+        idempotencyKey,
+      }),
+    },
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    // A conflicting actual or departed split participant needs resolution; it
+    // must not cause an automatic second payment or discard the notification.
+    if (
+      ["OCCURRENCE_CONFLICT", "OCCURRENCE_SPLIT_MEMBER_NOT_ACTIVE"].includes(
+        payload?.code,
+      )
+    ) {
+      throw new Error("NOTIFICATION_RECURRING_REQUIRES_REVIEW");
+    }
+    return { response, payload };
+  }
+  return {
+    response,
+    payload: notificationRecurringConfirmationPayload(payload),
   };
 }
 
@@ -332,7 +435,10 @@ Deno.serve(async (req: Request) => {
   } | null = null;
   try {
     const rawBody = await req.text();
-    if (new TextEncoder().encode(rawBody).length > MAX_REQUEST_BYTES) {
+    if (
+      new TextEncoder().encode(rawBody).length >
+        NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES
+    ) {
       return jsonResponse({ success: false, error: "Payload too large" }, 413);
     }
     let body: NotificationCaptureRequest;
@@ -444,8 +550,7 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
-    const accountId =
-      requestedAccountId ??
+    const accountId = requestedAccountId ??
       (await resolveDefaultAccountIdStrict(supabase, { userId, householdId }));
     let accountCurrency: string | null = null;
     if (accountId) {
@@ -463,10 +568,9 @@ Deno.serve(async (req: Request) => {
         );
       }
       const account = await getAccountOrNull(supabase, accountId);
-      accountCurrency =
-        typeof account?.currency === "string"
-          ? account.currency.trim().toUpperCase()
-          : null;
+      accountCurrency = typeof account?.currency === "string"
+        ? account.currency.trim().toUpperCase()
+        : null;
       if (!accountCurrency) {
         return jsonResponse(
           { success: false, error: "Selected account has no currency" },
@@ -476,10 +580,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    const preferredTimezone =
-      typeof contact?.preferred_timezone === "string"
-        ? contact.preferred_timezone
-        : null;
+    const preferredTimezone = typeof contact?.preferred_timezone === "string"
+      ? contact.preferred_timezone
+      : null;
     const clientDate = body.clientCreatedAt
       ? new Date(body.clientCreatedAt)
       : new Date();
@@ -492,14 +595,12 @@ Deno.serve(async (req: Request) => {
         householdId,
         accountId,
         accountCurrency,
-        preferredCurrency:
-          typeof contact?.preferred_currency === "string"
-            ? contact.preferred_currency
-            : null,
-        preferredLanguage:
-          typeof contact?.preferred_language === "string"
-            ? contact.preferred_language
-            : null,
+        preferredCurrency: typeof contact?.preferred_currency === "string"
+          ? contact.preferred_currency
+          : null,
+        preferredLanguage: typeof contact?.preferred_language === "string"
+          ? contact.preferred_language
+          : null,
         expenseCategories: Array.from(categoryContext.allowedExpenseSet),
         incomeCategories: Array.from(categoryContext.allowedIncomeSet),
       },
@@ -580,8 +681,8 @@ Deno.serve(async (req: Request) => {
         pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
         classifierModel: classification.model ?? null,
         verificationModel: classification.verificationModel ?? null,
-        normalizationDiagnostics:
-          classification.normalizationDiagnostics ?? null,
+        normalizationDiagnostics: classification.normalizationDiagnostics ??
+          null,
       };
       await finalizeClassificationEvent({
         supabase,
@@ -605,55 +706,55 @@ Deno.serve(async (req: Request) => {
       },
     );
 
-    let replacedSchedule: AndroidRecurringScheduleRow | null = null;
-    if (classification.isRecurring && classification.recurrenceRule) {
-      const schedules = await loadRecurringSchedules({
-        supabase,
-        userId,
-        householdId,
-      });
-      const recurringMatch = findAndroidRecurringCaptureMatch(schedules, {
-        merchant: classification.merchant!,
-        amountCents: Math.round(classification.amount! * 100),
-        currency: classification.currency!,
-        transactionType: classification.transactionType!,
-        accountId: captureAccountId,
-        frequency: classification.recurrenceRule.frequency,
-        date: classification.date,
-      });
-      if (recurringMatch?.kind === "existing") {
-        const result = {
-          success: true,
-          ignored: true,
-          reasonCode: "recurring_schedule_exists",
-          recurringId: recurringMatch.schedule.id,
-          pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
-        };
-        await finalizeClassificationEvent({
+    // A one-off payment to the same business near a due date is not proof of
+    // recurrence. Only independently verified recurring semantics authorize it.
+    const schedules =
+      classification.isRecurring && classification.recurrenceRule
+        ? await loadRecurringSchedules({
           supabase,
-          eventId,
-          processingToken,
-          status: "ignored",
-          classification,
-          result,
-        });
-        return jsonResponse(result);
-      }
-      if (recurringMatch?.kind === "replacement") {
-        replacedSchedule = recurringMatch.schedule;
-      }
-    }
-
-    const saved = await invokeWalletCapture({
-      request: req,
-      body,
-      userId,
-      notification,
-      classification,
-      eventKey,
+          userId,
+          householdId,
+          currency: classification.currency!,
+          transactionType: classification.transactionType!,
+        })
+        : [];
+    const occurrence = await resolveNotificationRecurringOccurrence(schedules, {
+      merchant: classification.merchant!,
+      currency: classification.currency!,
+      transactionType: classification.transactionType!,
       accountId: captureAccountId,
-      accountCurrency: classification.currency!,
+      frequency: classification.recurrenceRule?.frequency,
+      interval: classification.recurrenceRule?.interval,
+      date: classification.date,
+    }, async (args) => {
+      const { data, error } = await supabase.rpc(
+        "calculate_next_occurrence_on_or_after",
+        args,
+      );
+      if (error) throw error;
+      return data;
     });
+    const saved = occurrence
+      ? await invokeNotificationRecurringConfirmation({
+        supabase,
+        request: req,
+        userId,
+        eventKey,
+        occurrence,
+        classification,
+        notification,
+        accountId: captureAccountId,
+      })
+      : await invokeWalletCapture({
+        request: req,
+        body,
+        userId,
+        notification,
+        classification,
+        eventKey,
+        accountId: captureAccountId,
+        accountCurrency: classification.currency!,
+      });
     if (!saved.response.ok) {
       const saveFailureResult = buildAndroidNotificationDependencyFailure(
         `WALLET_CAPTURE_SAVE_HTTP_${saved.response.status}`,
@@ -690,14 +791,13 @@ Deno.serve(async (req: Request) => {
       saved.payload.data && typeof saved.payload.data === "object"
         ? (saved.payload.data as Record<string, unknown>)
         : {};
-    const savedMeta =
-      saved.payload.meta && typeof saved.payload.meta === "object"
-        ? (saved.payload.meta as Record<string, unknown>)
-        : {};
-    const isCrossSourceLogicalDuplicate = String(
-      savedMeta.deduplicationReason ?? "",
-    ).startsWith("android_logical_duplicate");
     const expenseId = optionalString(savedData.id, 80);
+    if (
+      saved.payload.success !== true ||
+      (!expenseId && saved.payload.ignored !== true)
+    ) {
+      throw new Error("INVALID_CAPTURE_SAVE_RESPONSE");
+    }
     const result = {
       ...saved.payload,
       classification: {
@@ -714,55 +814,13 @@ Deno.serve(async (req: Request) => {
       supabase,
       eventId,
       processingToken,
-      status: "saved",
+      status: saved.payload.ignored === true ? "ignored" : "saved",
       classification,
       expenseId,
       result,
     });
     committedResponse = { body: result, status: saved.response.status };
 
-    if (
-      replacedSchedule &&
-      expenseId &&
-      classification.recurrenceRule &&
-      !isCrossSourceLogicalDuplicate
-    ) {
-      const { data: savedExpense, error: savedExpenseError } = await supabase
-        .from("expenses")
-        .select(
-          "id, amount_cents, currency, type, account_id, is_recurring, recurrence_rule",
-        )
-        .eq("id", expenseId)
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (savedExpenseError) throw savedExpenseError;
-
-      if (
-        savedExpense &&
-        savedExpenseMatchesRecurringReplacement(
-          savedExpense as AndroidSavedRecurringRow,
-          {
-            replacedScheduleId: replacedSchedule.id,
-            amountCents: Math.round(classification.amount! * 100),
-            currency: classification.currency!,
-            transactionType: classification.transactionType!,
-            accountId: captureAccountId,
-            frequency: classification.recurrenceRule.frequency,
-          },
-        )
-      ) {
-        const replacementRule = {
-          ...(replacedSchedule.recurrence_rule ?? {}),
-          end_date: previousDate(classification.date),
-        };
-        const { error: closeError } = await supabase
-          .from("expenses")
-          .update({ recurrence_rule: replacementRule })
-          .eq("id", replacedSchedule.id)
-          .eq("user_id", userId);
-        if (closeError) throw closeError;
-      }
-    }
     return jsonResponse(result, saved.response.status);
   } catch (error) {
     if (committedResponse) {
@@ -800,8 +858,9 @@ Deno.serve(async (req: Request) => {
         result: failureResult,
       }).catch(() => undefined);
     }
-    const failureStatus =
-      httpStatusForAndroidNotificationFailure(failureResult);
+    const failureStatus = httpStatusForAndroidNotificationFailure(
+      failureResult,
+    );
     return jsonResponse(
       {
         success: false,

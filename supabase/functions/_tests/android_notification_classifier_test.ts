@@ -15,13 +15,117 @@ import {
   buildAndroidNotificationDependencyFailure,
   buildAndroidNotificationFailureResult,
   buildAndroidNotificationFieldProvenance,
+  buildNotificationCaptureTransaction,
   classificationHasNotificationEvidence,
   classifyAndroidNotification,
   httpStatusForAndroidNotificationFailure,
   normalizeAndroidNotificationClassification,
+  NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES,
 } from "../shared/android-notification-classifier.ts";
 
 const fallbackDate = "2026-07-15";
+
+Deno.test("invalid structured cadence cannot associate an otherwise completed payment with a schedule", () => {
+  for (const interval of [true, "2", 0, -1, 1.5, 366]) {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({
+        isRecurring: true,
+        frequency: "monthly",
+        interval,
+      }),
+      fallbackDate,
+    );
+    assertEquals(result.action, "save_transaction");
+    assertEquals(result.isRecurring, false);
+  }
+  const result = normalizeAndroidNotificationClassification(
+    saveArgs({
+      isRecurring: true,
+      frequency: "monthly",
+      interval: 2,
+    }),
+    fallbackDate,
+  );
+  assertEquals(result.recurrenceRule?.interval, 2);
+});
+
+Deno.test("bounded native envelopes fit the backend even with multibyte and escaped text", () => {
+  for (const character of ["ก", "𠮷", "\u0000"]) {
+    const notification: Record<string, unknown> = Object.fromEntries(
+      [
+        "title",
+        "text",
+        "bigText",
+        "subText",
+        "summaryText",
+        "infoText",
+        "conversationTitle",
+        "tickerText",
+      ]
+        .map((field) => [field, character.repeat(2000)]),
+    );
+    for (const field of ["textLines", "messages", "additionalText"]) {
+      notification[field] = Array(20).fill(character.repeat(500));
+    }
+    const size = new TextEncoder().encode(
+      JSON.stringify({ notification, idempotencyKey: "x".repeat(300) }),
+    ).length;
+    assertEquals(size < NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES, true);
+  }
+});
+
+Deno.test("classifier validates machine dates and rejects nonnumeric or unstorable financial amounts", () => {
+  const invalidDate = normalizeAndroidNotificationClassification(
+    saveArgs({ date: "2026-02-30" }),
+    fallbackDate,
+  );
+  assertEquals(invalidDate.date, fallbackDate);
+  const leapDate = normalizeAndroidNotificationClassification(
+    saveArgs({ date: "2024-02-29" }),
+    fallbackDate,
+  );
+  assertEquals(leapDate.date, "2024-02-29");
+  for (const amount of [true, "10.00", 21_474_836.48, Infinity, NaN, -1, 0]) {
+    assertEquals(
+      normalizeAndroidNotificationClassification(
+        saveArgs({ amount }),
+        fallbackDate,
+      ).action,
+      "ignore",
+    );
+  }
+  assertEquals(
+    normalizeAndroidNotificationClassification(
+      saveArgs({ amount: 21_474_836.47 }),
+      fallbackDate,
+    ).action,
+    "save_transaction",
+  );
+  assertEquals(
+    normalizeAndroidNotificationClassification(
+      saveArgs({ confidence: true }),
+      fallbackDate,
+    ).action,
+    "ignore",
+  );
+  for (
+    const subtype of [
+      "promotion",
+      "security",
+      "shipping",
+      "statement",
+      "bill_due",
+      "renewal_notice",
+    ]
+  ) {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({ subtype }),
+      fallbackDate,
+    );
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "unsupported_transaction_subtype");
+  }
+});
 
 Deno.test(
   "Android notification models use one centralized fallback order",
@@ -62,8 +166,7 @@ function fakeGenAI(
           if (generationConfig?.responseMimeType === "text/x.enum") {
             return Promise.resolve({
               response: {
-                text: () =>
-                  call?.args.approved === true ? "APPROVE" : "REJECT",
+                text: () => call?.args.approved === true ? "APPROVE" : "REJECT",
               },
             });
           }
@@ -134,6 +237,12 @@ function saveArgs(
     eventStatus: "posted",
     transactionType: "expense",
     subtype: "purchase",
+    moneyDirection: "out",
+    movementScope: "external",
+    directionEvidenceRaw: String(
+      overrides.transactionEvidenceRaw ?? overrides.completionEvidenceRaw ??
+        "Card purchase USD 12.99 at Cafe Bloom was completed",
+    ),
     amount: 12.99,
     amountEvidenceRaw: "12.99",
     currency: "USD",
@@ -162,6 +271,10 @@ function classification(
     eventStatus: "posted",
     transactionType: "expense",
     subtype: "purchase",
+    moneyDirection: "out",
+    movementScope: "external",
+    directionEvidenceRaw: overrides.transactionEvidenceRaw ??
+      "Card purchase USD 12.99 at Cafe Bloom was completed",
     amount: 12.99,
     amountEvidenceRaw: "12.99",
     currency: "USD",
@@ -199,6 +312,8 @@ Deno.test(
                 saveArgs({
                   transactionType: "income",
                   subtype: "deposit",
+                  moneyDirection: "in",
+                  directionEvidenceRaw: "vous a envoyé",
                   amount: 1,
                   amountEvidenceRaw: "1,00 €",
                   currency: "EUR",
@@ -304,6 +419,8 @@ Deno.test(
 
     assertEquals(result, {
       transactionType: "expense",
+      moneyDirection: "out",
+      movementScope: "external",
       amount: 12.99,
       currency: "USD",
       currencySource: "notification_explicit",
@@ -316,6 +433,7 @@ Deno.test(
         amount: true,
         currency: true,
         merchant: true,
+        direction: true,
       },
     });
     assertEquals("description" in result, false);
@@ -339,6 +457,7 @@ Deno.test(
       amount: true,
       currency: true,
       merchant: true,
+      direction: true,
     });
     assertEquals(JSON.stringify(result).includes("x".repeat(25)), false);
   },
@@ -383,6 +502,7 @@ Deno.test(
       saveArgs({
         transactionType: "expense",
         subtype: "refund",
+        moneyDirection: "in",
         amount: 12.99,
         currency: "USD",
         merchant: "Amazon",
@@ -397,6 +517,348 @@ Deno.test(
   },
 );
 
+Deno.test("completed returned reversals save income while cancelled authorizations remain excluded", () => {
+  const refund = normalizeAndroidNotificationClassification(
+    saveArgs({
+      eventStatus: "reversed",
+      subtype: "refund",
+      moneyDirection: "in",
+      category: "refunds",
+    }),
+    fallbackDate,
+  );
+  assertEquals(refund.action, "save_transaction");
+  assertEquals(refund.transactionType, "income");
+  for (
+    const fields of [
+      { subtype: "purchase", moneyDirection: "out" },
+      { subtype: "other", moneyDirection: "unknown" },
+      { subtype: "refund", moneyDirection: "out" },
+    ]
+  ) {
+    assertEquals(
+      normalizeAndroidNotificationClassification(
+        saveArgs({
+          eventStatus: "reversed",
+          ...fields,
+        }),
+        fallbackDate,
+      ).action,
+      "ignore",
+    );
+  }
+});
+
+Deno.test("reversed refund with Japanese credit evidence passes independent verification", async () => {
+  const message = "佐藤商店から￥1,000の返金が入金されました。";
+  const result = await classifyAndroidNotification({
+    genAI: fakeGenAI([
+      modelCall(
+        "classify_notification",
+        saveArgs({
+          eventStatus: "reversed",
+          subtype: "refund",
+          transactionType: "income",
+          moneyDirection: "in",
+          amount: 1000,
+          currency: "JPY",
+          merchant: "佐藤商店",
+          category: "refunds",
+          directionEvidenceRaw: "返金が入金されました",
+          transactionEvidenceRaw: message,
+          completionEvidenceRaw: "入金されました",
+          amountEvidenceRaw: "1,000",
+          currencyEvidenceRaw: "￥",
+          merchantEvidenceRaw: "佐藤商店",
+        }),
+      ),
+      modelCall("verify_notification", { approved: true }),
+    ]),
+    notification: { packageName: "bank.app", text: message },
+    fallbackDate,
+    accountCurrency: "JPY",
+    expenseCategories: ["other"],
+    incomeCategories: ["refunds"],
+  });
+  assertEquals(result.action, "save_transaction");
+  assertEquals(result.transactionType, "income");
+  assertEquals(result.amount, 1000);
+});
+
+const externalMovementFixtures = [
+  {
+    language: "Thai outgoing screenshot",
+    title: "💸 คุณโอน ฿10.00",
+    text: 'ให้ นาย ยุคนธร จันท...; "Moneko"',
+    direction: "out",
+    merchant: "นาย ยุคนธร จันท...",
+    amount: 10,
+    amountEvidence: "10.00",
+    currency: "THB",
+    currencyEvidence: "฿",
+    directionEvidence: "คุณโอน",
+    note: "Moneko",
+  },
+  {
+    language: "Thai incoming",
+    title: "คุณได้รับเงิน ฿6.00",
+    text: "จาก นางสาว กานต์",
+    direction: "in",
+    merchant: "นางสาว กานต์",
+    amount: 6,
+    amountEvidence: "6.00",
+    currency: "THB",
+    currencyEvidence: "฿",
+    directionEvidence: "คุณได้รับเงิน",
+  },
+  {
+    language: "Arabic outgoing regional digits",
+    title: "تم تحويل ١٬٢٣٤٫٥٠ ر.س إلى ليلى",
+    text: "التحويل مكتمل",
+    direction: "out",
+    merchant: "ليلى",
+    amount: 1234.5,
+    amountEvidence: "١٬٢٣٤٫٥٠",
+    currency: "SAR",
+    currencyEvidence: "ر.س",
+    directionEvidence: "تم تحويل",
+  },
+  {
+    language: "Japanese incoming",
+    title: "山田太郎さんから￥１，２００の入金が完了しました",
+    text: "",
+    direction: "in",
+    merchant: "山田太郎",
+    amount: 1200,
+    amountEvidence: "１，２００",
+    currency: "JPY",
+    currencyEvidence: "￥",
+    directionEvidence: "入金が完了しました",
+  },
+  {
+    language: "German outgoing",
+    title: "Sie haben 1.234,56 € an Jörg Müller überwiesen",
+    text: "",
+    direction: "out",
+    merchant: "Jörg Müller",
+    amount: 1234.56,
+    amountEvidence: "1.234,56",
+    currency: "EUR",
+    currencyEvidence: "€",
+    directionEvidence: "Sie haben 1.234,56 € an Jörg Müller überwiesen",
+  },
+  {
+    language: "French incoming",
+    title: "Vous avez reçu 1 234,56 € de Camille",
+    text: "",
+    direction: "in",
+    merchant: "Camille",
+    amount: 1234.56,
+    amountEvidence: "1 234,56",
+    currency: "EUR",
+    currencyEvidence: "€",
+    directionEvidence: "Vous avez reçu",
+  },
+  {
+    language: "Hindi outgoing",
+    title: "आपने आरव को ₹१,५००.०० भेजे। भुगतान पूरा हुआ।",
+    text: "",
+    direction: "out",
+    merchant: "आरव",
+    amount: 1500,
+    amountEvidence: "१,५००.००",
+    currency: "INR",
+    currencyEvidence: "₹",
+    directionEvidence: "आपने आरव को ₹१,५००.०० भेजे",
+  },
+] as const;
+
+for (const fixture of externalMovementFixtures) {
+  Deno.test(`external notification pipeline preserves ${fixture.language} direction, counterparty, category and native currency on both platforms`, async () => {
+    for (
+      const packageName of ["ios.notification.shortcut", "com.payment.app"]
+    ) {
+      const notification = {
+        packageName,
+        sourceAppLabel: "MAKE by KBank",
+        title: fixture.title,
+        text: fixture.text,
+        notificationKey: "stable-event-key",
+      };
+      const args = saveArgs({
+        transactionType: fixture.direction === "in" ? "income" : "expense",
+        subtype: "transfer",
+        moneyDirection: fixture.direction,
+        movementScope: "external",
+        directionEvidenceRaw: fixture.directionEvidence,
+        amount: fixture.amount,
+        amountEvidenceRaw: fixture.amountEvidence,
+        currency: fixture.currency,
+        currencyEvidenceRaw: fixture.currencyEvidence,
+        merchant: fixture.merchant,
+        merchantEntityType: "person",
+        merchantEvidenceRaw: fixture.merchant,
+        transactionEvidenceRaw: fixture.title,
+        completionEvidenceRaw: fixture.directionEvidence,
+        description: "note" in fixture ? fixture.note : undefined,
+      });
+      const requests: Array<
+        { model: string; request: Record<string, unknown> }
+      > = [];
+      const result = await classifyAndroidNotification({
+        genAI: fakeGenAIResponses(
+          [{ text: () => JSON.stringify(args) }, { text: () => "APPROVE" }],
+          [],
+          requests,
+        ),
+        notification,
+        fallbackDate,
+        accountCurrency: "USD",
+        preferredCurrency: "USD",
+        expenseCategories: ["transfers", "other"],
+        incomeCategories: ["transfers", "other"],
+      });
+      assertEquals(result.action, "save_transaction");
+      assertEquals(
+        result.subtype,
+        fixture.direction === "in" ? "deposit" : "transfer",
+      );
+      assertEquals(result.verificationModel !== result.model, true);
+      const transaction = buildNotificationCaptureTransaction(
+        notification,
+        result,
+        "USD",
+      );
+      assertEquals(
+        transaction.type,
+        fixture.direction === "in" ? "income" : "expense",
+      );
+      assertEquals(transaction.merchantName, fixture.merchant);
+      assertEquals(transaction.merchantEntityType, "person");
+      assertEquals(transaction.amount, fixture.amount);
+      assertEquals(transaction.currency, fixture.currency);
+      assertEquals(transaction.categoryHint, "transfers");
+      assertEquals(transaction.notificationKey, "stable-event-key");
+      assertEquals(
+        transaction.note,
+        "note" in fixture ? fixture.note : undefined,
+      );
+      assertEquals("transferId" in transaction, false);
+      const schema = (requests[0].request.generationConfig as {
+        responseSchema: { required: string[] };
+      }).responseSchema;
+      assertEquals(schema.required.includes("moneyDirection"), true);
+      assertEquals(schema.required.includes("movementScope"), true);
+      const provenance = buildAndroidNotificationFieldProvenance(result);
+      assertEquals(provenance.moneyDirection, fixture.direction);
+      assertEquals(provenance.movementScope, "external");
+      assertEquals(provenance.evidence.direction, true);
+      assertEquals("directionEvidenceRaw" in provenance, false);
+    }
+  });
+}
+
+Deno.test("unclear ownership and conflicting directions cannot bypass the transfer contract", () => {
+  for (const subtype of ["transfer", "purchase", "deposit"]) {
+    for (const movementScope of [undefined, "unknown", "own_accounts"]) {
+      assertEquals(
+        normalizeAndroidNotificationClassification(
+          saveArgs({ subtype, movementScope }),
+          fallbackDate,
+        ).action,
+        "ignore",
+      );
+    }
+  }
+  for (const moneyDirection of ["in", "unknown", undefined]) {
+    const result = normalizeAndroidNotificationClassification(
+      saveArgs({
+        subtype: "transfer",
+        transactionType: "expense",
+        moneyDirection,
+      }),
+      fallbackDate,
+    );
+    assertEquals(result.action, "ignore");
+    assertEquals(result.reasonCode, "unclear_or_conflicting_direction");
+  }
+});
+
+Deno.test("transfer direction evidence must occur in the original notification", () => {
+  const fixture = externalMovementFixtures[0];
+  const result = normalizeAndroidNotificationClassification(
+    saveArgs({
+      subtype: "transfer",
+      directionEvidenceRaw: "เงินเข้าบัญชี",
+      amountEvidenceRaw: "10.00",
+      currency: "THB",
+      currencyEvidenceRaw: "฿",
+      merchant: fixture.merchant,
+      merchantEvidenceRaw: fixture.merchant,
+      completionEvidenceRaw: "คุณโอน",
+      transactionEvidenceRaw: fixture.title,
+    }),
+    fallbackDate,
+  );
+  assertEquals(
+    classificationHasNotificationEvidence({
+      packageName: "ios.notification.shortcut",
+      title: fixture.title,
+      text: fixture.text,
+    }, result),
+    false,
+  );
+});
+
+Deno.test("independent verifier can recover an incorrectly ignored external payment", async () => {
+  const fixture = externalMovementFixtures[0];
+  const result = await classifyAndroidNotification({
+    genAI: fakeGenAIResponses([
+      {
+        text: () =>
+          JSON.stringify({
+            action: "ignore",
+            eventStatus: "posted",
+            subtype: "transfer",
+            movementScope: "own_accounts",
+            moneyDirection: "out",
+            confidence: 1,
+            reasonCode: "internal_transfer_or_unresolved_recipient",
+          }),
+      },
+      { text: () => "REJECT" },
+      {
+        text: () =>
+          JSON.stringify(saveArgs({
+            subtype: "transfer",
+            merchant: fixture.merchant,
+            merchantEvidenceRaw: fixture.merchant,
+            currency: "THB",
+            currencyEvidenceRaw: "฿",
+            amount: 10,
+            amountEvidenceRaw: "10.00",
+            directionEvidenceRaw: "คุณโอน",
+            completionEvidenceRaw: "คุณโอน",
+            transactionEvidenceRaw: fixture.title,
+          })),
+      },
+      { text: () => "APPROVE" },
+    ]),
+    notification: {
+      packageName: "ios.notification.shortcut",
+      title: fixture.title,
+      text: fixture.text,
+    },
+    fallbackDate,
+    expenseCategories: ["transfers"],
+    incomeCategories: ["transfers"],
+  });
+  assertEquals(result.action, "save_transaction");
+  assertEquals(result.transactionType, "expense");
+  assertEquals(result.category, "transfers");
+  assertEquals(result.model, ANDROID_NOTIFICATION_MODELS[1]);
+});
+
 Deno.test("Android notification classifier cannot save pending events", () => {
   const result = normalizeAndroidNotificationClassification(
     saveArgs({ eventStatus: "pending" }),
@@ -407,14 +869,14 @@ Deno.test("Android notification classifier cannot save pending events", () => {
   assertEquals(result.reasonCode, "not_posted");
 });
 
-Deno.test("Android notification classifier cannot save transfers", () => {
+Deno.test("Android notification classifier cannot save own-account transfers", () => {
   const result = normalizeAndroidNotificationClassification(
-    saveArgs({ subtype: "transfer" }),
+    saveArgs({ subtype: "transfer", movementScope: "own_accounts" }),
     fallbackDate,
   );
 
   assertEquals(result.action, "ignore");
-  assertEquals(result.reasonCode, "transfer_requires_wallets");
+  assertEquals(result.reasonCode, "internal_transfer_requires_wallets");
 });
 
 Deno.test(
@@ -985,8 +1447,8 @@ Deno.test(
       success: false,
       error: "Classification failed",
       diagnosticCode: "INVALID_CLASSIFICATION_RESPONSE",
-      retryable: false,
-      pipelineVersion: "android_notification_classifier_v9",
+      retryable: true,
+      pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
       diagnostics: [
         {
           phase: "classification",
@@ -1009,7 +1471,7 @@ Deno.test(
       error: "Classification failed",
       diagnosticCode: "unknown_error",
       retryable: true,
-      pipelineVersion: "android_notification_classifier_v9",
+      pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
       diagnostics: [],
     });
     assertEquals(
@@ -1220,7 +1682,7 @@ Deno.test(
     );
     const result = buildAndroidNotificationFailureResult(error);
 
-    assertEquals(result.retryable, false);
+    assertEquals(result.retryable, true);
     assertEquals(result.diagnostics[0].verdictState, "invalid");
     assertEquals(result.diagnostics[0].promptTokenCount, 321);
     assertEquals(result.diagnostics[0].candidatesTokenCount, 17);
@@ -1230,10 +1692,10 @@ Deno.test(
   },
 );
 
-Deno.test("deterministic model contract failures are terminal", () => {
+Deno.test("malformed model outputs are retryable while provider policy blocks remain terminal", () => {
   const terminal = buildAndroidNotificationFailureResult(
     new AndroidNotificationClassificationError(
-      "INVALID_VERIFICATION_RESPONSE",
+      "NOTIFICATION_VERIFICATION_BLOCKED",
       [],
     ),
   );
@@ -1248,6 +1710,18 @@ Deno.test("deterministic model contract failures are terminal", () => {
   assertEquals(httpStatusForAndroidNotificationFailure(terminal), 422);
   assertEquals(retryable.retryable, true);
   assertEquals(httpStatusForAndroidNotificationFailure(retryable), 503);
+  for (
+    const code of [
+      "INVALID_CLASSIFICATION_RESPONSE",
+      "INVALID_VERIFICATION_RESPONSE",
+    ]
+  ) {
+    const malformed = buildAndroidNotificationFailureResult(
+      new AndroidNotificationClassificationError(code, []),
+    );
+    assertEquals(malformed.retryable, true);
+    assertEquals(httpStatusForAndroidNotificationFailure(malformed), 503);
+  }
 });
 
 Deno.test(
@@ -1263,8 +1737,9 @@ Deno.test(
       incomeCategories: ["other income"],
     };
 
-    const original =
-      await buildAndroidNotificationClassificationContextHash(base);
+    const original = await buildAndroidNotificationClassificationContextHash(
+      base,
+    );
     const same = await buildAndroidNotificationClassificationContextHash({
       ...base,
     });
