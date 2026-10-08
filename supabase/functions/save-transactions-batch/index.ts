@@ -4,6 +4,10 @@
 // Significantly reduces latency by using batch insert instead of N individual calls
 
 import { corsHeaders } from "../shared/cors.ts";
+import {
+  merchantAutoResolutionPatch,
+  merchantAutoResolutionValidationError,
+} from "../shared/merchant-auto-resolution-policy.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
@@ -76,6 +80,7 @@ interface TransactionItem {
   description?: string;
   merchant?: string;
   merchantId?: string;
+  merchantAutoResolutionBlocked?: boolean;
   merchantStructuredName?: string;
   breakdown?: string[];
   receiptImageUrl?: string;
@@ -530,6 +535,14 @@ export async function saveTransactionsBatchInternal(
   for (let i = 0; i < body.transactions.length; i++) {
     const tx = body.transactions[i];
 
+    const merchantPolicyError = merchantAutoResolutionValidationError(
+      tx.merchantAutoResolutionBlocked,
+    );
+    if (merchantPolicyError) {
+      validationErrors.push({ index: i, error: merchantPolicyError });
+      continue;
+    }
+
     // Basic validation
     const normalizedInput = normalizeBatchTransactionInput({
       type: tx.type,
@@ -726,6 +739,7 @@ export async function saveTransactionsBatchInternal(
             ? tx.merchant.trim()
             : null,
       merchant_id: sanitizeUuid(tx.merchantId),
+      ...merchantAutoResolutionPatch(tx.merchantAutoResolutionBlocked),
       currency: currency,
       breakdown: tx.breakdown ?? null,
       receipt_image_url: tx.receiptImageUrl || null,

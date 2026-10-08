@@ -1900,6 +1900,7 @@ Deno.serve(async (req: Request) => {
                 currency: currencyResult.currency,
                 description: transaction.description,
                 merchant: transaction.merchant,
+                merchantSourceText: userMessageContent,
                 ...merchantIdentitySaveFields(transaction),
                 householdId,
                 isPortfolio:
@@ -2017,6 +2018,7 @@ Deno.serve(async (req: Request) => {
                     supabase,
                     userId,
                     preferredTimezone: userTimezone,
+                    sourceText: userMessageContent,
                   },
                 );
 
@@ -3819,6 +3821,7 @@ Deno.serve(async (req: Request) => {
                 date: transaction.date!,
                 description: transaction.description,
                 merchant: transaction.merchant,
+                merchantSourceText: userMessageContent,
                 ...merchantIdentitySaveFields(transaction),
                 type,
                 householdId,
@@ -3980,6 +3983,7 @@ Deno.serve(async (req: Request) => {
                 supabase,
                 userId,
                 preferredTimezone: userTimezone,
+                sourceText: userMessageContent,
               });
 
               // Resolve splits for shared-space transactions.

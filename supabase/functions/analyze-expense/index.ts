@@ -27,14 +27,25 @@ import {
   UserCategoryRemapRow,
 } from "../shared/user-categories.ts";
 import { loadLatestUserPreferredCurrency } from "../shared/user-preferred-currency.ts";
-import { parseInteractiveRequest, parseInteractiveSource, type InteractiveRequest } from "../shared/interactive-transaction-contract.ts";
+import {
+  parseInteractiveRequest,
+  parseInteractiveSource,
+  type InteractiveRequest,
+} from "../shared/interactive-transaction-contract.ts";
 import { loadInteractiveTransactionContext } from "../shared/interactive-transaction-context.ts";
-import { enrichVerifiedInteractiveItems, runInteractiveTransactionAnalysis } from "../shared/interactive-transaction-analysis.ts";
-import { enrichAnalyzedMerchantItems } from "../shared/merchant-analysis.ts";
+import {
+  enrichVerifiedInteractiveItems,
+  runInteractiveTransactionAnalysis,
+} from "../shared/interactive-transaction-analysis.ts";
+import { enrichSourceVerifiedMerchantItems } from "../shared/merchant-source-verification.ts";
 import { VALID_CURRENCIES } from "../shared/currency-validator.ts";
 import { formatDateInTimeZone } from "../shared/bot/date-utils.ts";
 
-import { applyAiCaptureDefaults, type AiCaptureDefaults, parseAiCaptureDefaults } from "../shared/ai-capture-defaults.ts";
+import {
+  applyAiCaptureDefaults,
+  type AiCaptureDefaults,
+  parseAiCaptureDefaults,
+} from "../shared/ai-capture-defaults.ts";
 
 interface InteractiveAnalyzeBody extends AnalyzeRequestBody {
   captureContext?: unknown;
@@ -45,18 +56,24 @@ interface InteractiveAnalyzeBody extends AnalyzeRequestBody {
 async function interactiveAnalysisResponse(
   body: InteractiveAnalyzeBody,
   request: InteractiveRequest,
-  supabaseAuthed: Parameters<typeof loadInteractiveTransactionContext>[0]["supabase"],
+  supabaseAuthed: Parameters<
+    typeof loadInteractiveTransactionContext
+  >[0]["supabase"],
   merchantContext: MerchantAnalysisContext,
   defaultCurrency: string | undefined,
   stream: boolean,
 ): Promise<Response> {
   const run = async () => {
+    const merchantDeadlineAt = Date.now() + 139000;
     const context = await loadInteractiveTransactionContext({
       supabase: supabaseAuthed,
       userId: merchantContext.userId,
       defaultSpaceId: body.householdId || "personal",
       defaultWalletId: body.accountId || null,
-      currency: defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency) ? defaultCurrency : body.currency || "USD",
+      currency:
+        defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency)
+          ? defaultCurrency
+          : body.currency || "USD",
       date: body.date || formatDateInTimeZone(body.preferredTimezone),
       language: body.language || "en",
       preferredTimezone: body.preferredTimezone,
@@ -64,30 +81,84 @@ async function interactiveAnalysisResponse(
       incomeCategories: body.allowedIncomeCategories!,
     });
     const result = await runInteractiveTransactionAnalysis({
-      source: { text: body.text, audio: body.audio }, request, context,
+      source: { text: body.text, audio: body.audio },
+      request,
+      context,
     });
-    const items = result.requireCorrection ? [] : await enrichVerifiedInteractiveItems(result.items, (items) => enrichAnalyzedMerchantItems({ items, ...merchantContext }));
-    return { success: true, data: { ...result, items, isAnalyzed: !result.requireCorrection } };
+    const items = result.requireCorrection
+      ? []
+      : await enrichVerifiedInteractiveItems(
+          result.items,
+          (items) =>
+            enrichSourceVerifiedMerchantItems({
+              body,
+              items,
+              answers: request.answers,
+              merchantContext,
+              deadlineAt: merchantDeadlineAt,
+            }),
+          true,
+        );
+    return {
+      success: true,
+      data: { ...result, items, isAnalyzed: !result.requireCorrection },
+    };
   };
   if (!stream) {
-    return new Response(JSON.stringify(await awaitWithHardTimeout(run(), 140000, "Analysis timed out")), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify(
+        await awaitWithHardTimeout(run(), 140000, "Analysis timed out"),
+      ),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
   const encoder = new TextEncoder();
-  return new Response(new ReadableStream<Uint8Array>({
-    async start(controller) {
-      try {
-        controller.enqueue(encoder.encode(formatSSEEvent("progress", { stage: "started", message: "Checking transaction details..." })));
-        const result = await awaitWithHardTimeout(run(), 140000, "Analysis timed out");
-        controller.enqueue(encoder.encode(formatSSEEvent("complete", result)));
-      } catch (_) {
-        controller.enqueue(encoder.encode(formatSSEEvent("error", { success: false, code: "AI_TEMPORARILY_UNAVAILABLE", status: 503, error: "Unable to verify transaction details. Please retry." })));
-      } finally {
-        controller.close();
-      }
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          controller.enqueue(
+            encoder.encode(
+              formatSSEEvent("progress", {
+                stage: "started",
+                message: "Checking transaction details...",
+              }),
+            ),
+          );
+          const result = await awaitWithHardTimeout(
+            run(),
+            140000,
+            "Analysis timed out",
+          );
+          controller.enqueue(
+            encoder.encode(formatSSEEvent("complete", result)),
+          );
+        } catch (_) {
+          controller.enqueue(
+            encoder.encode(
+              formatSSEEvent("error", {
+                success: false,
+                code: "AI_TEMPORARILY_UNAVAILABLE",
+                status: 503,
+                error: "Unable to verify transaction details. Please retry.",
+              }),
+            ),
+          );
+        } finally {
+          controller.close();
+        }
+      },
+    }),
+    {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
     },
-  }), { headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
+  );
 }
 
 const CATEGORY_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -540,6 +611,7 @@ function createSSEStream(
             body,
             apiKey: geminiApiKey,
             merchantContext,
+            merchantDeadlineAt: Date.now() + 179000,
             onProgress,
             transformItems: (items) => {
               return collapseReceiptItems(items, body) ?? items;
@@ -639,7 +711,8 @@ Deno.serve(async (req: Request) => {
     } catch (_error) {
       return errorResponse("Invalid analysis request", 400);
     }
-    const interactiveDefaultCurrency = captureDefaults?.currency ?? body.currency?.trim().toUpperCase();
+    const interactiveDefaultCurrency =
+      captureDefaults?.currency ?? body.currency?.trim().toUpperCase();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -786,12 +859,19 @@ Deno.serve(async (req: Request) => {
     );
 
     if (interactive) {
-      return await interactiveAnalysisResponse(body, interactive, supabaseAuthed, {
-        supabase: preferredCurrencyReader,
-        userId: callerId,
-        logoDevSecretKey,
-        preferredTimezone: body.preferredTimezone,
-      }, interactiveDefaultCurrency, isStreamMode);
+      return await interactiveAnalysisResponse(
+        body,
+        interactive,
+        supabaseAuthed,
+        {
+          supabase: preferredCurrencyReader,
+          userId: callerId,
+          logoDevSecretKey,
+          preferredTimezone: body.preferredTimezone,
+        },
+        interactiveDefaultCurrency,
+        isStreamMode,
+      );
     }
 
     // In household mode, provide the household member list to the model so it can
@@ -865,6 +945,7 @@ Deno.serve(async (req: Request) => {
         runEnrichedTransactionAnalysis({
           body,
           apiKey: GEMINI_API_KEY,
+          merchantDeadlineAt: Date.now() + 139000,
           merchantContext: {
             supabase: preferredCurrencyReader,
             userId: callerId,

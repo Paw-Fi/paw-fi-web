@@ -8,6 +8,8 @@ import {
   resolveAnalyzedMerchantIdentity,
 } from "../merchant-analysis.ts";
 import { resolveCurrencyFromOCR } from "../ocr-currency-resolver.ts";
+import { enrichSourceVerifiedMerchantItems } from "../merchant-source-verification.ts";
+import { analyzedMerchantSaveFields } from "../merchant-auto-resolution-policy.ts";
 import {
   normalizeAiToolMoneyCents,
   normalizeAiToolTransactionType,
@@ -38,6 +40,7 @@ export type NormalizedTransactionToolArgs = {
   merchant?: string;
   merchantId?: string;
   merchantStructuredName?: string;
+  merchantAutoResolutionBlocked?: boolean;
 };
 
 export type TransactionSaveParams = {
@@ -50,6 +53,8 @@ export type TransactionSaveParams = {
   merchant?: string;
   merchantId?: string;
   merchantStructuredName?: string;
+  merchantAutoResolutionBlocked?: boolean;
+  merchantSourceText?: string;
   householdId?: string | null;
   isPortfolio?: boolean;
   payerUserId?: string;
@@ -69,7 +74,11 @@ type MerchantIdentityResolver = (
 
 type BotMerchantTransaction = Pick<
   NormalizedTransactionToolArgs,
-  "merchant" | "merchantId" | "merchantStructuredName" | "currency"
+  | "merchant"
+  | "merchantId"
+  | "merchantStructuredName"
+  | "currency"
+  | "merchantAutoResolutionBlocked"
 >;
 
 type TransactionToolFallback = {
@@ -92,9 +101,15 @@ function normalizeOptionalString(value: unknown): string {
 export function merchantIdentitySaveFields(
   transaction: Pick<
     NormalizedTransactionToolArgs,
-    "merchantId" | "merchantStructuredName"
+    "merchantId" | "merchantStructuredName" | "merchantAutoResolutionBlocked"
   >,
-): { merchantId?: string; merchantStructuredName?: string } {
+): {
+  merchantId?: string;
+  merchantStructuredName?: string;
+  merchantAutoResolutionBlocked?: boolean;
+} {
+  if (transaction.merchantAutoResolutionBlocked === true)
+    return { merchantAutoResolutionBlocked: true };
   return {
     ...(transaction.merchantId ? { merchantId: transaction.merchantId } : {}),
     ...(transaction.merchantStructuredName
@@ -109,8 +124,28 @@ export async function resolveBotMerchantIdentityFields(params: {
   userId: string;
   preferredTimezone?: string;
   resolveIdentity?: MerchantIdentityResolver;
-}): Promise<{ merchantId?: string; merchantStructuredName?: string }> {
+  sourceText?: string;
+}): Promise<{
+  merchantId?: string;
+  merchantStructuredName?: string;
+  merchantAutoResolutionBlocked?: boolean;
+}> {
   const existing = merchantIdentitySaveFields(params.transaction);
+  if (existing.merchantAutoResolutionBlocked === true) return existing;
+  if (params.sourceText !== undefined) {
+    const [item] = await enrichSourceVerifiedMerchantItems({
+      body: { text: params.sourceText },
+      items: [{ ...params.transaction }],
+      merchantContext: {
+        supabase: params.supabase,
+        userId: params.userId,
+        preferredTimezone: params.preferredTimezone,
+        logoDevSecretKey: Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "",
+        autoResolveCandidates: true,
+      },
+    });
+    return analyzedMerchantSaveFields(item);
+  }
   if (existing.merchantId || !params.transaction.merchant) return existing;
 
   try {
@@ -334,7 +369,13 @@ export function normalizeTransactionToolArgs(
       ...(currency ? { currency } : {}),
       ...(description ? { description } : {}),
       ...(merchant ? { merchant } : {}),
-      ...merchantIdentitySaveFields({ merchantId, merchantStructuredName }),
+      ...merchantIdentitySaveFields({
+        merchantId,
+        merchantStructuredName,
+        merchantAutoResolutionBlocked:
+          input.merchant_auto_resolution_blocked === true ||
+          input.merchantAutoResolutionBlocked === true,
+      }),
     },
   };
 }
@@ -403,6 +444,7 @@ export async function invokeTransactionSave(
     supabase,
     userId,
     preferredTimezone: params.preferredTimezone,
+    sourceText: params.merchantSourceText ?? "",
   });
   const commonBody = {
     userId,

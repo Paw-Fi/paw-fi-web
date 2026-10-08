@@ -3,10 +3,9 @@ import {
   type ProgressCallback,
   runAnalyzeExpense,
 } from "./analyze-core.ts";
-import {
-  enrichAnalyzedMerchantItems,
-  type MerchantAnalysisContext,
-} from "./merchant-analysis.ts";
+import { type MerchantAnalysisContext } from "./merchant-analysis.ts";
+import { enrichSourceVerifiedMerchantItems } from "./merchant-source-verification.ts";
+import { blockAnalyzedMerchantIdentity } from "./merchant-auto-resolution-policy.ts";
 
 export {
   enrichAnalyzedMerchantItems,
@@ -40,11 +39,13 @@ export function preserveAnalyzedMerchantIdentity(params: {
   analyzedItems: Array<Record<string, unknown>>;
 }): Array<Record<string, unknown>> {
   const identities = new Map<string, Record<string, unknown>>();
+  const ambiguous = new Set<string>();
   for (const analyzedItem of params.analyzedItems) {
-    if (typeof analyzedItem.merchant_id !== "string") continue;
     const key = transactionIdentityKey(analyzedItem);
+    if (ambiguous.has(key)) continue;
     if (identities.has(key)) {
       identities.delete(key);
+      ambiguous.add(key);
       continue;
     }
     identities.set(key, analyzedItem);
@@ -52,12 +53,13 @@ export function preserveAnalyzedMerchantIdentity(params: {
 
   return params.items.map((item) => {
     const analyzedItem = identities.get(transactionIdentityKey(item));
-    if (!analyzedItem) return item;
+    if (!analyzedItem || analyzedItem.merchant_auto_resolution_blocked === true)
+      return blockAnalyzedMerchantIdentity(item);
     return {
       ...item,
       ...Object.fromEntries(
         MERCHANT_IDENTITY_FIELDS.flatMap((field) =>
-          analyzedItem[field] == null ? [] : [[field, analyzedItem[field]]]
+          analyzedItem[field] == null ? [] : [[field, analyzedItem[field]]],
         ),
       ),
     };
@@ -70,6 +72,7 @@ export async function runEnrichedTransactionAnalysis(params: {
   merchantContext: MerchantAnalysisContext;
   onProgress?: ProgressCallback;
   transformItems?: (items: any[]) => any[] | Promise<any[]>;
+  merchantDeadlineAt?: number;
 }): Promise<any> {
   const result = await runAnalyzeExpense(
     {
@@ -86,9 +89,11 @@ export async function runEnrichedTransactionAnalysis(params: {
     : result.items;
   return {
     ...result,
-    items: await enrichAnalyzedMerchantItems({
+    items: await enrichSourceVerifiedMerchantItems({
+      body: params.body,
       items: transformedItems,
-      ...params.merchantContext,
+      merchantContext: params.merchantContext,
+      deadlineAt: params.merchantDeadlineAt,
     }),
   };
 }

@@ -178,23 +178,25 @@ export async function runAnalyzeExpenseWithTimeout(
 ): Promise<any> {
   const logPrefix = options.logPrefix ?? "ai-bot";
   try {
-    const analysisPromise = options.merchantEnrichment?.supabase &&
-        typeof payload?.userId === "string"
-      ? runEnrichedTransactionAnalysis({
-        body: payload,
-        apiKey: apiKey || "",
-        merchantContext: {
-          supabase: options.merchantEnrichment.supabase,
-          userId: payload.userId,
-          logoDevSecretKey: Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "",
-          preferredTimezone: options.preferredTimezone,
-        },
-      })
-      : Promise.resolve({
-        success: false,
-        error: "Merchant enrichment context is required.",
-        language: "en",
-      });
+    const analysisPromise =
+      options.merchantEnrichment?.supabase &&
+      typeof payload?.userId === "string"
+        ? runEnrichedTransactionAnalysis({
+            body: payload,
+            apiKey: apiKey || "",
+            merchantDeadlineAt: Date.now() + Math.max(0, timeoutMs - 1000),
+            merchantContext: {
+              supabase: options.merchantEnrichment.supabase,
+              userId: payload.userId,
+              logoDevSecretKey: Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "",
+              preferredTimezone: options.preferredTimezone,
+            },
+          })
+        : Promise.resolve({
+            success: false,
+            error: "Merchant enrichment context is required.",
+            language: "en",
+          });
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error("timeout")), timeoutMs);
     });
@@ -206,17 +208,19 @@ export async function runAnalyzeExpenseWithTimeout(
     const backendFailureReported = isTimeout
       ? false
       : await reportEdgeFunctionError({
-        functionName: logPrefix,
-        error,
-        context: {
-          phase: "analyze_expense",
-          hasText: typeof payload?.text === "string" && payload.text.length > 0,
-          hasImage: payload?.image != null,
-          hasAudio: payload?.audio != null,
-          hasAttachments: Array.isArray(payload?.attachments) &&
-            payload.attachments.length > 0,
-        },
-      });
+          functionName: logPrefix,
+          error,
+          context: {
+            phase: "analyze_expense",
+            hasText:
+              typeof payload?.text === "string" && payload.text.length > 0,
+            hasImage: payload?.image != null,
+            hasAudio: payload?.audio != null,
+            hasAttachments:
+              Array.isArray(payload?.attachments) &&
+              payload.attachments.length > 0,
+          },
+        });
     return {
       success: false,
       error: timeoutError,

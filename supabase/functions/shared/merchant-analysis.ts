@@ -6,6 +6,8 @@ import {
   resolveMerchant,
 } from "./merchant-resolver.ts";
 import { selectMerchantCandidateByRegionalContext } from "./merchant-regional-selection.ts";
+import type { MerchantSourceVerdict } from "./merchant-source-verification.ts";
+import { blockAnalyzedMerchantIdentity } from "./merchant-auto-resolution-policy.ts";
 
 interface CanonicalMerchantIdentity {
   id: string;
@@ -58,186 +60,261 @@ export async function enrichAnalyzedMerchantItems(params: {
   preferredTimezone?: string;
   autoResolveCandidates?: boolean;
   dependencies?: MerchantAnalysisDependencies;
+  sourceVerdicts?: readonly (MerchantSourceVerdict | null)[];
 }): Promise<any[]> {
   return await Promise.all(
     params.items.map(async (item: any, itemIndex: number) => {
-      const { merchantCountry, ...publicItem } = item;
-      const merchant = typeof item?.merchant === "string"
-        ? item.merchant.trim()
-        : "";
-      if (!merchant) return publicItem;
-
-      const { data: key, error: keyError } = await params.supabase.rpc(
-        "merchant_resolution_descriptor_key",
-        {
-          p_merchant: merchant,
-          p_raw_text: null,
-          p_raw_text_is_merchant_descriptor: false,
-        },
-      );
-      if (keyError || typeof key !== "string" || !key) return publicItem;
-
-      const evidencedDomain = canonicalMerchantDomain(
-        typeof item?.merchantUrl === "string" ? item.merchantUrl : null,
-      );
-      const resolution = await resolveMerchant({
-        supabase: params.supabase,
-        input: {
-          userId: params.userId,
-          descriptorKey: key,
-          evidenceContextKey: "merchant_text",
-          structuredKey: key,
-          merchantDomain: evidencedDomain,
-          mode: "INTERACTIVE_ANALYZE",
-        },
-        persistUnknownDomain: evidencedDomain != null,
-        safeDiscoveryQuery: evidencedDomain == null ? key : null,
-        beforeExternalFetch: async () => {
-          const { data: allowed, error } = await params.supabase.rpc(
-            "consume_merchant_search_quota",
-            { p_user_id: params.userId, p_daily_limit: 20 },
-          );
-          if (error) throw error;
-          if (allowed !== true) {
-            throw new Error("MERCHANT_SEARCH_QUOTA_EXCEEDED");
-          }
-        },
-        discover: evidencedDomain == null && params.logoDevSecretKey
-          ? () =>
-            params.dependencies?.discoverCandidates
-              ? params.dependencies.discoverCandidates(
-                merchant,
-                params.logoDevSecretKey!,
-              )
-              : searchLogoDevCandidates(
-                merchant,
-                params.logoDevSecretKey!,
-                params.autoResolveCandidates === true ? 4_000 : 8_000,
-              )
-          : undefined,
-      });
-
-      let canonicalMerchant = await loadCanonicalMerchant(
-        params.supabase,
-        resolution.merchantId,
-      );
+      const { merchantCountry: extractedCountry, ...originalItem } = item;
+      const sourceVerdict = params.sourceVerdicts?.[itemIndex];
+      const sourceGated = params.sourceVerdicts !== undefined;
+      const publicItem = sourceGated
+        ? Object.fromEntries(
+            Object.entries(originalItem).filter(
+              ([field]) =>
+                ![
+                  "merchant_id",
+                  "merchant_domain",
+                  "merchant_structured_name",
+                  "merchant_resolution_source",
+                  "merchant_candidates",
+                  "merchant_logo_url",
+                  "merchant_auto_resolution_blocked",
+                ].includes(field),
+            ),
+          )
+        : originalItem;
+      const blockedItem = blockAnalyzedMerchantIdentity(publicItem);
+      const merchant =
+        typeof item?.merchant === "string" ? item.merchant.trim() : "";
       if (
-        !canonicalMerchant &&
-        !evidencedDomain &&
-        resolution.candidates.length > 0 &&
-        (params.autoResolveCandidates === true ||
-          (resolution.candidates.length > 1 &&
-            (params.preferredTimezone || merchantCountry)))
-      ) {
-        try {
-          const selectCandidate = params.dependencies?.selectCandidate ??
-            selectMerchantCandidateByRegionalContext;
-          const selected = await selectCandidate({
-            merchant,
-            candidates: resolution.candidates,
-            preferredTimezone: params.preferredTimezone,
-            merchantCountry,
-            transactionCurrency: typeof item?.currency === "string"
-              ? item.currency
+        sourceGated &&
+        (sourceVerdict?.approved !== true ||
+          sourceVerdict.merchant !== merchant)
+      )
+        return blockedItem;
+      if (!merchant) return publicItem;
+      const merchantCountry = sourceGated
+        ? sourceVerdict?.merchantCountry
+        : extractedCountry;
+
+      try {
+        const { data: key, error: keyError } = await params.supabase.rpc(
+          "merchant_resolution_descriptor_key",
+          {
+            p_merchant: merchant,
+            p_raw_text: null,
+            p_raw_text_is_merchant_descriptor: false,
+          },
+        );
+        if (keyError || typeof key !== "string" || !key)
+          return sourceGated ? blockedItem : publicItem;
+
+        const evidencedDomain = canonicalMerchantDomain(
+          sourceGated
+            ? sourceVerdict?.merchantUrl
+            : typeof item?.merchantUrl === "string"
+              ? item.merchantUrl
               : null,
-            ...(params.autoResolveCandidates === true
-              ? { timeoutMs: 5_000 }
-              : {}),
-          });
-          console.log("[merchant-enrichment] candidate_selection_result", {
-            itemIndex,
-            merchant,
-            candidateCount: resolution.candidates.length,
-            selected: selected != null,
-            selectedDomain: selected?.domain ?? null,
-          });
-          if (selected) {
-            const { data: normalizedName, error: normalizedNameError } =
-              await params.supabase.rpc("merchant_resolution_descriptor_key", {
-                p_merchant: selected.name,
-                p_raw_text: null,
-                p_raw_text_is_merchant_descriptor: false,
-              });
-            if (
-              !normalizedNameError &&
-              typeof normalizedName === "string" &&
-              normalizedName
-            ) {
-              canonicalMerchant = await persistCanonicalMerchant({
-                supabase: params.supabase,
-                canonicalName: selected.name,
-                normalizedName,
-                canonicalDomain: selected.domain,
-                verificationStatus: "automatic",
-                resolutionSource: "logo_dev_search",
-                confidence: 0.75,
-              });
-            } else {
-              console.warn(
-                "[merchant-enrichment] candidate_normalization_failed",
-                {
-                  itemIndex,
-                  merchant,
-                  selectedDomain: selected.domain,
-                  hasNormalizedName: typeof normalizedName === "string" &&
-                    normalizedName.length > 0,
-                  hasError: Boolean(normalizedNameError),
-                },
-              );
+        );
+        const resolution = await resolveMerchant({
+          supabase: params.supabase,
+          input: {
+            userId: params.userId,
+            descriptorKey: key,
+            evidenceContextKey: "merchant_text",
+            structuredKey: key,
+            merchantDomain: evidencedDomain,
+            mode: "INTERACTIVE_ANALYZE",
+          },
+          persistUnknownDomain: evidencedDomain != null,
+          safeDiscoveryQuery: evidencedDomain == null ? key : null,
+          beforeExternalFetch: async () => {
+            const { data: allowed, error } = await params.supabase.rpc(
+              "consume_merchant_search_quota",
+              { p_user_id: params.userId, p_daily_limit: 20 },
+            );
+            if (error) throw error;
+            if (allowed !== true) {
+              throw new Error("MERCHANT_SEARCH_QUOTA_EXCEEDED");
             }
-          }
-        } catch (error) {
-          console.warn(
-            "[merchant-resolution] AI candidate selection failed",
-            {
-              errorName: error instanceof Error ? error.name : "UnknownError",
-              errorCode: typeof (error as { code?: unknown })?.code === "string"
-                ? (error as { code: string }).code
-                : null,
-            },
-          );
+          },
+          discover:
+            evidencedDomain == null && params.logoDevSecretKey
+              ? () =>
+                  params.dependencies?.discoverCandidates
+                    ? params.dependencies.discoverCandidates(
+                        merchant,
+                        params.logoDevSecretKey!,
+                      )
+                    : searchLogoDevCandidates(
+                        merchant,
+                        params.logoDevSecretKey!,
+                        params.autoResolveCandidates === true ? 4_000 : 8_000,
+                      )
+              : undefined,
+        });
+
+        let canonicalMerchant = await loadCanonicalMerchant(
+          params.supabase,
+          resolution.merchantId,
+        );
+        if (
+          sourceGated &&
+          canonicalMerchant &&
+          !resolution.source.startsWith("user_")
+        ) {
+          const selected = await (
+            params.dependencies?.selectCandidate ??
+            selectMerchantCandidateByRegionalContext
+          )({
+            merchant,
+            candidates: [
+              {
+                name: canonicalMerchant.canonical_name,
+                domain: canonicalMerchant.domain,
+              },
+            ],
+            sourceEvidence: sourceVerdict?.evidence,
+            merchantCountry,
+            preferredTimezone: params.preferredTimezone,
+            transactionCurrency:
+              typeof item.currency === "string" ? item.currency : null,
+          });
+          if (!selected || selected.domain !== canonicalMerchant.domain)
+            canonicalMerchant = null;
         }
-      }
-
-      console.log(
-        "[merchant-resolution]",
-        JSON.stringify({
-          outcome: resolution.suppressed
-            ? "suppressed"
-            : resolution.merchantId
-            ? "internal_hit"
-            : canonicalMerchant
-            ? "ai_selected"
-            : resolution.cacheHit
-            ? "cache_hit"
-            : resolution.candidates.length
-            ? "candidate_ambiguous"
-            : "unresolved",
-          mode: "INTERACTIVE_ANALYZE",
-          candidateCount: resolution.candidates.length,
-        }),
-      );
-
-      return {
-        ...publicItem,
-        ...(canonicalMerchant
-          ? {
-            merchant_id: canonicalMerchant.id,
-            merchant_domain: canonicalMerchant.domain,
-            merchant_structured_name: canonicalMerchant.canonical_name,
-            merchant_resolution_source: resolution.merchantId
-              ? resolution.source
-              : params.autoResolveCandidates === true
-              ? "headless_ai_candidate"
-              : "timezone_regional_ai",
+        if (
+          !canonicalMerchant &&
+          !evidencedDomain &&
+          resolution.candidates.length > 0 &&
+          (params.autoResolveCandidates === true ||
+            (resolution.candidates.length > 1 &&
+              (params.preferredTimezone || merchantCountry)))
+        ) {
+          try {
+            const selectCandidate =
+              params.dependencies?.selectCandidate ??
+              selectMerchantCandidateByRegionalContext;
+            const selected = await selectCandidate({
+              merchant,
+              candidates: resolution.candidates,
+              preferredTimezone: params.preferredTimezone,
+              merchantCountry,
+              transactionCurrency:
+                typeof item?.currency === "string" ? item.currency : null,
+              ...(sourceGated
+                ? { sourceEvidence: sourceVerdict?.evidence }
+                : {}),
+              ...(params.autoResolveCandidates === true
+                ? { timeoutMs: 5_000 }
+                : {}),
+            });
+            console.log("[merchant-enrichment] candidate_selection_result", {
+              itemIndex,
+              merchant,
+              candidateCount: resolution.candidates.length,
+              selected: selected != null,
+              selectedDomain: selected?.domain ?? null,
+            });
+            if (selected) {
+              const { data: normalizedName, error: normalizedNameError } =
+                await params.supabase.rpc(
+                  "merchant_resolution_descriptor_key",
+                  {
+                    p_merchant: selected.name,
+                    p_raw_text: null,
+                    p_raw_text_is_merchant_descriptor: false,
+                  },
+                );
+              if (
+                !normalizedNameError &&
+                typeof normalizedName === "string" &&
+                normalizedName
+              ) {
+                canonicalMerchant = await persistCanonicalMerchant({
+                  supabase: params.supabase,
+                  canonicalName: selected.name,
+                  normalizedName,
+                  canonicalDomain: selected.domain,
+                  verificationStatus: "automatic",
+                  resolutionSource: "logo_dev_search",
+                  confidence: 0.75,
+                });
+              } else {
+                console.warn(
+                  "[merchant-enrichment] candidate_normalization_failed",
+                  {
+                    itemIndex,
+                    merchant,
+                    selectedDomain: selected.domain,
+                    hasNormalizedName:
+                      typeof normalizedName === "string" &&
+                      normalizedName.length > 0,
+                    hasError: Boolean(normalizedNameError),
+                  },
+                );
+              }
+            }
+          } catch (error) {
+            console.warn(
+              "[merchant-resolution] AI candidate selection failed",
+              {
+                errorName: error instanceof Error ? error.name : "UnknownError",
+                errorCode:
+                  typeof (error as { code?: unknown })?.code === "string"
+                    ? (error as { code: string }).code
+                    : null,
+              },
+            );
           }
-          : resolution.merchantId
-          ? { merchant_id: resolution.merchantId }
-          : {}),
-        ...(!canonicalMerchant && resolution.candidates.length
-          ? { merchant_candidates: resolution.candidates }
-          : {}),
-      };
+        }
+
+        console.log(
+          "[merchant-resolution]",
+          JSON.stringify({
+            outcome: resolution.suppressed
+              ? "suppressed"
+              : resolution.merchantId
+                ? "internal_hit"
+                : canonicalMerchant
+                  ? "ai_selected"
+                  : resolution.cacheHit
+                    ? "cache_hit"
+                    : resolution.candidates.length
+                      ? "candidate_ambiguous"
+                      : "unresolved",
+            mode: "INTERACTIVE_ANALYZE",
+            candidateCount: resolution.candidates.length,
+          }),
+        );
+
+        return {
+          ...publicItem,
+          ...(sourceGated && !canonicalMerchant
+            ? { merchant_auto_resolution_blocked: true }
+            : {}),
+          ...(canonicalMerchant
+            ? {
+                merchant_id: canonicalMerchant.id,
+                merchant_domain: canonicalMerchant.domain,
+                merchant_structured_name: canonicalMerchant.canonical_name,
+                merchant_resolution_source: resolution.merchantId
+                  ? resolution.source
+                  : params.autoResolveCandidates === true
+                    ? "headless_ai_candidate"
+                    : "timezone_regional_ai",
+              }
+            : !sourceGated && resolution.merchantId
+              ? { merchant_id: resolution.merchantId }
+              : {}),
+          ...(!canonicalMerchant && resolution.candidates.length
+            ? { merchant_candidates: resolution.candidates }
+            : {}),
+        };
+      } catch (error) {
+        if (!sourceGated) throw error;
+        return blockedItem;
+      }
     }),
   );
 }
@@ -264,14 +341,16 @@ export async function resolveAnalyzedMerchantIdentity(params: {
   if (!merchant) return null;
 
   const [enriched] = await enrichAnalyzedMerchantItems({
-    items: [{
-      merchant,
-      ...(params.currency ? { currency: params.currency } : {}),
-      ...(params.merchantUrl ? { merchantUrl: params.merchantUrl } : {}),
-      ...(params.merchantCountry
-        ? { merchantCountry: params.merchantCountry }
-        : {}),
-    }],
+    items: [
+      {
+        merchant,
+        ...(params.currency ? { currency: params.currency } : {}),
+        ...(params.merchantUrl ? { merchantUrl: params.merchantUrl } : {}),
+        ...(params.merchantCountry
+          ? { merchantCountry: params.merchantCountry }
+          : {}),
+      },
+    ],
     supabase: params.supabase,
     userId: params.userId,
     logoDevSecretKey: params.logoDevSecretKey,
@@ -279,16 +358,18 @@ export async function resolveAnalyzedMerchantIdentity(params: {
     autoResolveCandidates: true,
     dependencies: params.dependencies,
   });
-  const merchantId = typeof enriched?.merchant_id === "string"
-    ? enriched.merchant_id.trim()
-    : "";
+  const merchantId =
+    typeof enriched?.merchant_id === "string"
+      ? enriched.merchant_id.trim()
+      : "";
   if (!merchantId) return null;
 
   return {
     merchantId,
-    merchantDomain: typeof enriched.merchant_domain === "string"
-      ? enriched.merchant_domain.trim() || null
-      : null,
+    merchantDomain:
+      typeof enriched.merchant_domain === "string"
+        ? enriched.merchant_domain.trim() || null
+        : null,
     merchantStructuredName:
       typeof enriched.merchant_structured_name === "string"
         ? enriched.merchant_structured_name.trim() || null

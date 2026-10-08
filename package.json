@@ -15,6 +15,7 @@
     "pricing:check": "node scripts/generate-regional-pricing.mjs --check && prettier --check src/data/regional-pricing.generated.ts supabase/functions/shared/regional-pricing.generated.ts",
     "pricing:test": "node --experimental-strip-types --test tests/checkout-regional-pricing.test.mjs tests/regional-pricing.test.mjs tests/stripe-regional-pricing-sync.test.mjs tests/pricing-generation.test.mjs tests/pricing-audit.test.mjs tests/pricing-fx-refresh.test.mjs",
     "test:seo": "node --experimental-strip-types --test tests/seo-geo-pages.test.mjs tests/blog-publication.test.mjs",
+    "test:merchant": "node --experimental-strip-types --test supabase/functions/_tests/future_merchant_safeguards_node_test.mjs supabase/functions/_tests/merchant_auto_resolution_postgres_node_test.mjs tests/email-import-fanout.test.mjs",
     "test": "npm run pricing:test && npm run test:seo",
     "pricing:stripe:plan": "node scripts/sync-regional-pricing-to-stripe.mjs",
     "pricing:stripe:sync": "node scripts/sync-regional-pricing-to-stripe.mjs --apply",
@@ -130,6 +131,7 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@types/express": "^4.17.23",
     "@types/node": "^24.5.2",
     "@types/react": "^19.2.1",

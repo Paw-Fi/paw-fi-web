@@ -2000,6 +2000,7 @@ Deno.serve(async (req: Request) => {
                     category: transaction.category,
                     description: transaction.description,
                     merchant: transaction.merchant,
+                    merchantSourceText: userMessageContent,
                     ...merchantIdentitySaveFields(transaction),
                     date: transaction.date!,
                     currency: currencyResult.currency,
@@ -2156,6 +2157,7 @@ Deno.serve(async (req: Request) => {
                       supabase,
                       userId,
                       preferredTimezone: userTimezone,
+                      sourceText: userMessageContent,
                     });
                   const splitConfig =
                     householdId && !isPortfolio

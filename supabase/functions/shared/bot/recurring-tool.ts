@@ -114,9 +114,10 @@ function buildRecurringSelectionClarification(
 }
 
 async function resolveRecurringSelection(params: ExecuteManageRecurringParams) {
-  const expenseIdDirect = [params.args.recurring_id, params.args.expense_id]
-    .find((value) => typeof value === "string" && value.trim())
-    ?.trim() || "";
+  const expenseIdDirect =
+    [params.args.recurring_id, params.args.expense_id]
+      .find((value) => typeof value === "string" && value.trim())
+      ?.trim() || "";
   const spaceNameByHouseholdId = (householdId: string | null | undefined) =>
     householdId ? params.spaceMap.get(householdId)?.name || null : null;
 
@@ -181,7 +182,7 @@ function normalizeCalendarDate(value: unknown): string | null {
   }
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) ||
-      date.toISOString().slice(0, 10) !== value
+    date.toISOString().slice(0, 10) !== value
     ? null
     : value;
 }
@@ -251,9 +252,10 @@ function sanitizeSeriesListResult(
         latest_actionable_occurrence_date:
           row.latest_actionable_occurrence_date,
         actionable_count: row.actionable_count,
-        space: typeof row.household_id === "string"
-          ? params.spaceMap.get(row.household_id)?.name
-          : "personal",
+        space:
+          typeof row.household_id === "string"
+            ? params.spaceMap.get(row.household_id)?.name
+            : "personal",
       })),
       has_more: (data as Record<string, unknown>).has_more === true,
     },
@@ -278,9 +280,8 @@ function sanitizeHistoryResult(
         status: row.status,
         confirmation_source: row.confirmation_source,
         paid_date: row.paid_date,
-        amount: row.amount_cents == null
-          ? null
-          : Number(row.amount_cents) / 100,
+        amount:
+          row.amount_cents == null ? null : Number(row.amount_cents) / 100,
         currency: row.currency,
         confirmed_at: row.confirmed_at,
       })),
@@ -295,12 +296,12 @@ async function loadPendingOccurrenceChoices(
   recurringId: string,
 ): Promise<
   | {
-    items: Array<{
-      scheduled_occurrence_date: string;
-      amount: number;
-      currency: string;
-    }>;
-  }
+      items: Array<{
+        scheduled_occurrence_date: string;
+        amount: number;
+        currency: string;
+      }>;
+    }
   | Record<string, unknown>
 > {
   const result = await invokeRecurringFunction(
@@ -312,21 +313,23 @@ async function loadPendingOccurrenceChoices(
   );
   if (!result.success) return result;
 
-  const rows = result.data && typeof result.data === "object" &&
-      Array.isArray((result.data as Record<string, unknown>).items)
-    ? ((result.data as { items: Array<Record<string, unknown>> }).items)
-    : [];
+  const rows =
+    result.data &&
+    typeof result.data === "object" &&
+    Array.isArray((result.data as Record<string, unknown>).items)
+      ? (result.data as { items: Array<Record<string, unknown>> }).items
+      : [];
   return {
     items: rows
       .filter((row) => row.status === "pending")
       .map((row) => ({
-        scheduled_occurrence_date: String(
-          row.scheduled_occurrence_date || "",
-        ),
+        scheduled_occurrence_date: String(row.scheduled_occurrence_date || ""),
         amount: Number(row.amount_cents || 0) / 100,
         currency: String(row.currency || "").toUpperCase(),
       }))
-      .filter((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.scheduled_occurrence_date)),
+      .filter((row) =>
+        /^\d{4}-\d{2}-\d{2}$/.test(row.scheduled_occurrence_date),
+      ),
   };
 }
 
@@ -343,7 +346,8 @@ function buildOccurrenceConfirmationClarification(params: {
   const availableDates = params.pendingOccurrences.map(
     (occurrence) => occurrence.scheduled_occurrence_date,
   );
-  const scheduledDateIsPending = params.scheduledOccurrenceDate !== null &&
+  const scheduledDateIsPending =
+    params.scheduledOccurrenceDate !== null &&
     availableDates.includes(params.scheduledOccurrenceDate);
   return {
     status: "confirmation_details_required",
@@ -372,12 +376,14 @@ export async function executeManageRecurringTool(
     selectionIndex: Number.isSafeInteger(Number(params.args.selection_index))
       ? Number(params.args.selection_index)
       : null,
-    hasRecurringId: typeof params.args.recurring_id === "string" ||
+    hasRecurringId:
+      typeof params.args.recurring_id === "string" ||
       typeof params.args.expense_id === "string",
-    scheduled: normalizeCalendarDate(params.args.scheduled_occurrence_date) ||
-      "none",
+    scheduled:
+      normalizeCalendarDate(params.args.scheduled_occurrence_date) || "none",
     paid: normalizeCalendarDate(params.args.paid_date) || "none",
-    hasAmount: Number.isFinite(Number(params.args.amount)) &&
+    hasAmount:
+      Number.isFinite(Number(params.args.amount)) &&
       Number(params.args.amount) > 0,
   });
 
@@ -388,16 +394,19 @@ export async function executeManageRecurringTool(
     }
     const normalizedScope = String(
       params.args.space_scope || params.args.scope || "",
-    ).trim().toLowerCase().replace(/[\s-]+/g, "_");
+    )
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
     const hasExplicitScope = hasExplicitBotSpaceScope(params.args);
     const requestedScope = resolveBotSpaceScope(params.args, params.spaceMap);
     const requestedCurrencies = Array.isArray(params.args.currencies)
       ? params.args.currencies.map((value: unknown) =>
-        String(value).trim().toUpperCase()
-      )
+          String(value).trim().toUpperCase(),
+        )
       : params.args.currency
-      ? [String(params.args.currency).trim().toUpperCase()]
-      : [];
+        ? [String(params.args.currency).trim().toUpperCase()]
+        : [];
     if (
       requestedCurrencies.some(
         (value: string) => !VALID_CURRENCIES.includes(value),
@@ -405,9 +414,10 @@ export async function executeManageRecurringTool(
     ) {
       return { error: "currencies must contain valid ISO currency codes." };
     }
-    const currencies = requestedCurrencies.length > 0
-      ? Array.from(new Set(requestedCurrencies))
-      : undefined;
+    const currencies =
+      requestedCurrencies.length > 0
+        ? Array.from(new Set(requestedCurrencies))
+        : undefined;
     // A recurring selection must be read as one logical list. Calling the
     // existing single-scope RPC once per accessible space keeps its access
     // checks intact while ensuring the saved selection memory contains every
@@ -418,7 +428,9 @@ export async function executeManageRecurringTool(
       scopes = allAccessibleScopes;
     } else if (["personal", "personal_account"].includes(normalizedScope)) {
       scopes = [null];
-    } else if (["shared", "shared_space", "private_space"].includes(normalizedScope)) {
+    } else if (
+      ["shared", "shared_space", "private_space"].includes(normalizedScope)
+    ) {
       const wantsPrivate = normalizedScope === "private_space";
       scopes = listBotSpaceIds(
         params.spaceMap,
@@ -443,7 +455,7 @@ export async function executeManageRecurringTool(
             limit,
           },
           "Failed to list recurring transactions",
-        )
+        ),
       ),
     );
     const failedResult = results.find((result) => result.success !== true);
@@ -451,8 +463,8 @@ export async function executeManageRecurringTool(
     const allRows = results.flatMap((result) => {
       const data = result.data;
       return data &&
-          typeof data === "object" &&
-          Array.isArray((data as Record<string, unknown>).items)
+        typeof data === "object" &&
+        Array.isArray((data as Record<string, unknown>).items)
         ? (data as { items: unknown[] }).items
         : [];
     });
@@ -460,8 +472,10 @@ export async function executeManageRecurringTool(
       .sort((left: any, right: any) => {
         const leftDate = String(left?.next_occurrence_date || "9999-12-31");
         const rightDate = String(right?.next_occurrence_date || "9999-12-31");
-        return leftDate.localeCompare(rightDate) ||
-          String(left?.id || "").localeCompare(String(right?.id || ""));
+        return (
+          leftDate.localeCompare(rightDate) ||
+          String(left?.id || "").localeCompare(String(right?.id || ""))
+        );
       })
       .slice(0, limit);
     const result = {
@@ -469,21 +483,25 @@ export async function executeManageRecurringTool(
       action,
       data: {
         items: rows,
-        has_more: allRows.length > limit || results.some((result) =>
-          (result.data as Record<string, unknown> | undefined)?.has_more ===
-            true
-        ),
+        has_more:
+          allRows.length > limit ||
+          results.some(
+            (result) =>
+              (result.data as Record<string, unknown> | undefined)?.has_more ===
+              true,
+          ),
       },
     };
     const selectionItems = rows
       .map(normalizeLastListedTransactionFromRow)
       .filter((item): item is LastListedTransaction => item !== null);
     console.log(`[${params.logPrefix}] [RecurringSeriesReadTrace]`, {
-      scope: hasExplicitScope && !["all", "all_spaces"].includes(normalizedScope)
-        ? requestedScope.householdId
-          ? "named-space"
-          : normalizedScope || "personal"
-        : "all-accessible-spaces",
+      scope:
+        hasExplicitScope && !["all", "all_spaces"].includes(normalizedScope)
+          ? requestedScope.householdId
+            ? "named-space"
+            : normalizedScope || "personal"
+          : "all-accessible-spaces",
       queriedScopes: scopes.length,
       currencies: currencies || "all",
       requestedLimit: limit,
@@ -531,9 +549,10 @@ export async function executeManageRecurringTool(
     }
     const limit = normalizeLimit(params.args.limit, 50);
     if (limit === null) return { error: "limit must be between 1 and 100." };
-    const beforeScheduledDate = params.args.before_scheduled_date === undefined
-      ? undefined
-      : normalizeCalendarDate(params.args.before_scheduled_date);
+    const beforeScheduledDate =
+      params.args.before_scheduled_date === undefined
+        ? undefined
+        : normalizeCalendarDate(params.args.before_scheduled_date);
     if (
       params.args.before_scheduled_date !== undefined &&
       !beforeScheduledDate
@@ -552,19 +571,24 @@ export async function executeManageRecurringTool(
       },
       "Failed to list recurring payment history",
     );
-    const historyRows = result.data && typeof result.data === "object" &&
-        Array.isArray((result.data as Record<string, unknown>).items)
-      ? ((result.data as { items: Array<Record<string, unknown>> }).items)
-      : [];
+    const historyRows =
+      result.data &&
+      typeof result.data === "object" &&
+      Array.isArray((result.data as Record<string, unknown>).items)
+        ? (result.data as { items: Array<Record<string, unknown>> }).items
+        : [];
     console.log(`[${params.logPrefix}] [RecurringSeriesReadTrace]`, {
       action: "list_history",
       recurring: resolved.candidate.id.slice(0, 8),
       before: beforeScheduledDate || "none",
       success: result.success === true,
       returnedCount: historyRows.length,
-      occurrences: historyRows.slice(0, 8).map((row) =>
-        `${String(row.scheduled_occurrence_date || "?")}:${String(row.status || "?")}`
-      ),
+      occurrences: historyRows
+        .slice(0, 8)
+        .map(
+          (row) =>
+            `${String(row.scheduled_occurrence_date || "?")}:${String(row.status || "?")}`,
+        ),
     });
     return sanitizeHistoryResult(result);
   }
@@ -594,10 +618,12 @@ export async function executeManageRecurringTool(
 
     if (!result.success) return result;
 
-    const historyRows = result.data && typeof result.data === "object" &&
-        Array.isArray((result.data as Record<string, unknown>).items)
-      ? ((result.data as { items: Array<Record<string, unknown>> }).items)
-      : [];
+    const historyRows =
+      result.data &&
+      typeof result.data === "object" &&
+      Array.isArray((result.data as Record<string, unknown>).items)
+        ? (result.data as { items: Array<Record<string, unknown>> }).items
+        : [];
 
     if (historyRows.length === 0) {
       return {
@@ -612,9 +638,7 @@ export async function executeManageRecurringTool(
     const occurrenceDataPoints: OccurrenceDataPoint[] = historyRows.map(
       (row) => ({
         date: String(row.scheduled_occurrence_date || ""),
-        amount: row.amount_cents != null
-          ? Number(row.amount_cents) / 100
-          : 0,
+        amount: row.amount_cents != null ? Number(row.amount_cents) / 100 : 0,
         currency: String(row.currency || "").toUpperCase(),
         status: String(row.status || "pending"),
       }),
@@ -629,7 +653,8 @@ export async function executeManageRecurringTool(
     ).toLowerCase();
 
     // Build chart if requested or if asking about max/min/trend
-    const includeChart = params.args.include_chart === true ||
+    const includeChart =
+      params.args.include_chart === true ||
       ["max", "min", "trend"].includes(analyticsType);
 
     let chartUrl: string | undefined;
@@ -761,30 +786,32 @@ export async function executeManageRecurringTool(
         params.args.paid_date ?? params.args.date,
       );
       const amount = Number(params.args.amount);
-      const validAmount = Number.isFinite(amount) && amount > 0
-        ? amount
-        : null;
+      const validAmount = Number.isFinite(amount) && amount > 0 ? amount : null;
       const pendingResult = await loadPendingOccurrenceChoices(
         params,
         recurringId,
       );
-      const pendingOccurrences = "items" in pendingResult &&
-          Array.isArray((pendingResult as { items?: unknown }).items)
-        ? (pendingResult as {
-          items: Array<{
-            scheduled_occurrence_date: string;
-            amount: number;
-            currency: string;
-          }>;
-        }).items
-        : null;
+      const pendingOccurrences =
+        "items" in pendingResult &&
+        Array.isArray((pendingResult as { items?: unknown }).items)
+          ? (
+              pendingResult as {
+                items: Array<{
+                  scheduled_occurrence_date: string;
+                  amount: number;
+                  currency: string;
+                }>;
+              }
+            ).items
+          : null;
       if (!pendingOccurrences) return pendingResult;
-      const confirmationClarification = buildOccurrenceConfirmationClarification({
-        pendingOccurrences,
-        scheduledOccurrenceDate,
-        paidDate,
-        amount: validAmount,
-      });
+      const confirmationClarification =
+        buildOccurrenceConfirmationClarification({
+          pendingOccurrences,
+          scheduledOccurrenceDate,
+          paidDate,
+          amount: validAmount,
+        });
       if (
         confirmationClarification.needs_scheduled_occurrence_date ||
         confirmationClarification.needs_paid_date ||
@@ -797,38 +824,44 @@ export async function executeManageRecurringTool(
             recurring_id: recurringId,
             description: series.raw_text || series.description,
             category: series.category,
-            amount: series.amount_cents ? Number(series.amount_cents) / 100 : undefined,
+            amount: series.amount_cents
+              ? Number(series.amount_cents) / 100
+              : undefined,
             currency: series.currency,
           });
         }
         return confirmationClarification;
       }
-      const hasWalletHint = params.args.wallet_name !== undefined ||
+      const hasWalletHint =
+        params.args.wallet_name !== undefined ||
         params.args.wallet_id !== undefined ||
         params.args.account_id !== undefined;
       const wallet = hasWalletHint
         ? await resolveWalletForTransactionToolCall(
-          params.supabase,
-          params.userId,
-          series.household_id || null,
-          params.args,
-          params.logPrefix,
-        )
+            params.supabase,
+            params.userId,
+            series.household_id || null,
+            params.args,
+            params.logPrefix,
+          )
         : { accountId: series.account_id || null, error: undefined };
       if (wallet.error) return { error: wallet.error };
-      const hasSplitHints = Array.isArray(params.args.member_splits) &&
+      const hasSplitHints =
+        Array.isArray(params.args.member_splits) &&
         params.args.member_splits.length > 0;
-      const hasPayerHint = typeof params.args.payer_name === "string" &&
+      const hasPayerHint =
+        typeof params.args.payer_name === "string" &&
         params.args.payer_name.trim().length > 0;
-      const splitConfig = series.household_id && (hasSplitHints || hasPayerHint)
-        ? await resolveHouseholdSplitConfig(
-          params.supabase,
-          series.household_id,
-          params.userId,
-          validAmount!,
-          params.args,
-        )
-        : {};
+      const splitConfig =
+        series.household_id && (hasSplitHints || hasPayerHint)
+          ? await resolveHouseholdSplitConfig(
+              params.supabase,
+              series.household_id,
+              params.userId,
+              validAmount!,
+              params.args,
+            )
+          : {};
       return await invokeRecurringFunction(
         params,
         action,
@@ -868,15 +901,17 @@ export async function executeManageRecurringTool(
       if (!scheduledOccurrenceDate) {
         return { error: "scheduled_occurrence_date must use YYYY-MM-DD." };
       }
-      const paidDate = params.args.paid_date === undefined
-        ? undefined
-        : normalizeCalendarDate(params.args.paid_date);
+      const paidDate =
+        params.args.paid_date === undefined
+          ? undefined
+          : normalizeCalendarDate(params.args.paid_date);
       if (params.args.paid_date !== undefined && !paidDate) {
         return { error: "paid_date must use YYYY-MM-DD." };
       }
-      const amount = params.args.amount === undefined
-        ? undefined
-        : Number(params.args.amount);
+      const amount =
+        params.args.amount === undefined
+          ? undefined
+          : Number(params.args.amount);
       if (amount !== undefined && (!Number.isFinite(amount) || amount <= 0)) {
         return { error: "amount must be greater than 0." };
       }
@@ -892,17 +927,18 @@ export async function executeManageRecurringTool(
       if (optionalFields.every((value) => value === undefined)) {
         return { error: "Provide at least one occurrence field to update." };
       }
-      const hasWalletHint = params.args.wallet_name !== undefined ||
+      const hasWalletHint =
+        params.args.wallet_name !== undefined ||
         params.args.wallet_id !== undefined ||
         params.args.account_id !== undefined;
       const wallet = hasWalletHint
         ? await resolveWalletForTransactionToolCall(
-          params.supabase,
-          params.userId,
-          series.household_id || null,
-          params.args,
-          params.logPrefix,
-        )
+            params.supabase,
+            params.userId,
+            series.household_id || null,
+            params.args,
+            params.logPrefix,
+          )
         : null;
       if (wallet?.error) return { error: wallet.error };
       return await invokeRecurringFunction(
@@ -931,9 +967,10 @@ export async function executeManageRecurringTool(
       );
     }
 
-    const targetFunction = action === "unconfirm_occurrence"
-      ? "unconfirm-recurring-occurrence"
-      : "skip-recurring-occurrence";
+    const targetFunction =
+      action === "unconfirm_occurrence"
+        ? "unconfirm-recurring-occurrence"
+        : "skip-recurring-occurrence";
     const scheduledOccurrenceDate = normalizeCalendarDate(
       params.args.scheduled_occurrence_date,
     );
@@ -1003,15 +1040,16 @@ export async function executeManageRecurringTool(
       anchor_date: transaction.date!,
       projection_enabled: true,
     };
-    const splitConfig = householdId && scope.spaceMeta?.isPortfolio !== true
-      ? await resolveHouseholdSplitConfig(
-        params.supabase,
-        householdId,
-        params.userId,
-        transaction.amount,
-        params.args,
-      )
-      : {};
+    const splitConfig =
+      householdId && scope.spaceMeta?.isPortfolio !== true
+        ? await resolveHouseholdSplitConfig(
+            params.supabase,
+            householdId,
+            params.userId,
+            transaction.amount,
+            params.args,
+          )
+        : {};
     const wallet = await resolveWalletForTransactionToolCall(
       params.supabase,
       params.userId,
@@ -1022,7 +1060,8 @@ export async function executeManageRecurringTool(
     if (wallet.error) return { error: wallet.error };
     const currency = resolveWalletTransactionCurrency({
       wallet,
-      walletName: params.args.wallet_name ||
+      walletName:
+        params.args.wallet_name ||
         params.args.wallet_id ||
         params.args.account_id,
       transactionCurrency: transaction.currency,
@@ -1042,6 +1081,7 @@ export async function executeManageRecurringTool(
         date: transaction.date!,
         description: transaction.description,
         merchant: transaction.merchant,
+        merchantSourceText: params.userMessageContent,
         type: transaction.type,
         householdId,
         isPortfolio: scope.spaceMeta?.isPortfolio ?? false,
@@ -1072,12 +1112,12 @@ export async function executeManageRecurringTool(
       return { success: true, action };
     }
 
-    const formatted = formatInvokeError(error ?? data?.error) ||
+    const formatted =
+      formatInvokeError(error ?? data?.error) ||
       "Failed to save recurring transaction";
     const backendFailureReported = await reportFailure(params, {
-      targetFunction: transaction.type === "income"
-        ? "save-income"
-        : "save-expense",
+      targetFunction:
+        transaction.type === "income" ? "save-income" : "save-expense",
       formatted,
       error: error ?? data?.error,
       context: {
@@ -1129,11 +1169,11 @@ export async function executeManageRecurringTool(
   const scope = hasExplicitScope
     ? resolveBotSpaceScope(params.args, params.spaceMap)
     : {
-      householdId: existing.household_id || null,
-      spaceMeta: existing.household_id
-        ? params.spaceMap.get(existing.household_id)
-        : undefined,
-    };
+        householdId: existing.household_id || null,
+        spaceMeta: existing.household_id
+          ? params.spaceMap.get(existing.household_id)
+          : undefined,
+      };
   const householdId = scope.householdId;
   const date = normalizeDateInput(
     params.args.anchor_date ?? params.args.date,
@@ -1175,7 +1215,8 @@ export async function executeManageRecurringTool(
   }
   if (hasExplicitScope) updates.household_id = householdId;
 
-  const hasExplicitWallet = params.args.wallet_name !== undefined ||
+  const hasExplicitWallet =
+    params.args.wallet_name !== undefined ||
     params.args.wallet_id !== undefined ||
     params.args.account_id !== undefined;
   if (hasExplicitWallet) {
@@ -1189,7 +1230,8 @@ export async function executeManageRecurringTool(
     if (wallet.error) return { error: wallet.error };
     const currency = resolveWalletTransactionCurrency({
       wallet,
-      walletName: params.args.wallet_name ||
+      walletName:
+        params.args.wallet_name ||
         params.args.wallet_id ||
         params.args.account_id,
       transactionCurrency: updates.currency || existing.currency,
@@ -1201,24 +1243,28 @@ export async function executeManageRecurringTool(
     updates.currency = currency.currency;
   }
 
-  const hasSplitHints = Array.isArray(params.args.member_splits) &&
+  const hasSplitHints =
+    Array.isArray(params.args.member_splits) &&
     params.args.member_splits.length > 0;
-  const hasPayerHint = typeof params.args.payer_name === "string" &&
+  const hasPayerHint =
+    typeof params.args.payer_name === "string" &&
     params.args.payer_name.trim().length > 0;
-  const amountMajor = params.args.amount != null
-    ? Number(params.args.amount)
-    : Number(existing.amount_cents || 0) / 100;
-  const splitConfig = householdId &&
-      scope.spaceMeta?.isPortfolio !== true &&
-      (hasSplitHints || hasPayerHint)
-    ? await resolveHouseholdSplitConfig(
-      params.supabase,
-      householdId,
-      params.userId,
-      amountMajor,
-      params.args,
-    )
-    : {};
+  const amountMajor =
+    params.args.amount != null
+      ? Number(params.args.amount)
+      : Number(existing.amount_cents || 0) / 100;
+  const splitConfig =
+    householdId &&
+    scope.spaceMeta?.isPortfolio !== true &&
+    (hasSplitHints || hasPayerHint)
+      ? await resolveHouseholdSplitConfig(
+          params.supabase,
+          householdId,
+          params.userId,
+          amountMajor,
+          params.args,
+        )
+      : {};
 
   const requestBody: Record<string, unknown> = {
     userId: params.userId,
@@ -1255,7 +1301,8 @@ export async function executeManageRecurringTool(
   const success = !error && data?.success === true;
   if (success) return { success: true };
 
-  const formatted = formatInvokeError(error ?? data?.error) ||
+  const formatted =
+    formatInvokeError(error ?? data?.error) ||
     "Failed to update recurring transaction";
   const backendFailureReported = await reportFailure(params, {
     targetFunction: "update-expense",

@@ -3,6 +3,10 @@
 // Extends unified transaction system (expenses table with type='income')
 
 import { corsHeaders } from "../shared/cors.ts";
+import {
+  merchantAutoResolutionPatch,
+  merchantAutoResolutionValidationError,
+} from "../shared/merchant-auto-resolution-policy.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
@@ -89,6 +93,7 @@ interface RequestBody {
   description?: string; // Optional description/note
   merchant?: string; // Optional merchant/payee (used for both expense and income)
   merchantId?: string;
+  merchantAutoResolutionBlocked?: boolean;
   merchantStructuredName?: string;
   merchantEvidenceDescriptor?: string;
   merchantEvidenceAllowStructured?: boolean;
@@ -166,6 +171,10 @@ Deno.serve(async (req: Request) => {
 
     // Parse request body
     const body: RequestBody = await req.json();
+    const merchantPolicyError = merchantAutoResolutionValidationError(
+      body.merchantAutoResolutionBlocked,
+    );
+    if (merchantPolicyError) return errorResponse(merchantPolicyError, 400);
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
@@ -553,6 +562,7 @@ Deno.serve(async (req: Request) => {
           ? body.merchantStructuredName.trim().slice(0, 255)
           : normalizedMerchant,
       merchant_id: sanitizeUuid(body.merchantId),
+      ...merchantAutoResolutionPatch(body.merchantAutoResolutionBlocked),
       currency: currency,
       owner_type: ownerType,
       privacy_scope: privacyScope,

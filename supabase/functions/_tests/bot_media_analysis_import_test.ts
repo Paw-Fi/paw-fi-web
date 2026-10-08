@@ -70,11 +70,6 @@ Deno.test(
     assert(analyzeSource.includes("runEnrichedTransactionAnalysis"));
     assert(emailSource.includes("runEnrichedTransactionAnalysis"));
     assert(emailSource.includes("preferredTimezone: owner.preferredTimezone"));
-    assert(emailSource.includes("merchantId: item.merchant_id"));
-    assert(
-      emailSource.includes(
-        "merchantStructuredName: item.merchant_structured_name",
-      ),
-    );
+    assert(emailSource.includes("analyzedMerchantSaveFields(item)"));
   },
 );

@@ -72,10 +72,9 @@ import {
 } from "../shared/vertex-ai-chat.ts";
 import { normalizePreferredCurrency } from "../shared/user-preferred-currency.ts";
 import { buildNotificationDeepLink } from "../shared/notification-delivery.ts";
-import {
-  type AnalyzedMerchantIdentity,
-  resolveAnalyzedMerchantIdentity,
-} from "../shared/merchant-analysis.ts";
+import { type AnalyzedMerchantIdentity } from "../shared/merchant-analysis.ts";
+import { enrichSourceVerifiedMerchantItems } from "../shared/merchant-source-verification.ts";
+import { merchantAutoResolutionPatch } from "../shared/merchant-auto-resolution-policy.ts";
 import {
   hasCapturePlusEntitlement,
   jsonSubscriptionRequired,
@@ -129,6 +128,7 @@ const firebaseProjectId = readRuntimeEnv("FIREBASE_PROJECT_ID");
 interface TransactionPayload {
   merchantName?: string | null;
   merchantEntityType?: "organization" | "person" | "unknown" | null;
+  merchantSourceText?: string | null;
   rawMerchant?: string | null;
   type?: string | null;
   amount: number;
@@ -2626,21 +2626,56 @@ Deno.serve(async (req: Request) => {
     // guessed business name. Failures are non-blocking so optional logo
     // enrichment can never prevent an otherwise valid capture from saving.
     let resolvedMerchantIdentity: AnalyzedMerchantIdentity | null = null;
+    let merchantAutoResolutionBlocked = true;
     if (structuredMerchantForStorage && shouldResolveStructuredMerchant) {
       try {
-        const candidateIdentity = await resolveAnalyzedMerchantIdentity({
-          merchant: structuredMerchantForStorage,
-          currency,
-          supabase,
-          userId,
-          logoDevSecretKey: readRuntimeEnv("LOGO_DEV_SECRET_KEY") ?? "",
-          preferredTimezone: preferredTimezone ?? undefined,
+        const sourceText = isNotificationCapture
+          ? (tx.merchantSourceText ?? "")
+          : [tx.merchantName, tx.rawMerchant, tx.note]
+              .filter((value) => typeof value === "string" && value.trim())
+              .join("\n");
+        const [analyzed] = await enrichSourceVerifiedMerchantItems({
+          body: { text: sourceText },
+          items: [
+            {
+              merchant: structuredMerchantForStorage,
+              amount: tx.amount,
+              currency,
+              date: normalizedDate,
+              type: transactionType,
+            },
+          ],
+          merchantContext: {
+            supabase,
+            userId,
+            logoDevSecretKey: readRuntimeEnv("LOGO_DEV_SECRET_KEY") ?? "",
+            preferredTimezone: preferredTimezone ?? undefined,
+            autoResolveCandidates: true,
+          },
         });
-        const merchantId = sanitizeUuid(candidateIdentity?.merchantId);
-        resolvedMerchantIdentity =
-          candidateIdentity && merchantId
-            ? { ...candidateIdentity, merchantId }
-            : null;
+        const merchantId = sanitizeUuid(
+          typeof analyzed.merchant_id === "string"
+            ? analyzed.merchant_id
+            : null,
+        );
+        if (merchantId && analyzed.merchant_auto_resolution_blocked !== true) {
+          resolvedMerchantIdentity = {
+            merchantId,
+            merchantDomain:
+              typeof analyzed.merchant_domain === "string"
+                ? analyzed.merchant_domain
+                : null,
+            merchantStructuredName:
+              typeof analyzed.merchant_structured_name === "string"
+                ? analyzed.merchant_structured_name
+                : null,
+            merchantResolutionSource:
+              typeof analyzed.merchant_resolution_source === "string"
+                ? analyzed.merchant_resolution_source
+                : null,
+          };
+          merchantAutoResolutionBlocked = false;
+        }
       } catch (_) {
         console.warn(
           "[save-wallet-transaction] Optional merchant enrichment failed; continuing without canonical identity",
@@ -2655,6 +2690,10 @@ Deno.serve(async (req: Request) => {
     // Build the complete split before the parent exists. A required split is
     // committed by one database RPC, so no observer can see a parent-only row.
     const transactionId = crypto.randomUUID();
+    const merchantStructuredNameForStorage = merchantAutoResolutionBlocked
+      ? null
+      : (resolvedMerchantIdentity?.merchantStructuredName ??
+        structuredMerchantForStorage);
     const transactionRecord = {
       id: transactionId,
       contact_id: contactId,
@@ -2665,12 +2704,11 @@ Deno.serve(async (req: Request) => {
       date: normalizedDate,
       raw_text: description,
       merchant: merchantForStorage,
-      merchant_structured_name:
-        resolvedMerchantIdentity?.merchantStructuredName ??
-        structuredMerchantForStorage,
+      merchant_structured_name: merchantStructuredNameForStorage,
       ...(resolvedMerchantIdentity
         ? { merchant_id: resolvedMerchantIdentity.merchantId }
         : {}),
+      ...merchantAutoResolutionPatch(merchantAutoResolutionBlocked),
       currency,
       breakdown: null,
       receipt_image_url: null,
@@ -2811,19 +2849,24 @@ Deno.serve(async (req: Request) => {
     // parent best-effort; split creation remains unchanged and authoritative.
     if (
       atomicResult != null &&
-      (resolvedMerchantIdentity || structuredMerchantForStorage) &&
+      (resolvedMerchantIdentity ||
+        structuredMerchantForStorage ||
+        merchantAutoResolutionBlocked) &&
       (expense?.merchant_id !== resolvedMerchantIdentity?.merchantId ||
         expense?.merchant_structured_name !==
-          (resolvedMerchantIdentity?.merchantStructuredName ??
-            structuredMerchantForStorage))
+          merchantStructuredNameForStorage ||
+        (merchantAutoResolutionBlocked &&
+          expense?.user_overrides?.merchant_auto_resolution_blocked !== true))
     ) {
       const identityPatch = {
-        merchant_structured_name:
-          resolvedMerchantIdentity?.merchantStructuredName ??
-          structuredMerchantForStorage,
+        merchant_structured_name: merchantStructuredNameForStorage,
         ...(resolvedMerchantIdentity
           ? { merchant_id: resolvedMerchantIdentity.merchantId }
           : {}),
+        ...merchantAutoResolutionPatch(
+          merchantAutoResolutionBlocked,
+          expense?.user_overrides ?? {},
+        ),
       };
       const { data: enrichedExpense, error: identityUpdateError } =
         await supabase

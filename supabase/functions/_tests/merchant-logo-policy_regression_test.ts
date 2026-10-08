@@ -303,7 +303,7 @@ Deno.test(
     assert(!merchantAnalysis.includes('from("./analyze-core.ts")'));
     assertStringIncludes(
       walletCapture,
-      "await resolveAnalyzedMerchantIdentity({",
+      "await enrichSourceVerifiedMerchantItems({",
     );
     assertStringIncludes(merchantAnalysis, "autoResolveCandidates: true");
     assertStringIncludes(
@@ -333,10 +333,7 @@ Deno.test(
       walletCapture,
       "merchant_id: resolvedMerchantIdentity.merchantId",
     );
-    assertStringIncludes(
-      walletCapture,
-      "resolvedMerchantIdentity || structuredMerchantForStorage",
-    );
+    assertStringIncludes(walletCapture, "merchantStructuredNameForStorage");
   },
 );
 
@@ -346,7 +343,7 @@ Deno.test(
     assertStringIncludes(analyze, "runEnrichedTransactionAnalysis");
     assertStringIncludes(resendInbound, "runEnrichedTransactionAnalysis");
     assertStringIncludes(botMedia, "runEnrichedTransactionAnalysis");
-    assertStringIncludes(walletCapture, "resolveAnalyzedMerchantIdentity");
+    assertStringIncludes(walletCapture, "enrichSourceVerifiedMerchantItems");
     assertStringIncludes(notificationCapture, "save-wallet-transaction");
   },
 );

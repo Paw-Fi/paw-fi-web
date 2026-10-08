@@ -17,21 +17,30 @@ import {
 export async function enrichVerifiedInteractiveItems(
   items: InteractiveItem[],
   enrich: (items: InteractiveItem[]) => Promise<unknown>,
+  blockOnFailure = false,
 ): Promise<InteractiveItem[]> {
   try {
     const enriched = await enrich(structuredClone(items));
     if (!Array.isArray(enriched) || enriched.length !== items.length) {
-      return items;
+      return blockOnFailure
+        ? items.map((item) => ({
+            ...item,
+            merchant_auto_resolution_blocked: true,
+          }))
+        : items;
     }
     return items.map((item, index) => {
       const extra = objectValue(enriched[index]);
       const metadata: Record<string, unknown> = {};
+      const blocked = extra.merchant_auto_resolution_blocked === true;
+      if (blocked) metadata.merchant_auto_resolution_blocked = true;
       for (const field of [
         "merchant_id",
         "merchant_domain",
         "merchant_structured_name",
       ]) {
         if (
+          !blocked &&
           typeof extra[field] === "string" &&
           extra[field].trim() &&
           extra[field].length <= 4000
@@ -57,7 +66,12 @@ export async function enrichVerifiedInteractiveItems(
   } catch {
     // Identity/logos are optional; they cannot invalidate verified transaction
     // intent or change any amount, destination, raw merchant, or allocation.
-    return items;
+    return blockOnFailure
+      ? items.map((item) => ({
+          ...item,
+          merchant_auto_resolution_blocked: true,
+        }))
+      : items;
   }
 }
 

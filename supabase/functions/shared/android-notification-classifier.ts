@@ -139,15 +139,26 @@ export function buildNotificationCaptureTransaction(
   return {
     merchantName: classification.merchant,
     merchantEntityType: classification.merchantEntityType,
+    merchantSourceText: [
+      notification.title,
+      notification.text,
+      notification.bigText,
+      notification.subText,
+      notification.summaryText,
+      notification.infoText,
+    ]
+      .filter((value) => typeof value === "string" && value.trim())
+      .join("\n"),
     type: classification.transactionType,
     amount: classification.amount,
     currency: classification.currency,
     currencyEvidenceRaw: classification.currencyEvidenceRaw,
-    currencyEvidenceType: classification.currencySource === "account_context"
-      ? "ai_account_context"
-      : classification.currencySource === "user_preference"
-      ? "ai_user_preference"
-      : "ai_notification_explicit",
+    currencyEvidenceType:
+      classification.currencySource === "account_context"
+        ? "ai_account_context"
+        : classification.currencySource === "user_preference"
+          ? "ai_user_preference"
+          : "ai_notification_explicit",
     currencyAmbiguous: classification.currencyAmbiguous,
     accountCurrency,
     date: classification.date,
@@ -232,8 +243,10 @@ export class AndroidNotificationClassificationError extends Error {
   }
 }
 
-export interface AndroidNotificationFailureResult
-  extends Record<string, unknown> {
+export interface AndroidNotificationFailureResult extends Record<
+  string,
+  unknown
+> {
   success: false;
   error: "Classification failed";
   diagnosticCode: string;
@@ -278,17 +291,15 @@ export function buildAndroidNotificationDependencyFailure(
   };
 }
 
-export async function buildAndroidNotificationClassificationContextHash(
-  params: {
-    householdId: string | null;
-    accountId: string | null;
-    accountCurrency: string | null;
-    preferredCurrency: string | null;
-    preferredLanguage: string | null;
-    expenseCategories: string[];
-    incomeCategories: string[];
-  },
-): Promise<string> {
+export async function buildAndroidNotificationClassificationContextHash(params: {
+  householdId: string | null;
+  accountId: string | null;
+  accountCurrency: string | null;
+  preferredCurrency: string | null;
+  preferredLanguage: string | null;
+  expenseCategories: string[];
+  incomeCategories: string[];
+}): Promise<string> {
   // The event key already identifies notification content. Keep clock-derived
   // dates out so a retry after midnight cannot reopen the same failed event.
   const canonicalContext = [
@@ -515,7 +526,7 @@ function structuredResponseObject(response: {
         typeof part === "object" &&
         typeof (part as Record<string, unknown>).text === "string"
           ? String((part as Record<string, unknown>).text)
-          : ""
+          : "",
       )
       .join("")
       .trim();
@@ -605,7 +616,8 @@ function normalizedDate(value: unknown, fallbackDate: string): string {
   const raw = optionalString(value, 32);
   if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return fallbackDate;
   const parsed = new Date(`${raw}T00:00:00.000Z`);
-  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== raw
+  return Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== raw
     ? fallbackDate
     : raw;
 }
@@ -739,9 +751,8 @@ export function classificationHasNotificationEvidence(
       classification.currencyEvidenceRaw,
     );
   }
-  const normalizedAccountCurrency = normalizeSupportedCurrencyContext(
-    accountCurrency,
-  );
+  const normalizedAccountCurrency =
+    normalizeSupportedCurrencyContext(accountCurrency);
   const normalizedContextCurrency =
     classification.currencySource === "account_context"
       ? normalizedAccountCurrency
@@ -777,9 +788,8 @@ export function normalizeAndroidNotificationClassification(
   const eventStatus = EVENT_STATUSES.has(rawStatus) ? rawStatus : "unknown";
   const rawSubtype = optionalString(value.subtype, 32) ?? "other";
   const subtype = SUBTYPES.has(rawSubtype) ? rawSubtype : "other";
-  const rawConfidence = typeof value.confidence === "number"
-    ? value.confidence
-    : NaN;
+  const rawConfidence =
+    typeof value.confidence === "number" ? value.confidence : NaN;
   const confidence = Number.isFinite(rawConfidence)
     ? Math.max(0, Math.min(1, rawConfidence))
     : 0;
@@ -806,7 +816,9 @@ export function normalizeAndroidNotificationClassification(
       model,
     });
   }
-  const completedRefund = eventStatus === "reversed" && subtype === "refund" &&
+  const completedRefund =
+    eventStatus === "reversed" &&
+    subtype === "refund" &&
     moneyDirection === "in";
   if (eventStatus !== "posted" && !completedRefund) {
     return ignoredClassification({
@@ -823,9 +835,10 @@ export function normalizeAndroidNotificationClassification(
       eventStatus,
       subtype,
       confidence,
-      reasonCode: movementScope === "own_accounts"
-        ? "internal_transfer_requires_wallets"
-        : "unclear_movement_scope",
+      reasonCode:
+        movementScope === "own_accounts"
+          ? "internal_transfer_requires_wallets"
+          : "unclear_movement_scope",
       moneyDirection,
       movementScope,
       date,
@@ -897,11 +910,17 @@ export function normalizeAndroidNotificationClassification(
   }
 
   if (
-    !INCOME_SUBTYPES.has(subtype) && !EXPENSE_SUBTYPES.has(subtype) &&
-    subtype !== "transfer" && subtype !== "other"
+    !INCOME_SUBTYPES.has(subtype) &&
+    !EXPENSE_SUBTYPES.has(subtype) &&
+    subtype !== "transfer" &&
+    subtype !== "other"
   ) {
     return ignoredClassification({
-      eventStatus, subtype, confidence, date, model,
+      eventStatus,
+      subtype,
+      confidence,
+      date,
+      model,
       reasonCode: "unsupported_transaction_subtype",
     });
   }
@@ -911,9 +930,12 @@ export function normalizeAndroidNotificationClassification(
     rawFrequency && FREQUENCIES.has(rawFrequency) ? rawFrequency : undefined;
   const requestedRecurring = value.isRecurring === true;
   const rawInterval = value.interval;
-  const intervalValid = rawInterval == null ||
-    (typeof rawInterval === "number" && Number.isInteger(rawInterval) &&
-      rawInterval >= 1 && rawInterval <= 365);
+  const intervalValid =
+    rawInterval == null ||
+    (typeof rawInterval === "number" &&
+      Number.isInteger(rawInterval) &&
+      rawInterval >= 1 &&
+      rawInterval <= 365);
   const isRecurring = requestedRecurring && frequency != null && intervalValid;
   const interval =
     typeof rawInterval === "number" && intervalValid && rawInterval > 1
@@ -922,8 +944,8 @@ export function normalizeAndroidNotificationClassification(
   const normalizedType = INCOME_SUBTYPES.has(subtype)
     ? "income"
     : EXPENSE_SUBTYPES.has(subtype)
-    ? "expense"
-    : (transactionType as "expense" | "income");
+      ? "expense"
+      : (transactionType as "expense" | "income");
   if (moneyDirection !== (normalizedType === "income" ? "in" : "out")) {
     return ignoredClassification({
       eventStatus,
@@ -941,9 +963,10 @@ export function normalizeAndroidNotificationClassification(
     action: "save_transaction",
     eventStatus,
     transactionType: normalizedType,
-    subtype: subtype === "transfer" && normalizedType === "income"
-      ? "deposit"
-      : subtype,
+    subtype:
+      subtype === "transfer" && normalizedType === "income"
+        ? "deposit"
+        : subtype,
     moneyDirection,
     movementScope,
     directionEvidenceRaw: optionalString(value.directionEvidenceRaw, 500),
@@ -959,9 +982,10 @@ export function normalizeAndroidNotificationClassification(
     completionEvidenceRaw: optionalString(value.completionEvidenceRaw, 500),
     transactionEvidenceRaw: optionalString(value.transactionEvidenceRaw, 500),
     date,
-    category: subtype === "transfer"
-      ? "transfers"
-      : optionalString(value.category, 120)?.toLowerCase(),
+    category:
+      subtype === "transfer"
+        ? "transfers"
+        : optionalString(value.category, 120)?.toLowerCase(),
     description: optionalString(value.description, 240),
     isRecurring,
     ...(isRecurring && frequency
@@ -1037,8 +1061,7 @@ function buildClassifierSchema() {
   };
 }
 
-const NOTIFICATION_MOVEMENT_RULES =
-  `Determine moneyDirection from the account holder's perspective by semantic interpretation of all notification fields together: in means money received or credited; out means money sent, paid, debited, or withdrawn; unknown means direction is not established. Never infer direction from the app, currency, sender name, a generic transfer label, or a memo.
+const NOTIFICATION_MOVEMENT_RULES = `Determine moneyDirection from the account holder's perspective by semantic interpretation of all notification fields together: in means money received or credited; out means money sent, paid, debited, or withdrawn; unknown means direction is not established. Never infer direction from the app, currency, sender name, a generic transfer label, or a memo.
 Completed money received from another person or external source is income with subtype deposit, not a transfer. Apply this semantically in every language, script, regional number format, and currency notation.
 Completed money sent to another person or external recipient is an expense with subtype transfer and category transfers. A person-to-person payment is a saveable financial movement, even when no purchase or commercial merchant is mentioned.
 Set movementScope to external for money moving between the account holder and another party. Use own_accounts only when the notification explicitly establishes that both endpoints belong to the account holder. A generic transfer, payment to an account, a bank app, a truncated recipient name, or an unresolved destination wallet does not establish common ownership. Do not demand a second Moneko wallet for an external payment. When the direction or relationship itself is genuinely unclear, use unknown and ignore.
@@ -1091,8 +1114,9 @@ function buildVerifierPrompt(
   params: ClassifyAndroidNotificationParams,
   classification: AndroidNotificationClassification,
 ): string {
-  const decisionRule = classification.action === "save_transaction"
-    ? `Approve only when it clearly proves one completed or posted financial movement and the proposed direction, subtype, amount, ISO currency, merchant/source, and date are correct.
+  const decisionRule =
+    classification.action === "save_transaction"
+      ? `Approve only when it clearly proves one completed or posted financial movement and the proposed direction, subtype, amount, ISO currency, merchant/source, and date are correct.
 Reject promotions, discounts, reward offers, newsletters, shipping updates, statements, OTP/security messages, pending or declined events, authorizations, bills due, renewal reminders, explicitly identified movements between the user's own accounts or wallets, credit-card bill payments, and uncertain cases.
 Check that every proposed evidence fragment is verbatim and supports the field it claims to prove.
 When isRecurring is true, independently verify that the original notification explicitly establishes the proposed cadence and interval in its own language. A business name, repeatable service, matching amount, or nearby scheduled date alone does not prove recurrence. Reject a proposed recurring association when that evidence is absent.

@@ -6,6 +6,7 @@ import ts from "typescript";
 import * as emailImport from "../supabase/functions/shared/email-import.ts";
 import * as eventState from "../supabase/functions/shared/email-import-event-state.ts";
 import * as senderVerification from "../supabase/functions/shared/email-sender-verification.ts";
+import * as merchantPolicy from "../supabase/functions/shared/merchant-auto-resolution-policy.ts";
 import {
   hasPlusEntitlement,
   loadLatestSubscriptionForUser,
@@ -151,6 +152,7 @@ function harness(options = {}) {
   const exports = {};
   const email = { subject: "Import result", html: "Result", text: "Result" };
   const modules = {
+    "../shared/merchant-auto-resolution-policy.ts": merchantPolicy,
     "../shared/cors.ts": { corsHeaders: {} },
     "../shared/auth.ts": {
       resolveInternalFunctionKey: () => "test-internal-key",
@@ -186,7 +188,19 @@ function harness(options = {}) {
     },
     "../shared/email-import-ai-decision.ts": {
       classifyEmailImportWithAi: async () => [
-        { kind: "accept", transaction: { ...transaction } },
+        {
+          kind: "accept",
+          transaction: {
+            ...transaction,
+            ...(options.blocked
+              ? {
+                  merchant_auto_resolution_blocked: true,
+                  merchant_id: "untrusted",
+                  merchant_structured_name: "Wrong",
+                }
+              : {}),
+          },
+        },
       ],
       emailImportSafeRejectionCodes: () => [],
       shouldEscalateEmailImportAiFailure: () => true,
@@ -346,6 +360,24 @@ test("one receipt is saved to every authorized account with native currency and 
     app.events.every((event) => event.status === "processed"),
     true,
   );
+  assert.equal((await app.deliver()).status, 200);
+  assert.equal(app.saves.length, 2);
+});
+
+test("new email saves retain logo abstention without changing original financial data", async () => {
+  const app = harness({ blocked: true });
+  assert.equal((await app.deliver()).status, 200, JSON.stringify(app.errors));
+  for (const save of app.saves) {
+    const row = save.transactions[0];
+    assert.equal(row.merchantAutoResolutionBlocked, true);
+    assert.equal(row.merchantId, undefined);
+    assert.equal(row.merchantStructuredName, undefined);
+    assert.equal(row.merchant, transaction.merchant);
+    assert.equal(row.amount, transaction.amount);
+    assert.equal(row.currency, transaction.currency);
+    assert.equal(row.date, transaction.date);
+    assert.equal(row.category, transaction.category);
+  }
   assert.equal((await app.deliver()).status, 200);
   assert.equal(app.saves.length, 2);
 });

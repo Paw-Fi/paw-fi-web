@@ -18,6 +18,10 @@ import {
 } from "../shared/email-import.ts";
 import { resolveVerifiedSenderAccountIds } from "../shared/email-sender-verification.ts";
 import { createEmailImportAccountResolver } from "../shared/email-import-account.ts";
+import {
+  analyzedMerchantSaveFields,
+  blockAnalyzedMerchantIdentity,
+} from "../shared/merchant-auto-resolution-policy.ts";
 import { type AnalyzeRequestBody } from "../shared/analyze-core.ts";
 import {
   preserveAnalyzedMerchantIdentity,
@@ -1995,6 +1999,10 @@ export async function handleResendInboundWebhook(
             const result = await runEnrichedTransactionAnalysis({
               body: analyzeBody,
               apiKey: requiredGeminiApiKey,
+              merchantDeadlineAt:
+                processingStartedAtMs +
+                validPositiveInt(REQUEST_SOFT_DEADLINE_MS, 130000) -
+                1000,
               merchantContext: {
                 supabase,
                 userId: owner.userId,
@@ -2084,14 +2092,7 @@ export async function handleResendInboundWebhook(
                 item.merchant.trim().length > 0
                   ? { merchant: item.merchant.trim() }
                   : {}),
-                ...(typeof item.merchant_id === "string"
-                  ? { merchantId: item.merchant_id }
-                  : {}),
-                ...(typeof item.merchant_structured_name === "string"
-                  ? {
-                      merchantStructuredName: item.merchant_structured_name,
-                    }
-                  : {}),
+                ...analyzedMerchantSaveFields(item),
                 ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
                   ? { breakdown: item.breakdown }
                   : {}),
@@ -2171,6 +2172,10 @@ export async function handleResendInboundWebhook(
                 categoryPreferences: categoryContext.categoryPreferences,
               },
               apiKey: requiredGeminiApiKey,
+              merchantDeadlineAt:
+                processingStartedAtMs +
+                validPositiveInt(REQUEST_SOFT_DEADLINE_MS, 130000) -
+                1000,
               merchantContext: {
                 supabase,
                 userId: owner.userId,
@@ -2271,7 +2276,9 @@ export async function handleResendInboundWebhook(
                 } else if (decision.kind === "review") {
                   decisionCounts.review += 1;
                   reviewCandidates.push({
-                    candidate: decision.candidate,
+                    candidate: blockAnalyzedMerchantIdentity(
+                      decision.candidate,
+                    ),
                     issues: decision.issues,
                     evidenceText: boundedReviewEvidence(
                       emailBodyText,
@@ -2350,14 +2357,7 @@ export async function handleResendInboundWebhook(
                   item.merchant.trim().length > 0
                     ? { merchant: item.merchant.trim() }
                     : {}),
-                  ...(typeof item.merchant_id === "string"
-                    ? { merchantId: item.merchant_id }
-                    : {}),
-                  ...(typeof item.merchant_structured_name === "string"
-                    ? {
-                        merchantStructuredName: item.merchant_structured_name,
-                      }
-                    : {}),
+                  ...analyzedMerchantSaveFields(item),
                   ...(Array.isArray(item.breakdown) && item.breakdown.length > 0
                     ? { breakdown: item.breakdown }
                     : {}),

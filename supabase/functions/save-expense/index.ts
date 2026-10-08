@@ -3,6 +3,10 @@
 // Optionally creates household split if householdId provided
 
 import { corsHeaders } from "../shared/cors.ts";
+import {
+  merchantAutoResolutionPatch,
+  merchantAutoResolutionValidationError,
+} from "../shared/merchant-auto-resolution-policy.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
@@ -94,6 +98,7 @@ interface RequestBody {
   description?: string; // Optional description/note
   merchant?: string; // Optional merchant/payee
   merchantId?: string;
+  merchantAutoResolutionBlocked?: boolean;
   merchantStructuredName?: string | null;
   merchantEvidenceDescriptor?: string;
   merchantEvidenceAllowStructured?: boolean;
@@ -178,6 +183,11 @@ Deno.serve(async (req: Request) => {
     if (!body.date) {
       return errorResponse("Date is required", 400);
     }
+
+    const merchantPolicyError = merchantAutoResolutionValidationError(
+      body.merchantAutoResolutionBlocked,
+    );
+    if (merchantPolicyError) return errorResponse(merchantPolicyError, 400);
 
     if (body.merchant !== undefined && body.merchant !== null) {
       if (typeof body.merchant !== "string") {
@@ -596,6 +606,7 @@ Deno.serve(async (req: Request) => {
       merchant: normalizedMerchant,
       merchant_structured_name: normalizedMerchantStructuredName,
       merchant_id: sanitizeUuid(body.merchantId),
+      ...merchantAutoResolutionPatch(body.merchantAutoResolutionBlocked),
       currency: currency,
       breakdown: body.breakdown ?? null,
       receipt_image_url: normalizedReceiptImageUrl,
