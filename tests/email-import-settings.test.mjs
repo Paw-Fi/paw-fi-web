@@ -427,7 +427,7 @@ const errorCases = [
     {},
     503,
     "VERIFICATION_EMAIL_FAILED",
-    "Your sender is pending verification, but we couldn't send the email. Please wait one minute and resend it.",
+    "We couldn't send the verification email. Check the sender email address for typos and try again. This sender has not been approved.",
   ],
 ];
 for (const [
@@ -468,6 +468,18 @@ test("an address used by another account can request account-bound verification"
   assert.equal(app.calls[0].body.p_user_id, userId);
   assert.equal(app.emails[0].to, add.email);
   const token = app.emails[0].text.match(/#([A-Za-z0-9_-]{43})/)[1];
+  const link = `moneko://verify-email-sender#${token}`;
+  assert.equal(app.emails[0].text.includes(link), true);
+  assert.equal(app.emails[0].html.includes(`href="${link}"`), true);
+  assert.match(app.emails[0].html, /class="button primary"/);
+  assert.equal(
+    app.emails[0].idempotencyKey,
+    "email-sender-verification:verification-1",
+  );
+  assert.equal(
+    app.emails[0].text.includes("functions/v1/email-import-sender-verify"),
+    false,
+  );
   assert.equal(
     app.calls[0].body.p_token_hash,
     await verification.hashSenderVerificationToken(token),
@@ -479,6 +491,17 @@ test("already verified sender requests remain idempotent without another email",
   const app = harness({ rpcResult: { status: "already_verified" } });
   assert.equal((await app.request(add)).status, 200);
   assert.equal(app.emails.length, 0);
+});
+
+test("malformed sender addresses are rejected before creating pending verification", async () => {
+  for (const email of ["sender@example..com", ".sender@example.com", "sender@example.com\u200b"]) {
+    const app = harness();
+    const result = await app.request({ ...add, email });
+    assert.equal(result.status, 400);
+    assert.equal(result.body.code, "INVALID_EMAIL");
+    assert.equal(app.calls.length, 0);
+    assert.equal(app.emails.length, 0);
+  }
 });
 
 test("free sender request returns the highlighted Plus contract without sending email", async () => {

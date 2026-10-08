@@ -9,6 +9,7 @@ import {
   buildSenderVerificationEmail,
   createSenderVerificationToken,
   hashSenderVerificationToken,
+  isValidSenderEmailAddress,
 } from "../shared/email-sender-verification.ts";
 import {
   hasPlusEntitlement,
@@ -431,7 +432,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   if (payload.action === "add_whitelist") {
     const normalizedEmail = normalizeEmailAddress(payload.email);
-    if (!normalizedEmail) {
+    if (!normalizedEmail || !isValidSenderEmailAddress(normalizedEmail)) {
       return errorResponse(
         "Please enter a valid email address.",
         400,
@@ -481,7 +482,7 @@ async function handleRequest(req: Request): Promise<Response> {
     ) {
       const email = buildSenderVerificationEmail({
         accountEmail: authEmail,
-        verificationUrl: `${SUPABASE_URL}/functions/v1/email-import-sender-verify#${token}`,
+        verificationUrl: `moneko://verify-email-sender#${token}`,
       });
       const sent = await sendEmail({
         to: normalizedEmail,
@@ -490,7 +491,7 @@ async function handleRequest(req: Request): Promise<Response> {
       });
       if (!sent.success) {
         return errorResponse(
-          "Your sender is pending verification, but we couldn't send the email. Please wait one minute and resend it.",
+          "We couldn't send the verification email. Check the sender email address for typos and try again. This sender has not been approved.",
           503,
           "VERIFICATION_EMAIL_FAILED",
         );

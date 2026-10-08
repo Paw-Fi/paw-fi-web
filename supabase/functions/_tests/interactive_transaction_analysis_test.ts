@@ -126,6 +126,27 @@ Deno.test("interactive: merchant bounds match every save endpoint", () => {
   );
 });
 
+Deno.test("interactive: receipt line items survive validation without becoming extra transactions", () => {
+  const result = validateInteractiveItems([transaction({
+    breakdown: ["苹果 １，２３４．５０円", "خصم ١٠٫٠٠"],
+  })], context);
+  assertEquals(result.issues, []);
+  assertEquals(result.items.length, 1);
+  assertEquals(result.items[0].amount, 70);
+  assertEquals(result.items[0].breakdown, [
+    "苹果 １，２３４．５０円",
+    "خصم ١٠٫٠٠",
+  ]);
+  for (
+    const breakdown of ["line", [null], [3], [""], Array(201).fill("line")]
+  ) {
+    assertEquals(
+      validateInteractiveItems([transaction({ breakdown })], context).items,
+      [],
+    );
+  }
+});
+
 Deno.test("interactive: unresolved DST clock requests produce only a localized question", async () => {
   const request = parseInteractiveRequest({
     version: 1,
@@ -598,6 +619,86 @@ Deno.test("interactive: an unavailable drawer wallet cannot silently become Spen
   assertEquals(validateInteractiveItems([transaction()], stale).issues, []);
 });
 
+Deno.test("interactive: echoed dropdown IDs remain defaults without a destination question", () => {
+  for (
+    const defaults of [
+      context,
+      { ...context, defaultSpaceId: "family", defaultWalletId: "usd-wallet" },
+    ]
+  ) {
+    const original = {
+      type: "expense",
+      amount: 20,
+      category: "groceries",
+      spaceId: defaults.defaultSpaceId,
+      walletId: defaults.defaultWalletId,
+      explicitFields: ["amount"],
+    };
+    const before = structuredClone(original);
+    const result = validateInteractiveItems([original], defaults);
+    assertEquals(result.issues, []);
+    assertEquals(original, before);
+    assertEquals(result.items[0].explicitFields, ["amount"]);
+    assertEquals(
+      result.items[0].destination.accountId,
+      defaults.defaultWalletId,
+    );
+    assertEquals(
+      result.items[0].destination.householdId,
+      defaults.defaultSpaceId === "personal" ? null : "family",
+    );
+  }
+});
+
+Deno.test("interactive: only explicit instructions can override the dropdown destination", () => {
+  const echoedSpace = transaction({
+    spaceId: context.defaultSpaceId,
+    explicitFields: [
+      "walletId",
+      "currency",
+      "date",
+      "merchant",
+      "transactionTime",
+    ],
+  });
+  // The echoed default Space is omitted; the explicitly named wallet sets Space.
+  const explicit = validateInteractiveItems([echoedSpace], context);
+  assertEquals(explicit.issues, []);
+  assertEquals(explicit.items[0].destination.householdId, "family");
+  assertEquals(explicit.items[0].destination.accountId, "usd-wallet");
+  assertEquals(
+    validateInteractiveItems([transaction({
+      explicitFields: ["currency", "date", "merchant", "transactionTime"],
+    })], context).items,
+    [],
+  );
+});
+
+Deno.test("interactive: echoed defaults still enforce wallet availability and native currency", () => {
+  const base = { type: "expense", amount: 20, category: "groceries" };
+  const unavailable = { ...context, defaultWalletId: "deleted-wallet" };
+  assertEquals(
+    validateInteractiveItems([{
+      ...base,
+      spaceId: "personal",
+      walletId: "deleted-wallet",
+      explicitFields: ["amount"],
+    }], unavailable).items,
+    [],
+  );
+  const foreignReceipt = validateInteractiveItems([{
+    ...base,
+    currency: "USD",
+    spaceId: "personal",
+    walletId: "eur-wallet",
+    explicitFields: ["amount", "currency"],
+  }], context);
+  assertEquals(foreignReceipt.issues, []);
+  assertEquals(foreignReceipt.items[0].currency, "USD");
+  assertEquals(foreignReceipt.items[0].destination.householdId, null);
+  assertEquals(foreignReceipt.items[0].destination.accountId, null);
+});
+
 Deno.test("interactive: invalid provenance and unsupported details cannot silently save", () => {
   for (
     const overrides of [
@@ -944,6 +1045,10 @@ Deno.test("interactive: typed and bounded sources reject malformed requests befo
       { text: "20 dinner", date: "2026-02-30" },
       { text: "20 dinner", attachments: {} },
       { text: "20 dinner", image: "data" },
+      { image: {} },
+      { image: { data: "", contentType: "image/jpeg" } },
+      { image: { data: "receipt", contentType: "application/pdf" } },
+      { image: { data: "x".repeat(16000001), contentType: "image/jpeg" } },
       { audio: { data: "audio", contentType: "text/plain" } },
     ]
   ) {
@@ -953,7 +1058,26 @@ Deno.test("interactive: typed and bounded sources reject malformed requests befo
     } catch {
       rejected = true;
     }
-    assertEquals(rejected, true, JSON.stringify(value));
+    assertEquals(rejected, true);
+  }
+});
+
+Deno.test("interactive: camera and gallery images accept accompanying instructions", () => {
+  for (
+    const contentType of [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/heic",
+      "image/heif",
+    ]
+  ) {
+    const image = { data: "cmVjZWlwdA==", contentType };
+    assertEquals(parseInteractiveSource({ image }), { image });
+    assertEquals(parseInteractiveSource({ image, text: "旅行の財布に記録" }), {
+      image,
+      text: "旅行の財布に記録",
+    });
   }
 });
 

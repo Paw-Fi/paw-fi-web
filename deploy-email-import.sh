@@ -86,6 +86,9 @@ fi
 # Shared mailbox webhook (Resend verified — called by Resend inbound webhooks)
 deploy_public_function "resend-inbound-webhook"
 
+deploy_function "email-import-sender-verify"
+deploy_function "email-import-settings"
+
 echo "════════════════════════════════════════════════════════════"
 echo "  Email File Import functions deployed successfully"
 echo ""

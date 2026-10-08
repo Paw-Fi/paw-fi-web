@@ -14,6 +14,7 @@ export interface InteractiveRequest {
 export interface InteractiveSource {
   text?: string;
   audio?: { data: string; contentType: string };
+  image?: { data: string; contentType: string };
 }
 
 export function parseInteractiveSource(value: unknown): InteractiveSource {
@@ -36,10 +37,12 @@ export function parseInteractiveSource(value: unknown): InteractiveSource {
     throw new Error("Invalid interactive default date");
   }
   if (
-    input.image != null || (input.attachments != null &&
-      (!Array.isArray(input.attachments) || input.attachments.length > 0))
+    input.attachments != null &&
+    (!Array.isArray(input.attachments) || input.attachments.length > 0)
   ) {
-    throw new Error("Interactive analysis requires text or audio");
+    throw new Error(
+      "Interactive analysis does not support document attachments",
+    );
   }
   if (
     input.text != null &&
@@ -55,7 +58,17 @@ export function parseInteractiveSource(value: unknown): InteractiveSource {
   ) {
     throw new Error("Invalid interactive audio");
   }
-  if (!(typeof input.text === "string" && input.text.trim()) && !audio) {
+  const image = input.image == null ? undefined : objectValue(input.image);
+  if (
+    image && (!boundedText(image.data, 16000000) ||
+      !["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
+        .includes(String(image.contentType)))
+  ) {
+    throw new Error("Invalid interactive image");
+  }
+  if (
+    !(typeof input.text === "string" && input.text.trim()) && !audio && !image
+  ) {
     throw new Error("Missing interactive source");
   }
   return {
@@ -67,6 +80,14 @@ export function parseInteractiveSource(value: unknown): InteractiveSource {
         audio: {
           data: audio.data as string,
           contentType: audio.contentType as string,
+        },
+      }
+      : {}),
+    ...(image
+      ? {
+        image: {
+          data: image.data as string,
+          contentType: image.contentType as string,
         },
       }
       : {}),
@@ -226,7 +247,7 @@ export function validateInteractiveItems(
     };
   }
   const items = raw.map((value, itemIndex): InteractiveItem => {
-    const item = objectValue(value);
+    const item = { ...objectValue(value) };
     const issue = (field: string, reason: string) =>
       issues.push({ itemIndex, field, reason });
     const explicitFields =
@@ -240,6 +261,16 @@ export function validateInteractiveItems(
       explicitFields.length !== item.explicitFields.length ||
       new Set(explicitFields).size !== explicitFields.length
     ) issue("explicitFields", "Missing or invalid field provenance");
+    // An echoed drawer selection is still an omission default, not an explicit
+    // instruction. Other IDs retain the strict source-evidence requirement.
+    if (
+      item.spaceId === context.defaultSpaceId &&
+      !explicitFields.includes("spaceId")
+    ) delete item.spaceId;
+    if (
+      item.walletId === context.defaultWalletId &&
+      !explicitFields.includes("walletId")
+    ) delete item.walletId;
     for (const field of Object.keys(item)) {
       if (field !== "explicitFields" && !INTERACTIVE_FIELDS.includes(field)) {
         issue(
@@ -381,6 +412,11 @@ export function validateInteractiveItems(
         );
       }
     }
+    if (
+      item.breakdown != null &&
+      (!Array.isArray(item.breakdown) || item.breakdown.length > 200 ||
+        !item.breakdown.every((line) => boundedText(line, 4000)))
+    ) issue("breakdown", "Invalid receipt line-item details");
     const memberIds = new Set(space?.members.map((member) => member.userId));
     if (
       item.payerUserId != null &&
@@ -627,6 +663,7 @@ export const INTERACTIVE_FIELDS = [
   "transactionTime",
   "description",
   "merchant",
+  "breakdown",
   "spaceId",
   "walletId",
   "payerUserId",

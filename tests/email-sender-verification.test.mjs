@@ -6,8 +6,58 @@ import {
   createSenderVerificationToken,
   hashSenderVerificationToken,
   isValidSenderVerificationToken,
+  isValidSenderEmailAddress,
   resolveVerifiedSenderAccountIds,
 } from "../supabase/functions/shared/email-sender-verification.ts";
+import { sanitizeUrl } from "../supabase/functions/shared/email-security.ts";
+
+test("sender email format rejects malformed addresses without rejecting non-English scripts", () => {
+  for (const email of ["wickum@outlook.com", "wickum+receipts@outlook.com", "用户@例子.中国", "مستخدم@مثال.اختبار"]) {
+    assert.equal(isValidSenderEmailAddress(email), true, email);
+  }
+  for (const email of ["wickum@outlook..com", "wickum@outlook.com.", ".wickum@outlook.com", "wickum..receipts@outlook.com", "wickum,@outlook.com", "wickum@-outlook.com", "wickum@outlook_.com", "wickum@outlook.com\u200b", "wickum\u0000@outlook.com"]) {
+    assert.equal(isValidSenderEmailAddress(email), false, email);
+  }
+});
+import {
+  createImportUnavailableEmailBuilder,
+  importUnavailableReasons,
+} from "../supabase/functions/resend-inbound-webhook/email-templates/import-unavailable-email.ts";
+
+test("unknown sender email offers account-confirmed setup, not automatic verification or import", () => {
+  const build = createImportUnavailableEmailBuilder({
+    importInboxEmail: "files@inbound.moneko.io",
+    supportEmail: "hello@moneko.io",
+  });
+  const senderEmail = "wickum+receipts@outlook.com";
+  const link = `moneko://add-email-sender?email=${encodeURIComponent(senderEmail)}`;
+  const email = build({
+    senderEmail,
+    reason: importUnavailableReasons.senderNotWhitelisted,
+  });
+  assert.equal(sanitizeUrl(link), link);
+  assert.equal(email.html.includes(`href="${link}"`), true);
+  assert.match(email.html, /Add This Sender/);
+  assert.match(email.html, /class="button primary"/);
+  assert.match(email.text, /signed-in Moneko account/);
+  assert.match(email.text, /forward your attachment again/);
+  assert.match(email.text, /moneko:\/\/add-email-sender/);
+  assert.doesNotMatch(email.html, /verify-email-sender#/);
+  const disabled = build({
+    senderEmail,
+    reason: importUnavailableReasons.importDisabled,
+  });
+  assert.doesNotMatch(disabled.html, /add-email-sender/);
+  for (const invalid of [
+    `${link}&userId=other`,
+    `${link}&email=other%40example.com`,
+    `${link}#token`,
+    "moneko://add-email-sender?email=bad",
+    "moneko://add-email-sender/?email=user%40example.com",
+    "moneko://user@add-email-sender?email=user%40example.com",
+  ])
+    assert.equal(sanitizeUrl(invalid), "#", invalid);
+});
 
 test("sender tokens are high entropy and only their hashes are persisted", async () => {
   const first = createSenderVerificationToken();
@@ -22,17 +72,51 @@ test("sender tokens are high entropy and only their hashes are persisted", async
   assert.equal(hash, await hashSenderVerificationToken(first));
 });
 
-test("verification email identifies the requesting account and uses a fragment secret", () => {
+test("verification email uses the shared branded layout and direct app CTA", () => {
   const token = createSenderVerificationToken();
   const email = buildSenderVerificationEmail({
     accountEmail: "relay<test>@privaterelay.appleid.com",
-    verificationUrl: `https://example.test/verify#${token}`,
+    verificationUrl: `moneko://verify-email-sender#${token}`,
   });
   assert.equal(email.html.includes("relay&lt;test&gt;"), true);
-  assert.equal(email.html.includes(`verify#${token}`), true);
+  assert.equal(
+    email.html.includes(`href="moneko://verify-email-sender#${token}"`),
+    true,
+  );
+  assert.match(email.html, /class="container"/);
+  assert.match(email.html, /class="button primary"/);
+  assert.match(email.html, /class="footer"/);
+  assert.match(email.html, /Contact Support/);
+  assert.match(email.text, /installed/);
   assert.equal(email.text.includes("24 hours"), true);
   assert.equal(email.text.includes("every enabled account"), true);
   assert.equal(email.text.includes("If you didn't request"), true);
+});
+
+test("email URL sanitizer only permits exact sender verification app links", () => {
+  const token = createSenderVerificationToken();
+  const link = `moneko://verify-email-sender#${token}`;
+  assert.equal(sanitizeUrl(link), link);
+  assert.equal(sanitizeUrl("moneko://home"), "moneko://home");
+  for (const invalid of [
+    "moneko://verify-email-sender",
+    `moneko://verify-email-sender#${token.slice(1)}`,
+    `${link}a`,
+    `${link}\n`,
+    ` ${link}`,
+    `moneko://verify-email-sender/#${token}`,
+    `moneko://verify-email-sender?token=x#${token}`,
+    `moneko://verify-email-sender.evil#${token}`,
+    `moneko://user@verify-email-sender#${token}`,
+    `moneko://verify-email-sender:123#${token}`,
+    `moneko://verify-email-sender#${"+".repeat(43)}`,
+    `moneko://verify-email-sender#${"/".repeat(43)}`,
+    `moneko://verify-email-sender#${"=".repeat(43)}`,
+    `moneko://verify-email-sender#%41${token.slice(1)}`,
+    "javascript:alert(1)",
+  ]) {
+    assert.equal(sanitizeUrl(invalid), "#", invalid);
+  }
 });
 
 test("verified recipient resolution deduplicates accounts and fails closed on errors", async () => {

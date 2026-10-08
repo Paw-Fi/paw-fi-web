@@ -4,13 +4,32 @@ import {
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import {
-  verifyMerchantSources,
   enrichSourceVerifiedMerchantItems,
+  verifyMerchantSources,
 } from "../shared/merchant-source-verification.ts";
 import { enrichAnalyzedMerchantItems } from "../shared/merchant-analysis.ts";
 import { enrichVerifiedInteractiveItems } from "../shared/interactive-transaction-analysis.ts";
 import type { InteractiveItem } from "../shared/interactive-transaction-contract.ts";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
+
+Deno.test("receipt merchant evidence retains both the image and accompanying instructions", async () => {
+  const image = { data: "cmVjZWlwdA==", contentType: "image/png" };
+  const text = "このレシートを家族の財布に記録";
+  const result = await verifyMerchantSources({
+    body: { text, image },
+    items: [{ merchant: "小商店", amount: 1234, currency: "JPY" }],
+    complete: async (parts) => {
+      assertEquals(parts.slice(1), [
+        { text },
+        { inlineData: { mimeType: "image/png", data: image.data } },
+      ]);
+      return {
+        verdicts: [{ itemIndex: 0, approved: true, evidence: "小商店" }],
+      };
+    },
+  });
+  assertEquals(result[0]?.merchant, "小商店");
+});
 
 Deno.test(
   "near-deadline financial success skips optional logos rather than becoming an analysis timeout",
@@ -330,25 +349,27 @@ Deno.test(
   "source verifier carries original image/audio/PDF bytes and decoded document text",
   async () => {
     const media = encodeBase64(new Uint8Array([1, 2, 3]));
-    for (const body of [
-      { image: { data: media, contentType: "image/png" } },
-      {
-        audio: {
-          data: "",
-          bytes: new Uint8Array([1, 2, 3]),
-          contentType: "audio/mp3",
-        },
-      },
-      {
-        attachments: [
-          {
-            data: media,
-            contentType: "application/pdf",
-            filename: "receipt.pdf",
+    for (
+      const body of [
+        { image: { data: media, contentType: "image/png" } },
+        {
+          audio: {
+            data: "",
+            bytes: new Uint8Array([1, 2, 3]),
+            contentType: "audio/mp3",
           },
-        ],
-      },
-    ]) {
+        },
+        {
+          attachments: [
+            {
+              data: media,
+              contentType: "application/pdf",
+              filename: "receipt.pdf",
+            },
+          ],
+        },
+      ]
+    ) {
       const verdicts = await verifyMerchantSources({
         body,
         items: [{ merchant: "Tesco" }],
@@ -392,13 +413,15 @@ Deno.test(
 Deno.test(
   "verifier failure, timeout, oversized source and blank merchants cannot authorize logos",
   async () => {
-    for (const complete of [
-      async () => {
-        throw new Error("unavailable");
-      },
-      async () => new Promise(() => {}),
-      async () => ({ verdicts: "invalid" }),
-    ]) {
+    for (
+      const complete of [
+        async () => {
+          throw new Error("unavailable");
+        },
+        async () => new Promise(() => {}),
+        async () => ({ verdicts: "invalid" }),
+      ]
+    ) {
       const verdicts = await verifyMerchantSources({
         body: { text: "coffee 5" },
         items: [{ merchant: "Starbucks" }],
@@ -407,10 +430,12 @@ Deno.test(
       });
       assertEquals(verdicts[0]?.approved ?? false, false);
     }
-    for (const [body, items] of [
-      [{ text: "x".repeat(100_000) }, [{ merchant: "Tesco" }]],
-      [{ text: "coffee 5" }, [{ merchant: "" }]],
-    ] as const) {
+    for (
+      const [body, items] of [
+        [{ text: "x".repeat(100_000) }, [{ merchant: "Tesco" }]],
+        [{ text: "coffee 5" }, [{ merchant: "" }]],
+      ] as const
+    ) {
       await verifyMerchantSources({
         body,
         items: [...items],
@@ -478,9 +503,9 @@ Deno.test(
             table === "merchant_user_overrides"
               ? { data: { action: "map", merchant_id: id }, error: null }
               : {
-                  data: { id, canonical_name: "Tesco", domain: "tesco.com" },
-                  error: null,
-                },
+                data: { id, canonical_name: "Tesco", domain: "tesco.com" },
+                error: null,
+              },
         };
         return query;
       },

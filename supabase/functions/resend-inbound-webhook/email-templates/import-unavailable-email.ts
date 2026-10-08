@@ -1,4 +1,8 @@
-import { baseTemplate, renderFooter } from "../../shared/email-layout.ts";
+import {
+  baseTemplate,
+  renderButton,
+  renderFooter,
+} from "../../shared/email-layout.ts";
 import { escapeHtml, sanitizeSubject } from "../../shared/email-utils.ts";
 
 const HELP_URL =
@@ -41,13 +45,18 @@ export function createImportUnavailableEmailBuilder(
   return (params: ImportUnavailableEmailParams) => {
     const content = resolveContent(params.reason, config.importInboxEmail);
     const actionLink = content.actionUrl
-      ? `<p><a href="${escapeHtml(content.actionUrl)}" style="color:#7458FF;">${
-        escapeHtml(
+      ? `<p><a href="${escapeHtml(content.actionUrl)}" style="color:#7458FF;">${escapeHtml(
           content.actionLabel || content.action,
-        )
-      }</a></p>`
+        )}</a></p>`
       : "";
     const sender = escapeHtml(params.senderEmail);
+    const senderSetupLink =
+      params.reason === importUnavailableReasons.senderNotWhitelisted
+        ? `moneko://add-email-sender?email=${encodeURIComponent(params.senderEmail)}`
+        : null;
+    const senderSetupButton = senderSetupLink
+      ? renderButton("Add This Sender", senderSetupLink)
+      : "";
 
     return {
       subject: sanitizeSubject(content.subject),
@@ -56,23 +65,20 @@ export function createImportUnavailableEmailBuilder(
         <p class="subtitle">We couldn't process the email sent from ${sender}.</p>
         <p>${escapeHtml(content.message)}</p>
         <p>${escapeHtml(content.action)}</p>
+        ${senderSetupButton}
         ${actionLink}
-        <p>This address does not monitor replies. If you need help, contact <a href="mailto:${
-          escapeHtml(
-            config.supportEmail,
-          )
-        }" style="color:#7458FF;">${escapeHtml(config.supportEmail)}</a>.</p>`,
+        <p>This address does not monitor replies. If you need help, contact <a href="mailto:${escapeHtml(
+          config.supportEmail,
+        )}" style="color:#7458FF;">${escapeHtml(config.supportEmail)}</a>.</p>`,
         renderFooter({
-          customReason:
-            `You're receiving this email because someone sent files to ${config.importInboxEmail}. Replies are not monitored; contact ${config.supportEmail} if you need help.`,
+          customReason: `You're receiving this email because someone sent files to ${config.importInboxEmail}. Replies are not monitored; contact ${config.supportEmail} if you need help.`,
         }),
       ),
-      text:
-        `${content.heading}. We couldn't process the email sent from ${params.senderEmail}. ${content.message} ${content.action} ${
-          content.actionUrl
-            ? `${content.actionLabel || content.action}: ${content.actionUrl}`
-            : ""
-        } Replies are not monitored; contact ${config.supportEmail} if you need help.`,
+      text: `${content.heading}. We couldn't process the email sent from ${params.senderEmail}. ${content.message} ${content.action} ${
+        content.actionUrl
+          ? `${content.actionLabel || content.action}: ${content.actionUrl}`
+          : ""
+      } ${senderSetupLink ? `Add This Sender: ${senderSetupLink}.` : ""} Replies are not monitored; contact ${config.supportEmail} if you need help.`,
     };
   };
 }
@@ -89,7 +95,7 @@ function resolveContent(
         message:
           "This sender email is not on your Email File Import allowlist.",
         action:
-          "Open Moneko, go to Settings, and add this sender to Email File Import.",
+          "Tap Add This Sender to open Moneko and confirm adding this address to your signed-in Moneko account. Open the verification email we send to this address, then forward your attachment again. The earlier email will not be imported automatically. If the button does not open the app, go to Settings and add this sender to Email File Import.",
         actionUrl: HELP_URL,
         actionLabel: "Learn how to allow a sender",
       };
@@ -127,8 +133,7 @@ function resolveContent(
         heading: "No importable content was found",
         message:
           "We could not find readable receipt content or a supported PDF, CSV, or Excel attachment in this email.",
-        action:
-          `Forward a receipt email or send a supported file to ${importInboxEmail}, then try again.`,
+        action: `Forward a receipt email or send a supported file to ${importInboxEmail}, then try again.`,
         actionUrl: HELP_URL,
         actionLabel: "Learn what you can import",
       };

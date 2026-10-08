@@ -433,6 +433,7 @@
         "npm:@dnd-kit/sortable@10",
         "npm:@dnd-kit/utilities@^3.2.2",
         "npm:@dr.pogodin/react-helmet@^3.0.4",
+        "npm:@electric-sql/pglite@0.3.14",
         "npm:@fortawesome/fontawesome-svg-core@^7.0.1",
         "npm:@fortawesome/free-brands-svg-icons@^7.0.1",
         "npm:@fortawesome/free-regular-svg-icons@^7.0.1",

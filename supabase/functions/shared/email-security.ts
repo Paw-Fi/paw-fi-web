@@ -1,67 +1,89 @@
 // URL sanitization and security utilities
 export const LINKS = {
-  moneko: 'https://moneko.io',
-  pricing: 'https://moneko.io/pricing',
-  membership: 'https://moneko.io/dashboard/user-settings/membership',
-  appHome: 'moneko://home',
-  appInsights: 'moneko://insights',
-  appLogExpense: 'moneko://expenses/log',
-  support: 'mailto:hello@moneko.io',
-  privacy: 'https://moneko.io/privacy-policy',
-  terms: 'https://moneko.io/terms-of-service',
-  testflight: 'https://apps.apple.com/app/moneko/id6753925279',
-  appStore: 'https://apps.apple.com/app/moneko/id6753925279',
-  appleLogo: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/apple-logo.png',
-  googleLogo: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/google-play.png',
-  playStore:'https://play.google.com/store/apps/details?id=com.moneko.mobile',
-  stripe: 'https://stripe.com',
+  moneko: "https://moneko.io",
+  pricing: "https://moneko.io/pricing",
+  membership: "https://moneko.io/dashboard/user-settings/membership",
+  appHome: "moneko://home",
+  appInsights: "moneko://insights",
+  appLogExpense: "moneko://expenses/log",
+  support: "mailto:hello@moneko.io",
+  privacy: "https://moneko.io/privacy-policy",
+  terms: "https://moneko.io/terms-of-service",
+  testflight: "https://apps.apple.com/app/moneko/id6753925279",
+  appStore: "https://apps.apple.com/app/moneko/id6753925279",
+  appleLogo:
+    "https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/apple-logo.png",
+  googleLogo:
+    "https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/google-play.png",
+  playStore: "https://play.google.com/store/apps/details?id=com.moneko.mobile",
+  stripe: "https://stripe.com",
 } as const;
 
 // Domain allowlist for URL sanitization
 const EXACT_ALLOWED_HOSTS = [
-  'moneko.io',
-  'testflight.apple.com',
-  'apps.apple.com',
-  'play.google.com',
-  'supabase.co',
-  'upload.wikimedia.org',
+  "moneko.io",
+  "testflight.apple.com",
+  "apps.apple.com",
+  "play.google.com",
+  "supabase.co",
+  "upload.wikimedia.org",
 ];
 
 // Allowlist domains plus any of their subdomains
-const SUFFIX_ALLOWED_HOSTS = ['stripe.com'];
+const SUFFIX_ALLOWED_HOSTS = ["stripe.com"];
 
 // Enhanced URL sanitizer with allowlist and protocol validation
 export function sanitizeUrl(url: string): string {
-  if (!url || typeof url !== 'string') return '#';
+  if (!url || typeof url !== "string") return "#";
 
   // Short-circuit for mailto: and tel: protocols with basic validation
-  if (url.startsWith('mailto:')) {
+  if (url.startsWith("mailto:")) {
     const email = url.substring(7);
     // Basic email validation
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return url;
     }
-    return '#';
+    return "#";
   }
 
-  if (url.startsWith('tel:')) {
+  if (url.startsWith("tel:")) {
     const phone = url.substring(4);
     // Basic phone validation - allow digits, +, -, (, ), and spaces
     if (/^[\d\+\-\(\)\s]+$/.test(phone)) {
       return url;
     }
-    return '#';
+    return "#";
   }
 
   // Allow only known Moneko app routes for mobile CTAs.
-  if (/^moneko:\/\/(home|insights|expenses\/log|pockets|recurring)$/.test(url)) {
+  if (
+    /^moneko:\/\/(home|insights|expenses\/log|pockets|recurring)$/.test(url)
+  ) {
     return url;
+  }
+  if (/^moneko:\/\/verify-email-sender#[A-Za-z0-9_-]{43}(?![\s\S])/.test(url)) {
+    return url;
+  }
+  if (url.startsWith("moneko://add-email-sender?email=")) {
+    try {
+      const email = new URL(url).searchParams.get("email") || "";
+      if (
+        email.length <= 320 &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+        url === `moneko://add-email-sender?email=${encodeURIComponent(email)}`
+      ) {
+        return url;
+      }
+    } catch (_) {
+      return "#";
+    }
+    return "#";
   }
 
   try {
     // Only allow https: for web URLs
-    if (!url.startsWith('https://')) {
-      return '#';
+    if (!url.startsWith("https://")) {
+      return "#";
     }
 
     const parsed = new URL(url);
@@ -74,12 +96,12 @@ export function sanitizeUrl(url: string): string {
     );
 
     if (!isExactAllowed && !isSuffixAllowed) {
-      return '#';
+      return "#";
     }
 
     return url;
   } catch (error) {
     // URL parsing failed, return safe fallback
-    return '#';
+    return "#";
   }
 }
