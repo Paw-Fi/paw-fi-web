@@ -30,16 +30,52 @@ const inProgressItems: InProgressItem[] = [
   },
 ];
 
-interface ChangelogEntry {
+interface ChangelogEntryBase {
   title: string;
   date: string;
   version?: string;
   tags?: string[];
   description: string;
-  items: string[];
 }
 
+type ChangelogEntry = ChangelogEntryBase &
+  (
+    | { items: string[]; sections?: never }
+    | {
+        items?: never;
+        sections: { improvements: string[]; fixes: string[] };
+      }
+  );
+
 const changelogs: ChangelogEntry[] = [
+  {
+    title: "A Cleaner, More Modern Moneko",
+    date: "2026-10-08",
+    version: "5.0.0",
+    tags: ["Design", "Feature", "Home", "Recurring", "Currency"],
+    description:
+      "Moneko 5.0.0 brings a cleaner, more modern look to the whole app, with new category icons that make spending categories easier to recognize. You’ll also get clearer budget guidance and more dependable transaction tracking.",
+    sections: {
+      improvements: [
+        "Enjoy a cleaner, more modern look throughout the app, with pages that are easier to read and navigate",
+        "New category icons make spending categories easier to recognize at a glance",
+        "See your budget progress and get helpful spending suggestions from Home",
+        "Ask Siri to add expenses and confirm unclear details before they are saved",
+        "Choose when daily payments are due, confirm them from reminders, and get a nudge if one is overdue",
+        "Verify trusted email senders, manage receipts from multiple addresses, and review them in Moneko or Moneko Desktop",
+        "Drag to reorder wallet cards, and start a wallet with an amount you owe",
+        "Track spending in Honduran lempiras (HNL), and see subscription prices that better reflect your local currency",
+      ],
+      fixes: [
+        "Bank updates are less likely to disrupt recurring payments",
+        "Transfers now appear in the right totals",
+        "Pocket changes save more reliably",
+        "Interrupted expense saves and Apple Pay captures can resume when you are back online",
+        "Moneko checks merchant details more carefully, and you can clear a merchant it matched incorrectly",
+        "Fixed notification issues and crashes when returning to the app or switching accounts",
+      ],
+    },
+  },
   {
     title: "A Faster, Smoother Moneko",
     date: "2026-10-01",
@@ -822,14 +858,47 @@ export function ChangelogRouteComponent() {
 
               <Separator className="bg-border/70" />
 
-              <ul className="text-foreground/90 list-none space-y-3.5 pl-0 text-sm sm:text-[15px]">
-                {changelog.items.map((item, i) => (
-                  <li key={i} className="group/item flex items-start gap-3.5">
-                    <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
-                    <span className="text-foreground/85 leading-6">{item}</span>
-                  </li>
-                ))}
-              </ul>
+              {changelog.sections ? (
+                <div className="space-y-6">
+                  {[
+                    {
+                      title: "Improvements & New Features",
+                      items: changelog.sections.improvements,
+                    },
+                    { title: "Issues Fixed", items: changelog.sections.fixes },
+                  ]
+                    .filter((section) => section.items.length > 0)
+                    .map((section) => (
+                      <section key={section.title} className="space-y-3">
+                        <h3 className="text-foreground text-base font-semibold tracking-tight sm:text-lg">
+                          {section.title}
+                        </h3>
+                        <ul className="text-foreground/90 list-none space-y-3.5 pl-0 text-sm sm:text-[15px]">
+                          {section.items.map((item, i) => (
+                            <li
+                              key={i}
+                              className="group/item flex items-start gap-3.5"
+                            >
+                              <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
+                              <span className="text-foreground/85 leading-6">
+                                {item}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                </div>
+              ) : (
+                <ul className="text-foreground/90 list-none space-y-3.5 pl-0 text-sm sm:text-[15px]">
+                  {changelog.items.map((item, i) => (
+                    <li key={i} className="group/item flex items-start gap-3.5">
+                      <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
+                      <span className="text-foreground/85 leading-6">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </Card>
         </div>

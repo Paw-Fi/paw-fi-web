@@ -165,7 +165,9 @@ export function getVertexAiConfigFromEnv(): VertexAiEnvConfig {
 
 async function getVertexAccessToken(
   serviceAccountJson: string,
+  signal?: AbortSignal,
 ): Promise<string> {
+  signal?.throwIfAborted();
   const cacheKey = serviceAccountJson;
   const now = Date.now();
   if (
@@ -179,8 +181,10 @@ async function getVertexAccessToken(
   const token = await getGoogleAccessToken({
     serviceAccountJson,
     scope: CLOUD_PLATFORM_SCOPE,
+    signal,
   });
 
+  signal?.throwIfAborted();
   cachedAccessToken = {
     key: cacheKey,
     token,
@@ -319,12 +323,14 @@ function buildResponseWrapper(payload: any): VertexChatResponse {
 
 async function resolveAccessToken(
   options: VertexChatOptions["vertex"],
+  signal?: AbortSignal,
 ): Promise<string> {
+  signal?.throwIfAborted();
   if (options.accessToken) {
     return options.accessToken;
   }
   if (options.serviceAccountJson) {
-    return await getVertexAccessToken(options.serviceAccountJson);
+    return await getVertexAccessToken(options.serviceAccountJson, signal);
   }
   throw new Error(
     "Vertex AI auth is not configured. Provide accessToken or serviceAccountJson.",
@@ -435,12 +441,18 @@ export function createVertexGenerativeAI(options: VertexGenerativeAIOptions) {
   return {
     getGenerativeModel(modelOptions: VertexGenerativeModelOptions) {
       return {
-        async generateContent(request: Record<string, unknown>) {
-          const accessToken = await resolveAccessToken(options);
+        async generateContent(
+          request: Record<string, unknown>,
+          requestOptions?: { signal?: AbortSignal },
+        ) {
+          const signal = requestOptions?.signal;
+          const accessToken = await resolveAccessToken(options, signal);
+          signal?.throwIfAborted();
           const response = await fetchImpl(
             buildEndpoint(modelOptions.model, options),
             {
               method: "POST",
+              signal,
               headers: {
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
@@ -464,6 +476,7 @@ export function createVertexGenerativeAI(options: VertexGenerativeAIOptions) {
           );
 
           const payload = await response.json().catch(() => null);
+          signal?.throwIfAborted();
           if (!response.ok) {
             throw buildError(response.status, payload);
           }

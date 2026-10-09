@@ -54,43 +54,51 @@ async function signJwtRs256(privateKeyPem: string, header: unknown, payload: unk
 }
 
 export async function getGoogleAccessToken(params: {
-  serviceAccountJson: string
-  scope: string
+  serviceAccountJson: string;
+  scope: string;
+  signal?: AbortSignal;
 }): Promise<string> {
-  const sa = JSON.parse(params.serviceAccountJson) as GoogleServiceAccount
+  params.signal?.throwIfAborted();
+  const sa = JSON.parse(params.serviceAccountJson) as GoogleServiceAccount;
   if (!sa.client_email || !sa.private_key) {
-    throw new Error('Invalid Google service account JSON')
+    throw new Error("Invalid Google service account JSON");
   }
 
-  const now = Math.floor(Date.now() / 1000)
-  const tokenUri = sa.token_uri || 'https://oauth2.googleapis.com/token'
+  const now = Math.floor(Date.now() / 1000);
+  const tokenUri = sa.token_uri || "https://oauth2.googleapis.com/token";
 
   const assertion = await signJwtRs256(
     sa.private_key,
-    { alg: 'RS256', typ: 'JWT' },
+    { alg: "RS256", typ: "JWT" },
     {
       iss: sa.client_email,
       scope: params.scope,
       aud: tokenUri,
       iat: now,
       exp: now + 60 * 60,
-    }
-  )
+    },
+  );
 
-  const form = new URLSearchParams()
-  form.set('grant_type', 'urn:ietf:params:oauth:grant-type:jwt-bearer')
-  form.set('assertion', assertion)
+  const form = new URLSearchParams();
+  form.set("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
+  form.set("assertion", assertion);
 
+  params.signal?.throwIfAborted();
   const resp = await fetch(tokenUri, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form,
-  })
+    signal: params.signal,
+  });
 
-  const data = await resp.json().catch(() => null)
+  const data = await resp.json().catch(() => null);
+  params.signal?.throwIfAborted();
   if (!resp.ok || !data?.access_token) {
-    throw new Error(`Failed to get Google access token: ${resp.status} ${JSON.stringify(data)}`)
+    throw Object.assign(
+      new Error(`Failed to get Google access token: ${resp.status}`),
+      { status: resp.status },
+    );
   }
 
-  return data.access_token as string
+  return data.access_token as string;
 }

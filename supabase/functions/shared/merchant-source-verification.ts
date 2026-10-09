@@ -30,7 +30,10 @@ export interface MerchantSourceVerdict {
 type SourcePart =
   | { text: string }
   | { inlineData: { mimeType: string; data: string } };
-type MerchantSourceCompletion = (parts: SourcePart[]) => Promise<unknown>;
+type MerchantSourceCompletion = (
+  parts: SourcePart[],
+  signal?: AbortSignal,
+) => Promise<unknown>;
 
 interface PreparedSource {
   parts: SourcePart[];
@@ -124,14 +127,12 @@ function sourceParts(body: Partial<AnalyzeRequestBody>): PreparedSource {
   };
 }
 
-async function completeMerchantSource(parts: SourcePart[]): Promise<unknown> {
+async function completeMerchantSource(
+  parts: SourcePart[],
+  signal?: AbortSignal,
+): Promise<unknown> {
   const client = createVertexGenerativeAI({
     ...getVertexAiConfigFromEnv(),
-    fetchImpl: (input, init) =>
-      fetch(input, {
-        ...init,
-        signal: AbortSignal.timeout(VERIFICATION_TIMEOUT_MS),
-      }),
   });
   const response = await client
     .getGenerativeModel({
@@ -167,7 +168,7 @@ async function completeMerchantSource(parts: SourcePart[]): Promise<unknown> {
           },
         },
       },
-    });
+    }, { signal });
   return JSON.parse(response.response.text());
 }
 
@@ -225,11 +226,11 @@ export async function verifyMerchantSources(params: {
       return denied;
     }
     const response = await runWithTimeout({
-      operation: () =>
+      operation: (signal) =>
         (params.complete ?? completeMerchantSource)([
           { text: proposalText },
           ...source,
-        ]),
+        ], signal),
       timeoutMs: params.timeoutMs ?? VERIFICATION_TIMEOUT_MS,
       timeoutMessage: "Merchant source verification timed out",
     });
@@ -319,7 +320,7 @@ export async function enrichSourceVerifiedMerchantItems(params: {
     return await runWithTimeout({
       timeoutMs,
       timeoutMessage: "Optional merchant enrichment timed out",
-      operation: async () => {
+      operation: async (signal) => {
         const sourceVerdicts = await verifyMerchantSources({
           body: params.body,
           items: params.items,
@@ -327,6 +328,8 @@ export async function enrichSourceVerifiedMerchantItems(params: {
           complete: params.complete,
           timeoutMs: Math.min(VERIFICATION_TIMEOUT_MS, timeoutMs),
         });
+        // Do not start discovery if verification consumed the optional budget.
+        signal.throwIfAborted();
         return await enrichAnalyzedMerchantItems({
           items: params.items,
           ...params.merchantContext,

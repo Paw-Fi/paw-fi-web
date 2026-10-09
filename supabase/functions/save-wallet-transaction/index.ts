@@ -108,7 +108,6 @@ const GEMINI_CATEGORIZATION_MODELS = GEMINI_MODEL_FALLBACKS;
 const WALLET_CATEGORIZATION_TIMEOUT_MS = 6_000;
 
 type GenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
-const GEMINI_RETRY_DELAYS_MS = [300] as const;
 const readRuntimeEnv = (name: string): string | null => {
   const env = (
     globalThis as {
@@ -451,10 +450,6 @@ function extractCalendarDatePrefix(value: unknown): string | null {
   if (!trimmed) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
   return normalizeCalendarDateString(trimmed);
-}
-
-function sleepMs(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function getFcmAccessToken(): Promise<string | null> {
@@ -1600,8 +1595,24 @@ async function categorizeWithAI(params: {
   expenseCategories: string[];
   incomeCategories: string[];
   redactFailureContext?: boolean;
+  captureId?: string | null;
 }): Promise<string> {
-  const deadline = Date.now() + WALLET_CATEGORIZATION_TIMEOUT_MS;
+  const startedAt = Date.now();
+  const deadline = startedAt + WALLET_CATEGORIZATION_TIMEOUT_MS;
+  const attempts: Array<{
+    model: string;
+    budgetMs: number;
+    elapsedMs: number;
+    outcome: string;
+  }> = [];
+  const logOutcome = (outcome: string) =>
+    console.info("[save-wallet-transaction] categorization outcome", {
+      captureId: params.captureId,
+      outcome,
+      elapsedMs: Date.now() - startedAt,
+      budgetMs: WALLET_CATEGORIZATION_TIMEOUT_MS,
+      attempts,
+    });
   try {
     const {
       genAI,
@@ -1652,10 +1663,10 @@ async function categorizeWithAI(params: {
             {
               text: `You are a transaction categorization engine.
 Return exactly 1 category for the transaction below.
-Use only the allowed categories listed.
+Interpret the merchant and note semantically across all languages and locales.
+Use only the allowed categories listed for this transaction type.
 
-Expense categories: ${expenseCategories.join(", ")}
-Income categories: ${incomeCategories.join(", ")}
+Allowed categories: ${(transactionType === "income" ? incomeCategories : expenseCategories).join(", ")}
 
 Transactions:
 1. ${transactionType.toUpperCase()} | ${date} | ${description} | ${amount} ${currency}`,
@@ -1666,7 +1677,6 @@ Transactions:
       toolConfig: {
         functionCallingConfig: CATEGORIZE_FUNCTION_CALLING_CONFIG,
       },
-      generationConfig: { maxOutputTokens: 256 },
     } as any;
 
     for (let index = 0; index < GEMINI_CATEGORIZATION_MODELS.length; index++) {
@@ -1677,37 +1687,53 @@ Transactions:
           tools: tools as any,
         });
 
-        let response: any = null;
-        for (
-          let attempt = 0;
-          attempt <= GEMINI_RETRY_DELAYS_MS.length;
-          attempt++
-        ) {
-          try {
-            const remainingMs = deadline - Date.now();
-            if (remainingMs <= 0) {
-              throw new Error("Wallet categorization timed out");
-            }
-            response = await runWithTimeout({
-              operation: () => model.generateContent(request),
-              timeoutMs: remainingMs,
-              timeoutMessage: "Wallet categorization timed out",
-            });
-            break;
-          } catch (error) {
-            const retryable = isRetryableGeminiError(error);
-            const hasRetryLeft = attempt < GEMINI_RETRY_DELAYS_MS.length;
-            if (!retryable || !hasRetryLeft) {
-              throw error;
-            }
-            const waitMs = GEMINI_RETRY_DELAYS_MS[attempt];
-            console.warn(
-              `[save-wallet-transaction] ${modelName} transient categorization failure (attempt ${
-                attempt + 1
-              }/${GEMINI_RETRY_DELAYS_MS.length + 1}), retrying in ${waitMs}ms`,
-            );
-            await sleepMs(waitMs);
-          }
+        const remainingMs = deadline - Date.now();
+        if (remainingMs <= 0)
+          throw new Error("Wallet categorization timed out");
+        // Reserve time for a different model. Repeating the primary request or
+        // sleeping after it exhausts the budget made fallback unreachable.
+        const hasNextModel = index < GEMINI_CATEGORIZATION_MODELS.length - 1;
+        const budgetMs = hasNextModel
+          ? Math.ceil(remainingMs / 2)
+          : remainingMs;
+        const attemptStartedAt = Date.now();
+        const attempt = {
+          model: modelName,
+          budgetMs,
+          elapsedMs: 0,
+          outcome: "failed",
+        };
+        attempts.push(attempt);
+        let response: any;
+        try {
+          response = await runWithTimeout({
+            operation: (signal) =>
+              model.generateContent(
+                {
+                  ...request,
+                  generationConfig: {
+                    maxOutputTokens: 256,
+                    thinkingConfig: {
+                      thinkingLevel:
+                        modelName === "gemini-3.8-flash" ? "LOW" : "MINIMAL",
+                    },
+                  },
+                },
+                { signal },
+              ),
+            timeoutMs: budgetMs,
+            timeoutMessage: "Wallet categorization timed out",
+          });
+          attempt.outcome = "completed";
+        } catch (error) {
+          attempt.outcome =
+            error instanceof Error &&
+            error.message === "Wallet categorization timed out"
+              ? "timed_out"
+              : "provider_error";
+          throw error;
+        } finally {
+          attempt.elapsedMs = Date.now() - attemptStartedAt;
         }
 
         const toolCalls = getGeminiFunctionCalls(response).filter(
@@ -1720,6 +1746,7 @@ Transactions:
               ? call.args.categories
               : [];
             if (categories.length >= 1) {
+              logOutcome("categorized");
               return normalizeCategoryForStorage(categories[0]);
             }
           }
@@ -1728,19 +1755,22 @@ Transactions:
         const text = response?.response?.text?.();
         if (text) {
           const normalized = normalizeCategoryForStorage(text.trim());
-          if (normalized !== "other") return normalized;
+          if (normalized !== "other") {
+            logOutcome("categorized");
+            return normalized;
+          }
         }
 
+        logOutcome("category_degraded_invalid_response");
         return "other";
       } catch (error) {
         const retryable = isRetryableGeminiError(error);
         const hasNextModel = index < GEMINI_CATEGORIZATION_MODELS.length - 1;
-        if (retryable && hasNextModel) {
+        if (retryable && hasNextModel && Date.now() < deadline) {
           console.warn(
             `[save-wallet-transaction] ${modelName} transient categorization failure, switching to ${
               GEMINI_CATEGORIZATION_MODELS[index + 1]
             }`,
-            error,
           );
           continue;
         }
@@ -1752,12 +1782,18 @@ Transactions:
   } catch (error) {
     console.error("[save-wallet-transaction] AI categorization failed:", error);
 
-    await reportVertexAiFailure({
+    logOutcome("category_degraded");
+    const reporting = reportVertexAiFailure({
       functionName: "save-wallet-transaction",
       error,
       phase: "ai_categorization",
-      modelName: GEMINI_CATEGORIZATION_MODELS[0],
+      modelName: attempts.at(-1)?.model ?? GEMINI_CATEGORIZATION_MODELS[0],
       context: {
+        captureId: params.captureId,
+        outcome: "category_degraded",
+        elapsedMs: Date.now() - startedAt,
+        budgetMs: WALLET_CATEGORIZATION_TIMEOUT_MS,
+        attempts,
         fallbackModelName: GEMINI_CATEGORIZATION_MODELS.slice(1).join(","),
         transactionType: params.transactionType,
         currency: params.currency,
@@ -1769,6 +1805,15 @@ Transactions:
             }),
       },
     });
+
+    // Preserve the digest while keeping telemetry I/O off the capture save path.
+    const runtime = (
+      globalThis as {
+        EdgeRuntime?: { waitUntil: (task: Promise<unknown>) => void };
+      }
+    ).EdgeRuntime;
+    if (runtime?.waitUntil) runtime.waitUntil(reporting);
+    else await reporting;
 
     return "other";
   }
@@ -1782,6 +1827,8 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const captureStartedAt = Date.now();
+  let transactionPersisted = false;
   let idempotencyClaimId: string | null = null;
   let androidCaptureClaimId: string | null = null;
   let requestDebugContext: Record<string, unknown> | null = null;
@@ -2546,6 +2593,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Category resolution ───────────────────────────────────────────
+    // Optional merchant/logo work shares the categorization envelope rather than
+    // adding up to 20 seconds before persistence (native iOS requests allow 25s).
+    const enrichmentDeadlineAt = Date.now() + WALLET_CATEGORIZATION_TIMEOUT_MS;
     // Step 1: Load user category context (custom categories, preferences, remaps)
     let resolvedCategory = "other";
     try {
@@ -2564,6 +2614,7 @@ Deno.serve(async (req: Request) => {
       const aiCategory =
         categoryHint ||
         (await categorizeWithAI({
+          captureId: idempotencyClaimId,
           genAI,
           merchantName: merchantDisplay,
           transactionType,
@@ -2635,6 +2686,7 @@ Deno.serve(async (req: Request) => {
               .filter((value) => typeof value === "string" && value.trim())
               .join("\n");
         const [analyzed] = await enrichSourceVerifiedMerchantItems({
+          deadlineAt: enrichmentDeadlineAt,
           body: { text: sourceText },
           items: [
             {
@@ -2844,6 +2896,7 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
     }
 
+    transactionPersisted = true;
     // The established household RPC predates canonical merchant fields and may
     // omit them from its explicit insert payload. Enrich the already committed
     // parent best-effort; split creation remains unchanged and authoritative.
@@ -2888,9 +2941,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (!isNotificationCapture) {
-      console.log("[save-wallet-transaction] Expense saved:", expense.id);
-    }
+    console.info("[save-wallet-transaction] capture outcome", {
+      captureId: idempotencyClaimId,
+      captureSource,
+      outcome: "persisted",
+      elapsedMs: Date.now() - captureStartedAt,
+    });
 
     // ── Learn category preference ─────────────────────────────────────
     try {
@@ -3060,6 +3116,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("[save-wallet-transaction] Unhandled error:", {
       error,
+      captureId: idempotencyClaimId,
+      outcome: transactionPersisted ? "persisted_response_failed" : "request_failed",
+      elapsedMs: Date.now() - captureStartedAt,
       request: requestDebugContext,
     });
     if (

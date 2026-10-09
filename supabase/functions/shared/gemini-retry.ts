@@ -97,6 +97,13 @@ export function isRetryableGeminiError(error: unknown): boolean {
     "aborterror",
     "aborted",
     "signal has been aborted",
+    "fetch failed",
+    "failed to fetch",
+    "network request failed",
+    "error sending request",
+    "connection reset",
+    "connection closed",
+    "econnreset",
     "timeout",
     "timed out",
   ];
