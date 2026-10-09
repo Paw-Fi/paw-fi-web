@@ -62,6 +62,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'USD': '$',
   'VND': '₫',
   'ZAR': 'R',
+  'HNL': 'L',
   'HUF': 'Ft',
   'MMK': 'Ks',
   'JOD': 'د.أ',

@@ -37,6 +37,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'GTQ': 'Q',
   'GYD': 'G\$',
   'HKD': 'HK\$',
+  'HNL': 'L',
   'HUF': 'Ft',
   'JMD': 'J\$',
   'IDR': 'Rp',

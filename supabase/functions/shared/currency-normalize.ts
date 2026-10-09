@@ -45,6 +45,9 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     "DH": "MAD",
     "DHS": "MAD",
 
+    // Honduran lempira
+    "HONDURAN LEMPIRA": "HNL",
+
     // Pound, Euro, Yen signs
     "£": "GBP",
     "€": "EUR",

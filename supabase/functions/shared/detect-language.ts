@@ -54,6 +54,7 @@ const CURRENCY_LANGUAGE_FALLBACKS: Record<string, string> = {
   GBP: "en",
   GHS: "en",
   GTQ: "es",
+  HNL: "es",
   HKD: "zh",
   HUF: "en",
   IDR: "en",
