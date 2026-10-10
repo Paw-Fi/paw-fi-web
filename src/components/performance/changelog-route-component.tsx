@@ -73,6 +73,7 @@ const changelogs: ChangelogEntry[] = [
         "Interrupted expense saves and Apple Pay captures can resume when you are back online",
         "Moneko checks merchant details more carefully, and you can clear a merchant it matched incorrectly",
         "Fixed notification issues and crashes when returning to the app or switching accounts",
+        "Fixed Android widget links that opened the wrong screen. Balances in Android and iOS widgets now refresh more reliably, while the last saved balance stays visible if an update fails",
       ],
     },
   },

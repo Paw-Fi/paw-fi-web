@@ -35,6 +35,7 @@ import {
 import { loadInteractiveTransactionContext } from "../shared/interactive-transaction-context.ts";
 import {
   enrichVerifiedInteractiveItems,
+  interactiveAnalysisFailure,
   runInteractiveTransactionAnalysis,
 } from "../shared/interactive-transaction-analysis.ts";
 import { enrichSourceVerifiedMerchantItems } from "../shared/merchant-source-verification.ts";
@@ -71,9 +72,10 @@ async function interactiveAnalysisResponse(
       userId: merchantContext.userId,
       defaultSpaceId: body.householdId || "personal",
       defaultWalletId: body.accountId || null,
-      currency: defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency)
-        ? defaultCurrency
-        : body.currency || "USD",
+      currency:
+        defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency)
+          ? defaultCurrency
+          : body.currency || "USD",
       date: body.date || formatDateInTimeZone(body.preferredTimezone),
       language: body.language || "en",
       preferredTimezone: body.preferredTimezone,
@@ -88,31 +90,37 @@ async function interactiveAnalysisResponse(
     const items = result.requireCorrection
       ? []
       : await enrichVerifiedInteractiveItems(
-        result.items,
-        (items) =>
-          enrichSourceVerifiedMerchantItems({
-            body,
-            items,
-            answers: request.answers,
-            merchantContext,
-            deadlineAt: merchantDeadlineAt,
-          }),
-        true,
-      );
+          result.items,
+          (items) =>
+            enrichSourceVerifiedMerchantItems({
+              body,
+              items,
+              answers: request.answers,
+              merchantContext,
+              deadlineAt: merchantDeadlineAt,
+            }),
+          true,
+        );
     return {
       success: true,
       data: { ...result, items, isAnalyzed: !result.requireCorrection },
     };
   };
   if (!stream) {
-    return new Response(
-      JSON.stringify(
-        await awaitWithHardTimeout(run(), 140000, "Analysis timed out"),
-      ),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    try {
+      return new Response(
+        JSON.stringify(
+          await awaitWithHardTimeout(run(), 140000, "Analysis timed out"),
+        ),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    } catch (error) {
+      console.error("[analyze-expense] Interactive analysis failed:", error);
+      const failure = interactiveAnalysisFailure(error);
+      return errorResponse(failure.error, failure.status, failure.code);
+    }
   }
   const encoder = new TextEncoder();
   return new Response(
@@ -135,15 +143,14 @@ async function interactiveAnalysisResponse(
           controller.enqueue(
             encoder.encode(formatSSEEvent("complete", result)),
           );
-        } catch (_) {
+        } catch (error) {
+          console.error(
+            "[analyze-expense] Interactive streaming analysis failed:",
+            error,
+          );
           controller.enqueue(
             encoder.encode(
-              formatSSEEvent("error", {
-                success: false,
-                code: "AI_TEMPORARILY_UNAVAILABLE",
-                status: 503,
-                error: "Unable to verify transaction details. Please retry.",
-              }),
+              formatSSEEvent("error", interactiveAnalysisFailure(error)),
             ),
           );
         } finally {
@@ -240,8 +247,8 @@ function mapProgressEvent(
 
 function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
   const hasImage = Boolean(body.image);
-  const hasAttachments = Array.isArray(body.attachments) &&
-    body.attachments.length > 0;
+  const hasAttachments =
+    Array.isArray(body.attachments) && body.attachments.length > 0;
   return hasImage && !hasAttachments;
 }
 
@@ -249,10 +256,11 @@ function formatBreakdownAmount(item: any): string {
   const amount = Number(item?.amount);
   if (!Number.isFinite(amount)) return "";
   const formatted = amount.toFixed(2);
-  const symbol = typeof item?.currencySymbol === "string" &&
-      item.currencySymbol.trim().length > 0
-    ? item.currencySymbol.trim()
-    : "";
+  const symbol =
+    typeof item?.currencySymbol === "string" &&
+    item.currencySymbol.trim().length > 0
+      ? item.currencySymbol.trim()
+      : "";
   const currency =
     typeof item?.currency === "string" && item.currency.trim().length > 0
       ? item.currency.trim()
@@ -265,9 +273,8 @@ function formatBreakdownAmount(item: any): string {
 function buildReceiptBreakdown(items: any[]): string[] {
   return items
     .map((item) => {
-      const desc = typeof item?.description === "string"
-        ? item.description.trim()
-        : "";
+      const desc =
+        typeof item?.description === "string" ? item.description.trim() : "";
       const amountText = formatBreakdownAmount(item);
       if (!amountText && !desc) return "";
       if (!amountText) return desc;
@@ -280,7 +287,7 @@ function buildReceiptBreakdown(items: any[]): string[] {
 function pickReceiptDescription(items: any[]): string {
   const candidates = items
     .map((item) =>
-      typeof item?.description === "string" ? item.description.trim() : ""
+      typeof item?.description === "string" ? item.description.trim() : "",
     )
     .filter((value) => value.length > 0);
   if (candidates.length === 0) return "Receipt";
@@ -361,9 +368,10 @@ function collapseReceiptItems(
   // into a single expense instead of returning one item per transaction row.
   if (!hasExplicitReceiptSignals(items)) return items;
 
-  const filteredItems = items.length > 1
-    ? items.filter((item) => !isTotalLike(item?.description))
-    : items;
+  const filteredItems =
+    items.length > 1
+      ? items.filter((item) => !isTotalLike(item?.description))
+      : items;
   const workingItems = filteredItems.length > 0 ? filteredItems : items;
 
   const totalAmount = workingItems.reduce((sum, item) => {
@@ -379,15 +387,15 @@ function collapseReceiptItems(
       .map((item) =>
         typeof item?.currency === "string"
           ? item.currency.trim().toUpperCase()
-          : ""
+          : "",
       )
       .filter((currency) => currency.length > 0),
   );
   if (resolvedCurrencies.size > 1) return items;
 
   const breakdown = buildReceiptBreakdown(workingItems);
-  const category = resolveReceiptCategory(workingItems) || primary.category ||
-    "other";
+  const category =
+    resolveReceiptCategory(workingItems) || primary.category || "other";
   const description = pickReceiptDescription(workingItems);
   const merchant =
     typeof primary?.merchant === "string" && primary.merchant.trim().length > 0
@@ -405,8 +413,8 @@ function collapseReceiptItems(
       type,
       amount: Number(totalAmount.toFixed(2)),
       category,
-      currency: resolvedCurrencies.values().next().value || body.currency ||
-        "USD",
+      currency:
+        resolvedCurrencies.values().next().value || body.currency || "USD",
       currencySymbol: primary.currencySymbol || "$",
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
       ...(primary.transactionTime
@@ -418,7 +426,7 @@ function collapseReceiptItems(
         ? { merchantUrl: primary.merchantUrl }
         : {}),
       ...(typeof primary?.merchantCountry === "string" &&
-          primary.merchantCountry
+      primary.merchantCountry
         ? { merchantCountry: primary.merchantCountry }
         : {}),
       breakdown,
@@ -483,11 +491,9 @@ function getElapsedMs(startedAt: number): number {
 
 function logStage(stage: string, startedAt: number) {
   console.log(
-    `[analyze-expense][timing] stage=${stage} elapsed_ms=${
-      getElapsedMs(
-        startedAt,
-      )
-    }`,
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(
+      startedAt,
+    )}`,
   );
 }
 
@@ -662,10 +668,10 @@ function createSSEStream(
             stream: true,
             hasImage: !!body.image,
             hasAudio: !!body.audio,
-            hasAttachments: Array.isArray(body.attachments) &&
-              body.attachments.length > 0,
-            hasText: typeof body.text === "string" &&
-              body.text.trim().length > 0,
+            hasAttachments:
+              Array.isArray(body.attachments) && body.attachments.length > 0,
+            hasText:
+              typeof body.text === "string" && body.text.trim().length > 0,
           },
         });
         const message = error instanceof Error ? error.message : String(error);
@@ -712,8 +718,8 @@ Deno.serve(async (req: Request) => {
     } catch (_error) {
       return errorResponse("Invalid analysis request", 400);
     }
-    const interactiveDefaultCurrency = captureDefaults?.currency ??
-      body.currency?.trim().toUpperCase();
+    const interactiveDefaultCurrency =
+      captureDefaults?.currency ?? body.currency?.trim().toUpperCase();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -739,8 +745,8 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } = await supabaseAuthed.auth
-      .getUser();
+    const { data: userData, error: userErr } =
+      await supabaseAuthed.auth.getUser();
     logStage("auth_get_user", requestStartedAt);
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
@@ -754,15 +760,15 @@ Deno.serve(async (req: Request) => {
     body.preferredTimezone = undefined;
     const preferredCurrencyReader = SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-          detectSessionInUrl: false,
-        },
-        global: {
-          headers: { "X-Client-Info": "moneko-analyze-expense" },
-        },
-      })
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+            detectSessionInUrl: false,
+          },
+          global: {
+            headers: { "X-Client-Info": "moneko-analyze-expense" },
+          },
+        })
       : supabaseAuthed;
     const logoDevSecretKey = Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "";
     body.currency = await loadLatestUserPreferredCurrency({
@@ -904,15 +910,15 @@ Deno.serve(async (req: Request) => {
         const canAdminRead = !!SUPABASE_SERVICE_ROLE_KEY;
         const reader = canAdminRead
           ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!, {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false,
-              detectSessionInUrl: false,
-            },
-            global: {
-              headers: { "X-Client-Info": "moneko-analyze-expense" },
-            },
-          })
+              auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+                detectSessionInUrl: false,
+              },
+              global: {
+                headers: { "X-Client-Info": "moneko-analyze-expense" },
+              },
+            })
           : supabaseAuthed;
 
         const { data: members, error: membersError } = await reader
@@ -983,8 +989,8 @@ Deno.serve(async (req: Request) => {
           stream: false,
           hasImage: !!body.image,
           hasAudio: !!body.audio,
-          hasAttachments: Array.isArray(body.attachments) &&
-            body.attachments.length > 0,
+          hasAttachments:
+            Array.isArray(body.attachments) && body.attachments.length > 0,
           hasText: typeof body.text === "string" && body.text.trim().length > 0,
         },
       });
