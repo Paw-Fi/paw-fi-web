@@ -13,11 +13,13 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 interface CreateInviteRequest {
   household_id: string;
-  invited_email?: string;
+  invited_email?: string | null;
   personal_message?: string;
   inviter_name?: string;
   household_name?: string;
   expires_in_days?: number;
+  is_reusable?: boolean;
+  invited_role?: "admin" | "member";
 }
 
 serve(async (req) => {
@@ -81,8 +83,9 @@ serve(async (req) => {
       personalMessage: body.personal_message,
       inviterName,
       householdName: body.household_name,
-      expiresInDays:
-        typeof body.expires_in_days === "number" ? body.expires_in_days : 7,
+      expiresInDays: body.expires_in_days,
+      isReusable: body.is_reusable,
+      invitedRole: body.invited_role,
     });
 
     if (!result.success) {
@@ -94,6 +97,8 @@ serve(async (req) => {
         invite_url: result.invite_url,
         token: result.token,
         expires_at: result.expires_at,
+        is_reusable: result.is_reusable,
+        invited_role: result.invited_role,
       },
       200,
       corsHeaders,

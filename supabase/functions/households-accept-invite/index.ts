@@ -92,201 +92,19 @@ serve(async (req) => {
     const body: AcceptInviteRequest = await req.json();
     const { token } = body;
 
-    if (!token) {
+    if (typeof token !== "string" || !token.trim()) {
       return new Response(JSON.stringify({ error: "Token is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Find the invite
-    const { data: invite, error: inviteError } = await supabase
-      .from("invites")
-      .select("*")
-      .eq("token", token)
-      .single();
-
-    if (inviteError || !invite) {
-      return new Response(
-        JSON.stringify({ error: "Invalid invitation token" }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Validate invite status and expiry
-    if (invite.status === "accepted") {
-      // Idempotent: if already accepted by this user, return success
-      if (invite.invited_user_id === user.id) {
-        const { data: existingMember } = await supabase
-          .from("household_members")
-          .select("id, household_id")
-          .eq("household_id", invite.household_id)
-          .eq("user_id", user.id)
-          .single();
-
-        if (existingMember) {
-          return new Response(
-            JSON.stringify({
-              success: true,
-              household_id: existingMember.household_id,
-              member_id: existingMember.id,
-            } as AcceptInviteResponse),
-            {
-              status: 200,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ error: "This invitation has already been accepted" }),
-        {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (invite.status === "revoked") {
-      return new Response(
-        JSON.stringify({ error: "This invitation has been revoked" }),
-        {
-          status: 410,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (
-      invite.status === "expired" ||
-      (invite.expires_at && new Date(invite.expires_at) < new Date())
-    ) {
-      return new Response(
-        JSON.stringify({ error: "This invitation has expired" }),
-        {
-          status: 410,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const inviterUserId = invite.inviter_user_id ?? invite.inviter_id ?? null;
-
-    const { data: inviteeContact, error: inviteeContactError } =
-      await fetchLatestUserContact(supabase, user.id);
-
-    if (inviteeContactError) {
-      console.error(
-        "[accept-invite] Error fetching invitee contact:",
-        inviteeContactError,
-      );
-      await reportEdgeFunctionError({
-        functionName: "households-accept-invite",
-        error: inviteeContactError,
-        context: {
-          inviteId: invite?.id,
-          step: "fetch-invitee-contact",
-          userId: user.id,
-        },
-      });
-      throw inviteeContactError;
-    }
-
-    const inviteeContactId = inviteeContact?.id;
-
-    if (
-      inviteeContactId &&
-      inviteeContact?.preferred_currency == null &&
-      inviterUserId
-    ) {
-      const { data: inviterContact, error: inviterContactError } =
-        await fetchLatestUserContact<{ preferred_currency: string | null }>(
-          supabase,
-          inviterUserId,
-          "preferred_currency",
-        );
-
-      if (inviterContactError) {
-        console.error(
-          "[accept-invite] Error fetching inviter contact:",
-          inviterContactError,
-        );
-        await reportEdgeFunctionError({
-          functionName: "households-accept-invite",
-          error: inviterContactError,
-          context: {
-            inviterUserId,
-            inviteId: invite?.id,
-            step: "fetch-inviter-contact",
-            userId: user.id,
-          },
-        });
-        throw inviterContactError;
-      }
-
-      if (inviterContact?.preferred_currency) {
-        const { error: updateContactError } = await supabase
-          .from("user_contacts")
-          .update({ preferred_currency: inviterContact.preferred_currency })
-          .eq("id", inviteeContactId)
-          .is("preferred_currency", null);
-
-        if (updateContactError) {
-          console.error(
-            "[accept-invite] Error updating invitee preferred currency:",
-            updateContactError,
-          );
-          await reportEdgeFunctionError({
-            functionName: "households-accept-invite",
-            error: updateContactError,
-            context: {
-              inviteId: invite?.id,
-              inviterUserId,
-              step: "update-invitee-preferred-currency",
-              userId: user.id,
-            },
-          });
-          throw updateContactError;
-        }
-      }
-    }
-
-    // Check if user is already a member
-    const { data: existingMember } = await supabase
-      .from("household_members")
-      .select("id")
-      .eq("household_id", invite.household_id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (existingMember) {
-      return new Response(
-        JSON.stringify({ error: "You are already a member of this household" }),
-        {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // Begin transaction-like operations
-    // 1. Create household member
-    const { data: newMember, error: memberError } = await supabase
-      .from("household_members")
-      .insert({
-        household_id: invite.household_id,
-        user_id: user.id,
-        role: "admin",
-      })
-      .select()
-      .single();
-
-    if (memberError) {
-      console.error("Error creating household member:", memberError);
+    const { data: acceptance, error: acceptanceError } = await supabase.rpc(
+      "households_accept_invite_v1",
+      { p_token: token, p_user_id: user.id },
+    );
+    if (acceptanceError || !acceptance) {
+      console.error("Error accepting household invitation:", acceptanceError);
       return new Response(
         JSON.stringify({ error: "Failed to join household" }),
         {
@@ -295,28 +113,144 @@ serve(async (req) => {
         },
       );
     }
-
-    // 2. Update invite status
-    const { error: updateError } = await supabase
-      .from("invites")
-      .update({
-        status: "accepted",
-        invited_user_id: user.id,
-        accepted_at: new Date().toISOString(),
-      })
-      .eq("id", invite.id);
-
-    if (updateError) {
-      console.error("Error updating invite status:", updateError);
-      // Rollback: remove the member
-      await supabase.from("household_members").delete().eq("id", newMember.id);
-
+    if (!acceptance.success) {
+      const errors: Record<string, { status: number; message: string }> = {
+        NOT_FOUND: { status: 404, message: "Invalid invitation token" },
+        ACCEPTED: {
+          status: 409,
+          message: "This invitation has already been accepted",
+        },
+        REVOKED: { status: 410, message: "This invitation has been revoked" },
+        EXPIRED: { status: 410, message: "This invitation has expired" },
+        INVALID_STATUS: {
+          status: 409,
+          message: "This invitation is not pending",
+        },
+        PRIVATE_SPACE: {
+          status: 400,
+          message: "Private spaces cannot have invite links",
+        },
+        INVALID_REQUEST: {
+          status: 400,
+          message: "Token and authenticated user are required",
+        },
+      };
+      const mapped = errors[acceptance.error_code];
       return new Response(
-        JSON.stringify({ error: "Failed to update invitation status" }),
+        JSON.stringify({
+          error: mapped?.message ?? "Failed to join household",
+          error_code: mapped ? acceptance.error_code : undefined,
+        }),
         {
-          status: 500,
+          status: mapped?.status ?? 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+      );
+    }
+    if (!acceptance.member_created) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          household_id: acceptance.household_id,
+          member_id: acceptance.member_id,
+        } as AcceptInviteResponse),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+    const invite = {
+      id: acceptance.invite_id,
+      household_id: acceptance.household_id,
+    };
+    const newMember = { id: acceptance.member_id };
+    const inviterUserId = acceptance.inviter_id ?? null;
+
+    // Membership is committed. Ancillary contact failure must not suppress join events.
+    try {
+      const { data: inviteeContact, error: inviteeContactError } =
+        await fetchLatestUserContact(supabase, user.id);
+
+      if (inviteeContactError) {
+        console.error(
+          "[accept-invite] Error fetching invitee contact:",
+          inviteeContactError,
+        );
+        await reportEdgeFunctionError({
+          functionName: "households-accept-invite",
+          error: inviteeContactError,
+          context: {
+            inviteId: invite?.id,
+            step: "fetch-invitee-contact",
+            userId: user.id,
+          },
+        });
+        throw inviteeContactError;
+      }
+
+      const inviteeContactId = inviteeContact?.id;
+
+      if (
+        inviteeContactId &&
+        inviteeContact?.preferred_currency == null &&
+        inviterUserId
+      ) {
+        const { data: inviterContact, error: inviterContactError } =
+          await fetchLatestUserContact<{ preferred_currency: string | null }>(
+            supabase,
+            inviterUserId,
+            "preferred_currency",
+          );
+
+        if (inviterContactError) {
+          console.error(
+            "[accept-invite] Error fetching inviter contact:",
+            inviterContactError,
+          );
+          await reportEdgeFunctionError({
+            functionName: "households-accept-invite",
+            error: inviterContactError,
+            context: {
+              inviterUserId,
+              inviteId: invite?.id,
+              step: "fetch-inviter-contact",
+              userId: user.id,
+            },
+          });
+          throw inviterContactError;
+        }
+
+        if (inviterContact?.preferred_currency) {
+          const { error: updateContactError } = await supabase
+            .from("user_contacts")
+            .update({ preferred_currency: inviterContact.preferred_currency })
+            .eq("id", inviteeContactId)
+            .is("preferred_currency", null);
+
+          if (updateContactError) {
+            console.error(
+              "[accept-invite] Error updating invitee preferred currency:",
+              updateContactError,
+            );
+            await reportEdgeFunctionError({
+              functionName: "households-accept-invite",
+              error: updateContactError,
+              context: {
+                inviteId: invite?.id,
+                inviterUserId,
+                step: "update-invitee-preferred-currency",
+                userId: user.id,
+              },
+            });
+            throw updateContactError;
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[accept-invite] Post-acceptance contact update failed:",
+        error,
       );
     }
 
@@ -866,9 +800,13 @@ function buildInviterSubscriptionBindingEmail(data: {
     <p>You can still share subscription access with <strong>${escapeHtml(
       remainingText,
     )}</strong> on the current plan.</p>
-    ${data.isOwnerTrialing ? `
+    ${
+      data.isOwnerTrialing
+        ? `
       <p>${escapeHtml(data.inviteeName)}'s subscription is linked to yours. When you upgrade to Moneko Plus, they'll automatically share your upgraded plan.</p>
-    ` : ""}
+    `
+        : ""
+    }
     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 28px 0;" />
     <p><strong>FAQ: What if I invite more than ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users?</strong></p>
     <p>You can invite unlimited people to your household, but only ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users can share subscription access with your current plan. Additional members can still join the household; they just keep their own subscription status.</p>

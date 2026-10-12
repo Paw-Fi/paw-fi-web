@@ -135,6 +135,7 @@ async function getEligibleInvites(
     `,
     )
     .eq("status", "pending")
+    .eq("is_reusable", false)
     .lt("reminder_count", 3)
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .limit(maxBatchSize);

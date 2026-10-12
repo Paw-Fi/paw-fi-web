@@ -25,10 +25,12 @@ interface ValidateInviteResponse {
     full_name?: string;
     avatar_url?: string | null;
   };
-  expires_at?: string;
+  expires_at?: string | null;
   status?: string;
   invite?: {
     personal_message?: string | null;
+    is_reusable: boolean;
+    invited_role: "admin" | "member";
   };
   error?: string;
   error_code?:
@@ -36,7 +38,8 @@ interface ValidateInviteResponse {
     | "REVOKED"
     | "ACCEPTED"
     | "NOT_FOUND"
-    | "ALREADY_MEMBER";
+    | "ALREADY_MEMBER"
+    | "INVALID_STATUS";
 }
 
 serve(async (req) => {
@@ -68,7 +71,7 @@ serve(async (req) => {
       token = url.searchParams.get("token");
     }
 
-    if (!token) {
+    if (typeof token !== "string" || !token.trim()) {
       return new Response(
         JSON.stringify({
           valid: false,
@@ -94,6 +97,8 @@ serve(async (req) => {
         status,
         expires_at,
         personal_message,
+        is_reusable,
+        invited_role,
           households:household_id (
           id,
           name,
@@ -152,13 +157,10 @@ serve(async (req) => {
     }
 
     // Check if invite is expired (null = unlimited)
-    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-      // Update status to expired
-      await supabase
-        .from("invites")
-        .update({ status: "expired" })
-        .eq("id", invite.id);
-
+    if (
+      invite.status === "expired" ||
+      (invite.expires_at && new Date(invite.expires_at) <= new Date())
+    ) {
       return new Response(
         JSON.stringify({
           valid: false,
@@ -173,6 +175,26 @@ serve(async (req) => {
         },
       );
     }
+
+    if (invite.status !== "pending") {
+      return new Response(
+        JSON.stringify({
+          valid: false,
+          error: "This invitation is not pending",
+          error_code: "INVALID_STATUS",
+        } as ValidateInviteResponse),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const inviteMetadata = {
+      personal_message: invite.personal_message ?? null,
+      is_reusable: invite.is_reusable,
+      invited_role: invite.invited_role,
+    };
 
     // If user is authenticated, check if they're already a member
     const authHeader = req.headers.get("Authorization");
@@ -195,6 +217,10 @@ serve(async (req) => {
               valid: false,
               error: "You are already a member of this household",
               error_code: "ALREADY_MEMBER",
+              household: invite.households as any,
+              status: invite.status,
+              expires_at: invite.expires_at,
+              invite: inviteMetadata,
             } as ValidateInviteResponse),
             {
               status: 409,
@@ -226,9 +252,7 @@ serve(async (req) => {
         : undefined,
       expires_at: invite.expires_at,
       status: invite.status,
-      invite: {
-        personal_message: invite.personal_message ?? null,
-      },
+      invite: inviteMetadata,
     };
 
     return new Response(JSON.stringify(response), {

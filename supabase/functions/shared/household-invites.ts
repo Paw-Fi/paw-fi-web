@@ -10,6 +10,8 @@ export type CreateHouseholdInviteResult =
       invite_url: string;
       token: string;
       expires_at: string | null;
+      is_reusable: boolean;
+      invited_role: "admin" | "member";
       email_sent: boolean;
       email_error?: string;
       household_name?: string;
@@ -27,11 +29,13 @@ export async function createHouseholdInvite(params: {
   resendFrom: string;
   householdId: string;
   actorUserId: string;
-  invitedEmail?: string;
+  invitedEmail?: string | null;
   personalMessage?: string;
   inviterName?: string;
   householdName?: string;
   expiresInDays?: number;
+  isReusable?: boolean;
+  invitedRole?: "admin" | "member";
   failOnEmailError?: boolean;
 }): Promise<CreateHouseholdInviteResult> {
   const householdId = params.householdId?.trim();
@@ -39,10 +43,33 @@ export async function createHouseholdInvite(params: {
   if (!householdId) return failure(400, "household_id is required");
   if (!actorUserId) return failure(401, "Authenticated user is required");
 
+  const isReusable =
+    params.isReusable === undefined ? false : params.isReusable;
+  const invitedRole =
+    params.invitedRole === undefined ? "admin" : params.invitedRole;
+  if (typeof isReusable !== "boolean") {
+    return failure(400, "is_reusable must be a boolean");
+  }
+  if (invitedRole !== "admin" && invitedRole !== "member") {
+    return failure(400, "invited_role must be admin or member");
+  }
+  if (params.invitedEmail != null && typeof params.invitedEmail !== "string") {
+    return failure(400, "invited_email must be a string");
+  }
+  const invitedEmail = params.invitedEmail?.trim() || undefined;
+  if (isReusable && invitedEmail) {
+    return failure(400, "Reusable invitations cannot have a recipient email");
+  }
   const expiresInDays =
-    typeof params.expiresInDays === "number" ? params.expiresInDays : 7;
+    params.expiresInDays === undefined ? 7 : params.expiresInDays;
   const ttlError = validateInviteTtl(expiresInDays);
   if (ttlError) return ttlError;
+  if (isReusable && ![0, 1, 3, 7, 14, 30].includes(expiresInDays)) {
+    return failure(
+      400,
+      "Reusable invite expiry must be 0, 1, 3, 7, 14, or 30 days",
+    );
+  }
 
   const { data: household, error: householdError } = await params.supabase
     .from("households")
@@ -77,7 +104,6 @@ export async function createHouseholdInvite(params: {
       ? null
       : new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
 
-  const invitedEmail = params.invitedEmail?.trim() || undefined;
   const personalMessage = params.personalMessage?.trim() || undefined;
   const { data: invite, error: inviteError } = await params.supabase
     .from("invites")
@@ -85,7 +111,9 @@ export async function createHouseholdInvite(params: {
       token,
       household_id: householdId,
       inviter_id: actorUserId,
-      invited_email: invitedEmail,
+      invited_email: invitedEmail ?? null,
+      is_reusable: isReusable,
+      invited_role: invitedRole,
       personal_message: personalMessage,
       expires_at: expiresAt ? expiresAt.toISOString() : null,
       status: "pending",
@@ -121,6 +149,8 @@ export async function createHouseholdInvite(params: {
         invite_url: inviteUrl,
         token,
         expires_at: invite.expires_at,
+        is_reusable: isReusable,
+        invited_role: invitedRole,
         email_sent: false,
         email_error: emailResult.error,
         household_name: resolvedHouseholdName,
@@ -133,19 +163,29 @@ export async function createHouseholdInvite(params: {
     invite_url: inviteUrl,
     token,
     expires_at: invite.expires_at,
+    is_reusable: isReusable,
+    invited_role: invitedRole,
     email_sent: !!invitedEmail,
     household_name: resolvedHouseholdName,
   };
 }
 
-function validateInviteTtl(expiresInDays: number): CreateHouseholdInviteResult | null {
+function validateInviteTtl(
+  expiresInDays: number,
+): CreateHouseholdInviteResult | null {
   const maxTTLDays = 30;
+  if (!Number.isInteger(expiresInDays)) {
+    return failure(400, "Invite expiry must be an integer number of days");
+  }
   if (expiresInDays === 0) return null;
   if (expiresInDays > maxTTLDays) {
     return failure(400, `Invite expiry cannot exceed ${maxTTLDays} days`);
   }
   if (expiresInDays < 1) {
-    return failure(400, "Invite expiry must be at least 1 day or 0 for unlimited");
+    return failure(
+      400,
+      "Invite expiry must be at least 1 day or 0 for unlimited",
+    );
   }
   return null;
 }

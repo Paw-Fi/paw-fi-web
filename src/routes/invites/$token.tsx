@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
@@ -24,14 +24,106 @@ interface InviteData {
   };
   invite: {
     personal_message: string | null;
+    is_reusable: boolean;
+    invited_role: "admin" | "member";
   };
 }
 
 function InvitePage() {
   const { token } = Route.useParams();
-  const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
 
+  // A new token or actor owns fresh state, including app-open/request guards.
+  return (
+    <InviteContent
+      key={JSON.stringify([token, user?.id ?? null])}
+      token={token}
+      userId={user?.id ?? null}
+      authLoading={authLoading}
+    />
+  );
+}
+
+async function readInvitePayload(response: { data: any; error: any }) {
+  // Non-2xx function responses put their JSON contract in the HTTP error context.
+  const context = response.error?.context;
+  if (context && typeof context.clone === "function") {
+    try {
+      return await context.clone().json();
+    } catch {
+      return response.data;
+    }
+  }
+  return response.data;
+}
+
+function mapInviteData(data: any): InviteData | null {
+  const invite = data?.invite === undefined ? {} : data.invite;
+  if (!invite || typeof invite !== "object" || Array.isArray(invite)) {
+    return null;
+  }
+  // Older validation responses omit these fields; absence is never reusable.
+  const isReusable = Object.prototype.hasOwnProperty.call(invite, "is_reusable")
+    ? invite.is_reusable
+    : false;
+  const invitedRole = Object.prototype.hasOwnProperty.call(
+    invite,
+    "invited_role",
+  )
+    ? invite.invited_role
+    : "admin";
+  if (
+    typeof data?.household?.id !== "string" ||
+    !data.household.id ||
+    typeof data.household.name !== "string" ||
+    !data.household.name ||
+    typeof isReusable !== "boolean" ||
+    !["admin", "member"].includes(invitedRole)
+  ) {
+    return null;
+  }
+  return {
+    household: {
+      id: data.household.id,
+      name: data.household.name,
+      emoji:
+        typeof data.household.cover_image_url === "string"
+          ? data.household.cover_image_url
+          : null,
+    },
+    inviter: {
+      full_name:
+        typeof data.inviter?.full_name === "string" && data.inviter.full_name
+          ? data.inviter.full_name
+          : typeof data.inviter?.email === "string" && data.inviter.email
+            ? data.inviter.email
+            : "Someone",
+      avatar_url:
+        typeof data.inviter?.avatar_url === "string"
+          ? data.inviter.avatar_url
+          : null,
+    },
+    invite: {
+      personal_message:
+        typeof invite.personal_message === "string"
+          ? invite.personal_message
+          : null,
+      is_reusable: isReusable,
+      invited_role: invitedRole,
+    },
+  };
+}
+
+function InviteContent({
+  token,
+  userId,
+  authLoading,
+}: {
+  token: string;
+  userId: string | null;
+  authLoading: boolean;
+}) {
+  const navigate = useNavigate();
   const [inviteData, setInviteData] = useState<InviteData | null>(null);
   const [isValidating, setIsValidating] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
@@ -44,6 +136,21 @@ function InvitePage() {
   // Ref to prevent multiple validation calls
   const hasValidatedRef = useRef(false);
   const appOpenAttemptedRef = useRef(false);
+  const mountedRef = useRef(false);
+  const validatingRef = useRef(false);
+  const acceptingRef = useRef(false);
+  const acceptedRef = useRef(false);
+  const appOpenCleanupRef = useRef<(() => void) | null>(null);
+
+  // Revoke request ownership during commit, before passive cleanup or old toasts.
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      appOpenCleanupRef.current?.();
+      appOpenCleanupRef.current = null;
+    };
+  }, []);
 
   // Detect if user is on mobile device
   useEffect(() => {
@@ -62,9 +169,15 @@ function InvitePage() {
   // Try to open app automatically if on mobile BEFORE auth check
   useEffect(() => {
     // Only attempt once, only on mobile, regardless of auth status
-    if (!appOpenAttemptedRef.current && isMobileDevice) {
+    if (
+      isMobileDevice &&
+      (!appOpenAttemptedRef.current ||
+        (attemptedAppOpen && !appOpenCleanupRef.current))
+    ) {
+      const shouldNavigate = !appOpenAttemptedRef.current;
       appOpenAttemptedRef.current = true;
-      tryOpenApp();
+      // StrictMode may replay setup after cleanup; resume fallback without reopening.
+      tryOpenApp(shouldNavigate);
     }
   }, [isMobileDevice, token]);
 
@@ -79,10 +192,10 @@ function InvitePage() {
     }
 
     // If not authenticated, redirect to login/register with current URL
-    if (!user) {
+    if (!userId) {
       navigate({
         to: "/login",
-        search: { redirect: window.location.pathname },
+        search: { redirect: `/invites/${encodeURIComponent(token)}` },
       });
       return;
     }
@@ -90,16 +203,15 @@ function InvitePage() {
     // User is authenticated, validate the invite if we haven't already
     // But only if not attempting to open app (wait for app open to fail first)
     if (
-      user &&
+      userId &&
       !inviteData &&
       !error &&
       !hasValidatedRef.current &&
       !attemptedAppOpen
     ) {
-      hasValidatedRef.current = true;
-      validateInvite();
+      void validateInvite();
     }
-  }, [authLoading, user, token, inviteData, error, attemptedAppOpen]);
+  }, [authLoading, userId, token, inviteData, error, attemptedAppOpen]);
 
   // 10-second timeout for validation
   useEffect(() => {
@@ -115,139 +227,186 @@ function InvitePage() {
   }, [isValidating, inviteData, error]);
 
   const validateInvite = async () => {
+    if (
+      !mountedRef.current ||
+      authLoading ||
+      !userId ||
+      validatingRef.current
+    ) {
+      return;
+    }
+    hasValidatedRef.current = true;
+    validatingRef.current = true;
     setIsValidating(true);
     setError(null);
+    setShowTimeout(false);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+      if (!mountedRef.current) return;
+      const session = sessionData.session;
+      if (sessionError || !session || session.user.id !== userId) {
+        throw new Error("Your session changed. Please log in again.");
+      }
       // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 30000),
+      const timeoutPromise = new Promise(
+        (_, reject) =>
+          (timeoutId = setTimeout(
+            () => reject(new Error("Request timeout")),
+            30000,
+          )),
       );
 
       const validatePromise = supabase.functions.invoke(
         "households-validate-invite",
         {
           body: { token },
+          headers: { Authorization: `Bearer ${session.access_token}` },
         },
       );
 
-      const { data, error } = (await Promise.race([
+      const response = (await Promise.race([
         validatePromise,
         timeoutPromise,
       ])) as any;
+      const data = await readInvitePayload(response);
+      if (!mountedRef.current) return;
 
-      if (error) {
-        console.error("[InvitePage] Invoke error:", error);
-        throw error;
-      }
-
-      // Check if the response indicates an invalid invite
-      if (data && !data.valid) {
-        setError(data.error || "Invalid invitation");
+      if (data?.error_code === "ALREADY_MEMBER") {
+        const mappedData = mapInviteData(data);
+        if (!mappedData) throw new Error("Invalid response from server");
+        setInviteData(mappedData);
+        acceptedRef.current = true;
+        setIsAccepted(true);
         return;
       }
 
-      // Map the response to the expected format
-      if (data && data.valid && data.household) {
-        const mappedData: InviteData = {
-          household: {
-            id: data.household.id,
-            name: data.household.name,
-            emoji: data.household.cover_image_url || null, // Using cover_image_url as emoji
-          },
-          inviter: {
-            full_name:
-              data.inviter?.full_name || data.inviter?.email || "Someone",
-            avatar_url: data.inviter?.avatar_url || null,
-          },
-          invite: {
-            personal_message: data.invite?.personal_message || null,
-          },
-        };
-        setInviteData(mappedData);
-      } else {
-        console.error("[InvitePage] Unexpected response structure:", data);
-        setError("Invalid response from server");
+      if (response.error || data?.valid !== true) {
+        throw new Error(
+          data?.error || response.error?.message || "Invalid invitation",
+        );
+      }
+
+      const mappedData = mapInviteData(data);
+      if (!mappedData) throw new Error("Invalid response from server");
+      setInviteData(mappedData);
+      setShowTimeout(false);
+      setIsValidating(false);
+      // Start once from authoritative validation, never from an error-retrying effect.
+      if (mappedData.invite.is_reusable) {
+        void acceptInvite(mappedData);
       }
     } catch (err: any) {
-      console.error("[InvitePage] Error validating invite:", err);
-
-      // Provide more specific error messages
-      let errorMessage = "Failed to validate invitation. Please try again.";
-
-      if (err.message === "Request timeout") {
-        errorMessage =
-          "Request timed out. Please check if the Supabase Edge Functions are running locally (npx supabase functions serve) or if your network connection is stable.";
-      } else if (
-        err.message?.includes("Failed to fetch") ||
-        err.message?.includes("NetworkError")
-      ) {
-        errorMessage =
-          "Cannot connect to the server. Make sure Supabase is running locally (npx supabase start) and Edge Functions are served (npx supabase functions serve).";
+      if (mountedRef.current) {
+        setError(
+          err.message === "Request timeout"
+            ? "Request timed out. Check your connection and try again."
+            : err.message || "Failed to validate invitation. Please try again.",
+        );
       }
-
-      setError(errorMessage);
     } finally {
-      setIsValidating(false);
+      clearTimeout(timeoutId);
+      validatingRef.current = false;
+      if (mountedRef.current) setIsValidating(false);
     }
   };
 
-  const handleAcceptInvite = async () => {
-    if (!user) {
-      // Should not happen due to redirect, but handle gracefully
-      const currentUrl = encodeURIComponent(window.location.pathname);
-      navigate({
-        to: "/login",
-        search: { redirect: currentUrl },
-      });
+  const acceptInvite = async (validatedInvite: InviteData) => {
+    if (
+      !mountedRef.current ||
+      authLoading ||
+      !userId ||
+      acceptingRef.current ||
+      acceptedRef.current
+    ) {
       return;
     }
 
+    acceptingRef.current = true;
     setIsAccepting(true);
     setError(null);
+    const abortController = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     try {
-      // Get current session for auth header
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-
-      if (!accessToken) {
-        throw new Error("Not authenticated. Please log in again.");
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "households-accept-invite",
-        {
-          body: { token },
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(
+            new Error(
+              "Joining timed out. Your membership may already have been saved. Try again to confirm.",
+            ),
+          );
+          abortController.abort();
+        }, 30000);
+      });
+      // Bound session lookup, HTTP dispatch, and error-body decoding as one attempt.
+      const acceptancePromise = (async () => {
+        const { data: sessionData, error: sessionError } =
+          await supabase.auth.getSession();
+        if (!mountedRef.current || abortController.signal.aborted) return null;
+        const session = sessionData.session;
+        if (sessionError || !session || session.user.id !== userId) {
+          throw new Error("Your session changed. Please log in again.");
+        }
+        const response = await supabase.functions.invoke(
+          "households-accept-invite",
+          {
+            body: { token },
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            signal: abortController.signal,
           },
-        },
-      );
+        );
+        return { response, data: await readInvitePayload(response) };
+      })();
+      const result = await Promise.race([acceptancePromise, timeoutPromise]);
+      if (!mountedRef.current || !result) return;
+      const { response, data } = result;
 
-      if (error) throw error;
-
-      if (data && data.error) {
-        setError(data.error);
-        toast.error(data.error);
-        return;
+      const alreadyMember = data?.error_code === "ALREADY_MEMBER";
+      if (!alreadyMember && (response.error || data?.error)) {
+        throw new Error(
+          data?.error ||
+            response.error?.message ||
+            "Failed to accept invitation",
+        );
+      }
+      if (
+        !alreadyMember &&
+        (data?.success !== true ||
+          data.household_id !== validatedInvite.household.id ||
+          typeof data.member_id !== "string" ||
+          !data.member_id)
+      ) {
+        throw new Error("Invalid response from server. Please try again.");
       }
 
-      // Success!
+      acceptedRef.current = true;
       setIsAccepted(true);
-      toast.success(
-        `Welcome to ${inviteData?.household.name || "the household"}!`,
-      );
+      toast.success(`Welcome to ${validatedInvite.household.name}!`);
     } catch (err: any) {
-      console.error("[InvitePage] Error accepting invite:", err);
-      setError(err.message || "Failed to accept invitation. Please try again.");
-      toast.error("Failed to accept invitation");
+      if (mountedRef.current) {
+        setError(
+          err.message || "Failed to accept invitation. Please try again.",
+        );
+        toast.error("Failed to accept invitation");
+      }
     } finally {
-      setIsAccepting(false);
+      clearTimeout(timeoutId);
+      acceptingRef.current = false;
+      if (mountedRef.current) setIsAccepting(false);
     }
   };
 
-  const tryOpenApp = () => {
+  const handleAcceptInvite = () => {
+    if (inviteData) void acceptInvite(inviteData);
+  };
+
+  const tryOpenApp = (shouldNavigate = true) => {
+    appOpenCleanupRef.current?.();
     setAttemptedAppOpen(true);
 
     const deepLink = `moneko://households/join?token=${encodeURIComponent(token)}`;
@@ -272,34 +431,28 @@ function InvitePage() {
 
     // iframe scheme open is blocked in many modern mobile browsers.
     // Direct navigation in a user-gesture path is more reliable.
-    window.location.href = deepLink;
+    if (shouldNavigate) window.location.href = deepLink;
 
     // Fallback: Check if app opened after 2 seconds
-    setTimeout(() => {
+    const cleanupListeners = () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("blur", onBlur);
+    };
+    const timeoutId = setTimeout(() => {
+      cleanupListeners();
+      if (!mountedRef.current) return;
 
       // If app didn't open and we're still on mobile, show continue button
       if (!appOpened && !document.hidden) {
-        setAttemptedAppOpen(false); // Allow user to continue on web
-        // Trigger validation now that we know app isn't available
-        if (!hasValidatedRef.current) {
-          hasValidatedRef.current = true;
-          validateInvite();
-        }
+        // The auth-gated effect owns validation after app fallback.
+        setAttemptedAppOpen(false);
       }
     }, 2500);
-
-    // Fallback to app store after longer delay if really didn't work
-    setTimeout(() => {
-      if (!appOpened && !document.hidden) {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isAndroid = /Android/.test(navigator.userAgent);
-
-        // Only show app store link, don't force redirect
-      }
-    }, 3000);
+    appOpenCleanupRef.current = () => {
+      clearTimeout(timeoutId);
+      cleanupListeners();
+    };
   };
 
   const handleOpenApp = () => {
@@ -307,7 +460,12 @@ function InvitePage() {
   };
 
   // Loading state
-  if (isValidating || authLoading) {
+  if (
+    isValidating ||
+    authLoading ||
+    !userId ||
+    (isAccepting && inviteData?.invite.is_reusable)
+  ) {
     return (
       <div className="bg-moneko-background flex min-h-screen items-center justify-center px-4">
         <div className="max-w-md text-center">
@@ -315,7 +473,11 @@ function InvitePage() {
             <>
               <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-t-transparent"></div>
               <p className="text-muted-foreground">
-                {isValidating ? "Validating invitation..." : "Loading..."}
+                {isAccepting
+                  ? "Joining..."
+                  : isValidating
+                    ? "Validating invitation..."
+                    : "Loading..."}
               </p>
             </>
           ) : (
@@ -383,9 +545,20 @@ function InvitePage() {
             </div>
           </div>
           <h1 className="text-foreground mb-3 text-2xl font-light">
-            Invalid Invitation
+            {inviteData ? "Couldn't Join" : "Invalid Invitation"}
           </h1>
           <p className="text-muted-foreground mb-8">{error}</p>
+          <motion.button
+            onClick={() => {
+              if (inviteData) void acceptInvite(inviteData);
+              else void validateInvite();
+            }}
+            className="bg-primary text-primary-foreground mb-3 w-full rounded-full px-6 py-4 font-medium transition-all duration-200 hover:shadow-md"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+          >
+            Try Again
+          </motion.button>
           <motion.button
             onClick={() => navigate({ to: "/" })}
             className="bg-primary text-primary-foreground w-full rounded-full px-6 py-4 font-medium transition-all duration-200 hover:shadow-md"
@@ -558,6 +731,13 @@ function InvitePage() {
               </h1>
               <p className="text-muted-foreground">
                 You've been invited to collaborate on household finances
+              </p>
+              <p className="text-muted-foreground mt-2 text-sm">
+                You'll join as{" "}
+                {inviteData.invite.invited_role === "admin"
+                  ? "an admin"
+                  : "a member"}
+                .
               </p>
             </motion.div>
 
