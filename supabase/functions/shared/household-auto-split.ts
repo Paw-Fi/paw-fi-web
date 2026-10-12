@@ -710,12 +710,16 @@ function allocateCentsByWeights(
   return floorValues;
 }
 
-function memberIdsFromRows(members: HouseholdMemberRow[]): string[] {
-  return members
+function memberIdsFromRows(
+  members: HouseholdMemberRow[],
+  stableOrder = true,
+): string[] {
+  const ids = members
     .map((member) =>
       typeof member.user_id === "string" ? member.user_id.trim() : "",
     )
     .filter((userId) => userId.length > 0);
+  return stableOrder ? ids.sort() : ids;
 }
 
 function sameMembers(
@@ -862,9 +866,19 @@ export function buildHouseholdSplitRecords({
       error: "Custom splits must include all household members",
     };
   }
-  const reconciledCustomSplits = reconcileMemberChanges
+  const resolvedCustomSplits = reconcileMemberChanges
     ? reconcileCustomSplitsForMembers(customSplits, members, amountCents)
     : customSplits;
+  // New allocations are ID-keyed; reorder copies, never positional values or
+  // existing persisted lines. Stable IDs also decide fractional-cent ties.
+  const reconciledCustomSplits = resolvedCustomSplits
+    ? {
+        ...resolvedCustomSplits,
+        memberSplits: [...resolvedCustomSplits.memberSplits].sort((a, b) =>
+          a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0,
+        ),
+      }
+    : null;
   const splitType = reconciledCustomSplits
     ? reconciledCustomSplits.splitType
     : "equal";
@@ -965,7 +979,7 @@ export function buildHouseholdSplitRecords({
       expense_id: transactionId,
       payer_user_id: memberIds.includes(payerUserId)
         ? payerUserId
-        : memberIds[0],
+        : memberIdsFromRows(members, false)[0],
       split_type: splitType,
       currency,
       total_amount_cents: amountCents,
