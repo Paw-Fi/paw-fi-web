@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 
 // Initialize Stripe with your secret key - using latest API version
@@ -14,7 +14,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-serve(async (req) => {
+serve(withCors(async (req) => {
   let requestBody: any = null;
 
   try {
@@ -482,4 +482,4 @@ serve(async (req) => {
       },
     );
   }
-});
+}));

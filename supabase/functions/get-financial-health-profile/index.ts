@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 
 // Initialize Supabase client
 const supabaseClient = createClient(
@@ -8,7 +8,7 @@ const supabaseClient = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
 );
 
-serve(async (req: Request): Promise<Response> => {
+serve(withCors(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -146,4 +146,4 @@ serve(async (req: Request): Promise<Response> => {
       },
     );
   }
-});
+}));

@@ -2,7 +2,7 @@
 // Simple API to update preferred currency for a user (direct database operation)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
@@ -24,7 +24,7 @@ function errorResponse(message: string, status = 400, details?: unknown) {
   return jsonResponse({ error: message, details }, status);
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -253,4 +253,4 @@ Deno.serve(async (req: Request) => {
   };
 
   return jsonResponse({ ok: true, results });
-});
+}));

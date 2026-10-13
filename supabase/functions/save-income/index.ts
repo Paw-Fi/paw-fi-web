@@ -2,7 +2,7 @@
 // Saves income transaction to database with privacy controls and household sharing
 // Extends unified transaction system (expenses table with type='income')
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import {
   merchantAutoResolutionPatch,
   merchantAutoResolutionValidationError,
@@ -157,7 +157,7 @@ interface RequestBody {
   };
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -853,4 +853,4 @@ Deno.serve(async (req: Request) => {
     });
     return errorResponse("Failed to save income", 500, "SERVER_ERROR");
   }
-});
+}));

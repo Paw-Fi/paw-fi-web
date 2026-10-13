@@ -14,7 +14,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { validateEnvironment } from "../shared/env-validation.ts";
 import { generateIdempotencyKey } from "../shared/idempotency.ts";
@@ -53,7 +53,7 @@ function sanitizeReturnUrl(
   return parsed.toString();
 }
 
-serve(async (req: Request): Promise<Response> => {
+serve(withCors(async (req: Request): Promise<Response> => {
   try {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -241,4 +241,4 @@ serve(async (req: Request): Promise<Response> => {
       },
     );
   }
-});
+}));

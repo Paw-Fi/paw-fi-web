@@ -3,7 +3,7 @@
 // Used by clients to extract structured transactions before logging
 // Supports SSE streaming for real-time progress updates (opt-in via ?stream=true query param)
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import {
   AnalyzeRequestBody,
   normalizePreferredTimezone,
@@ -699,7 +699,7 @@ function createSSEStream(
   });
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -1036,4 +1036,4 @@ Deno.serve(async (req: Request) => {
     console.error("[analyze-expense] Error:", error);
     return errorResponse("Failed to analyze expense", 500, "SERVER_ERROR");
   }
-});
+}));

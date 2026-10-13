@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { assertAccountInScope } from "../shared/accounts.ts";
 import { normalizeEmailAddress } from "../shared/email-import.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -553,7 +553,7 @@ async function handleRequest(req: Request): Promise<Response> {
   );
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   try {
     return await handleRequest(req);
   } catch (error) {
@@ -572,4 +572,4 @@ Deno.serve(async (req: Request) => {
       "SERVER_ERROR",
     );
   }
-});
+}));

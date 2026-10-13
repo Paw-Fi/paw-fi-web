@@ -1,7 +1,7 @@
 // supabase/functions/gemini-structured-stream/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { AI_PROMPT } from "./prompt.ts";
@@ -266,7 +266,7 @@ function createErrorResponse(
   });
 }
 
-serve(async (req: Request): Promise<Response> => {
+serve(withCors(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return handleOptionsRequest();
   if (req.method !== "POST") return handleMethodNotAllowed();
 
@@ -1054,4 +1054,4 @@ serve(async (req: Request): Promise<Response> => {
 
     return createErrorResponse("Internal Server Error", 500, errorMessage);
   }
-});
+}));

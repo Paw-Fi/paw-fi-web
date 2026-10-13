@@ -2,7 +2,7 @@
 // Saves confirmed expense to database
 // Optionally creates household split if householdId provided
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import {
   merchantAutoResolutionPatch,
   merchantAutoResolutionValidationError,
@@ -135,7 +135,7 @@ interface RequestBody {
   accountId?: string; // Optional financial account
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -1186,4 +1186,4 @@ Deno.serve(async (req: Request) => {
     });
     return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
   }
-});
+}));

@@ -3,7 +3,7 @@
 // Designed for AI-extracted bulk imports (PDFs, bank statements, etc.)
 // Significantly reduces latency by using batch insert instead of N individual calls
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import {
   merchantAutoResolutionPatch,
   merchantAutoResolutionValidationError,
@@ -1401,7 +1401,7 @@ function createSSEStream(
 }
 
 if (import.meta.main) {
-  Deno.serve(async (req: Request) => {
+  Deno.serve(withCors(async (req: Request) => {
     if (req.method === "OPTIONS") {
       return new Response("ok", { headers: corsHeaders });
     }
@@ -1491,5 +1491,5 @@ if (import.meta.main) {
         "SERVER_ERROR",
       );
     }
-  });
+  }));
 }

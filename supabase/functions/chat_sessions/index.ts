@@ -1,6 +1,6 @@
 // @deno-types="https://esm.sh/v135/@supabase/supabase-js@2.39.7/dist/module/index.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 
 console.log(`Function "chat_sessions" up and running!`);
 
@@ -365,7 +365,7 @@ async function handleDeleteSession(
 }
 
 // Main function handler
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -435,4 +435,4 @@ Deno.serve(async (req: Request) => {
       error instanceof Error ? error.message : 'Unknown error'
     );
   }
-});
+}));

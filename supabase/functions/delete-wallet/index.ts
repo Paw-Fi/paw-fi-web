@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { getAccountOrNull, sanitizeUuid } from "../shared/accounts.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
@@ -129,7 +129,7 @@ async function hasReplacementDefaultWallet(params: {
   return Array.isArray(data) && data.length > 0;
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -400,7 +400,7 @@ Deno.serve(async (req: Request) => {
       500,
     );
   }
-});
+}));
 
 async function cleanupWalletLogo(params: {
   supabase: FunctionSupabaseClient;

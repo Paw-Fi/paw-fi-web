@@ -2,7 +2,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { authenticateUser } from "../shared/auth.ts";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { type LogoDevCandidate } from "../shared/merchant-resolution.ts";
 import { searchLogoDevCandidates } from "../shared/logo-dev-discovery.ts";
 import {
@@ -61,7 +61,7 @@ async function resolveEvidenceKey(params: {
   return typeof data === "string" && data.length > 0 ? data : null;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -387,4 +387,4 @@ Deno.serve(async (req) => {
     console.error("[merchant-user-search]", error);
     return json({ error: "Merchant search is temporarily unavailable" }, 503);
   }
-});
+}));

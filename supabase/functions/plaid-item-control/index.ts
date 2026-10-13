@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { assertScopeAccess } from "../shared/accounts.ts";
-import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
+import { corsHeaders, getCorsHeaders, withCors } from "../shared/cors.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
@@ -60,7 +60,7 @@ function isSupportedAction(value: unknown): value is PlaidItemAction {
   );
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   const debugId = crypto.randomUUID();
   let body: PlaidItemControlBody = {};
 
@@ -839,7 +839,7 @@ Deno.serve(async (req) => {
       },
     );
   }
-});
+}));
 
 function serializeErrorForLog(error: unknown): Record<string, unknown> {
   if (error instanceof Error) {

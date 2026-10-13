@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { readWalletLedgerPages } from "../shared/wallet-ledger-pages.ts";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
 
@@ -55,7 +55,7 @@ function normalizeDate(value?: string | null): string | null {
   return trimmed;
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -377,4 +377,4 @@ Deno.serve(async (req: Request) => {
       500,
     );
   }
-});
+}));

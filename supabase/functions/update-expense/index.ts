@@ -2,7 +2,7 @@
 // Updates individual fields of an expense transaction with validation
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
@@ -302,7 +302,7 @@ function buildProviderFieldsFromExpenseRow(
   };
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -2603,4 +2603,4 @@ Deno.serve(async (req: Request) => {
     });
     return errorResponse("An unexpected error occurred", "SERVER_ERROR", 500);
   }
-});
+}));

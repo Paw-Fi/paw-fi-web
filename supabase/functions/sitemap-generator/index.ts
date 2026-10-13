@@ -21,7 +21,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 // @ts-ignore - These modules will be available in the Deno runtime environment
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 // Import CORS headers from shared utility
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 
 // Types
 interface StaticRoute {
@@ -210,7 +210,7 @@ Sitemap: https://pbopcsmrcykdzbilpilf.supabase.co/functions/v1/sitemap-generator
 }
 
 // Main handler for all routes
-serve(async (req: Request) => {
+serve(withCors(async (req: Request) => {
   // Handle OPTIONS request for CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -239,4 +239,4 @@ serve(async (req: Request) => {
     status: 404,
     headers: { "Content-Type": "application/json", ...corsHeaders },
   });
-});
+}));

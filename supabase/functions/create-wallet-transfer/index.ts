@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { getAccountOrNull, sanitizeUuid } from "../shared/accounts.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
@@ -29,7 +29,7 @@ function normalizeCurrency(value?: string | null): string | null {
   return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -352,4 +352,4 @@ Deno.serve(async (req: Request) => {
       500,
     );
   }
-});
+}));

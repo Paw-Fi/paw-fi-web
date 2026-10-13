@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import {
   sendEmail,
   sendUserEmail,
@@ -59,7 +59,7 @@ interface SendEmailResponse {
   test?: boolean;
 }
 
-serve(async (req) => {
+serve(withCors(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
     if (req.method === "OPTIONS") {
@@ -157,7 +157,7 @@ serve(async (req) => {
       },
     );
   }
-});
+}));
 
 // Handle direct/template emails
 async function handleDirectEmail(

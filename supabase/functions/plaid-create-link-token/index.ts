@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
+import { corsHeaders, getCorsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
@@ -42,7 +42,7 @@ interface CreateLinkTokenRequest {
   mode?: "new" | "update" | "reconnect" | "duplicate_blocked";
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -418,4 +418,4 @@ Deno.serve(async (req) => {
       },
     );
   }
-});
+}));

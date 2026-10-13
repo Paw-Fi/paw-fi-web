@@ -3,7 +3,7 @@ import {
   isRecurringOccurrenceRequestBody,
   recurringOccurrenceDatabaseFailure,
 } from "../shared/recurring-occurrence-errors.ts";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 
@@ -29,7 +29,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -142,4 +142,4 @@ Deno.serve(async (req) => {
     const failure = recurringOccurrenceDatabaseFailure({});
     return json(failure.body, failure.status);
   }
-});
+}));

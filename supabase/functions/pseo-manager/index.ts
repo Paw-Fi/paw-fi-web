@@ -23,7 +23,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 // @ts-ignore - These modules will be available in the Deno runtime environment
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.20.0";
 // Import CORS headers from shared utility
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 
 // Create a single Supabase client for all functions
 const getSupabaseClient = () => {
@@ -157,7 +157,7 @@ async function getRelatedPages(slug: string) {
 }
 
 // Main handler for all routes
-serve(async (req) => {
+serve(withCors(async (req) => {
   console.log('🌐 Incoming request:', req.method, req.url);
   console.log('📋 Headers:', Object.fromEntries(req.headers.entries()));
   
@@ -220,4 +220,4 @@ serve(async (req) => {
     JSON.stringify({ error: 'Not found', method: req.method, path, action: actionHeader }),
     { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
   );
-});
+}));

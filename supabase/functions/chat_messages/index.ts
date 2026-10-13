@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 
 console.log(`Function "chat_messages" up and running!`);
 
@@ -71,7 +71,7 @@ function createSupabaseClient(supabaseUrl: string, supabaseKey: string) {
 }
 
 // Main function handler
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   try {
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
@@ -291,4 +291,4 @@ Deno.serve(async (req: Request) => {
     console.error('Unhandled error in chat_messages function:', error);
     return createErrorResponse(500, 'Internal server error', error);
   }
-});
+}));

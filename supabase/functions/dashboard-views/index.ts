@@ -1,6 +1,6 @@
 // Supabase Edge Function for dashboard views management
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { getTemplateById } from "../shared/template-loader.ts";
 
 console.log(`Function "dashboard-views" up and running!`);
@@ -77,7 +77,7 @@ function createSupabaseClient(supabaseUrl: string, supabaseKey: string) {
 
 // Main function handler
 // @ts-ignore: Deno namespace is available in Supabase Edge Functions
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   try {
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
@@ -186,7 +186,7 @@ Deno.serve(async (req: Request) => {
     console.error('Unhandled error in dashboard-views function:', error);
     return createErrorResponse(500, 'Internal server error', error);
   }
-});
+}));
 
 // Handler for getting all dashboard views for a user
 async function handleGetAll(

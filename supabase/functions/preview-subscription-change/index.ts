@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { getPriceId } from "../shared/stripe-subscription-prices.ts";
 import type {
   BillingInterval,
@@ -80,7 +80,7 @@ function isProrationLineItem(line: any): boolean {
   );
 }
 
-serve(async (req) => {
+serve(withCors(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
     if (req.method === "OPTIONS") {
@@ -546,4 +546,4 @@ serve(async (req) => {
       },
     );
   }
-});
+}));

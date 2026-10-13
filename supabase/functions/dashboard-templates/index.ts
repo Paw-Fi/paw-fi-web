@@ -1,6 +1,6 @@
 // Supabase Edge Function for dashboard templates management
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { getAllTemplates, getTemplateById } from "../shared/template-loader.ts";
 
 console.log(`Function "dashboard-templates" up and running!`);
@@ -56,7 +56,7 @@ function createSupabaseClient(supabaseUrl: string, supabaseKey: string) {
 }
 
 // Main function handler
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   // Always add CORS headers to all responses
   const headers = {
     ...corsHeaders,
@@ -122,7 +122,7 @@ Deno.serve(async (req: Request) => {
     console.error('Unhandled error in dashboard-templates function:', error);
     return createErrorResponse(500, 'Internal server error', error);
   }
-});
+}));
 
 // Function to get all available templates
 function getAvailableTemplates(headers: Record<string, string>) {

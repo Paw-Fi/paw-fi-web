@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { SYSTEM_PROMPT } from "./prompt.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -12,7 +12,7 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
 
-serve(async (req: Request): Promise<Response> => {
+serve(withCors(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -141,4 +141,4 @@ I know that talking about money can feel overwhelming, but you're in a safe, jud
       },
     );
   }
-});
+}));

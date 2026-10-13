@@ -2,7 +2,7 @@
 // Update user's preferred language code in user_contacts (or create contact if missing)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizePreferredLanguage } from "../shared/currency-helpers.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -30,7 +30,7 @@ function normalizeLanguage(input?: string | null): string | null {
   return normalizePreferredLanguage(String(input));
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -203,4 +203,4 @@ Deno.serve(async (req: Request) => {
   }
 
   return json({ ok: true, results: { contactId, preferredLanguage } });
-});
+}));

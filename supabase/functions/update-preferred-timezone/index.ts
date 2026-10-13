@@ -3,7 +3,7 @@
 // Accepts IANA timezones (e.g., "Asia/Singapore") or UTC offsets (e.g., "UTC+08:00").
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
@@ -48,7 +48,7 @@ function normalizeTimezone(input?: string | null): string | null {
   return null;
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -220,4 +220,4 @@ Deno.serve(async (req: Request) => {
   }
 
   return json({ ok: true, results: { contactId, preferredTimezone } });
-});
+}));

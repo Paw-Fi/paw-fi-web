@@ -1,7 +1,7 @@
 // supabase/functions/gemini-structured-stream/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { CHAT_SUGGESTION_PROMPT_INSTRUCTIONS } from "./prompt.ts";
 
 // We'll define the AI_PROMPT directly in this file for clarity
@@ -17,7 +17,7 @@ if (!GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
 
-serve(async (req: Request): Promise<Response> => {
+serve(withCors(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -177,4 +177,4 @@ serve(async (req: Request): Promise<Response> => {
       },
     );
   }
-});
+}));

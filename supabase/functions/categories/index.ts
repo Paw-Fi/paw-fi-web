@@ -3,7 +3,7 @@
 // Categories are stored in public.expense_categories and referenced by name in expenses.category.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 function json(body: unknown, status = 200) {
@@ -13,7 +13,7 @@ function json(body: unknown, status = 200) {
   });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -123,4 +123,4 @@ Deno.serve(async (req) => {
     ok: true,
     categories: [...(defaults || []), ...(custom || [])],
   });
-});
+}));

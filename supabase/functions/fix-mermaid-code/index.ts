@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 
 // Initialize Supabase client
 const supabaseClient = createClient(
@@ -34,7 +34,7 @@ Your entire response must be ONLY the corrected, complete Mermaid code block. Do
 
 Here is the code:`;
 
-serve(async (req: Request): Promise<Response> => {
+serve(withCors(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -236,4 +236,4 @@ serve(async (req: Request): Promise<Response> => {
       },
     );
   }
-});
+}));

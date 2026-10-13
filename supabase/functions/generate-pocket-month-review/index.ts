@@ -7,7 +7,7 @@ import {
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { calculateNextMonthCarryCents } from "./rollover.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
 import {
   isRetryableGeminiError,
@@ -1238,7 +1238,7 @@ function previousMonthKey(value: string): string {
     .join("-");
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   const requestId = crypto.randomUUID();
   let stage = "request_received";
 
@@ -1636,4 +1636,4 @@ Deno.serve(async (req) => {
       500,
     );
   }
-});
+}));

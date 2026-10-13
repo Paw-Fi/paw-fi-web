@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 
 function json(body: unknown, status = 200) {
@@ -77,7 +77,7 @@ async function remapEnvelopeCategoryLinks(
   if (deleteOldError) throw deleteOldError;
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -411,4 +411,4 @@ Deno.serve(async (req: Request) => {
     console.error("[manage-user-categories] error", error);
     return json({ success: false, error: String(error) }, 500);
   }
-});
+}));
