@@ -17,6 +17,7 @@ import {
   buildNotificationCaptureTransaction,
   classifyAndroidNotification,
   httpStatusForAndroidNotificationFailure,
+  notificationUsesProviderSource,
   NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES,
 } from "../shared/android-notification-classifier.ts";
 import {
@@ -709,7 +710,8 @@ Deno.serve(async (req: Request) => {
     // A one-off payment to the same business near a due date is not proof of
     // recurrence. Only independently verified recurring semantics authorize it.
     const schedules =
-      classification.isRecurring && classification.recurrenceRule
+      classification.isRecurring && classification.recurrenceRule &&
+        !notificationUsesProviderSource(notification, classification)
         ? await loadRecurringSchedules({
           supabase,
           userId,

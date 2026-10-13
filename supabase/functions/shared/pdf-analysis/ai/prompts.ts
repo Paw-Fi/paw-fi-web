@@ -1,4 +1,5 @@
 import type { PdfAnalysisResult, PdfDocumentContent } from "../types.ts";
+import { AI_CATEGORY_POLICY } from "../../ai-category-policy.ts";
 
 export interface PdfPromptContext {
   callerCurrency: string;
@@ -11,9 +12,10 @@ export interface PdfPromptContext {
 }
 
 export function buildPdfSystemPrompt(context: PdfPromptContext): string {
-  const typeHint = context.typeHint && context.typeHint !== "mixed"
-    ? `Document import hint: imported transactions are likely ${context.typeHint}. Use this only as a hint.`
-    : "";
+  const typeHint =
+    context.typeHint && context.typeHint !== "mixed"
+      ? `Document import hint: imported transactions are likely ${context.typeHint}. Use this only as a hint.`
+      : "";
   const householdPrompt = context.householdPrompt
     ? `Household context:\n${context.householdPrompt}`
     : "";
@@ -37,12 +39,13 @@ export function buildPdfSystemPrompt(context: PdfPromptContext): string {
     "10. If you suspect the bank statement extraction is incomplete, add an anomaly describing that risk.",
     "",
     "Rules for `items`:",
-    `- category must be chosen from this expense list when type=expense: ${
-      context.expenseCategories.join(", ")
-    }`,
-    `- category must be chosen from this income list when type=income: ${
-      context.incomeCategories.join(", ")
-    }`,
+    AI_CATEGORY_POLICY,
+    `- category must be chosen from this expense list when type=expense: ${context.expenseCategories.join(
+      ", ",
+    )}`,
+    `- category must be chosen from this income list when type=income: ${context.incomeCategories.join(
+      ", ",
+    )}`,
     ...(context.categoryPreferenceGuidance ?? []),
     "- amount must be a positive number",
     "- date must be ISO YYYY-MM-DD when possible",

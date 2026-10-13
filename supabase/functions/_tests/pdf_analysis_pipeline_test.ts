@@ -407,27 +407,25 @@ Deno.test(
               text: [
                 "2026-04-01 chunk a 10.00 ".repeat(20),
                 "2026-04-02 chunk b 20.00 ".repeat(20),
-                "2026-04-03 chunk c 30.00 ".repeat(20),
-                "2026-04-04 chunk d 40.00 ".repeat(20),
               ].join("\n\n"),
               pages: [
                 "2026-04-01 chunk a 10.00 ".repeat(20),
                 "2026-04-02 chunk b 20.00 ".repeat(20),
-                "2026-04-03 chunk c 30.00 ".repeat(20),
-                "2026-04-04 chunk d 40.00 ".repeat(20),
               ],
-              pageCount: 4,
+              pageCount: 2,
             };
           },
           async ocr() {
             return null;
           },
           async vision() {
-            return { documents: [], pageCount: 4 };
+            return { documents: [], pageCount: 2 };
           },
         },
       });
 
+      assertEquals(result.analysis.metadata.chunk_count, 2);
+      assertEquals(result.analysis.metadata.chunk_item_counts, [60, 60]);
       assertEquals(result.items.length, 120);
       assertEquals(synthesisAttempts, 0);
       assertObjectMatch(result.items[0], firstChunkItems[0]);
@@ -504,29 +502,27 @@ Deno.test(
           async native() {
             return {
               text: [
-                "2026-04-21 Parking meter 12.50",
-                "2026-04-21 Parking meter 12.50",
-                "2026-04-22 Coffee 4.80",
-                "2026-04-23 Lunch 18.20",
+                "2026-04-21 Parking meter 12.50 ".repeat(20),
+                "2026-04-21 Parking meter 12.50 ".repeat(20),
               ].join("\n\n"),
               pages: [
-                "2026-04-21 Parking meter 12.50",
-                "2026-04-21 Parking meter 12.50",
-                "2026-04-22 Coffee 4.80",
-                "2026-04-23 Lunch 18.20",
+                "2026-04-21 Parking meter 12.50 ".repeat(20),
+                "2026-04-21 Parking meter 12.50 ".repeat(20),
               ],
-              pageCount: 4,
+              pageCount: 2,
             };
           },
           async ocr() {
             return null;
           },
           async vision() {
-            return { documents: [], pageCount: 4 };
+            return { documents: [], pageCount: 2 };
           },
         },
       });
 
+      assertEquals(result.analysis.metadata.chunk_count, 2);
+      assertEquals(result.analysis.metadata.chunk_item_counts, [1, 1]);
       assertEquals(result.items.length, 2);
       assertObjectMatch(result.items[0], repeatedTransaction);
       assertObjectMatch(result.items[1], repeatedTransaction);
@@ -613,7 +609,9 @@ Deno.test(
     assertEquals(result.analysis.requires_review, true);
     assertEquals(cacheWrites, 0);
     assertEquals(
-      result.analysis.anomalies.includes("incomplete_bank_statement_extraction"),
+      result.analysis.anomalies.includes(
+        "incomplete_bank_statement_extraction",
+      ),
       true,
     );
   },

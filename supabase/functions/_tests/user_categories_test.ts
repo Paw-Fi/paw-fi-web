@@ -221,6 +221,7 @@ Deno.test(
         category_name: "coffee & tea",
         use_count: 3,
         last_used_at: null,
+        is_user_confirmed: true,
       },
     ];
 
@@ -256,6 +257,7 @@ Deno.test(
         category_name: "coffee & tea",
         use_count: 1,
         last_used_at: null,
+        is_user_confirmed: true,
       },
     ];
 
@@ -291,6 +293,7 @@ Deno.test(
         category_name: "pet insurance",
         use_count: 2,
         last_used_at: null,
+        is_user_confirmed: true,
       },
     ];
 

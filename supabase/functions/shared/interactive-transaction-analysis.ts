@@ -4,6 +4,11 @@ import {
 } from "./vertex-ai-chat.ts";
 import { GEMINI_MODEL_FALLBACKS } from "./gemini-models.ts";
 import { buildAiResponseLanguageInstruction } from "./ai-response-language.ts";
+import { AI_CATEGORY_POLICY } from "./ai-category-policy.ts";
+import {
+  type CategoryContext,
+  resolveCategory,
+} from "./category-resolution.ts";
 import {
   INTERACTIVE_FIELDS,
   type InteractiveContext,
@@ -137,6 +142,7 @@ export async function runInteractiveTransactionAnalysis(params: {
   source: InteractiveSource;
   request: InteractiveRequest;
   context: InteractiveContext;
+  categoryContext?: CategoryContext;
   complete?: InteractiveCompletion;
 }) {
   const complete =
@@ -202,24 +208,42 @@ export async function runInteractiveTransactionAnalysis(params: {
       { issues: validated.issues },
     );
   }
-  const hasSplits = validated.items.some((item) => item.customSplits != null);
+  // Apply only server-loaded user choices, once, before independent verification.
+  // Automatic history is deliberately not an authority in this source-verified path.
+  const items = validated.items.map((item) => {
+    if (!params.categoryContext || item.explicitFields.includes("category"))
+      return item;
+    const category = resolveCategory({
+      initialGuess: item.category,
+      description:
+        typeof item.description === "string" ? item.description : null,
+      transactionType: item.type,
+      ctx: { ...params.categoryContext, preferences: [] },
+    });
+    return { ...item, category };
+  });
+  const categoryOverrides = items.flatMap((item, itemIndex) =>
+    item.category !== validated.items[itemIndex].category
+      ? [{ itemIndex, category: item.category }]
+      : [],
+  );
+  const verificationPayload = { ...payload, items, categoryOverrides };
+  const hasSplits = items.some((item) => item.customSplits != null);
   const models = hasSplits
     ? [GEMINI_MODEL_FALLBACKS[1], GEMINI_MODEL_FALLBACKS[2]]
     : [GEMINI_MODEL_FALLBACKS[1]];
   const verdicts = await Promise.all(
     models.map(async (model) =>
-      objectValue(
-        await complete("verify", model, { ...payload, items: validated.items }),
-      ),
+      objectValue(await complete("verify", model, verificationPayload)),
     ),
   );
   const rejected = verdicts.find((verdict) => verdict.approved !== true);
-  if (rejected) return correction(rejected, { items: validated.items });
+  if (rejected) return correction(rejected, { items, categoryOverrides });
   return {
     success: true,
     interactiveVersion: 1,
     requireCorrection: false,
-    items: validated.items,
+    items,
     language: params.context.language,
     preferredTimezone: params.context.preferredTimezone,
   };
@@ -237,6 +261,8 @@ Unknown, inaccessible, duplicate/ambiguous names, conflicting explicit wallet/Sp
 Use the caller date and timezone to resolve relative dates. Keep date as YYYY-MM-DD and transactionTime as HH:mm:ss wall time; never convert them to another timezone. Omit time unless supplied. Preserve zero seconds, midnight, native scripts and merchant evidence. Never fabricate a merchant, transaction amount, or time.
 If the client reports an ambiguous_wall_time or nonexistent_wall_time, no instant can safely be chosen automatically. Ask about that transaction's clock in context.language. Choices can offer a different valid date/time or explicitly recording the date without a clock. An explicit offset or timezone that this contract cannot persist requires clarification; never select a daylight-saving occurrence, normalize a missing clock, or discard the original clock without a new explicit answer.
 Use only allowed categories for the type. Explicit valid categories win. If an explicitly named category cannot be mapped unambiguously, ask rather than replacing it. Infer a category semantically only when missing.
+During verification, categoryOverrides identifies exact server-applied saved user corrections/remaps. For those item indexes, verify the allowed category matches that override instead of rejecting it for differing from your generic taxonomy choice. An explicit valid category in the latest source/answer still wins. Do not apply a category remap a second time.
+${AI_CATEGORY_POLICY}
 Household: payerUserId is who actually paid/received, NOT who owes a share. me/myself in any language refers to context.userId. Splits and payer must use members of the transaction's resolved shared Space. Omit customSplits when not requested so existing saved auto-split settings apply. Preserve an explicit equal split using splitType equal and only its intended participants. For amount splits preserve every explicit amount EXACTLY, with integer-cent precision, including zero. Never adjust an explicit last-member value or distribute an unexplained remainder. Example: total 100, Alice 50, me 20 requires a question about the missing 30. If only Alice 50 and me 20 is given as a complete allocation, total can be 70. If the source explicitly specifies who gets the remainder, calculate it. Unmentioned members are excluded, not assigned invented shares. Percentage must total 100; shares are positive integers.
 Recurrence requires explicit recurrence intent. Use the existing recurrence_rule contract: frequency daily/weekly/biweekly/monthly/yearly/custom, positive integer interval (custom means days), anchor_date matching the transaction date and optional end_date. Omit recurrence_rule for a one-off transaction. Recurring templates do not support an explicit scheduled wall time; ask whether to record a dated one-off transaction when needed. Unsupported schedules or instructions require clarification. A transaction with no supported financial intent must ask what transaction to record; do not invent one. Transfers, goals and fields not supported by this contract cannot be silently converted to expenses.
 When correction is required, return ONE nonempty focused question of at most 1200 characters and EVERY one of the 2-4 distinct nonempty self-contained string answer choices of at most 400 characters each, strictly in context.language, with no items. Choices must describe the transaction/field and resulting financial meaning; never expose internal IDs. A verifier returning approved:false MUST include question and choices; approved:true can omit them. The client also allows a custom free-text answer. Do not ask about optional omitted details that have safe defaults. All proposed transactions are withheld until every explicit instruction is resolved.`;
@@ -258,7 +284,7 @@ export function createInteractiveCompletion(
         ? INTERACTIVE_ANALYSIS_INSTRUCTIONS
         : `${INTERACTIVE_ANALYSIS_INSTRUCTIONS}\n${
             phase === "verify"
-              ? "You are an INDEPENDENT verifier. Check the original source and every clarification, not just internal consistency. Approve only if ALL transactions and explicit instructions are present, grounded, authorized, unambiguous and unchanged. Check omitted fields, participant identity, payer, split semantics, regional numbers/dates and destination defaults. An authorized compatible dropdown default is sufficient for an omitted destination; it is not evidence of an explicit destination instruction. Do not reject or ask to reconfirm a valid default simply because the source did not mention it. Reject if any explicit detail was lost or inferred incorrectly, and ask a focused question with choices. Do not repair the proposal yourself."
+              ? "You are an INDEPENDENT verifier. Check the original source and every clarification, not just internal consistency. Approve only if ALL transactions and explicit instructions are present, grounded, authorized, unambiguous and unchanged. Check category meaning against the actual purchase or income source, not merely membership in the allowed list; a generic category is justified only when no specific allowed category is supported, unless explicitly selected by the user. Check omitted fields, participant identity, payer, split semantics, regional numbers/dates and destination defaults. An authorized compatible dropdown default is sufficient for an omitted destination; it is not evidence of an explicit destination instruction. Do not reject or ask to reconfirm a valid default simply because the source did not mention it. Reject if any explicit detail was lost or inferred incorrectly, and ask a focused question with choices. Do not repair the proposal yourself."
               : "The server rejected the proposal or its clarification format. Use the supplied issues and invalidClarification, when present, with the original source and answers to identify the unresolved detail. Any supplied items are unapproved proposals, not verified facts. Return one nonempty question (at most 1200 characters) and 2-4 distinct nonempty string choices (at most 400 characters each) in context.language. Return only question and choices, never approval or transaction items. Do not change or repair the user's values automatically."
           }`;
     const modelClient = client.getGenerativeModel({

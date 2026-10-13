@@ -1100,3 +1100,159 @@ Deno.test("interactive: clarification choices are trimmed and remain distinct", 
   }
   assertEquals(rejected, true);
 });
+
+Deno.test(
+  "interactive categories: saved corrections precede verification without rewriting financial fields",
+  async () => {
+    const original = transaction({
+      description: "パンと牛乳",
+      category: "restaurants",
+    });
+    const verifiedPayloads: Array<Record<string, unknown>> = [];
+    const result = await runInteractiveTransactionAnalysis({
+      source: { text: "パンと牛乳 70 USD" },
+      request: { version: 1, answers: [] },
+      context,
+      categoryContext: {
+        allowedExpenseSet: new Set(context.expenseCategories),
+        allowedIncomeSet: new Set(context.incomeCategories),
+        preferences: [],
+        remaps: [],
+        confirmedPreferences: [
+          {
+            transaction_type: "expense",
+            match_key: "パンと牛乳",
+            category_name: "groceries",
+            use_count: 1,
+            last_used_at: null,
+            is_user_confirmed: true,
+          },
+        ],
+      },
+      complete: async (phase, _model, payload) => {
+        if (phase === "extract")
+          return { decision: "ready", items: [original] };
+        verifiedPayloads.push(payload);
+        return { approved: true };
+      },
+    });
+    assertEquals(result.requireCorrection, false);
+    if (result.requireCorrection) throw new Error("unexpected clarification");
+    assertEquals(result.items[0].category, "groceries");
+    assertEquals(result.items[0].amount, 70);
+    assertEquals(result.items[0].currency, "USD");
+    assertEquals(result.items[0].merchant, original.merchant);
+    assertEquals(result.items[0].transactionTime, original.transactionTime);
+    assertEquals(result.items[0].destination.accountId, "usd-wallet");
+    assertEquals(verifiedPayloads[0].categoryOverrides, [
+      { itemIndex: 0, category: "groceries" },
+    ]);
+  },
+);
+
+Deno.test(
+  "interactive categories: explicit valid categories beat both saved corrections and remaps",
+  async () => {
+    const original = transaction({
+      category: "other",
+      explicitFields: [...transaction().explicitFields, "category"],
+    });
+    const result = await runInteractiveTransactionAnalysis({
+      source: { text: "Use other for this transaction" },
+      request: { version: 1, answers: [] },
+      context,
+      categoryContext: {
+        allowedExpenseSet: new Set(context.expenseCategories),
+        allowedIncomeSet: new Set(context.incomeCategories),
+        preferences: [],
+        confirmedPreferences: [
+          {
+            transaction_type: "expense",
+            match_key: "晚餐",
+            category_name: "restaurants",
+            use_count: 1,
+            last_used_at: null,
+            is_user_confirmed: true,
+          },
+        ],
+        remaps: [
+          {
+            transaction_type: "expense",
+            from_category_name: "other",
+            to_category_name: "groceries",
+            use_count: 1,
+            last_used_at: null,
+          },
+        ],
+      },
+      complete: async (phase, _model, payload) => {
+        if (phase === "extract")
+          return { decision: "ready", items: [original] };
+        assertEquals(payload.categoryOverrides, []);
+        return { approved: true };
+      },
+    });
+    if (result.requireCorrection) throw new Error("unexpected clarification");
+    assertEquals(result.items[0].category, "other");
+  },
+);
+
+Deno.test(
+  "interactive categories: opposite remaps apply exactly once and rejection withholds every item",
+  async () => {
+    for (const approved of [true, false]) {
+      const result = await runInteractiveTransactionAnalysis({
+        source: { text: "食料品と夕食" },
+        request: { version: 1, answers: [] },
+        context,
+        categoryContext: {
+          allowedExpenseSet: new Set(context.expenseCategories),
+          allowedIncomeSet: new Set(context.incomeCategories),
+          preferences: [],
+          remaps: [
+            {
+              transaction_type: "expense",
+              from_category_name: "groceries",
+              to_category_name: "restaurants",
+              use_count: 1,
+              last_used_at: null,
+            },
+            {
+              transaction_type: "expense",
+              from_category_name: "restaurants",
+              to_category_name: "groceries",
+              use_count: 1,
+              last_used_at: null,
+            },
+          ],
+        },
+        complete: async (phase, _model, payload) => {
+          if (phase === "extract")
+            return {
+              decision: "ready",
+              items: [transaction(), transaction({ category: "restaurants" })],
+            };
+          assertEquals(
+            (payload.items as Array<{ category: string }>).map(
+              (item) => item.category,
+            ),
+            ["restaurants", "groceries"],
+          );
+          assertEquals(payload.categoryOverrides, [
+            { itemIndex: 0, category: "restaurants" },
+            { itemIndex: 1, category: "groceries" },
+          ]);
+          return approved
+            ? { approved: true }
+            : {
+                approved: false,
+                question: "どの分類にしますか？",
+                choices: ["食料品に分類する", "外食に分類する"],
+              };
+        },
+      });
+      assertEquals(result.requireCorrection, !approved);
+      assertEquals(result.items.length, approved ? 2 : 0);
+    }
+  },
+);

@@ -86,6 +86,13 @@ async function interactiveAnalysisResponse(
       source: parseInteractiveSource(body),
       request,
       context,
+      categoryContext: {
+        allowedExpenseSet: new Set(body.allowedExpenseCategories),
+        allowedIncomeSet: new Set(body.allowedIncomeCategories),
+        preferences: [],
+        confirmedPreferences: body.confirmedCategoryPreferences ?? [],
+        remaps: body.categoryRemaps ?? [],
+      },
     });
     const items = result.requireCorrection
       ? []

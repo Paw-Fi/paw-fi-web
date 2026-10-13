@@ -107,8 +107,13 @@ Deno.test(
               response: {
                 functionCalls: () => [
                   {
-                    name: "categorize_transactions",
-                    args: { categories: ["restaurants"] },
+                    name: (request as any).toolConfig.functionCallingConfig
+                      .allowedFunctionNames[0],
+                    args:
+                      (request as any).toolConfig.functionCallingConfig
+                        .allowedFunctionNames[0] === "verify_categories"
+                        ? { approvals: [true] }
+                        : { categories: ["restaurants"] },
                   },
                 ],
               },
@@ -139,8 +144,10 @@ Deno.test(
     const requestText = String(
       (requests[0] as any).contents?.[0]?.parts?.[0]?.text ?? "",
     );
-    assertStringIncludes(requestText, "Merchant/source: KFC");
-    assertStringIncludes(requestText, "Original user text: ٣٥ لمطعم KFC");
+    const evidence = JSON.parse(requestText).transactions[0];
+    assertEquals(evidence.merchant, "KFC");
+    assertEquals(evidence.sourceText, "٣٥ لمطعم KFC");
+    assertEquals(requests.length, 2);
   },
 );
 
@@ -266,6 +273,7 @@ Deno.test(
           category_name: "takeout & delivery",
           use_count: 8,
           last_used_at: "2026-04-01T00:00:00Z",
+          is_user_confirmed: true,
         },
         {
           transaction_type: "expense",
@@ -287,7 +295,7 @@ Deno.test(
     });
 
     const text = guidance.join("\n");
-    assertStringIncludes(text, '"uber eats" -> takeout & delivery');
+    assertStringIncludes(text, '"uber eats" -> "takeout & delivery"');
     assertEquals(text.includes("dining -> restaurants"), false);
     assertEquals(text.includes("not allowed"), false);
   },
@@ -616,5 +624,108 @@ Deno.test(
     });
 
     assertEquals(inferred, "CAD");
+  },
+);
+
+Deno.test(
+  "analyze-core: specific legacy guesses are independently reclassified without changing native fields",
+  async () => {
+    const responses: unknown[][] = [
+      ["restaurants"],
+      [false],
+      ["groceries"],
+      [true],
+    ];
+    const original = {
+      type: "expense" as const,
+      amount: 1234.5,
+      category: "restaurants",
+      currency: "EUR",
+      currencySymbol: "€",
+      date: "2026-10-13",
+      description: "牛乳と卵",
+      merchant: "小商店",
+      breakdown: ["牛乳", "卵"],
+    };
+    const result = await refineAmbiguousTextCategories({
+      genAI: {
+        getGenerativeModel: () => ({
+          generateContent: (request: any) => {
+            const name =
+              request.toolConfig.functionCallingConfig.allowedFunctionNames[0];
+            return Promise.resolve({
+              response: {
+                functionCalls: () => [
+                  {
+                    name,
+                    args: {
+                      [name === "verify_categories"
+                        ? "approvals"
+                        : "categories"]: responses.shift(),
+                    },
+                  },
+                ],
+              },
+            });
+          },
+        }),
+      } as any,
+      items: [original],
+      sourceText: "牛乳と卵を購入 １，２３４．５０ユーロ",
+      language: "ja",
+      expenseCategories: ["groceries", "restaurants", "other"],
+      incomeCategories: ["salary", "other"],
+      verifySpecificCategories: true,
+    });
+    assertEquals(result[0].category, "groceries");
+    assertEquals(result[0].amount, original.amount);
+    assertEquals(result[0].currency, original.currency);
+    assertEquals(result[0].date, original.date);
+    assertEquals(result[0].merchant, original.merchant);
+    assertEquals(result[0].breakdown, original.breakdown);
+    assertEquals(responses.length, 0);
+  },
+);
+
+Deno.test(
+  "analyze-core: unavailable category verification retains financial rows and saved choices",
+  async () => {
+    const original = {
+      type: "expense" as const,
+      amount: 20,
+      category: "restaurants",
+      currency: "EUR",
+      currencySymbol: "€",
+      date: "2026-10-13",
+      description: "مواد غذائية",
+      merchant: "متجر",
+    };
+    const savedChoice = {
+      ...original,
+      category: "groceries",
+      description: "تصنيف مؤكد",
+    };
+    const result = await refineAmbiguousTextCategories({
+      genAI: {
+        getGenerativeModel: () => ({
+          generateContent: () =>
+            Promise.reject(new Error("provider unavailable")),
+        }),
+      } as any,
+      items: [original, savedChoice],
+      sourceText: "شراء مواد غذائية",
+      language: "ar",
+      expenseCategories: ["groceries", "restaurants", "other"],
+      incomeCategories: ["salary", "other"],
+      verifySpecificCategories: true,
+      excludedItemIndexes: new Set([1]),
+    });
+    assertEquals(result.length, 2);
+    assertEquals(result[0].category, "other");
+    assertEquals(result[0].needsReview, true);
+    assertEquals(result[0].amount, original.amount);
+    assertEquals(result[0].currency, original.currency);
+    assertEquals(result[0].merchant, original.merchant);
+    assertEquals(result[1], savedChoice);
   },
 );

@@ -108,6 +108,7 @@ Deno.test(
             category_name: "coffee & tea",
             use_count: 4,
             last_used_at: null,
+            is_user_confirmed: true,
           },
         ],
       }),

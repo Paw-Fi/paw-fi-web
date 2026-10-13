@@ -432,10 +432,13 @@ export async function learnUserCategoryPreference(params: {
   descriptionText?: string | null;
   isUserConfirmed?: boolean;
 }): Promise<void> {
+  // A model output is not a training label. Only an explicit user correction
+  // may create/update memory; otherwise mistakes reinforce themselves forever.
+  if (params.isUserConfirmed !== true) return;
   const category =
     sanitizeCategoryName(params.categoryName) ??
     normalizeCategoryForStorage(params.categoryName);
-  if (!category || category === "other") return;
+  if (!category) return;
 
   const matchKey = normalizePreferenceMatchKey(
     params.sourceText || params.descriptionText || null,
@@ -492,17 +495,17 @@ export function applyPreferencesToItems(params: {
 }> {
   if (!params.preferences.length) return params.items;
 
-  const prefMapExpense = new Map<string, string>();
-  const prefMapIncome = new Map<string, string>();
+  const prefMapExpense = new Map<string, UserCategoryPreferenceRow>();
+  const prefMapIncome = new Map<string, UserCategoryPreferenceRow>();
 
   for (const pref of params.preferences) {
+    if (pref.is_user_confirmed !== true) continue;
     const key = pref.match_key.trim();
     if (!key) continue;
-    const cat = normalizeStoredUserCategory(pref.category_name);
     if (pref.transaction_type === "income") {
-      prefMapIncome.set(key, cat);
+      prefMapIncome.set(key, pref);
     } else {
-      prefMapExpense.set(key, cat);
+      prefMapExpense.set(key, pref);
     }
   }
 
@@ -510,19 +513,16 @@ export function applyPreferencesToItems(params: {
     const key = normalizePreferenceMatchKey(item.description || null);
     if (!key) return item;
 
-    if (item.type === "income") {
-      const preferred = prefMapIncome.get(key);
-      if (preferred && params.allowedIncomeCategories.has(preferred)) {
-        return { ...item, category: preferred };
-      }
-      return item;
-    }
-
-    const preferred = prefMapExpense.get(key);
-    if (preferred && params.allowedExpenseCategories.has(preferred)) {
-      return { ...item, category: preferred };
-    }
-    return item;
+    const allowed =
+      item.type === "income"
+        ? params.allowedIncomeCategories
+        : params.allowedExpenseCategories;
+    const preference = (
+      item.type === "income" ? prefMapIncome : prefMapExpense
+    ).get(key);
+    if (!preference) return item;
+    const preferred = normalizeStoredUserCategory(preference.category_name);
+    return allowed.has(preferred) ? { ...item, category: preferred } : item;
   });
 }
 

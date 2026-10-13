@@ -54,6 +54,9 @@ const merchantAnalysis = await Deno.readTextFile(
 const walletCapture = await Deno.readTextFile(
   new URL("../save-wallet-transaction/index.ts", import.meta.url),
 );
+const categoryClassifier = await Deno.readTextFile(
+  new URL("../shared/ai-category-classifier.ts", import.meta.url),
+);
 const resendInbound = await Deno.readTextFile(
   new URL("../resend-inbound-webhook/index.ts", import.meta.url),
 );
@@ -327,7 +330,11 @@ Deno.test(
       walletCapture,
       "WALLET_CATEGORIZATION_TIMEOUT_MS = 6_000",
     );
-    assertStringIncludes(walletCapture, "await runWithTimeout({");
+    assertStringIncludes(
+      walletCapture,
+      "await classifyTransactionCategories({",
+    );
+    assertStringIncludes(categoryClassifier, "await runWithTimeout({");
     assertStringIncludes(walletCapture, "capture remains saved");
     assertStringIncludes(
       walletCapture,

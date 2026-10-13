@@ -7,7 +7,7 @@
  *
  * Resolution order (from analyze-core.ts):
  *  1. Apply explicit remap on the initial guess → track if remap matched
- *  2. Apply learned preferences on the BASE guess (not remapped)
+ *  2. Apply confirmed preferences on the BASE guess (not remapped)
  *  3. Merge: use remap result if remap matched, else use preference result
  *  4. Coerce final category to the user's allowed category set
  */
@@ -27,6 +27,7 @@ import {
   normalizeStoredUserCategory,
 } from "./user-categories.ts";
 import { coerceCategoryToAllowed } from "./category-colors.ts";
+import { isGenericAiCategory } from "./ai-category-policy.ts";
 
 type SupabaseClient = {
   from: (table: string) => any;
@@ -38,6 +39,31 @@ export interface CategoryContext {
   preferences: UserCategoryPreferenceRow[];
   confirmedPreferences?: UserCategoryPreferenceRow[];
   remaps: UserCategoryRemapRow[];
+}
+
+/** Keep only usable upstream labels; user remaps still run exactly once. */
+export function resolveCategoryHint(params: {
+  hint: unknown;
+  transactionType: "expense" | "income";
+  ctx: CategoryContext;
+  explicitRemapOnly?: boolean;
+}): string | null {
+  if (typeof params.hint !== "string" || !params.hint.trim()) return null;
+  const source = normalizeStoredUserCategory(params.hint);
+  const allowed =
+    params.transactionType === "income"
+      ? params.ctx.allowedIncomeSet
+      : params.ctx.allowedExpenseSet;
+  const remapped = applyCategoryRemap({
+    categoryName: source,
+    transactionType: params.transactionType,
+    remaps: params.ctx.remaps,
+    allowedExpenseCategories: params.ctx.allowedExpenseSet,
+    allowedIncomeCategories: params.ctx.allowedIncomeSet,
+  });
+  if (remapped !== source) return source;
+  if (params.explicitRemapOnly) return null;
+  return allowed.has(source) && !isGenericAiCategory(source) ? source : null;
 }
 
 /**
@@ -134,7 +160,7 @@ export function resolveCategory(params: {
   });
   const remapMatched = afterRemap !== normalizedSource;
 
-  // ── Step 2: Apply preferences on the BASE (un-remapped) guess ─────────
+  // ── Step 2: Apply confirmed preferences on the BASE guess ────────────
   const baseItem = {
     type: transactionType,
     description: description ?? undefined,
