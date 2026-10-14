@@ -1,3 +1,9 @@
+import {
+  runWithTimeout,
+  type AnalysisExecutionOptions,
+} from "./async-timeout.ts";
+import { createGeminiPdfAnalysisProvider } from "./pdf-analysis/ai/providers/gemini.ts";
+import { extractOcrTextFromPdf } from "./pdf-analysis/extractors/ocr.ts";
 // Suppress Deno microtask warnings and polyfill warnings BEFORE importing PDF.js
 // This is critical - must happen before PDF.js initialization
 const originalConsoleError = console.error;
@@ -86,8 +92,12 @@ import { CURRENCY_SYMBOLS, getCurrencySymbol } from "./currency-symbols.ts";
 import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 // Import new deterministic parser modules
-import { parseCsvFromBytes } from "./import/csv.ts";
-import type { ParsedTransaction, ParseResult } from "./import/types.ts";
+import { decodeFileBytes, parseCsvFromBytes } from "./import/csv.ts";
+import {
+  parseDateFromText as parseCanonicalDate,
+  type ParsedTransaction,
+  type ParseResult,
+} from "./import/types.ts";
 import {
   buildXlsxPreview as buildXlsxPreviewNew,
   parseXlsxFromBytes,
@@ -577,7 +587,7 @@ export function extractExplicitTransactionTime(
 export function normalizeTransactionDateAndDescription(
   rawDate: unknown,
   rawDescription: unknown,
-  callerDate: string,
+  _callerDate: string,
 ): { date: string; description: string } {
   const description =
     typeof rawDescription === "string"
@@ -585,30 +595,17 @@ export function normalizeTransactionDateAndDescription(
       : rawDescription != null
         ? String(rawDescription).trim()
         : "";
-
-  const normalizedRawDate =
-    typeof rawDate === "string" && rawDate.trim().length > 0
-      ? parseDateFromText(rawDate.trim(), callerDate) || ""
-      : "";
-
-  if (normalizedRawDate) {
-    return {
-      date: normalizedRawDate,
-      description,
-    };
+  // The model must supply the canonical date (including the caller default
+  // when the source has no date). Do not reinterpret its generated prose.
+  let date: string | null = null;
+  try {
+    if (typeof rawDate === "string")
+      date = parseCanonicalDate(rawDate, _callerDate);
+  } catch {
+    throw new Error("INVALID_TRANSACTION_DATE");
   }
-
-  const explicitDate = description
-    ? extractExplicitDateFromDescription(description, callerDate)
-    : null;
-  if (!explicitDate) {
-    return {
-      date: callerDate,
-      description,
-    };
-  }
-
-  return explicitDate;
+  if (!date) throw new Error("INVALID_TRANSACTION_DATE");
+  return { date, description };
 }
 
 function normalizeAmountString(value: string): number | null {
@@ -998,23 +995,8 @@ export function inferAttachmentFallbackCurrency(params: {
   return callerCurrency;
 }
 
-function inferTypeFromText(line: string): "expense" | "income" {
-  const normalized = line.toLowerCase();
-  if (
-    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from|поступлен|зачислен|возврат|перевод от)/.test(
-      normalized,
-    )
-  ) {
-    return "income";
-  }
-  if (
-    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to|расход|списан|оплат|покупк|снятие|комисси|перевод на)/.test(
-      normalized,
-    )
-  ) {
-    return "expense";
-  }
-  return "expense";
+function inferTypeFromText(_line: string): "expense" | "income" {
+  throw new Error("SEMANTIC_TRANSACTION_TYPE_REQUIRED");
 }
 
 function stripAmountsAndDates(text: string): string {
@@ -1521,7 +1503,7 @@ export function extractDeterministicItemsFromTableRows(
       const parsed = parseSignedAmountFromCell(row[headerMap.amount]);
       if (parsed) {
         amountValue = parsed.amount;
-        type = parsed.isNegative ? "expense" : inferTypeFromText(joined);
+        type = inferTypeFromText(joined);
       }
     }
 
@@ -1635,8 +1617,9 @@ async function resolveCandidateCategories(
   _categoryPreferences: UserCategoryPreferenceRow[] = [],
   _categoryRemaps: UserCategoryRemapRow[] = [],
   onProgress?: ProgressCallback,
-  unresolvedFallbackCategories?: string[],
-): Promise<string[]> {
+  sourceParts?: Array<Record<string, unknown>>,
+  execution: AnalysisExecutionOptions = {},
+): Promise<Array<string | null>> {
   onProgress?.({
     type: "analyzing_chunk",
     message: "Sorting your transactions into categories...",
@@ -1647,29 +1630,18 @@ async function resolveCandidateCategories(
     expenseCategories,
     incomeCategories,
     budgetMs: 30000,
+    deadlineAt: execution.deadlineAt,
+    signal: execution.signal,
+    sourceParts,
   });
   console.info("[analyze-expense] categorization outcome", {
     attempts: result.attempts,
     unresolved: result.categories.filter((category) => category === null)
       .length,
   });
-  if (
-    candidates.length &&
-    result.categories.every((category) => category === null)
-  ) {
-    throw result.error ?? new Error("Invalid category response");
-  }
-  return result.categories.map((category, index) => {
-    if (category) return category;
-    const fallback = sanitizeCategoryName(
-      unresolvedFallbackCategories?.[index],
-    );
-    const allowed =
-      candidates[index].type === "income"
-        ? incomeCategories
-        : expenseCategories;
-    return fallback && allowed.includes(fallback) ? fallback : "other";
-  });
+  // Null means inference was unavailable or malformed. A returned "other"
+  // is a semantic decision, and must remain distinguishable from failure.
+  return result.categories;
 }
 
 function isGenericFallbackCategory(category: unknown): boolean {
@@ -1684,6 +1656,7 @@ export function buildAmbiguousCategoryRefinementCandidates(
   sourceText: string,
   excludedItemIndexes: ReadonlySet<number> = new Set<number>(),
   includeSpecificCategories = false,
+  hasMediaSource = false,
 ): Array<{
   itemIndex: number;
   type: "expense" | "income";
@@ -1711,7 +1684,8 @@ export function buildAmbiguousCategoryRefinementCandidates(
     const description = [item.description?.trim(), ...(item.breakdown ?? [])]
       .filter(Boolean)
       .join("\n");
-    if (!merchant && !description && !originalText) return [];
+    if (!merchant && !description && !originalText && !hasMediaSource)
+      return [];
 
     return [
       {
@@ -1740,42 +1714,75 @@ export async function refineAmbiguousTextCategories(params: {
   onProgress?: ProgressCallback;
   excludedItemIndexes?: ReadonlySet<number>;
   verifySpecificCategories?: boolean;
+  sourceParts?: Array<Record<string, unknown>>;
+  execution?: AnalysisExecutionOptions;
 }): Promise<ExpenseItem[]> {
   const candidates = buildAmbiguousCategoryRefinementCandidates(
     params.items,
     params.sourceText,
     params.excludedItemIndexes,
     params.verifySpecificCategories,
+    Boolean(params.sourceParts?.length),
   );
   if (candidates.length === 0) return params.items;
 
   try {
-    const resolvedCategories = await resolveCandidateCategories(
-      params.genAI,
-      candidates,
-      params.expenseCategories,
-      params.incomeCategories,
-      params.language,
-      params.categoryPreferences ?? [],
-      params.categoryRemaps ?? [],
-      params.onProgress,
-      candidates.map(() => "other"),
+    const resolvedCategories: Array<string | null> = [];
+    const reviewDeadlineAt = Math.min(
+      Date.now() + 30000,
+      (params.execution?.deadlineAt ?? Infinity) - 1500,
     );
+    // Keep custom labels within output limits and avoid one oversized response
+    // preventing review of every row in a large import.
+    for (let offset = 0; offset < candidates.length; offset += 32) {
+      if (Date.now() >= reviewDeadlineAt || params.execution?.signal?.aborted)
+        break;
+      resolvedCategories.push(
+        ...(await resolveCandidateCategories(
+          params.genAI,
+          candidates.slice(offset, offset + 32),
+          params.expenseCategories,
+          params.incomeCategories,
+          params.language,
+          params.categoryPreferences ?? [],
+          params.categoryRemaps ?? [],
+          params.onProgress,
+          params.sourceParts,
+          { ...params.execution, deadlineAt: reviewDeadlineAt },
+        )),
+      );
+    }
     const replacements = new Map<number, string>();
+    const unresolved = new Set<number>();
 
     candidates.forEach((candidate, index) => {
+      if (resolvedCategories[index] == null) {
+        unresolved.add(candidate.itemIndex);
+        return;
+      }
       const allowed =
         candidate.type === "income"
           ? new Set(params.incomeCategories)
           : new Set(params.expenseCategories);
       const resolved = coerceCategoryToAllowed(
-        resolvedCategories[index] ?? "other",
+        resolvedCategories[index],
         allowed,
       );
       replacements.set(candidate.itemIndex, resolved);
     });
 
     return params.items.map((item, index) => {
+      if (unresolved.has(index))
+        return {
+          ...item,
+          needsReview: true,
+          categoryReasonCodes: [
+            ...new Set([
+              ...(item.categoryReasonCodes ?? []),
+              "category_review_unavailable",
+            ]),
+          ],
+        };
       const category = replacements.get(index);
       if (!category) return item;
       return {
@@ -3347,8 +3354,10 @@ async function extractTransactionsJsonWithGemini(
               '{"transactions":[{"date":"YYYY-MM-DD","description":"string","merchant":"string","merchantCountry":"GB","amount":0,"currency":"USD","type":"expense|income"}]}',
               "",
               "Rules:",
+              "- Interpret expense/income direction semantically across ALL languages, scripts and regional formats, using authoritative debit/credit fields when supplied. Never use an English keyword list or default unknown prose to expense. Return only canonical type identifiers expense and income; do not fabricate an unresolved direction.",
               "- Return ALL transactions; never summarize or collapse into totals.",
-              "- Skip opening/closing balance lines and totals.",
+              "- Exclude source-supported summary/balance rows, not merchant substrings, equal amounts or arithmetic coincidences. Preserve distinct identical-value transactions.",
+              "- Interpret numeric/date formats from the complete source in its own language and locale. Never assume DD/MM versus MM/DD or treat ambiguous grouping as decimal punctuation. Do not fabricate a financial value when the source does not establish it.",
               "- Use caller date if no date is present in a row.",
               "- Use caller currency if missing.",
               "- For expense rows, analyze the merchant/store/payee and return it in merchant when identifiable.",
@@ -3438,19 +3447,8 @@ function mergeTransactionJsonSnippets(snippets: string[]): string | null {
 
   if (all.length === 0) return null;
 
-  const seen = new Set<string>();
-  const deduped = all.filter((item) => {
-    const key = `${item.date || ""}|${item.amount || ""}|${(
-      item.description || ""
-    )
-      .toLowerCase()
-      .slice(0, 50)}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-  return JSON.stringify({ transactions: deduped });
+  // Matching values and descriptions do not establish source-row identity.
+  return JSON.stringify({ transactions: all });
 }
 
 export function parseTransactionsJsonToItems(
@@ -3483,7 +3481,7 @@ export function parseTransactionsJsonToItems(
             .replace(/^"+|"+$/g, "")
         : "";
     const amount = Math.abs(Number(item?.amount));
-    if (!Number.isFinite(amount) || amount <= 0) continue;
+    if (!Number.isFinite(amount) || amount <= 0) return [];
 
     const currencyResolution = resolveCurrencyFromOCR({
       detectedCurrencyCode:
@@ -3496,16 +3494,21 @@ export function parseTransactionsJsonToItems(
         typeof item?.merchantCountry === "string" ? item.merchantCountry : null,
     });
     const currency = currencyResolution.finalCurrencyCode;
-    const normalizedDateAndDescription = normalizeTransactionDateAndDescription(
-      item?.date,
-      description,
-      callerDate,
-    );
+    let normalizedDateAndDescription;
+    try {
+      normalizedDateAndDescription = normalizeTransactionDateAndDescription(
+        item?.date,
+        description,
+        callerDate,
+      );
+    } catch {
+      return [];
+    }
     const typeRaw = String(item?.type || "").toLowerCase();
-    const type =
-      typeRaw === "income" || typeRaw === "expense"
-        ? (typeRaw as "income" | "expense")
-        : inferTypeFromText(description);
+    // An invalid structured type requires re-extracting the complete source;
+    // returning only the other rows would silently lose transactions.
+    if (typeRaw !== "income" && typeRaw !== "expense") return [];
+    const type = typeRaw;
 
     results.push({
       type,
@@ -3551,7 +3554,7 @@ async function analyzeFromText(
   preferredTimezone?: string,
   preChunkedPages?: string[], // Optional: pre-split pages from PDF extraction
   onProgress?: ProgressCallback, // Optional: progress callback for SSE streaming
-  allowDeterministicFailureFallback = true,
+  _allowDeterministicFailureFallback = false,
 ): Promise<ExpenseItem[]> {
   const systemInstruction = buildTransactionSystemInstruction(
     language,
@@ -3568,24 +3571,9 @@ async function analyzeFromText(
     ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
     : "\n";
 
-  const normalizedText = injectStatementLineBreaks(bodyText);
-  const transactionLines = extractTransactionLines(normalizedText);
-  const deterministicCandidates = buildDeterministicCandidates(
-    normalizedText,
-    callerDate,
-    callerCurrency,
-    transactionLines.length >= 20 ? transactionLines : undefined,
-  );
-  const analysisText =
-    transactionLines.length >= 20
-      ? transactionLines.join("\n")
-      : normalizedText;
-
-  if (DEBUG_LOGS && transactionLines.length >= 20) {
-    console.log(
-      `[analyze-expense] Text: Using ${transactionLines.length} transaction-like lines for analysis`,
-    );
-  }
+  // Keep the complete source for semantic direction extraction. English-only
+  // line filters and category-only shortcuts must not preassign financial type.
+  const analysisText = bodyText;
 
   // Check if text is large enough to require chunking
   // ~12000 chars is roughly 3000-4000 tokens input, leaving room for output
@@ -3598,7 +3586,7 @@ async function analyzeFromText(
     textChunks = [];
     let currentChunk = "";
     for (const page of preChunkedPages) {
-      const processedPage = injectStatementLineBreaks(page);
+      const processedPage = page;
       if (processedPage.length > CHUNK_THRESHOLD) {
         // Page is too large, flush current and split this page
         if (currentChunk.trim()) textChunks.push(currentChunk.trim());
@@ -3644,45 +3632,6 @@ async function analyzeFromText(
     });
   }
 
-  // Deterministic path for statement-like inputs: reduce LLM to categorization only
-  if (
-    allowDeterministicFailureFallback &&
-    deterministicCandidates.length >= 30
-  ) {
-    const categories = await resolveCandidateCategories(
-      genAI,
-      deterministicCandidates,
-      expenseCategories,
-      incomeCategories,
-      language,
-      categoryPreferences,
-      categoryRemaps,
-      onProgress,
-    );
-
-    const deterministicItems: ExpenseItem[] = deterministicCandidates.map(
-      (candidate, index) => {
-        const category = categories[index] || "other";
-        const itemCurrency = candidate.currency || callerCurrency;
-        const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
-        return {
-          type: candidate.type,
-          amount: candidate.amount,
-          category,
-          categorySource: "semantic_ai",
-          currency: itemCurrency,
-          currencySymbol: itemCurrencySymbol,
-          date: candidate.date || callerDate,
-          description: candidate.description || "",
-        };
-      },
-    );
-
-    const cleaned = deduplicateAndCleanItems(deterministicItems);
-    reconcileStatementTotals(normalizedText, cleaned);
-    return cleaned;
-  }
-
   // Process single chunk directly (no parallelism needed)
   if (!isMultiChunk) {
     try {
@@ -3706,23 +3655,7 @@ async function analyzeFromText(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[analyze-expense] Text: LLM failed: ${message}`);
-      if (
-        allowDeterministicFailureFallback &&
-        deterministicCandidates.length > 0
-      ) {
-        console.warn(
-          `[analyze-expense] Text: Falling back to deterministic candidates (${deterministicCandidates.length})`,
-        );
-        const fallbackItems = buildItemsFromDeterministicCandidates(
-          deterministicCandidates,
-          callerCurrency,
-          callerDate,
-        );
-        const cleaned = deduplicateAndCleanItems(fallbackItems);
-        reconcileStatementTotals(normalizedText, cleaned);
-        return cleaned;
-      }
-      return [];
+      throw error;
     }
   }
 
@@ -3779,6 +3712,7 @@ async function analyzeFromText(
           `[analyze-expense] Text: Chunk ${batchStart + i + 1} failed:`,
           result.reason,
         );
+        throw result.reason;
       }
     }
 
@@ -3793,25 +3727,7 @@ async function analyzeFromText(
     }
   }
 
-  // Final deduplication and cleanup
-  let cleanedItems = deduplicateAndCleanItems(allItems);
-  if (
-    allowDeterministicFailureFallback &&
-    cleanedItems.length === 0 &&
-    deterministicCandidates.length > 0
-  ) {
-    console.warn(
-      `[analyze-expense] Text: Falling back to deterministic candidates (${deterministicCandidates.length})`,
-    );
-    const fallbackItems = buildItemsFromDeterministicCandidates(
-      deterministicCandidates,
-      callerCurrency,
-      callerDate,
-    );
-    cleanedItems = deduplicateAndCleanItems(fallbackItems);
-    reconcileStatementTotals(normalizedText, cleanedItems);
-  }
-  return cleanedItems;
+  return deduplicateAndCleanItems(allItems);
 }
 
 async function analyzeFromQuickText(
@@ -4141,7 +4057,10 @@ function processRawItems(
       const txType = String(it.type || "").toLowerCase();
       const resolvedType =
         txType === "income" || txType === "expense" ? txType : undefined;
+      if (!resolvedType) throw new Error("INVALID_TRANSACTION_TYPE");
       const amount = Math.abs(Number(it.amount));
+      if (!Number.isFinite(amount) || amount <= 0)
+        throw new Error("INVALID_TRANSACTION_AMOUNT");
       const currencyEvidenceText = [
         typeof it?.currencyEvidence === "string" ? it.currencyEvidence : "",
         typeof it?.rawOcrText === "string" ? it.rawOcrText : "",
@@ -4253,31 +4172,15 @@ function processRawItems(
 }
 
 /**
- * Deduplicates items and removes total-like entries
+ * Preserve extracted rows unless source analysis established summary/duplicate identity
  */
 function deduplicateAndCleanItems(
   items: ExpenseItem[],
-  options?: {
-    skipTotalSumHeuristic?: boolean;
-  },
+  _options?: { skipTotalSumHeuristic?: boolean },
 ): ExpenseItem[] {
-  if (items.length <= 1) return items;
-
-  // Remove total-like entries
-  const withoutTotals = items.filter((it) => !isTotalLike(it.description));
-  let result = withoutTotals.length > 0 ? withoutTotals : items;
-
-  if (!options?.skipTotalSumHeuristic) {
-    // Remove items that equal the sum of other items (likely totals)
-    const sums = result.map((_, i) =>
-      result
-        .filter((__, j) => i !== j)
-        .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
-    );
-    result = result.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
-  }
-
-  return result;
+  // Equal amounts, arithmetic coincidences and merchant words are not source
+  // identity. Extraction must establish summaries/duplicates from the source.
+  return items;
 }
 
 function convertPdfPipelineItems(
@@ -4289,8 +4192,13 @@ function convertPdfPipelineItems(
   return deduplicateAndCleanItems(
     items
       .map((item): ExpenseItem => {
-        const type: ExpenseItem["type"] =
-          item.type === "income" ? "income" : "expense";
+        const amount = Number(item.amount);
+        if (!Number.isFinite(amount) || amount <= 0)
+          throw new Error("INVALID_TRANSACTION_AMOUNT");
+        const type: ExpenseItem["type"] = item.type;
+        if (type !== "income" && type !== "expense") {
+          throw new Error("INVALID_TRANSACTION_TYPE");
+        }
         const normalizedDateAndDescription =
           normalizeTransactionDateAndDescription(
             typeof item.date === "string" ? item.date : undefined,
@@ -4309,7 +4217,7 @@ function convertPdfPipelineItems(
 
         return {
           type,
-          amount: Number(item.amount),
+          amount,
           category:
             typeof item.category === "string"
               ? (sanitizeCategoryName(item.category) ?? "other")
@@ -4378,6 +4286,7 @@ async function categorizePdfExtractedItems(params: {
   categoryPreferences?: UserCategoryPreferenceRow[];
   categoryRemaps?: UserCategoryRemapRow[];
   onProgress?: ProgressCallback;
+  execution?: AnalysisExecutionOptions;
 }): Promise<ExpenseItem[]> {
   if (params.items.length === 0) return params.items;
 
@@ -4385,6 +4294,10 @@ async function categorizePdfExtractedItems(params: {
   const clusters = buildTransactionCategoryClusters(params.items);
   const expenseAllowed = new Set(params.expenseCategories);
   const incomeAllowed = new Set(params.incomeCategories);
+  const reviewDeadlineAt = Math.min(
+    Date.now() + 30000,
+    (params.execution?.deadlineAt ?? Infinity) - 1500,
+  );
   const clusterCategories = new Map<
     number,
     { category: string; confidence: number; source: string }
@@ -4404,16 +4317,21 @@ async function categorizePdfExtractedItems(params: {
     }));
 
     try {
-      const categories = await resolveCandidateCategories(
-        params.genAI,
-        candidates,
-        params.expenseCategories,
-        params.incomeCategories,
-        params.language,
-        params.categoryPreferences ?? [],
-        params.categoryRemaps ?? [],
-        params.onProgress,
-      );
+      const categories =
+        Date.now() >= reviewDeadlineAt || params.execution?.signal?.aborted
+          ? batch.map(() => null)
+          : await resolveCandidateCategories(
+              params.genAI,
+              candidates,
+              params.expenseCategories,
+              params.incomeCategories,
+              params.language,
+              params.categoryPreferences ?? [],
+              params.categoryRemaps ?? [],
+              params.onProgress,
+              undefined,
+              { ...params.execution, deadlineAt: reviewDeadlineAt },
+            );
 
       categories.forEach((category, batchIndex) => {
         const cluster = batch[batchIndex];
@@ -4421,6 +4339,15 @@ async function categorizePdfExtractedItems(params: {
           cluster.representative.type === "income"
             ? incomeAllowed
             : expenseAllowed;
+        if (category === null) {
+          clusterCategories.set(offset + batchIndex, {
+            category: fallbackPdfClusterCategory({ cluster, allowed }),
+            confidence: 0.35,
+            source: "pdf_extraction_fallback",
+          });
+          fallbackCategorized += 1;
+          return;
+        }
         const coerced = coerceCategoryToAllowed(category, allowed);
         clusterCategories.set(offset + batchIndex, {
           category: coerced,
@@ -4521,6 +4448,7 @@ async function analyzeFromPdf(
   categoryPreferences: UserCategoryPreferenceRow[] = [],
   categoryRemaps: UserCategoryRemapRow[] = [],
   onProgress?: ProgressCallback,
+  execution: AnalysisExecutionOptions = {},
 ): Promise<{ items: ExpenseItem[]; rawText?: string; error?: string }> {
   console.log("[analyze-expense] PDF: Starting universal PDF pipeline");
   const pdfExpenseCategories =
@@ -4544,6 +4472,10 @@ async function analyzeFromPdf(
   const pipelineResult = await runPdfAnalysisPipeline({
     base64Pdf,
     contentType,
+    signal: execution.signal,
+    createProvider: () =>
+      createGeminiPdfAnalysisProvider({ createClient: () => genAI }),
+    extractors: { ocr: (pdf) => extractOcrTextFromPdf(pdf, execution.signal) },
     callerCurrency,
     callerDate,
     expenseCategories: pdfExpenseCategories,
@@ -4657,6 +4589,7 @@ async function analyzeFromPdf(
     categoryPreferences,
     categoryRemaps,
     onProgress,
+    execution,
   });
 
   return {
@@ -5185,23 +5118,11 @@ async function generateGeminiWithRetry(params: {
     }
 
     try {
-      const responsePromise = model.generateContent(request);
-      let timeoutId: number | undefined;
-      const timeoutPromise = new Promise<never>(
-        (_, reject) =>
-          (timeoutId = setTimeout(
-            () =>
-              reject(
-                new Error(`Model ${modelName} timed out after ${timeoutMs}ms`),
-              ),
-            remaining,
-          )),
-      );
-      try {
-        return await Promise.race([responsePromise, timeoutPromise]);
-      } finally {
-        if (timeoutId !== undefined) clearTimeout(timeoutId);
-      }
+      return await runWithTimeout({
+        operation: (signal) => model.generateContent(request, { signal }),
+        timeoutMs: remaining,
+        timeoutMessage: `Model ${modelName} timed out after ${timeoutMs}ms`,
+      });
     } catch (error) {
       lastError = error;
       const formatted = formatGeminiError(error);
@@ -5368,7 +5289,27 @@ export async function runAnalyzeExpense(
   body: AnalyzeRequestBody,
   _geminiApiKey: string,
   onProgress?: ProgressCallback,
+  execution: AnalysisExecutionOptions = {},
 ): Promise<AnalyzeResult> {
+  const controller = new AbortController();
+  const parentSignal = execution.signal;
+  const onAbort = () => controller.abort(parentSignal?.reason);
+  if (parentSignal?.aborted) onAbort();
+  else parentSignal?.addEventListener("abort", onAbort, { once: true });
+  const deadlineAt = execution.deadlineAt ?? Date.now() + 140000;
+  if (deadlineAt <= Date.now()) {
+    controller.abort(
+      new Error("Analysis timed out: request deadline exceeded"),
+    );
+  }
+  const deadlineTimer = setTimeout(
+    () =>
+      controller.abort(
+        new Error("Analysis timed out: request deadline exceeded"),
+      ),
+    Math.max(0, deadlineAt - Date.now()),
+  );
+  execution = { deadlineAt, signal: controller.signal };
   try {
     // Report started event
     if (onProgress) {
@@ -5437,7 +5378,11 @@ export async function runAnalyzeExpense(
         ? (rawTypeHint as AnalyzeRequestBody["typeHint"])
         : undefined;
 
-    const genAI = createVertexGenerativeAI(getVertexAiConfigFromEnv());
+    execution.signal?.throwIfAborted();
+    const genAI = createVertexGenerativeAI({
+      ...getVertexAiConfigFromEnv(),
+      ...execution,
+    });
 
     const normalizeAllowedCategory = (value: unknown): string => {
       const raw = typeof value === "string" ? value : String(value ?? "");
@@ -5538,7 +5483,11 @@ export async function runAnalyzeExpense(
                         description:
                           "ISO 3166 country code only when the receipt visibly shows a merchant country/location, e.g. US, CA, AU, SG. Do not infer from merchant name alone.",
                       },
-                      date: { type: "string", description: "YYYY-MM-DD." },
+                      date: {
+                        type: "string",
+                        description:
+                          "Required canonical YYYY-MM-DD transaction date. Interpret source dates semantically across all languages and regional formats; never guess an ambiguous date. When the source contains no transaction date, emit the supplied caller-date default.",
+                      },
                       transactionTime: {
                         type: "string",
                         description:
@@ -5609,7 +5558,7 @@ export async function runAnalyzeExpense(
                         required: ["splitType", "memberSplits"],
                       },
                     },
-                    required: ["type", "amount", "category"],
+                    required: ["type", "amount", "category", "date"],
                   },
                 },
               },
@@ -5644,7 +5593,11 @@ export async function runAnalyzeExpense(
                       currencySymbol: { type: "string" },
                       currencyEvidence: { type: "string" },
                       merchantCountry: { type: "string" },
-                      date: { type: "string" },
+                      date: {
+                        type: "string",
+                        description:
+                          "Required canonical YYYY-MM-DD transaction date. Interpret source dates semantically across all languages and regional formats; never guess an ambiguous date. When the source contains no transaction date, emit the supplied caller-date default.",
+                      },
                       transactionTime: {
                         type: "string",
                         description:
@@ -5664,7 +5617,7 @@ export async function runAnalyzeExpense(
                       payerUserId: { type: "string" },
                       customSplits: { type: "object" },
                     },
-                    required: ["type", "amount", "category"],
+                    required: ["type", "amount", "category", "date"],
                   },
                 },
               },
@@ -5676,6 +5629,7 @@ export async function runAnalyzeExpense(
     ];
 
     let items: ExpenseItem[] = [];
+    let categorySourceText = body.text ?? "";
     let splitVerificationSource: HouseholdSplitVerificationSource | null =
       hasText ? { kind: "text", text: body.text! } : null;
     let parseDiagnostics:
@@ -5753,6 +5707,7 @@ export async function runAnalyzeExpense(
       let pdfProcessingError: string | null = null;
 
       if (textLike) {
+        syntheticText = decodeFileBytes(bytes).text;
         // CSV files: use deterministic parser first, then fall through to LLM if needed
         const isCsv =
           /\.(csv)$/i.test(lowerName) || /text\/csv/i.test(contentType);
@@ -5763,6 +5718,20 @@ export async function runAnalyzeExpense(
               callerDate,
               callerCurrency,
             );
+            if (
+              csvResult.errorCode === "CSV_TOO_MANY_ROWS" ||
+              csvResult.errorCode === "FILE_TOO_LARGE"
+            ) {
+              return {
+                success: false,
+                items: [],
+                error: csvResult.errorMessage,
+                code: csvResult.errorCode,
+                status: 400,
+                language,
+                diagnostics: csvResult.diagnostics,
+              };
+            }
             if (csvResult.success && csvResult.items.length > 0) {
               items = convertParsedTransactions(
                 csvResult.items,
@@ -5789,9 +5758,7 @@ export async function runAnalyzeExpense(
                 );
               }
               try {
-                syntheticText = new TextDecoder("utf-8", {
-                  fatal: false,
-                }).decode(bytes);
+                syntheticText = decodeFileBytes(bytes).text;
               } catch {
                 syntheticText = "";
               }
@@ -5802,21 +5769,10 @@ export async function runAnalyzeExpense(
               csvErr,
             );
             try {
-              syntheticText = new TextDecoder("utf-8", {
-                fatal: false,
-              }).decode(bytes);
+              syntheticText = decodeFileBytes(bytes).text;
             } catch {
               syntheticText = "";
             }
-          }
-        } else {
-          // Non-CSV text files (txt, json, xml): decode full text for LLM analysis
-          try {
-            syntheticText = new TextDecoder("utf-8", { fatal: false }).decode(
-              bytes,
-            );
-          } catch {
-            syntheticText = "";
           }
         }
       } else if (isSpreadsheet) {
@@ -5827,6 +5783,17 @@ export async function runAnalyzeExpense(
             callerDate,
             callerCurrency,
           );
+          if (xlsxResult.errorCode === "XLSX_TOO_MANY_ROWS") {
+            return {
+              success: false,
+              items: [],
+              error: xlsxResult.errorMessage,
+              code: xlsxResult.errorCode,
+              status: 400,
+              language,
+              diagnostics: xlsxResult.diagnostics,
+            };
+          }
           if (xlsxResult.success && xlsxResult.items.length > 0) {
             items = convertParsedTransactions(xlsxResult.items, callerCurrency);
             parseDiagnostics = xlsxResult.diagnostics;
@@ -5855,11 +5822,11 @@ export async function runAnalyzeExpense(
           );
         }
 
-        if (items.length === 0) {
-          syntheticText = buildXlsxPreviewNew(bytes) || "";
+        if (!syntheticText) {
+          syntheticText = buildXlsxPreviewNew(bytes, true) || "";
           if (DEBUG_LOGS) {
             console.log(
-              `[analyze-expense] XLSX: Deterministic extraction empty, falling back to preview (${syntheticText.length} chars)`,
+              `[analyze-expense] XLSX: Prepared complete source for semantic analysis (${syntheticText.length} chars)`,
             );
           }
         }
@@ -5890,6 +5857,7 @@ export async function runAnalyzeExpense(
             categoryPreferencesForPrompt,
             categoryRemapsForPrompt,
             onProgress,
+            execution,
           );
           items = pdfResult.items;
           if (pdfResult.rawText) {
@@ -5992,6 +5960,7 @@ export async function runAnalyzeExpense(
           );
         }
       }
+      categorySourceText = syntheticText;
     } else if (hasText) {
       if (onProgress) {
         onProgress({
@@ -6465,7 +6434,18 @@ export async function runAnalyzeExpense(
       items = await refineAmbiguousTextCategories({
         genAI,
         items,
-        sourceText: body.text ?? "",
+        sourceText: categorySourceText,
+        sourceParts:
+          splitVerificationSource?.kind === "media"
+            ? [
+                {
+                  inlineData: {
+                    mimeType: splitVerificationSource.mimeType,
+                    data: splitVerificationSource.data,
+                  },
+                },
+              ]
+            : undefined,
         expenseCategories,
         incomeCategories,
         language,
@@ -6473,6 +6453,8 @@ export async function runAnalyzeExpense(
         categoryRemaps: remaps,
         onProgress,
         excludedItemIndexes: explicitlyRemappedItemIndexes,
+        verifySpecificCategories: true,
+        execution,
       });
     }
 
@@ -6503,15 +6485,26 @@ export async function runAnalyzeExpense(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const transientFailure = isTransientModelErrorMessage(message);
+    const outputTruncated = message.includes("MODEL_OUTPUT_TRUNCATED");
     return {
       success: false,
-      error: transientFailure
-        ? "AI service is temporarily experiencing high demand. Please try again shortly."
-        : message,
-      code: transientFailure ? "AI_TEMPORARILY_UNAVAILABLE" : "SERVER_ERROR",
-      status: transientFailure ? 503 : 500,
+      error: outputTruncated
+        ? "Analysis output limit reached. Please split the input into smaller parts; no partial result was accepted."
+        : transientFailure
+          ? "AI service is temporarily experiencing high demand. Please try again shortly."
+          : message,
+      code: outputTruncated
+        ? "IMPORT_OUTPUT_LIMIT"
+        : transientFailure
+          ? "AI_TEMPORARILY_UNAVAILABLE"
+          : "SERVER_ERROR",
+      status: outputTruncated ? 400 : transientFailure ? 503 : 500,
       language: "en",
     };
+  } finally {
+    clearTimeout(deadlineTimer);
+    parentSignal?.removeEventListener("abort", onAbort);
+    controller.abort(new DOMException("Analysis settled", "AbortError"));
   }
 }
 
@@ -6753,7 +6746,7 @@ function extractXlsxTransactions(
           const parsed = parseSignedAmountFromCell(amountCell);
           if (parsed) {
             amountValue = parsed.amount;
-            type = parsed.isNegative ? "expense" : inferTypeFromText(joined);
+            type = inferTypeFromText(joined);
           }
         }
 
@@ -6767,9 +6760,7 @@ function extractXlsxTransactions(
               const parsed = parseSignedAmountFromCell(cell);
               if (parsed) {
                 amountValue = parsed.amount;
-                type = parsed.isNegative
-                  ? "expense"
-                  : inferTypeFromText(joined);
+                type = inferTypeFromText(joined);
                 break;
               }
             }

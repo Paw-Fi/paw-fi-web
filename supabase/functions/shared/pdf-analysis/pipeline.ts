@@ -28,7 +28,7 @@ import { hashPdfBytes, hashPdfCacheKey } from "./utils/hasher.ts";
 import { detectDocumentLanguageHint } from "./utils/language.ts";
 import { resolveGeminiModelFallbacks } from "../gemini-models.ts";
 
-const PDF_ANALYSIS_CACHE_VERSION = "2026-04-23-v2";
+const PDF_ANALYSIS_CACHE_VERSION = "2026-10-14-v3";
 
 function getMaxNativePages(): number {
   try {
@@ -58,6 +58,7 @@ interface PdfPipelineExtractors {
 export interface RunPdfAnalysisPipelineOptions extends PdfPromptContext {
   base64Pdf: string;
   contentType: string;
+  signal?: AbortSignal;
   createProvider?: () => PdfAnalysisProvider;
   storage?: PdfAnalysisStorage;
   extractors?: Partial<PdfPipelineExtractors>;
@@ -103,6 +104,7 @@ function pickPreferredText(
 export async function runPdfAnalysisPipeline(
   options: RunPdfAnalysisPipelineOptions,
 ): Promise<PdfPipelineResult> {
+  options.signal?.throwIfAborted();
   const startedAt = Date.now();
   const requestId = crypto.randomUUID();
   const pdfBytes = decodeBase64(options.base64Pdf);
@@ -194,6 +196,7 @@ export async function runPdfAnalysisPipeline(
     maxNativePages: getMaxNativePages(),
     elapsedMs: Date.now() - startedAt,
   });
+  options.signal?.throwIfAborted();
   const ocrResult = strategy === PDF_EXTRACTION_STRATEGY.native
     ? null
     : await (async () => {
@@ -214,6 +217,7 @@ export async function runPdfAnalysisPipeline(
       return result;
     })();
 
+  options.signal?.throwIfAborted();
   let content: PdfDocumentContent;
   if (strategy === PDF_EXTRACTION_STRATEGY.native) {
     const preferred = pickPreferredText(strategy, nativeResult, ocrResult);
@@ -289,6 +293,7 @@ export async function runPdfAnalysisPipeline(
   });
 
   try {
+    options.signal?.throwIfAborted();
     const analysis = await runPdfAnalysisOrchestrator({
       content,
       requestId,
@@ -311,6 +316,7 @@ export async function runPdfAnalysisPipeline(
       elapsedMs: Date.now() - startedAt,
     });
 
+    options.signal?.throwIfAborted();
     analysis.metadata = {
       ...analysis.metadata,
       latency_ms: Date.now() - startedAt,

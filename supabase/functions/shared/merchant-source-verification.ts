@@ -178,6 +178,7 @@ export async function verifyMerchantSources(params: {
   answers?: readonly unknown[];
   complete?: MerchantSourceCompletion;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }): Promise<Array<MerchantSourceVerdict | null>> {
   const denied = params.items.map(() => null);
   const proposals = params.items
@@ -232,6 +233,7 @@ export async function verifyMerchantSources(params: {
           ...source,
         ], signal),
       timeoutMs: params.timeoutMs ?? VERIFICATION_TIMEOUT_MS,
+      signal: params.signal,
       timeoutMessage: "Merchant source verification timed out",
     });
     if (
@@ -307,6 +309,7 @@ export async function enrichSourceVerifiedMerchantItems(params: {
   answers?: readonly unknown[];
   merchantContext: MerchantAnalysisContext;
   deadlineAt?: number;
+  signal?: AbortSignal;
   complete?: MerchantSourceCompletion;
 }): Promise<Record<string, unknown>[]> {
   const blocked = () => params.items.map(blockAnalyzedMerchantIdentity);
@@ -320,6 +323,7 @@ export async function enrichSourceVerifiedMerchantItems(params: {
     return await runWithTimeout({
       timeoutMs,
       timeoutMessage: "Optional merchant enrichment timed out",
+      signal: params.signal,
       operation: async (signal) => {
         const sourceVerdicts = await verifyMerchantSources({
           body: params.body,
@@ -327,6 +331,7 @@ export async function enrichSourceVerifiedMerchantItems(params: {
           answers: params.answers,
           complete: params.complete,
           timeoutMs: Math.min(VERIFICATION_TIMEOUT_MS, timeoutMs),
+          signal,
         });
         // Do not start discovery if verification consumed the optional budget.
         signal.throwIfAborted();

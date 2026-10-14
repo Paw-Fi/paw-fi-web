@@ -1,3 +1,4 @@
+import { runWithTimeout } from "./async-timeout.ts";
 import { getGoogleAccessToken } from "./google-auth.ts";
 
 const CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
@@ -98,6 +99,9 @@ type VertexGenerativeAIOptions = {
   serviceAccountJson?: string;
   accessToken?: string;
   fetchImpl?: typeof fetch;
+  signal?: AbortSignal;
+  deadlineAt?: number;
+  requestTimeoutMs?: number;
 };
 
 type VertexGenerativeModelOptions = {
@@ -445,45 +449,75 @@ export function createVertexGenerativeAI(options: VertexGenerativeAIOptions) {
           request: Record<string, unknown>,
           requestOptions?: { signal?: AbortSignal },
         ) {
-          const signal = requestOptions?.signal;
-          const accessToken = await resolveAccessToken(options, signal);
-          signal?.throwIfAborted();
-          const response = await fetchImpl(
-            buildEndpoint(modelOptions.model, options),
-            {
-              method: "POST",
-              signal,
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                ...request,
-                ...(modelOptions.systemInstruction &&
-                    request.systemInstruction == null
-                  ? {
-                    systemInstruction: {
-                      role: "system",
-                      parts: [{ text: modelOptions.systemInstruction }],
-                    },
-                  }
-                  : {}),
-                ...(modelOptions.tools && request.tools == null
-                  ? { tools: normalizeTools(modelOptions.tools) }
-                  : {}),
-              }),
-            },
+          const signals = [options.signal, requestOptions?.signal].filter(
+            (signal): signal is AbortSignal => Boolean(signal),
           );
+          const parentSignal = signals.length
+            ? AbortSignal.any(signals)
+            : undefined;
+          const timeoutMs = Math.min(
+            options.requestTimeoutMs ?? Infinity,
+            options.deadlineAt === undefined
+              ? Infinity
+              : options.deadlineAt - Date.now(),
+          );
+          const generate = async (signal?: AbortSignal) => {
+            signal?.throwIfAborted();
+            const accessToken = await resolveAccessToken(options, signal);
+            signal?.throwIfAborted();
+            const response = await fetchImpl(
+              buildEndpoint(modelOptions.model, options),
+              {
+                method: "POST",
+                signal,
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  ...request,
+                  ...(modelOptions.systemInstruction &&
+                      request.systemInstruction == null
+                    ? {
+                      systemInstruction: {
+                        role: "system",
+                        parts: [{ text: modelOptions.systemInstruction }],
+                      },
+                    }
+                    : {}),
+                  ...(modelOptions.tools && request.tools == null
+                    ? { tools: normalizeTools(modelOptions.tools) }
+                    : {}),
+                }),
+              },
+            );
 
-          const payload = await response.json().catch(() => null);
-          signal?.throwIfAborted();
-          if (!response.ok) {
-            throw buildError(response.status, payload);
-          }
+            const payload = await response.json().catch(() => null);
+            signal?.throwIfAborted();
+            if (!response.ok) {
+              throw buildError(response.status, payload);
+            }
+            if (
+              payload?.candidates?.some((
+                candidate: { finishReason?: string },
+              ) => candidate.finishReason === "MAX_TOKENS")
+            ) {
+              throw new Error("MODEL_OUTPUT_TRUNCATED");
+            }
 
-          return {
-            response: buildResponseWrapper(payload),
+            return {
+              response: buildResponseWrapper(payload),
+            };
           };
+          if (Number.isFinite(timeoutMs)) {
+            return await runWithTimeout({
+              operation: generate,
+              timeoutMs,
+              signal: parentSignal,
+              timeoutMessage: "Analysis timed out: request deadline exceeded",
+            });
+          }
+          return await generate(parentSignal);
         },
       };
     },

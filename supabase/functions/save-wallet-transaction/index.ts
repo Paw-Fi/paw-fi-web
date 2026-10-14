@@ -147,6 +147,7 @@ interface TransactionPayload {
   currencyAmbiguous?: boolean | null;
   categoryHint?: string | null;
   categoryHintModel?: string | null;
+  categoryHintVerified?: boolean;
   isRecurring?: boolean | null;
   recurrenceRule?: {
     frequency?: string | null;
@@ -1619,6 +1620,18 @@ async function categorizeWithAI(params: {
     });
   try {
     if (!params.genAI) {
+      const allowed =
+        params.transactionType === "income"
+          ? params.incomeCategories
+          : params.expenseCategories;
+      if (
+        params.initialCategory &&
+        allowed.includes(params.initialCategory) &&
+        !isGenericAiCategory(params.initialCategory)
+      ) {
+        logOutcome("category_review_unavailable_preserved");
+        return params.initialCategory;
+      }
       logOutcome("category_degraded_unconfigured");
       return "other";
     }
@@ -1644,12 +1657,17 @@ async function categorizeWithAI(params: {
         ? [params.initialCategory]
         : undefined,
       initialModel: params.initialCategoryModel ?? undefined,
+      reviewInitialCategories: true,
       onAttempt: (attempt) => attempts.push(attempt),
     });
     const category = result.categories[0];
     if (!category) throw result.error ?? new Error("Invalid category response");
     logOutcome(
-      isGenericAiCategory(category) ? "category_unresolved" : "categorized",
+      !result.reviewed[0]
+        ? "category_review_unavailable_preserved"
+        : isGenericAiCategory(category)
+          ? "category_unresolved"
+          : "categorized",
     );
     return category;
   } catch (error) {
@@ -2485,7 +2503,7 @@ Deno.serve(async (req: Request) => {
       // Generic/invalid hints must not bypass semantic classification. Exact
       // confirmed corrections and explicit remaps retain their authority.
       const confirmedCategory = matchConfirmedCategoryPreference({
-        description: merchantDisplay,
+        description,
         transactionType,
         preferences: ctx.confirmedPreferences ?? [],
         allowed:
@@ -2521,13 +2539,13 @@ Deno.serve(async (req: Request) => {
           ? "confirmed_preference"
           : explicitRemapHint !== null
             ? "explicit_remap"
-            : categoryHint !== null
+            : categoryHint !== null && tx.categoryHintVerified === true
               ? "upstream_specific"
               : "semantic_recovery";
       const aiCategory =
         confirmedCategory ??
         explicitRemapHint ??
-        categoryHint ??
+        (tx.categoryHintVerified === true ? categoryHint : null) ??
         (await categorizeWithAI({
           captureId: idempotencyClaimId,
           genAI,
@@ -2558,7 +2576,7 @@ Deno.serve(async (req: Request) => {
       // Step 3: Confirmed correction → one remap/preference merge → allowed set.
       resolvedCategory = resolveCategory({
         initialGuess: aiCategory,
-        description: merchantDisplay,
+        description,
         transactionType,
         ctx,
       });

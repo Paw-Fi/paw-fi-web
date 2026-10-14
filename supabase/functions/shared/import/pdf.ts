@@ -71,7 +71,10 @@ export const DEFAULT_PDF_CONFIG: PdfParseConfig = {
  * Generates an OAuth2 access token from Google Cloud service account credentials.
  * Uses JWT signing to authenticate with Google's OAuth2 endpoint.
  */
-async function getGoogleCloudAccessToken(): Promise<string | null> {
+async function getGoogleCloudAccessToken(
+  signal?: AbortSignal,
+): Promise<string | null> {
+  signal?.throwIfAborted();
   try {
     const rawServiceAccount = getGoogleCloudServiceAccount();
     let serviceAccount;
@@ -163,9 +166,11 @@ async function getGoogleCloudAccessToken(): Promise<string | null> {
     const jwt = `${signatureInput}.${encodedSignature}`;
 
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      signal,
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+      body:
+        `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
     });
 
     if (!tokenResponse.ok) {
@@ -324,6 +329,7 @@ export function normalizeDocumentText(text: string): string {
  */
 export async function extractPdfText(
   base64Pdf: string,
+  signal?: AbortSignal,
 ): Promise<PdfTextResult | null> {
   if (!getGoogleCloudServiceAccount()) {
     console.log(
@@ -335,7 +341,9 @@ export async function extractPdfText(
   try {
     console.log("[pdf] Extracting text with Google Cloud Document AI");
 
-    const accessToken = await getGoogleCloudAccessToken();
+    signal?.throwIfAborted();
+    const accessToken = await getGoogleCloudAccessToken(signal);
+    signal?.throwIfAborted();
     if (!accessToken) {
       console.log(
         "[pdf] Failed to get access token, will use Gemini native processing",
@@ -344,6 +352,7 @@ export async function extractPdfText(
     }
 
     const response = await fetch(DOCUMENT_AI_ENDPOINT, {
+      signal,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -366,6 +375,7 @@ export async function extractPdfText(
     }
 
     const data = await response.json();
+    signal?.throwIfAborted();
 
     if (!data.document || !data.document.text) {
       console.log("[pdf] No text extracted from Document AI");
@@ -410,14 +420,12 @@ export async function extractPdfText(
 
     // Validate extracted text
     const fallbackText = normalizeDocumentText(fullText);
-    const cleanText =
-      pageTexts.length > 0
-        ? normalizeDocumentText(pageTexts.join("\n\n"))
-        : fallbackText;
+    const cleanText = pageTexts.length > 0
+      ? normalizeDocumentText(pageTexts.join("\n\n"))
+      : fallbackText;
     const hasSubstantialText =
       cleanText.length >= DEFAULT_PDF_CONFIG.minTextLength;
-    const hasTransactionLikeContent =
-      /\d+\.\d{2}|\$|€|£|¥|₹/.test(cleanText) ||
+    const hasTransactionLikeContent = /\d+\.\d{2}|\$|€|£|¥|₹/.test(cleanText) ||
       /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(cleanText);
 
     if (hasSubstantialText && hasTransactionLikeContent) {
@@ -433,20 +441,20 @@ export async function extractPdfText(
             : ""),
       );
 
-      const finalTableRows =
-        tableRows.length > 0
-          ? tableRows
-          : inferredRows.length > 0
-            ? inferredRows
-            : undefined;
+      const finalTableRows = tableRows.length > 0
+        ? tableRows
+        : inferredRows.length > 0
+        ? inferredRows
+        : undefined;
 
       return {
         text: cleanText,
         pageCount: totalPages,
         pages: pagesForProcessing,
         tableRows: finalTableRows,
-        lineTexts:
-          collectedLineTexts.length > 0 ? collectedLineTexts : undefined,
+        lineTexts: collectedLineTexts.length > 0
+          ? collectedLineTexts
+          : undefined,
       };
     }
 

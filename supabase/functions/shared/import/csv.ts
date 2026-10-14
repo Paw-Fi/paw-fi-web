@@ -17,14 +17,13 @@ import {
   DEFAULT_CSV_CONFIG,
   detectCurrencyFromText,
   extractAmountTokens,
-  HEADER_NOISE_PATTERN,
   inferTypeFromText,
-  isTotalLike,
   normalizeAmountString,
   parseDateFromText,
   type ParseDiagnostics,
   type ParsedTransaction,
   type ParseResult,
+  parseStructuredCurrency,
   stripAmountsAndDates,
 } from "./types.ts";
 
@@ -412,9 +411,6 @@ function extractTransactionFromRow(
 
   const joined = cells.filter(Boolean).join(" | ");
 
-  // Skip noise rows
-  if (HEADER_NOISE_PATTERN.test(joined)) return null;
-
   // --- Date ---
   const dateSource = columnMap && columnMap.date >= 0
     ? cells[columnMap.date]
@@ -428,46 +424,49 @@ function extractTransactionFromRow(
     ? cells[columnMap.description]
     : stripAmountsAndDates(joined) || joined;
 
-  // Skip total-like rows
-  if (isTotalLike(description)) return null;
-
   // --- Currency ---
   const currencySource = columnMap && columnMap.currency >= 0
     ? cells[columnMap.currency]
     : joined;
-  const currency = detectCurrencyFromText(currencySource, callerCurrency);
+  const currency = columnMap && columnMap.currency >= 0
+    ? parseStructuredCurrency(currencySource || "", callerCurrency)
+    : detectCurrencyFromText(currencySource, callerCurrency);
 
   // --- Amount & Type ---
   let amount: number | null = null;
   let type: "expense" | "income" = "expense";
 
-  // Try moneyOut column first
-  if (columnMap && columnMap.moneyOut >= 0) {
-    const val = normalizeAmountString(cells[columnMap.moneyOut] || "");
-    if (val !== null && val > 0) {
-      amount = val;
-      type = "expense";
-    }
+  const debitText = columnMap && columnMap.moneyOut >= 0
+    ? cells[columnMap.moneyOut] || ""
+    : "";
+  const creditText = columnMap && columnMap.moneyIn >= 0
+    ? cells[columnMap.moneyIn] || ""
+    : "";
+  const debit = normalizeAmountString(debitText);
+  const credit = normalizeAmountString(creditText);
+  // Mixed movements or signed reversals require source semantics rather than
+  // choosing the first nonempty column or silently removing its sign.
+  if (
+    (debit && credit) || (debit && debitText.trim().startsWith("-")) ||
+    (credit && creditText.trim().startsWith("-"))
+  ) {
+    throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
+  }
+  if (debit && debit > 0) {
+    amount = debit;
+    type = "expense";
+  } else if (credit && credit > 0) {
+    amount = credit;
+    type = "income";
   }
 
-  // Try moneyIn column if no moneyOut
-  if (amount === null && columnMap && columnMap.moneyIn >= 0) {
-    const val = normalizeAmountString(cells[columnMap.moneyIn] || "");
-    if (val !== null && val > 0) {
-      amount = val;
-      type = "income";
-    }
-  }
-
-  // Try single amount column with sign detection
+  // A generic amount column has no authoritative direction convention.
   if (amount === null && columnMap && columnMap.amount >= 0) {
     const raw = cells[columnMap.amount] || "";
-    const cleaned = raw.replace(/[−–—]/g, "-").replace(/[^0-9,.\-()]/g, "");
-    const isNegative = /^\s*[\-−–—]/.test(cleaned) || /\(.*\)/.test(cleaned);
     const val = normalizeAmountString(raw);
     if (val !== null && val > 0) {
       amount = val;
-      type = isNegative ? "expense" : inferTypeFromText(joined);
+      type = inferTypeFromText(joined);
     }
   }
 
@@ -482,10 +481,7 @@ function extractTransactionFromRow(
 
   if (amount === null || amount <= 0) return null;
 
-  // Filter year-like amounts (1900-2100) unless there's a currency symbol
-  if (amount >= 1900 && amount <= 2100 && !/[€$£¥₹]/.test(joined)) {
-    return null;
-  }
+  if (!date) throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
 
   // --- Category ---
   const category = columnMap && columnMap.category >= 0
@@ -649,6 +645,27 @@ export function parseCsvFromBytes(
 
   // --- Extract transactions ---
   const dataStartRow = headerRowIndex >= 0 ? headerRowIndex + 1 : 0;
+  if (allRows.length - dataStartRow > config.maxRows) {
+    return {
+      success: false,
+      items: [],
+      errorCode: "CSV_TOO_MANY_ROWS",
+      errorMessage:
+        `CSV exceeds the ${config.maxRows} data-row limit. Split the file into smaller files; no transactions were imported.`,
+      diagnostics: {
+        parserPath: "csv_deterministic",
+        rowsExamined: 0,
+        rowsParsed: 0,
+        rowsSkipped: 0,
+        delimiter,
+        encoding,
+        hasBom,
+        warnings,
+        truncated: true,
+      },
+    };
+  }
+
   const items: ParsedTransaction[] = [];
   let rowsExamined = 0;
   let rowsSkipped = 0;
@@ -661,7 +678,14 @@ export function parseCsvFromBytes(
     rowsExamined++;
     const row = allRows[i].map((c) => c.trim());
 
-    // Limit column count
+    // A column cap cannot erase a mapped financial field and turn it into an
+    // omission default. The semantic fallback retains the complete source.
+    if (
+      columnMap &&
+      Object.values(columnMap).some((index) => index >= config.maxColumns)
+    ) {
+      throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
+    }
     const limited = row.slice(0, config.maxColumns);
 
     const transaction = extractTransactionFromRow(
@@ -677,13 +701,6 @@ export function parseCsvFromBytes(
     } else {
       rowsSkipped++;
     }
-  }
-
-  // Row limit warning
-  if (allRows.length - dataStartRow > config.maxRows) {
-    warnings.push(
-      `File contains more than ${config.maxRows} data rows; only the first ${config.maxRows} were parsed`,
-    );
   }
 
   // --- Build result ---

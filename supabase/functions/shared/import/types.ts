@@ -82,6 +82,8 @@ export interface ParseDiagnostics {
   extractedCharCount?: number;
   /** Warnings that don't block parsing but should be surfaced */
   warnings: string[];
+  /** Resource limits prevented a complete import; no subset is saveable. */
+  truncated?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,112 +229,60 @@ export function formatDateParts(
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/**
- * Parse a date from free-form text. Supports:
- * - ISO 8601: 2024-01-15
- * - Month-first: Jan 15, 2024 / January 15 2024
- * - Day-first: 15 Jan 2024
- * - Numeric: 01/15/2024, 15-01-2024
- *
- * Uses the caller's date for year inference when the year is missing.
- */
+/** Validate a canonical date; localized values require semantic extraction. */
 export function parseDateFromText(
-  line: string,
-  callerDate: string,
+  value: string,
+  _callerDate: string,
 ): string | null {
-  const monthNameRegex =
-    /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i;
-  const monthFirstRegex = new RegExp(
-    `${monthNameRegex.source}\\s+(\\d{1,2})(?:,\\s*(\\d{2,4}))?`,
-    "i",
-  );
-  const dayFirstRegex = new RegExp(
-    `(\\d{1,2})\\s+${monthNameRegex.source}(?:\\s+(\\d{2,4}))?`,
-    "i",
-  );
-
-  const yearFromCaller =
-    Number(callerDate.slice(0, 4)) || new Date().getFullYear();
-
-  const monthFirstMatch = line.match(monthFirstRegex);
-  if (monthFirstMatch) {
-    const monthToken = monthFirstMatch[0].split(/\s+/)[0].toLowerCase();
-    const month = MONTH_MAP[monthToken] || MONTH_MAP[monthToken.slice(0, 3)];
-    const day = Number(monthFirstMatch[1]);
-    const yearRaw = monthFirstMatch[2];
-    const year = yearRaw
-      ? Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw)
-      : yearFromCaller;
-    if (month && day) return formatDateParts(year, month, day);
+  const normalized = value.trim();
+  if (!normalized) return null;
+  // Only the canonical machine date contract is safe without source locale.
+  // Localized dates (even apparently unambiguous ones) enter semantic extraction.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
   }
-
-  const dayFirstMatch = line.match(dayFirstRegex);
-  if (dayFirstMatch) {
-    const monthToken = dayFirstMatch[0]
-      .split(/\s+/)
-      .find((token) => monthNameRegex.test(token))
-      ?.toLowerCase();
-    const month = monthToken
-      ? MONTH_MAP[monthToken] || MONTH_MAP[monthToken.slice(0, 3)]
-      : undefined;
-    const day = Number(dayFirstMatch[1]);
-    const yearRaw = dayFirstMatch[2];
-    const year = yearRaw
-      ? Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw)
-      : yearFromCaller;
-    if (month && day) return formatDateParts(year, month, day);
+  const parsed = new Date(`${normalized}T00:00:00Z`);
+  if (
+    !Number.isFinite(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== normalized
+  ) {
+    throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
   }
+  const date = normalized;
+  return date;
+}
 
-  const isoMatch = line.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
-  if (isoMatch) {
-    return formatDateParts(
-      Number(isoMatch[1]),
-      Number(isoMatch[2]),
-      Number(isoMatch[3]),
-    );
+/** A present currency column must establish an exact supported ISO code. */
+export function parseStructuredCurrency(
+  value: string,
+  callerCurrency: string,
+): string {
+  const code = value.trim().toUpperCase();
+  if (!code) return callerCurrency;
+  if (!/^[A-Z]{3}$/.test(code) || !Object.hasOwn(CURRENCY_SYMBOLS, code)) {
+    throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
   }
-
-  const numericMatch = line.match(
-    /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/,
-  );
-  if (numericMatch) {
-    const first = Number(numericMatch[1]);
-    const second = Number(numericMatch[2]);
-    const yearRaw = numericMatch[3];
-    const year = Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw);
-    if (first > 12 && second <= 12) {
-      return formatDateParts(year, second, first);
-    }
-    if (second > 12 && first <= 12) {
-      return formatDateParts(year, first, second);
-    }
-    // Ambiguous: assume DD/MM/YYYY (European convention)
-    return formatDateParts(year, second, first);
-  }
-
-  return null;
+  return code;
 }
 
 /**
- * Normalize a raw amount string handling European (1.234,56) and US (1,234.56) formats.
- * Returns the absolute value or null if unparseable.
+ * Parse only a conservative numeric contract. Empty values remain empty; other
+ * localized or ambiguous formats require semantic extraction of the full source.
  */
 export function normalizeAmountString(value: string): number | null {
-  const normalizedDashes = value.replace(/[−–—]/g, "-");
-  const cleaned = normalizedDashes.replace(/[^0-9,.\-]/g, "");
-  if (!cleaned || cleaned === "-" || cleaned === ".") return null;
-  const lastComma = cleaned.lastIndexOf(",");
-  const lastDot = cleaned.lastIndexOf(".");
-  let normalized = cleaned;
-  if (lastComma > lastDot) {
-    // European: 1.234,56 → comma is decimal separator
-    normalized = cleaned.replace(/\./g, "").replace(/,/g, ".");
-  } else {
-    // US/UK: 1,234.56 → dot is decimal separator
-    normalized = cleaned.replace(/,/g, "");
+  const normalized = value.trim();
+  if (!normalized) return null;
+  // Do not strip currency text, Unicode digits or separators and then guess.
+  // Three trailing digits can be either grouping or decimal precision.
+  // Typed spreadsheet numbers bypass this string contract without conversion.
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(normalized)) {
+    throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
   }
   const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? Math.abs(parsed) : null;
+  if (!Number.isFinite(parsed)) {
+    throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
+  }
+  return Math.abs(parsed);
 }
 
 /**
@@ -431,25 +381,13 @@ export function detectCurrencyFromText(
 }
 
 /**
- * Infer whether a line describes an expense or income based on keyword signals.
+ * Require semantic extraction when structured debit/credit fields are absent.
  */
-export function inferTypeFromText(line: string): "expense" | "income" {
-  const normalized = line.toLowerCase();
-  if (
-    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from|поступлен|зачислен|возврат|перевод от)/.test(
-      normalized,
-    )
-  ) {
-    return "income";
-  }
-  if (
-    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to|расход|списан|оплат|покупк|снятие|комисси|перевод на)/.test(
-      normalized,
-    )
-  ) {
-    return "expense";
-  }
-  return "expense";
+export function inferTypeFromText(_line: string): "expense" | "income" {
+  // Descriptions do not establish a normalized debit/credit contract. Abort
+  // this deterministic parse so the complete source enters semantic extraction.
+  // Never attach source text to the error: import diagnostics may be logged.
+  throw new Error("SEMANTIC_TRANSACTION_TYPE_REQUIRED");
 }
 
 /**
@@ -481,9 +419,10 @@ export function stripAmountsAndDates(text: string): string {
  * that should be excluded from transaction items.
  */
 export function isTotalLike(description: string): boolean {
-  return /\b(total|subtotal|balance|opening|closing|brought forward|carried forward)\b/i.test(
-    description,
-  );
+  return /\b(total|subtotal|balance|opening|closing|brought forward|carried forward)\b/i
+    .test(
+      description,
+    );
 }
 
 /**

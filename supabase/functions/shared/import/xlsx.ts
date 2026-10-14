@@ -17,14 +17,13 @@ import {
   DEFAULT_XLSX_CONFIG,
   detectCurrencyFromText,
   extractAmountTokens,
-  HEADER_NOISE_PATTERN,
   inferTypeFromText,
-  isTotalLike,
   normalizeAmountString,
   parseDateFromText,
   type ParseDiagnostics,
   type ParsedTransaction,
   type ParseResult,
+  parseStructuredCurrency,
   stripAmountsAndDates,
   type XlsxParseConfig,
 } from "./types.ts";
@@ -131,10 +130,16 @@ export function detectHeaderMap(row: string[]): XlsxColumnMap | null {
  * This is used when deterministic extraction finds 0 items.
  * Returns a text representation or null if the workbook can't be read.
  */
-export function buildXlsxPreview(buf: Uint8Array): string | null {
+export function buildXlsxPreview(
+  buf: Uint8Array,
+  requireComplete = false,
+): string | null {
   try {
     // deno-lint-ignore no-explicit-any
-    const wb = XLSX.read(buf, { type: "array" }) as any;
+    const wb = XLSX.read(buf, {
+      type: "array",
+      cellDates: requireComplete,
+    }) as any;
     const sheetNames: string[] = Array.isArray(wb.SheetNames)
       ? wb.SheetNames
       : [];
@@ -148,7 +153,7 @@ export function buildXlsxPreview(buf: Uint8Array): string | null {
     const sheetBlocks: string[] = [];
 
     for (const sheetName of sheetNames) {
-      if (totalRows >= MAX_TOTAL_ROWS) break;
+      if (!requireComplete && totalRows >= MAX_TOTAL_ROWS) break;
       const sheet = wb.Sheets[sheetName];
       if (!sheet) continue;
       // deno-lint-ignore no-explicit-any
@@ -159,9 +164,11 @@ export function buildXlsxPreview(buf: Uint8Array): string | null {
       const rowLimit = Math.min(MAX_ROWS_PER_SHEET, remaining);
       // deno-lint-ignore no-explicit-any
       const limited = rows
-        .slice(0, rowLimit)
+        .slice(0, requireComplete ? rows.length : rowLimit)
         // deno-lint-ignore no-explicit-any
-        .map((r: any) => (Array.isArray(r) ? r.slice(0, MAX_COLS) : r));
+        .map((
+          r: any,
+        ) => (Array.isArray(r) && !requireComplete ? r.slice(0, MAX_COLS) : r));
       if (limited.length === 0) continue;
 
       totalRows += limited.length;
@@ -283,6 +290,47 @@ export function parseXlsxFromBytes(
     };
   }
 
+  // Preflight every sheet before financial parsing can fall back to AI.
+  // A limit error never exposes an apparently successful subset.
+  let dataRowCount = 0;
+  for (const sheetName of sheetNames) {
+    const sheet = wb.Sheets[sheetName];
+    if (!sheet) continue;
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      raw: true,
+    }) as unknown[][];
+    let startRow = 0;
+    for (let i = 0; i < Math.min(rows.length, config.maxHeaderScanRows); i++) {
+      if (detectHeaderMap((rows[i] ?? []).map(extractCellText))) {
+        startRow = i + 1;
+        break;
+      }
+    }
+    const sheetRows = rows.length - startRow;
+    dataRowCount += sheetRows;
+    if (
+      sheetRows > config.maxRowsPerSheet || dataRowCount > config.maxTotalRows
+    ) {
+      return {
+        success: false,
+        items: [],
+        errorCode: "XLSX_TOO_MANY_ROWS",
+        errorMessage:
+          `Workbook exceeds the ${config.maxRowsPerSheet} data rows per sheet or ${config.maxTotalRows} total data-row limit. Split it into smaller files; no transactions were imported.`,
+        diagnostics: {
+          parserPath: "xlsx_deterministic",
+          rowsExamined: 0,
+          rowsParsed: 0,
+          rowsSkipped: 0,
+          sheetNames,
+          warnings,
+          truncated: true,
+        },
+      };
+    }
+  }
+
   // --- Process sheets ---
   const allItems: ParsedTransaction[] = [];
   let totalRowsExamined = 0;
@@ -335,6 +383,13 @@ export function parseXlsxFromBytes(
       }
     }
 
+    if (
+      columnMap &&
+      Object.values(columnMap).some((index) => index >= config.maxColumns)
+    ) {
+      throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
+    }
+
     // --- Extract transactions ---
     const limit = Math.min(rows.length, startRow + config.maxRowsPerSheet);
     if (rows.length > startRow + config.maxRowsPerSheet) {
@@ -357,16 +412,18 @@ export function parseXlsxFromBytes(
         .map((cell: unknown) => extractCellText(cell));
       const joined = cells.filter(Boolean).join(" | ");
       if (!joined) continue;
-      if (HEADER_NOISE_PATTERN.test(joined)) {
-        totalRowsSkipped++;
-        continue;
-      }
 
       // --- Date ---
       const dateText = columnMap && columnMap.date >= 0
         ? cells[columnMap.date]
         : joined;
-      const rowDate = parseDateFromText(dateText, callerDate);
+      const dateCell = columnMap && columnMap.date >= 0
+        ? row[columnMap.date]
+        : undefined;
+      const rowDate =
+        dateCell instanceof Date && Number.isFinite(dateCell.getTime())
+          ? dateCell.toISOString().slice(0, 10)
+          : parseDateFromText(dateText, callerDate);
       if (!columnMap && !rowDate) {
         totalRowsSkipped++;
         continue;
@@ -377,11 +434,6 @@ export function parseXlsxFromBytes(
         ? cells[columnMap.description]
         : stripAmountsAndDates(joined) || joined;
 
-      if (isTotalLike(descriptionText)) {
-        totalRowsSkipped++;
-        continue;
-      }
-
       // --- Currency ---
       const currencyText = columnMap && columnMap.currency >= 0
         ? cells[columnMap.currency]
@@ -391,30 +443,33 @@ export function parseXlsxFromBytes(
       let amountValue: number | null = null;
       let type: "expense" | "income" = "expense";
 
-      // Try moneyOut column
-      if (columnMap && columnMap.moneyOut >= 0) {
-        const parsed = parseSignedAmountFromCell(rows[i][columnMap.moneyOut]);
-        if (parsed) {
-          amountValue = parsed.amount;
-          type = "expense";
-        }
+      const debit = columnMap && columnMap.moneyOut >= 0
+        ? parseSignedAmountFromCell(row[columnMap.moneyOut])
+        : null;
+      const credit = columnMap && columnMap.moneyIn >= 0
+        ? parseSignedAmountFromCell(row[columnMap.moneyIn])
+        : null;
+      if (
+        (debit?.amount && credit?.amount) ||
+        (debit?.amount && debit.isNegative) ||
+        (credit?.amount && credit.isNegative)
+      ) {
+        throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
+      }
+      if (debit && debit.amount > 0) {
+        amountValue = debit.amount;
+        type = "expense";
+      } else if (credit && credit.amount > 0) {
+        amountValue = credit.amount;
+        type = "income";
       }
 
-      // Try moneyIn column
-      if (amountValue === null && columnMap && columnMap.moneyIn >= 0) {
-        const parsed = parseSignedAmountFromCell(rows[i][columnMap.moneyIn]);
-        if (parsed) {
-          amountValue = parsed.amount;
-          type = "income";
-        }
-      }
-
-      // Try single amount column
+      // A generic amount column has no authoritative direction convention.
       if (amountValue === null && columnMap && columnMap.amount >= 0) {
         const parsed = parseSignedAmountFromCell(rows[i][columnMap.amount]);
         if (parsed) {
           amountValue = parsed.amount;
-          type = parsed.isNegative ? "expense" : inferTypeFromText(joined);
+          type = inferTypeFromText(joined);
         }
       }
 
@@ -430,7 +485,7 @@ export function parseXlsxFromBytes(
             const parsed = parseSignedAmountFromCell(cell);
             if (parsed) {
               amountValue = parsed.amount;
-              type = parsed.isNegative ? "expense" : inferTypeFromText(joined);
+              type = inferTypeFromText(joined);
               break;
             }
           }
@@ -442,23 +497,11 @@ export function parseXlsxFromBytes(
         continue;
       }
 
-      // Filter year-like amounts
-      if (
-        amountValue >= 1900 &&
-        amountValue <= 2100 &&
-        !/[€$£¥₹]/.test(joined)
-      ) {
-        totalRowsSkipped++;
-        continue;
-      }
-
-      const currency = detectCurrencyFromText(currencyText, callerCurrency) ||
-        callerCurrency;
-
-      if (HEADER_NOISE_PATTERN.test(descriptionText)) {
-        totalRowsSkipped++;
-        continue;
-      }
+      if (!rowDate) throw new Error("SEMANTIC_FINANCIAL_EXTRACTION_REQUIRED");
+      const currency = columnMap && columnMap.currency >= 0
+        ? parseStructuredCurrency(currencyText || "", callerCurrency)
+        : detectCurrencyFromText(currencyText, callerCurrency) ||
+          callerCurrency;
 
       allItems.push({
         type,

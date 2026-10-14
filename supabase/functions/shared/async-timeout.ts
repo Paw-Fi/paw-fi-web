@@ -1,3 +1,9 @@
+/** Internal request scope; never sourced from a transaction payload. */
+export interface AnalysisExecutionOptions {
+  deadlineAt?: number;
+  signal?: AbortSignal;
+}
+
 export async function runWithTimeout<T>(params: {
   operation: (signal: AbortSignal) => Promise<T>;
   timeoutMs: number;

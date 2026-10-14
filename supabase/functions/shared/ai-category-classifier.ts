@@ -45,16 +45,24 @@ export async function classifyTransactionCategories(params: {
   incomeCategories: string[];
   initialCategories?: Array<string | null>;
   initialModel?: string;
+  reviewInitialCategories?: boolean;
+  sourceParts?: Array<Record<string, unknown>>;
   budgetMs: number;
+  deadlineAt?: number;
+  signal?: AbortSignal;
   /** Stagger overlapping fallbacks without shortening the primary deadline. */
   hedgeDelayMs?: number;
   onAttempt?: (attempt: CategoryAttempt) => void;
 }): Promise<{
   categories: Array<string | null>;
   attempts: CategoryAttempt[];
+  reviewed: boolean[];
   error?: unknown;
 }> {
-  const deadline = Date.now() + params.budgetMs;
+  const deadline = Math.min(
+    Date.now() + params.budgetMs,
+    params.deadlineAt ?? Infinity,
+  );
   const startedAt = Date.now();
   const allowed = params.items.map(
     (item) =>
@@ -71,6 +79,7 @@ export async function classifyTransactionCategories(params: {
       : null;
   });
   const attempts: CategoryAttempt[] = [];
+  const reviewed = params.items.map(() => !params.reviewInitialCategories);
   let lastError: unknown;
   // A notification model has already returned a generic answer. Give a
   // different, stronger fallback first access to the recovery budget.
@@ -87,9 +96,14 @@ export async function classifyTransactionCategories(params: {
         ];
 
   const stop = new AbortController();
+  const onParentAbort = () => stop.abort(params.signal?.reason);
+  if (params.signal?.aborted) onParentAbort();
+  else params.signal?.addEventListener("abort", onParentAbort, { once: true });
   const pendingIndexes = () =>
     categories.flatMap((category, itemIndex) =>
-      category === null || isGenericAiCategory(category) ? [itemIndex] : [],
+      category === null || isGenericAiCategory(category) || !reviewed[itemIndex]
+        ? [itemIndex]
+        : [],
     );
 
   async function runAttempt(index: number, overlapping: boolean) {
@@ -110,9 +124,16 @@ export async function classifyTransactionCategories(params: {
       itemCount: pending.length,
     };
     try {
+      const sourceTexts = [
+        ...new Set(
+          pending
+            .map((i) => params.items[i].sourceText)
+            .filter((text): text is string => Boolean(text)),
+        ),
+      ];
       const model = params.genAI.getGenerativeModel({
         model: models[index],
-        systemInstruction: `${AI_CATEGORY_POLICY}\nReturn one exact allowed category per input in the same order by calling categorize_transactions. This is a focused category recovery pass: an earlier generic answer is not evidence that no category fits. Reconsider the actual purchase or income source against the ENTIRE allowed catalog, including broad supported categories and custom categories. Use the original notification/source evidence instead of relying solely on the bank, processor or a short generated description. Return a generic category only when no more informative allowed category is supported; do not fabricate missing purchase details.`,
+        systemInstruction: `${AI_CATEGORY_POLICY}\nReturn one exact allowed category per input in the same order by calling categorize_transactions. This is a focused category recovery pass: an earlier generic answer is not evidence that no category fits. Reconsider the actual purchase or income source against the ENTIRE allowed catalog, including broad supported categories and custom categories. Use the original notification/source evidence instead of relying solely on the bank, processor or a short generated description. A transaction sourceTextIndex points to sourceTexts at that index; original image/audio parts are shared source evidence. Match the source evidence to each transaction rather than borrowing another transaction's purchase purpose. Return a generic category only when no more informative allowed category is supported; do not fabricate missing purchase details.`,
         tools: buildCategoryAssignmentTools(
           pending.flatMap((i) => [...allowed[i]]),
           pending.length,
@@ -133,9 +154,22 @@ export async function classifyTransactionCategories(params: {
                       text: JSON.stringify({
                         expenseCategories: params.expenseCategories,
                         incomeCategories: params.incomeCategories,
-                        transactions: pending.map((i) => params.items[i]),
+                        sourceTexts,
+                        transactions: pending.map((i) => {
+                          const { sourceText, ...fields } = params.items[i];
+                          return {
+                            ...fields,
+                            ...(sourceText
+                              ? {
+                                  sourceTextIndex:
+                                    sourceTexts.indexOf(sourceText),
+                                }
+                              : {}),
+                          };
+                        }),
                       }),
                     },
+                    ...(params.sourceParts ?? []),
                   ],
                 },
               ],
@@ -177,9 +211,12 @@ export async function classifyTransactionCategories(params: {
         if (
           assigned[resultIndex] !== null &&
           (categories[itemIndex] === null ||
-            isGenericAiCategory(categories[itemIndex]!))
-        )
+            isGenericAiCategory(categories[itemIndex]!) ||
+            !reviewed[itemIndex])
+        ) {
           categories[itemIndex] = assigned[resultIndex];
+          reviewed[itemIndex] = true;
+        }
       });
       attempt.outcome = assigned.some((category) => category === null)
         ? "invalid_response"
@@ -226,34 +263,45 @@ export async function classifyTransactionCategories(params: {
     }
   }
 
-  const hedgeDelayMs = params.hedgeDelayMs;
-  if (
-    hedgeDelayMs !== undefined &&
-    Number.isFinite(hedgeDelayMs) &&
-    hedgeDelayMs > 0
-  ) {
-    const tasks: Promise<void>[] = [];
-    for (let index = 0; index < models.length; index++) {
-      const previous = tasks[index - 1];
-      tasks.push(
-        (async () => {
-          if (previous)
-            await waitForFallback(
-              startedAt + index * hedgeDelayMs - Date.now(),
-              previous,
-            );
-          await runAttempt(index, true);
-        })(),
-      );
+  try {
+    const hedgeDelayMs = params.hedgeDelayMs;
+    if (
+      hedgeDelayMs !== undefined &&
+      Number.isFinite(hedgeDelayMs) &&
+      hedgeDelayMs > 0
+    ) {
+      const tasks: Promise<void>[] = [];
+      for (let index = 0; index < models.length; index++) {
+        const previous = tasks[index - 1];
+        tasks.push(
+          (async () => {
+            if (previous)
+              await waitForFallback(
+                startedAt + index * hedgeDelayMs - Date.now(),
+                previous,
+              );
+            await runAttempt(index, true);
+          })(),
+        );
+      }
+      // Parent cancellation settles losers immediately, including clients that
+      // fail to honor AbortSignal; their timers and scheduled starts are cleared.
+      await Promise.allSettled(tasks);
+    } else {
+      for (let index = 0; index < models.length; index++) {
+        if (stop.signal.aborted) break;
+        await runAttempt(index, false);
+      }
     }
-    // Parent cancellation settles losers immediately, including clients that
-    // fail to honor AbortSignal; their timers and scheduled starts are cleared.
-    await Promise.allSettled(tasks);
-  } else {
-    for (let index = 0; index < models.length; index++) {
-      if (stop.signal.aborted) break;
-      await runAttempt(index, false);
-    }
+  } finally {
+    params.signal?.removeEventListener("abort", onParentAbort);
+    stop.abort(new DOMException("Category review settled", "AbortError"));
   }
-  return { categories, attempts, ...(lastError ? { error: lastError } : {}) };
+
+  return {
+    categories,
+    attempts,
+    reviewed,
+    ...(lastError ? { error: lastError } : {}),
+  };
 }

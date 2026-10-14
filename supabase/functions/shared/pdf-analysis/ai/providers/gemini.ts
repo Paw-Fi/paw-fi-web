@@ -17,7 +17,7 @@ interface VertexLikeClient {
   }): {
     generateContent(
       request: Record<string, unknown>,
-    ): Promise<{ response: { text(): string; raw?: Record<string, unknown> } }>;
+    ): Promise<{ response: { text(): string; raw?: unknown } }>;
   };
 }
 

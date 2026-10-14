@@ -157,7 +157,7 @@ export async function fetchUserCustomCategories(params: {
     .order("updated_at", { ascending: false });
 
   if (error || !Array.isArray(data)) {
-    return [];
+    throw new Error("Failed to load the custom category catalog");
   }
 
   return data
@@ -186,7 +186,7 @@ export async function fetchUserHiddenCategories(params: {
     .order("updated_at", { ascending: false });
 
   if (error || !Array.isArray(data)) {
-    return [];
+    throw new Error("Failed to load the hidden category catalog");
   }
 
   return data

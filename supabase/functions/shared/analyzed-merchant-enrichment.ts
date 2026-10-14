@@ -1,3 +1,4 @@
+import type { AnalysisExecutionOptions } from "./async-timeout.ts";
 import {
   type AnalyzeRequestBody,
   type ProgressCallback,
@@ -73,7 +74,12 @@ export async function runEnrichedTransactionAnalysis(params: {
   onProgress?: ProgressCallback;
   transformItems?: (items: any[]) => any[] | Promise<any[]>;
   merchantDeadlineAt?: number;
+  execution?: AnalysisExecutionOptions;
 }): Promise<any> {
+  const execution = {
+    ...params.execution,
+    deadlineAt: params.execution?.deadlineAt ?? Date.now() + 140000,
+  };
   const result = await runAnalyzeExpense(
     {
       ...params.body,
@@ -81,6 +87,7 @@ export async function runEnrichedTransactionAnalysis(params: {
     },
     params.apiKey,
     params.onProgress,
+    execution,
   );
   if (!result.success || !Array.isArray(result.items)) return result;
 
@@ -93,7 +100,11 @@ export async function runEnrichedTransactionAnalysis(params: {
       body: params.body,
       items: transformedItems,
       merchantContext: params.merchantContext,
-      deadlineAt: params.merchantDeadlineAt,
+      deadlineAt: Math.min(
+        params.merchantDeadlineAt ?? Infinity,
+        execution.deadlineAt - 1000,
+      ),
+      signal: execution.signal,
     }),
   };
 }
