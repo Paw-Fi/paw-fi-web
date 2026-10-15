@@ -23,20 +23,16 @@ async function loadHandler(endpoint, existing = null) {
   let handler;
   let saved = existing;
   const client = {
-    from() {
-      let patch;
-      const query = {
-        select() { return query; },
-        eq() { return query; },
-        insert(value) { patch = value; return query; },
-        update(value) { patch = value; return query; },
-        async maybeSingle() { return { data: saved, error: null }; },
-        async single() {
-          saved = { id: "transfer", ...saved, ...patch };
-          return { data: saved, error: null };
-        },
-      };
-      return query;
+    async rpc(_name, { p_payload: payload, p_operation: operation }) {
+      const patch = { from_account_id: payload.fromAccountId, to_account_id: payload.toAccountId,
+        amount_cents: payload.amountCents, currency: payload.currency, date: payload.date,
+        ...(Object.hasOwn(payload, "time") ? { time: payload.time } : {}), note: payload.note };
+      if (operation === "create" && payload.clientRecordId && saved &&
+        Object.entries(patch).some(([key, value]) => saved[key] !== value)) {
+        return { data: null, error: { message: "IDEMPOTENCY_CONFLICT", code: "23505" } };
+      }
+      saved = { id: "transfer", ...saved, ...patch };
+      return { data: saved, error: null };
     },
   };
   // Evaluate the real HTTP handler in Node with isolated authority/storage stubs.
@@ -44,11 +40,18 @@ async function loadHandler(endpoint, existing = null) {
   const context = createContext({ Request, Response, console,
     Deno: { serve(value) { handler = value; }, env: { get() { return "test"; } } },
   });
-  const source = await readFile(new URL(`../${endpoint}/index.ts`, import.meta.url), "utf8");
-  const module = new SourceTextModule(stripTypeScriptTypes(source), { context });
-  await module.link((specifier) => {
+  const moduleUrl = new URL(`../${endpoint}/index.ts`, import.meta.url);
+  const source = await readFile(moduleUrl, "utf8");
+  const module = new SourceTextModule(stripTypeScriptTypes(source), { context, identifier: moduleUrl.href });
+  const cache = new Map();
+  await module.link(async (specifier, referencing) => {
+    if (specifier.endsWith("wallet-transfer-mutation.ts")) {
+      const url = new URL(specifier, referencing.identifier);
+      return new SourceTextModule(stripTypeScriptTypes(await readFile(url, "utf8")), { context, identifier: url.href });
+    }
+    if (cache.has(specifier)) return cache.get(specifier);
     const exports = specifier.includes("@supabase") ? { createClient: () => client }
-      : specifier.endsWith("cors.ts") ? { corsHeaders: {} }
+      : specifier.endsWith("cors.ts") ? { corsHeaders: {}, withCors: (handler) => handler }
       : specifier.endsWith("auth.ts") ? {
         authenticateUserOrInternalSecret: async () => ({ success: true, userId: "user" }),
       }
@@ -58,9 +61,11 @@ async function loadHandler(endpoint, existing = null) {
       }
       : specifier.endsWith("date-normalization.ts") ? { normalizeCalendarDateString }
       : { normalizeWalletTransferTime };
-    return new SyntheticModule(Object.keys(exports), function () {
+    const dependency = new SyntheticModule(Object.keys(exports), function () {
       for (const [name, value] of Object.entries(exports)) this.setExport(name, value);
     }, { context });
+    cache.set(specifier, dependency);
+    return dependency;
   });
   await module.evaluate();
   return async (body) => {

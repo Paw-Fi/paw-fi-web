@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { readWalletLedgerPages } from "../shared/wallet-ledger-pages.ts";
+import { walletTransferSide } from "../shared/wallet-transfer-read.ts";
 import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
@@ -55,167 +56,325 @@ function normalizeDate(value?: string | null): string | null {
   return trimmed;
 }
 
-Deno.serve(withCors(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+Deno.serve(
+  withCors(async (req: Request) => {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
 
-  if (req.method !== "POST") {
-    return jsonResponse(
-      { success: false, error: "Method not allowed", code: "VALIDATION_ERROR" },
-      405,
-    );
-  }
+    if (req.method !== "POST") {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Method not allowed",
+          code: "VALIDATION_ERROR",
+        },
+        405,
+      );
+    }
 
-  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonResponse(
-      {
-        success: false,
-        error: "Server configuration error",
-        code: "SERVER_ERROR",
-      },
-      500,
-    );
-  }
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Server configuration error",
+          code: "SERVER_ERROR",
+        },
+        500,
+      );
+    }
 
-  try {
-    const body = (await req.json()) as RequestBody;
-    if (body.currencies != null && !Array.isArray(body.currencies)) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "currencies must be an array",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-    const householdId = sanitizeUuid(body.householdId ?? null);
-    if (body.householdId && !householdId) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "Invalid householdId",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-    const selectedCurrency = normalizeCurrency(body.currency);
-    const selectedCurrencies = normalizeCurrencies(body.currencies) ??
-      (selectedCurrency ? [selectedCurrency] : null);
-    if (body.currency && !selectedCurrency) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "Invalid currency",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-    if (body.currencies != null && selectedCurrencies == null) {
-      return jsonResponse(
-        {
-          success: false,
-          error: body.currencies.length > 20
-            ? "Too many currencies"
-            : "Invalid currencies",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-    if (body.monthStart || body.currentMonthStart) {
-      const normalizedMonthStart = normalizeDate(
-        body.monthStart ?? body.currentMonthStart,
-      );
-      if (!normalizedMonthStart) {
+    try {
+      const body = (await req.json()) as RequestBody;
+      if (body.currencies != null && !Array.isArray(body.currencies)) {
         return jsonResponse(
           {
             success: false,
-            error: "Invalid monthStart",
+            error: "currencies must be an array",
             code: "VALIDATION_ERROR",
           },
           400,
         );
       }
-    }
+      const householdId = sanitizeUuid(body.householdId ?? null);
+      if (body.householdId && !householdId) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Invalid householdId",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
+      const selectedCurrency = normalizeCurrency(body.currency);
+      const selectedCurrencies = normalizeCurrencies(body.currencies) ??
+        (selectedCurrency ? [selectedCurrency] : null);
+      if (body.currency && !selectedCurrency) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Invalid currency",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
+      if (body.currencies != null && selectedCurrencies == null) {
+        return jsonResponse(
+          {
+            success: false,
+            error: body.currencies.length > 20
+              ? "Too many currencies"
+              : "Invalid currencies",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
+      if (body.monthStart || body.currentMonthStart) {
+        const normalizedMonthStart = normalizeDate(
+          body.monthStart ?? body.currentMonthStart,
+        );
+        if (!normalizedMonthStart) {
+          return jsonResponse(
+            {
+              success: false,
+              error: "Invalid monthStart",
+              code: "VALIDATION_ERROR",
+            },
+            400,
+          );
+        }
+      }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-      global: { headers: { "X-Client-Info": "moneko-list-accounts" } },
-    });
-
-    const auth = await authenticateUserOrInternalSecret(req, supabase);
-    if (!auth.success) {
-      return jsonResponse(
-        {
-          success: false,
-          error: auth.error ?? "Unauthorized",
-          code: auth.statusCode === 401 ? "UNAUTHORIZED" : "VALIDATION_ERROR",
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
         },
-        auth.statusCode ?? 401,
-      );
-    }
+        global: { headers: { "X-Client-Info": "moneko-list-accounts" } },
+      });
 
-    const userId = auth.isInternalService
-      ? sanitizeUuid(body.userId ?? null)
-      : auth.userId;
-    if (!userId) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "Valid userId is required",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
+      const auth = await authenticateUserOrInternalSecret(req, supabase);
+      if (!auth.success) {
+        return jsonResponse(
+          {
+            success: false,
+            error: auth.error ?? "Unauthorized",
+            code: auth.statusCode === 401 ? "UNAUTHORIZED" : "VALIDATION_ERROR",
+          },
+          auth.statusCode ?? 401,
+        );
+      }
 
-    const canAccess = await assertScopeAccess(supabase, userId, householdId);
-    if (!canAccess) {
-      return jsonResponse(
-        { success: false, error: "Forbidden scope", code: "UNAUTHORIZED" },
-        403,
-      );
-    }
+      const userId = auth.isInternalService
+        ? sanitizeUuid(body.userId ?? null)
+        : auth.userId;
+      if (!userId) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Valid userId is required",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
 
-    const includeArchived = body.includeArchived === true;
+      const canAccess = await assertScopeAccess(supabase, userId, householdId);
+      if (!canAccess) {
+        return jsonResponse(
+          { success: false, error: "Forbidden scope", code: "UNAUTHORIZED" },
+          403,
+        );
+      }
 
-    let accountsQuery = supabase
-      .from("accounts")
-      .select(
-        "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, exclude_from_analytics, linked_bank_account_id, created_at, updated_at",
-      )
-      .order("is_default", { ascending: false })
-      .order("is_system", { ascending: false })
-      .order("name", { ascending: true });
+      const includeArchived = body.includeArchived === true;
 
-    if (!includeArchived) {
-      accountsQuery = accountsQuery.eq("is_archived", false);
-    }
+      let accountsQuery = supabase
+        .from("accounts")
+        .select(
+          "id, user_id, household_id, name, icon, color, logo_url, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, exclude_from_analytics, linked_bank_account_id, created_at, updated_at",
+        )
+        .order("is_default", { ascending: false })
+        .order("is_system", { ascending: false })
+        .order("name", { ascending: true });
 
-    if (householdId) {
-      accountsQuery = accountsQuery.eq("household_id", householdId);
-    } else {
-      accountsQuery = accountsQuery
-        .eq("user_id", userId)
-        .is("household_id", null);
-    }
+      if (!includeArchived) {
+        accountsQuery = accountsQuery.eq("is_archived", false);
+      }
 
-    if (selectedCurrencies != null) {
-      accountsQuery = accountsQuery.in("currency", selectedCurrencies);
-    }
+      if (householdId) {
+        accountsQuery = accountsQuery.eq("household_id", householdId);
+      } else {
+        accountsQuery = accountsQuery
+          .eq("user_id", userId)
+          .is("household_id", null);
+      }
 
-    const { data: accounts, error: accountsError } = await accountsQuery;
-    if (accountsError) {
+      if (selectedCurrencies != null) {
+        accountsQuery = accountsQuery.in("currency", selectedCurrencies);
+      }
+
+      const { data: accounts, error: accountsError } = await accountsQuery;
+      if (accountsError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to list accounts",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+
+      const accountIds = (accounts ?? []).map((row: any) => row.id as string);
+      const accountCurrencyById = new Map<string, string>();
+      for (const row of (accounts ?? []) as any[]) {
+        accountCurrencyById.set(
+          row.id as string,
+          String(row.currency ?? selectedCurrency ?? "USD")
+            .trim()
+            .toUpperCase(),
+        );
+      }
+      if (accountIds.length === 0) {
+        return jsonResponse({ success: true, data: [] });
+      }
+
+      const expenseRows = await readWalletLedgerPages((afterId) => {
+        let query = supabase
+          .from("expenses")
+          .select(
+            "id, account_id, amount_cents, type, is_recurring, currency, analytics_is_final",
+          )
+          .in("account_id", accountIds)
+          .eq("is_recurring", false)
+          .lte("date", new Date().toISOString().slice(0, 10))
+          .is("deleted_at", null)
+          .order("id", { ascending: true })
+          .limit(500);
+        if (afterId) query = query.gt("id", afterId);
+        return query;
+      });
+
+      const expenseOut: Record<string, number> = {};
+      const incomeIn: Record<string, number> = {};
+      for (const row of (expenseRows ?? []) as any[]) {
+        if (row.is_recurring === true || row.analytics_is_final === false) {
+          continue;
+        }
+        const accountId = row.account_id as string;
+        const walletCurrency = accountCurrencyById.get(accountId);
+        const rowCurrency = String(row.currency ?? "")
+          .trim()
+          .toUpperCase();
+        if (walletCurrency && rowCurrency !== walletCurrency) continue;
+        const amount = Number(row.amount_cents || 0);
+        const type = String(row.type ?? "expense").toLowerCase();
+        if (type === "income") {
+          incomeIn[accountId] = (incomeIn[accountId] ?? 0) + amount;
+        } else {
+          expenseOut[accountId] = (expenseOut[accountId] ?? 0) + amount;
+        }
+      }
+
+      const transferOutRows = await readWalletLedgerPages((afterId) => {
+        let query = supabase
+          .from("account_transfers")
+          .select("id, from_account_id, amount_cents, currency")
+          .in("from_account_id", accountIds)
+          .order("id", { ascending: true })
+          .limit(500);
+        if (afterId) query = query.gt("id", afterId);
+        return query;
+      });
+      const transferInRows = await readWalletLedgerPages((afterId) => {
+        let query = supabase
+          .from("account_transfers")
+          .select(
+            "id, to_account_id, amount_cents, currency, to_amount_cents, to_currency",
+          )
+          .in("to_account_id", accountIds)
+          .order("id", { ascending: true })
+          .limit(500);
+        if (afterId) query = query.gt("id", afterId);
+        return query;
+      });
+
+      const transferOut: Record<string, number> = {};
+      for (const row of (transferOutRows ?? []) as any[]) {
+        const key = row.from_account_id as string;
+        const walletCurrency = accountCurrencyById.get(key);
+        const side = walletTransferSide(row, "out");
+        if (walletCurrency && side.currency !== walletCurrency) continue;
+        transferOut[key] = (transferOut[key] ?? 0) + side.amountCents;
+      }
+
+      const transferIn: Record<string, number> = {};
+      for (const row of (transferInRows ?? []) as any[]) {
+        const key = row.to_account_id as string;
+        const walletCurrency = accountCurrencyById.get(key);
+        const side = walletTransferSide(row, "in");
+        if (walletCurrency && side.currency !== walletCurrency) continue;
+        transferIn[key] = (transferIn[key] ?? 0) + side.amountCents;
+      }
+
+      const linkedBankAccountIds = (accounts ?? [])
+        .map((row: any) => row.linked_bank_account_id as string | null)
+        .filter((id: string | null): id is string => Boolean(id));
+      const providerBalanceByBankAccountId = new Map<string, number>();
+      if (linkedBankAccountIds.length > 0) {
+        const { data: bankAccountRows, error: bankAccountError } =
+          await supabase
+            .from("bank_accounts")
+            .select("id, type, provider_balance_current_cents")
+            .in("id", linkedBankAccountIds);
+        if (bankAccountError) throw bankAccountError;
+        for (const bankAccount of (bankAccountRows ?? []) as any[]) {
+          if (bankAccount.provider_balance_current_cents == null) continue;
+          const current = Number(bankAccount.provider_balance_current_cents);
+          const type = String(bankAccount.type ?? "").toLowerCase();
+          providerBalanceByBankAccountId.set(
+            bankAccount.id,
+            type === "credit" || type === "loan" ? -Math.abs(current) : current,
+          );
+        }
+      }
+
+      const payload = (accounts ?? []).map((row: any) => {
+        const accountId = row.id as string;
+        const opening = Number(row.opening_balance_cents || 0);
+        const fallbackBalanceCents = opening +
+          (incomeIn[accountId] ?? 0) -
+          (expenseOut[accountId] ?? 0) +
+          (transferIn[accountId] ?? 0) -
+          (transferOut[accountId] ?? 0);
+        const currentBalanceCents = row.linked_bank_account_id
+          ? (providerBalanceByBankAccountId.get(row.linked_bank_account_id) ??
+            fallbackBalanceCents)
+          : fallbackBalanceCents;
+
+        return {
+          ...row,
+          current_balance_cents: currentBalanceCents,
+          has_provider_balance: row.linked_bank_account_id
+            ? providerBalanceByBankAccountId.has(row.linked_bank_account_id)
+            : false,
+          transfer_summary: {
+            total_in_cents: transferIn[accountId] ?? 0,
+            total_out_cents: transferOut[accountId] ?? 0,
+          },
+        };
+      });
+
+      return jsonResponse({ success: true, data: payload });
+    } catch (error) {
+      console.error("[list-accounts]", error);
       return jsonResponse(
         {
           success: false,
@@ -225,156 +384,5 @@ Deno.serve(withCors(async (req: Request) => {
         500,
       );
     }
-
-    const accountIds = (accounts ?? []).map((row: any) => row.id as string);
-    const accountCurrencyById = new Map<string, string>();
-    for (const row of (accounts ?? []) as any[]) {
-      accountCurrencyById.set(
-        row.id as string,
-        String(row.currency ?? selectedCurrency ?? "USD")
-          .trim()
-          .toUpperCase(),
-      );
-    }
-    if (accountIds.length === 0) {
-      return jsonResponse({ success: true, data: [] });
-    }
-
-    const expenseRows = await readWalletLedgerPages((afterId) => {
-      let query = supabase
-        .from("expenses")
-        .select(
-          "id, account_id, amount_cents, type, is_recurring, currency, analytics_is_final",
-        )
-        .in("account_id", accountIds)
-        .eq("is_recurring", false)
-        .lte("date", new Date().toISOString().slice(0, 10))
-        .is("deleted_at", null)
-        .order("id", { ascending: true }).limit(500);
-      if (afterId) query = query.gt("id", afterId);
-      return query;
-    });
-
-    const expenseOut: Record<string, number> = {};
-    const incomeIn: Record<string, number> = {};
-    for (const row of (expenseRows ?? []) as any[]) {
-      if (row.is_recurring === true || row.analytics_is_final === false) {
-        continue;
-      }
-      const accountId = row.account_id as string;
-      const walletCurrency = accountCurrencyById.get(accountId);
-      const rowCurrency = String(row.currency ?? "")
-        .trim()
-        .toUpperCase();
-      if (walletCurrency && rowCurrency !== walletCurrency) continue;
-      const amount = Number(row.amount_cents || 0);
-      const type = String(row.type ?? "expense").toLowerCase();
-      if (type === "income") {
-        incomeIn[accountId] = (incomeIn[accountId] ?? 0) + amount;
-      } else {
-        expenseOut[accountId] = (expenseOut[accountId] ?? 0) + amount;
-      }
-    }
-
-    const transferOutRows = await readWalletLedgerPages((afterId) => {
-      let query = supabase
-        .from("account_transfers")
-        .select("id, from_account_id, amount_cents, currency")
-        .in("from_account_id", accountIds)
-        .order("id", { ascending: true }).limit(500);
-      if (afterId) query = query.gt("id", afterId);
-      return query;
-    });
-    const transferInRows = await readWalletLedgerPages((afterId) => {
-      let query = supabase
-        .from("account_transfers")
-        .select("id, to_account_id, amount_cents, currency")
-        .in("to_account_id", accountIds)
-        .order("id", { ascending: true }).limit(500);
-      if (afterId) query = query.gt("id", afterId);
-      return query;
-    });
-
-    const transferOut: Record<string, number> = {};
-    for (const row of (transferOutRows ?? []) as any[]) {
-      const key = row.from_account_id as string;
-      const walletCurrency = accountCurrencyById.get(key);
-      const rowCurrency = String(row.currency ?? "")
-        .trim()
-        .toUpperCase();
-      if (walletCurrency && rowCurrency !== walletCurrency) continue;
-      transferOut[key] = (transferOut[key] ?? 0) +
-        Number(row.amount_cents || 0);
-    }
-
-    const transferIn: Record<string, number> = {};
-    for (const row of (transferInRows ?? []) as any[]) {
-      const key = row.to_account_id as string;
-      const walletCurrency = accountCurrencyById.get(key);
-      const rowCurrency = String(row.currency ?? "")
-        .trim()
-        .toUpperCase();
-      if (walletCurrency && rowCurrency !== walletCurrency) continue;
-      transferIn[key] = (transferIn[key] ?? 0) + Number(row.amount_cents || 0);
-    }
-
-    const linkedBankAccountIds = (accounts ?? [])
-      .map((row: any) => row.linked_bank_account_id as string | null)
-      .filter((id: string | null): id is string => Boolean(id));
-    const providerBalanceByBankAccountId = new Map<string, number>();
-    if (linkedBankAccountIds.length > 0) {
-      const { data: bankAccountRows, error: bankAccountError } = await supabase
-        .from("bank_accounts")
-        .select("id, type, provider_balance_current_cents")
-        .in("id", linkedBankAccountIds);
-      if (bankAccountError) throw bankAccountError;
-      for (const bankAccount of (bankAccountRows ?? []) as any[]) {
-        if (bankAccount.provider_balance_current_cents == null) continue;
-        const current = Number(bankAccount.provider_balance_current_cents);
-        const type = String(bankAccount.type ?? "").toLowerCase();
-        providerBalanceByBankAccountId.set(
-          bankAccount.id,
-          type === "credit" || type === "loan" ? -Math.abs(current) : current,
-        );
-      }
-    }
-
-    const payload = (accounts ?? []).map((row: any) => {
-      const accountId = row.id as string;
-      const opening = Number(row.opening_balance_cents || 0);
-      const fallbackBalanceCents = opening +
-        (incomeIn[accountId] ?? 0) -
-        (expenseOut[accountId] ?? 0) +
-        (transferIn[accountId] ?? 0) -
-        (transferOut[accountId] ?? 0);
-      const currentBalanceCents = row.linked_bank_account_id
-        ? (providerBalanceByBankAccountId.get(row.linked_bank_account_id) ??
-          fallbackBalanceCents)
-        : fallbackBalanceCents;
-
-      return {
-        ...row,
-        current_balance_cents: currentBalanceCents,
-        has_provider_balance: row.linked_bank_account_id
-          ? providerBalanceByBankAccountId.has(row.linked_bank_account_id)
-          : false,
-        transfer_summary: {
-          total_in_cents: transferIn[accountId] ?? 0,
-          total_out_cents: transferOut[accountId] ?? 0,
-        },
-      };
-    });
-
-    return jsonResponse({ success: true, data: payload });
-  } catch (error) {
-    console.error("[list-accounts]", error);
-    return jsonResponse(
-      {
-        success: false,
-        error: "Failed to list accounts",
-        code: "SERVER_ERROR",
-      },
-      500,
-    );
-  }
-}));
+  }),
+);

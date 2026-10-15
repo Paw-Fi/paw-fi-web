@@ -246,6 +246,7 @@ Deno.serve(async (req: Request) => {
         merchant,
         merchant_id,
         merchant_structured_name,
+        transfer_fee_transfer_id,
         merchants(domain, logo_identifier),
         amount_cents,
         currency,
@@ -302,7 +303,9 @@ Deno.serve(async (req: Request) => {
           .eq("user_id", callerId)
           .or(
             `household_id.is.null,household_id.in.(${
-              portfolioHouseholdIds.join(",")
+              portfolioHouseholdIds.join(
+                ",",
+              )
             })`,
           );
       } else {
@@ -369,7 +372,9 @@ Deno.serve(async (req: Request) => {
         .eq("user_id", callerId)
         .or(
           `household_id.is.null,household_id.in.(${
-            portfolioHouseholdIds.join(",")
+            portfolioHouseholdIds.join(
+              ",",
+            )
           })`,
         );
     } else {
@@ -439,6 +444,9 @@ Deno.serve(async (req: Request) => {
         merchantStructuredName: privacyRedacted
           ? null
           : record.merchant_structured_name,
+        transferFeeTransferId: privacyRedacted
+          ? null
+          : (record.transfer_fee_transfer_id ?? null),
         amountMajor: (Number(record.amount_cents) || 0) / 100,
         currency: record.currency,
         ownerType: privacyRedacted ? null : record.owner_type,
