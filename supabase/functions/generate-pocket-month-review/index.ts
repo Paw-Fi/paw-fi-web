@@ -322,7 +322,11 @@ function parseRequest(value: unknown): PocketReviewRequest | null {
   return { scope, householdId, currency, cycleStart, locale };
 }
 
-function schema() {
+export function schema(context: SuggestionContext) {
+  const firstPlan = context.pockets.length === 0;
+  const allowedIds = firstPlan
+    ? Array.from({ length: 8 }, (_, index) => `draft-${index + 1}`)
+    : context.pockets.map((pocket) => pocket.id);
   return {
     type: "OBJECT",
     properties: {
@@ -357,7 +361,7 @@ function schema() {
             summary: { type: "STRING" },
             action: { type: "STRING" },
             estimated_impact_cents: { type: "INTEGER" },
-            envelope_id: { type: "STRING" },
+            envelope_id: { type: "STRING", enum: allowedIds },
           },
           required: ["type", "title", "summary"],
         },
@@ -368,14 +372,25 @@ function schema() {
         items: {
           type: "OBJECT",
           properties: {
-            envelope_id: { type: "STRING" },
+            envelope_id: { type: "STRING", enum: allowedIds },
             suggested_amount_cents: { type: "INTEGER" },
             pocket_name: { type: "STRING" },
-            categories: { type: "ARRAY", items: { type: "STRING" } },
+            categories: {
+              type: "ARRAY",
+              items: {
+                type: "STRING",
+                ...(firstPlan ? { enum: firstPlanCategories(context) } : {}),
+              },
+            },
             reason: { type: "STRING" },
             tip: { type: "STRING" },
           },
-          required: ["envelope_id", "suggested_amount_cents", "reason"],
+          required: [
+            "envelope_id",
+            "suggested_amount_cents",
+            "reason",
+            ...(firstPlan ? ["pocket_name", "categories"] : []),
+          ],
         },
       },
     },
@@ -793,8 +808,9 @@ export function normalize(
     firstPlanCategories(context),
     raw.suggested_total_budget_cents,
     context.total_budget_cents,
+    reject,
   );
-  if (!rawSuggestions) return reject("proposal_constraints_invalid");
+  if (!rawSuggestions) return null;
   if (!firstPlan && rawSuggestions.length !== validIds.size) {
     return reject("suggestion_count_mismatch", {
       returned_count: rawSuggestions.length,
@@ -1265,7 +1281,7 @@ ${JSON.stringify(modelContext)}`;
                   temperature: 0.2,
                   maxOutputTokens,
                   responseMimeType: "application/json",
-                  responseSchema: schema(),
+                  responseSchema: schema(context),
                 },
               })
               .then((result) => result.response),

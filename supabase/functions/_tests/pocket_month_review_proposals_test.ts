@@ -68,6 +68,68 @@ function firstPlanContext() {
 }
 
 Deno.test(
+  "first-plan model schema requires the metadata enforced by validation",
+  () => {
+    const context = firstPlanContext();
+    const schema = endpoint.schema(context);
+    const suggestion = schema.properties.suggestions.items;
+    assert(suggestion.required.includes("pocket_name"));
+    assert(suggestion.required.includes("categories"));
+    assert(
+      JSON.stringify(suggestion.properties.categories.items.enum) ===
+        JSON.stringify(["سكن", "食料品", "transport"]),
+    );
+    assert(suggestion.properties.envelope_id.enum?.includes("draft-1"));
+    assert(suggestion.properties.envelope_id.enum?.length === 8);
+  },
+);
+
+Deno.test(
+  "proposal rejection logs identify constraints without exposing financial data",
+  () => {
+    const failures: string[] = [];
+    const reject = (reason: string) => failures.push(reason);
+    const suggestions = rows();
+    suggestions[0].categories = ["not-in-evidence"];
+    assert(
+      validatePocketProposals(
+        suggestions,
+        [],
+        ["سكن", "食料品", "transport"],
+        35000,
+        40000,
+        reject,
+      ) === null,
+    );
+    assert(JSON.stringify(failures) === '["category_not_in_evidence"]');
+    failures.length = 0;
+    assert(
+      validatePocketProposals(
+        rows(),
+        [],
+        ["سكن", "食料品", "transport"],
+        35000,
+        30000,
+        reject,
+      ) === null,
+    );
+    assert(JSON.stringify(failures) === '["total_exceeds_selected_budget"]');
+    failures.length = 0;
+    assert(
+      validatePocketProposals(
+        rows(),
+        [],
+        ["سكن", "食料品", "transport"],
+        35001,
+        40000,
+        reject,
+      ) === null,
+    );
+    assert(JSON.stringify(failures) === '["suggested_total_mismatch"]');
+  },
+);
+
+Deno.test(
   "production existing-pocket plans retain exact names, known IDs and complete coverage",
   () => {
     const current = endpoint.buildContext(
