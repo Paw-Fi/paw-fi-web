@@ -136,11 +136,11 @@ async function claimClassificationEvent(params: {
   contextHash: string;
 }): Promise<
   | {
-    status: "claimed";
-    id: string;
-    processingToken: string;
-    attemptNumber: number;
-  }
+      status: "claimed";
+      id: string;
+      processingToken: string;
+      attemptNumber: number;
+    }
   | { status: "cached"; result: Record<string, unknown> }
   | { status: "processing" }
   | { status: "rate_limited" }
@@ -159,9 +159,8 @@ async function claimClassificationEvent(params: {
     },
   );
   if (error) throw error;
-  const result = data && typeof data === "object"
-    ? (data as Record<string, unknown>)
-    : {};
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   if (result.status === "cached" && result.result) {
     return {
       status: "cached",
@@ -243,7 +242,7 @@ async function loadRecurringSchedules(params: {
     ? query.eq("household_id", params.householdId)
     : query.is("household_id", null);
   const schedules: AndroidRecurringScheduleRow[] = [];
-  for (let offset = 0;; offset += 250) {
+  for (let offset = 0; ; offset += 250) {
     const { data, error } = await query.order("id").range(offset, offset + 249);
     if (error) throw error;
     if (!Array.isArray(data)) {
@@ -267,11 +266,9 @@ async function invokeWalletCapture(params: {
   const authorization = params.request.headers.get("Authorization") || "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
   const internalKey = resolveAnyInternalFunctionKey();
-  const url = `${
-    Deno.env.get(
-      "SUPABASE_URL",
-    )
-  }/functions/v1/save-wallet-transaction`;
+  const url = `${Deno.env.get(
+    "SUPABASE_URL",
+  )}/functions/v1/save-wallet-transaction`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -331,9 +328,13 @@ async function invokeNotificationRecurringConfirmation(params: {
     .maybeSingle();
   if (priorError) throw priorError;
   if (prior?.status === "confirmed" && prior.actual_transaction_id) {
-    const { data: transaction, error } = await params.supabase.from("expenses")
-      .select("*").eq("id", prior.actual_transaction_id)
-      .eq("user_id", params.userId).is("deleted_at", null).maybeSingle();
+    const { data: transaction, error } = await params.supabase
+      .from("expenses")
+      .select("*")
+      .eq("id", prior.actual_transaction_id)
+      .eq("user_id", params.userId)
+      .is("deleted_at", null)
+      .maybeSingle();
     if (error) throw error;
     if (!transaction) throw new Error("RECURRING_CONFIRMATION_RECOVERY_FAILED");
     const payload = notificationRecurringConfirmationPayload({
@@ -345,24 +346,30 @@ async function invokeNotificationRecurringConfirmation(params: {
   let customSplits: unknown = null;
   let payerUserId: string | null = null;
   if (
-    schedule.household_id && schedule.split_group_id &&
+    schedule.household_id &&
+    schedule.split_group_id &&
     schedule.type === "expense"
   ) {
     const { data: group, error: groupError } = await params.supabase
       .from("expense_split_groups")
       .select("payer_user_id, total_amount_cents, currency")
-      .eq("id", schedule.split_group_id).eq("expense_id", schedule.id)
-      .eq("household_id", schedule.household_id).maybeSingle();
+      .eq("id", schedule.split_group_id)
+      .eq("expense_id", schedule.id)
+      .eq("household_id", schedule.household_id)
+      .maybeSingle();
     if (groupError) throw groupError;
     if (
-      !group || group.currency !== params.classification.currency ||
+      !group ||
+      group.currency !== params.classification.currency ||
       !sanitizeUuid(group.payer_user_id)
     ) {
       throw new Error("INVALID_RECURRING_SAVED_SPLIT");
     }
     const { data: lines, error: linesError } = await params.supabase
-      .from("expense_split_lines").select("user_id, amount_cents")
-      .eq("split_group_id", schedule.split_group_id).order("user_id");
+      .from("expense_split_lines")
+      .select("user_id, amount_cents")
+      .eq("split_group_id", schedule.split_group_id)
+      .order("user_id");
     if (linesError) throw linesError;
     customSplits = scaleNotificationRecurringSplit(
       lines ?? [],
@@ -378,10 +385,12 @@ async function invokeNotificationRecurringConfirmation(params: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(internalKey ? buildInternalInvokeHeaders(internalKey) : {
-          Authorization: params.request.headers.get("Authorization") || "",
-          apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
-        }),
+        ...(internalKey
+          ? buildInternalInvokeHeaders(internalKey)
+          : {
+              Authorization: params.request.headers.get("Authorization") || "",
+              apikey: Deno.env.get("SUPABASE_ANON_KEY") || "",
+            }),
       },
       body: JSON.stringify({
         userId: params.userId,
@@ -430,6 +439,7 @@ Deno.serve(async (req: Request) => {
   let processingToken: string | null = null;
   let attemptNumber = 0;
   let supabase: any = null;
+  let stage = "request";
   let committedResponse: {
     body: Record<string, unknown>;
     status: number;
@@ -438,7 +448,7 @@ Deno.serve(async (req: Request) => {
     const rawBody = await req.text();
     if (
       new TextEncoder().encode(rawBody).length >
-        NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES
+      NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES
     ) {
       return jsonResponse({ success: false, error: "Payload too large" }, 413);
     }
@@ -477,6 +487,7 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    stage = "authentication";
     const auth = await authenticateUserOrInternalSecret(req, supabase);
     if (!auth.success) {
       return jsonResponse(
@@ -494,6 +505,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    stage = "subscription";
     const subscription = await loadLatestSubscriptionForUser(supabase, userId);
     if (!hasCapturePlusEntitlement(subscription)) {
       try {
@@ -511,6 +523,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(jsonSubscriptionRequired("wallet capture"), 403);
     }
 
+    stage = "contact_context";
     const { data: contact, error: contactError } = await supabase
       .from("user_contacts")
       .select(
@@ -545,13 +558,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    stage = "scope_resolution";
     if (!(await assertScopeAccess(supabase, userId, householdId))) {
       return jsonResponse(
         { success: false, error: "Destination scope is not accessible" },
         400,
       );
     }
-    const accountId = requestedAccountId ??
+    const accountId =
+      requestedAccountId ??
       (await resolveDefaultAccountIdStrict(supabase, { userId, householdId }));
     let accountCurrency: string | null = null;
     if (accountId) {
@@ -569,9 +584,10 @@ Deno.serve(async (req: Request) => {
         );
       }
       const account = await getAccountOrNull(supabase, accountId);
-      accountCurrency = typeof account?.currency === "string"
-        ? account.currency.trim().toUpperCase()
-        : null;
+      accountCurrency =
+        typeof account?.currency === "string"
+          ? account.currency.trim().toUpperCase()
+          : null;
       if (!accountCurrency) {
         return jsonResponse(
           { success: false, error: "Selected account has no currency" },
@@ -580,10 +596,13 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    stage = "category_context";
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    const preferredTimezone = typeof contact?.preferred_timezone === "string"
-      ? contact.preferred_timezone
-      : null;
+    stage = "classification_context";
+    const preferredTimezone =
+      typeof contact?.preferred_timezone === "string"
+        ? contact.preferred_timezone
+        : null;
     const clientDate = body.clientCreatedAt
       ? new Date(body.clientCreatedAt)
       : new Date();
@@ -596,12 +615,14 @@ Deno.serve(async (req: Request) => {
         householdId,
         accountId,
         accountCurrency,
-        preferredCurrency: typeof contact?.preferred_currency === "string"
-          ? contact.preferred_currency
-          : null,
-        preferredLanguage: typeof contact?.preferred_language === "string"
-          ? contact.preferred_language
-          : null,
+        preferredCurrency:
+          typeof contact?.preferred_currency === "string"
+            ? contact.preferred_currency
+            : null,
+        preferredLanguage:
+          typeof contact?.preferred_language === "string"
+            ? contact.preferred_language
+            : null,
         expenseCategories: Array.from(categoryContext.allowedExpenseSet),
         incomeCategories: Array.from(categoryContext.allowedIncomeSet),
       },
@@ -614,6 +635,7 @@ Deno.serve(async (req: Request) => {
         10,
       ) || DEFAULT_HOURLY_AI_LIMIT,
     );
+    stage = "event_claim";
     const claim = await claimClassificationEvent({
       supabase,
       userId,
@@ -660,7 +682,9 @@ Deno.serve(async (req: Request) => {
     processingToken = claim.processingToken;
     attemptNumber = claim.attemptNumber;
 
+    stage = "model_configuration";
     const genAI = createVertexGenerativeAI(getVertexAiConfigFromEnv());
+    stage = "classification";
     const classification = await classifyAndroidNotification({
       genAI,
       notification,
@@ -682,9 +706,10 @@ Deno.serve(async (req: Request) => {
         pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
         classifierModel: classification.model ?? null,
         verificationModel: classification.verificationModel ?? null,
-        normalizationDiagnostics: classification.normalizationDiagnostics ??
-          null,
+        normalizationDiagnostics:
+          classification.normalizationDiagnostics ?? null,
       };
+      stage = "event_finalization";
       await finalizeClassificationEvent({
         supabase,
         eventId,
@@ -696,6 +721,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(result);
     }
 
+    stage = "wallet_resolution";
     const captureAccountId = await resolveWalletCaptureAccountForCurrency(
       supabase,
       {
@@ -709,54 +735,61 @@ Deno.serve(async (req: Request) => {
 
     // A one-off payment to the same business near a due date is not proof of
     // recurrence. Only independently verified recurring semantics authorize it.
+    stage = "recurring_resolution";
     const schedules =
-      classification.isRecurring && classification.recurrenceRule &&
-        !notificationUsesProviderSource(notification, classification)
+      classification.isRecurring &&
+      classification.recurrenceRule &&
+      !notificationUsesProviderSource(notification, classification)
         ? await loadRecurringSchedules({
-          supabase,
-          userId,
-          householdId,
-          currency: classification.currency!,
-          transactionType: classification.transactionType!,
-        })
+            supabase,
+            userId,
+            householdId,
+            currency: classification.currency!,
+            transactionType: classification.transactionType!,
+          })
         : [];
-    const occurrence = await resolveNotificationRecurringOccurrence(schedules, {
-      merchant: classification.merchant!,
-      currency: classification.currency!,
-      transactionType: classification.transactionType!,
-      accountId: captureAccountId,
-      frequency: classification.recurrenceRule?.frequency,
-      interval: classification.recurrenceRule?.interval,
-      date: classification.date,
-    }, async (args) => {
-      const { data, error } = await supabase.rpc(
-        "calculate_next_occurrence_on_or_after",
-        args,
-      );
-      if (error) throw error;
-      return data;
-    });
+    const occurrence = await resolveNotificationRecurringOccurrence(
+      schedules,
+      {
+        merchant: classification.merchant!,
+        currency: classification.currency!,
+        transactionType: classification.transactionType!,
+        accountId: captureAccountId,
+        frequency: classification.recurrenceRule?.frequency,
+        interval: classification.recurrenceRule?.interval,
+        date: classification.date,
+      },
+      async (args) => {
+        const { data, error } = await supabase.rpc(
+          "calculate_next_occurrence_on_or_after",
+          args,
+        );
+        if (error) throw error;
+        return data;
+      },
+    );
+    stage = occurrence ? "recurring_confirmation" : "wallet_capture_save";
     const saved = occurrence
       ? await invokeNotificationRecurringConfirmation({
-        supabase,
-        request: req,
-        userId,
-        eventKey,
-        occurrence,
-        classification,
-        notification,
-        accountId: captureAccountId,
-      })
+          supabase,
+          request: req,
+          userId,
+          eventKey,
+          occurrence,
+          classification,
+          notification,
+          accountId: captureAccountId,
+        })
       : await invokeWalletCapture({
-        request: req,
-        body,
-        userId,
-        notification,
-        classification,
-        eventKey,
-        accountId: captureAccountId,
-        accountCurrency: classification.currency!,
-      });
+          request: req,
+          body,
+          userId,
+          notification,
+          classification,
+          eventKey,
+          accountId: captureAccountId,
+          accountCurrency: classification.currency!,
+        });
     if (!saved.response.ok) {
       const saveFailureResult = buildAndroidNotificationDependencyFailure(
         `WALLET_CAPTURE_SAVE_HTTP_${saved.response.status}`,
@@ -767,7 +800,7 @@ Deno.serve(async (req: Request) => {
           functionName: "classify-notification-capture",
           error: new Error(saveFailureResult.diagnosticCode),
           context: {
-            stage: "wallet_capture_save",
+            stage,
             eventId,
             status: saved.response.status,
             dependencyCode: optionalString(saved.payload.code, 80),
@@ -778,6 +811,7 @@ Deno.serve(async (req: Request) => {
           },
         });
       }
+      stage = "event_finalization";
       await finalizeClassificationEvent({
         supabase,
         eventId,
@@ -812,6 +846,7 @@ Deno.serve(async (req: Request) => {
         pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
       },
     };
+    stage = "event_finalization";
     await finalizeClassificationEvent({
       supabase,
       eventId,
@@ -836,15 +871,21 @@ Deno.serve(async (req: Request) => {
     const failureResult = buildAndroidNotificationFailureResult(error);
     console.error("[classify-notification-capture] Request failed", {
       error: failureResult.diagnosticCode,
+      stage,
       eventId,
       diagnostics: failureResult.diagnostics,
     });
     if (attemptNumber <= 1) {
+      const reportError = new Error(failureResult.diagnosticCode);
+      const failureLocation = failureResult.diagnostics.at(-1)?.failureLocation;
+      if (failureLocation) {
+        reportError.stack = `Error: ${failureResult.diagnosticCode}\n    at functions/${failureLocation}`;
+      }
       await reportEdgeFunctionError({
         functionName: "classify-notification-capture",
-        error: new Error(failureResult.diagnosticCode),
+        error: reportError,
         context: {
-          stage: "classification",
+          stage,
           eventId,
           diagnosticCode: failureResult.diagnosticCode,
           diagnostics: failureResult.diagnostics,
@@ -860,9 +901,8 @@ Deno.serve(async (req: Request) => {
         result: failureResult,
       }).catch(() => undefined);
     }
-    const failureStatus = httpStatusForAndroidNotificationFailure(
-      failureResult,
-    );
+    const failureStatus =
+      httpStatusForAndroidNotificationFailure(failureResult);
     return jsonResponse(
       {
         success: false,

@@ -245,6 +245,7 @@ async function fixture(realWriter = false) {
     "20261002103000_defer_ambiguous_bank_recurring_cycles.sql",
     "20261002113000_review_incompatible_recurring_bank_rows.sql",
     "20261003050000_preserve_confirmed_bank_series_links.sql",
+    "20261016090000_defer_manual_recurring_wallet_conflicts.sql",
   ]) {
     await db.exec(
       await Deno.readTextFile(
@@ -748,6 +749,7 @@ async function syncBatch(db: PGlite, protectedImport = false, ready = true) {
   const row = {
     id: imported,
     user_id: user,
+    privacy_scope: "full",
     account_id: wallet,
     bank_account_id: bank,
     provider: "plaid",
@@ -1685,3 +1687,263 @@ Deno.test(
     }
   },
 );
+
+Deno.test(
+  "bank recurring: sync defers a manual wallet mismatch without moving either payment",
+  async () => {
+    const db = await fixture();
+    try {
+      await manual(db);
+      const otherWallet = "00000000-0000-4000-8000-000000000016";
+      await db.exec(
+        `insert into accounts values ('${otherWallet}', '${user}', null, 'CAD', false);
+        update expenses set account_id='${otherWallet}' where id='${actual}'`,
+      );
+      const beforeActual =
+        (await db.query(`select * from expenses where id='${actual}'`)).rows;
+      const beforeOccurrence =
+        (await db.query("select * from recurring_occurrences")).rows;
+      const result = await syncBatch(db);
+      assertEquals(result.rows[0].result.inserted_records[0].id, imported);
+      assertEquals(
+        (await db.query("select cursor from bank_connections")).rows,
+        [{ cursor: "after" }],
+      );
+      assertEquals(
+        (await db.query(`select * from expenses where id='${actual}'`)).rows,
+        beforeActual,
+      );
+      assertEquals(
+        (await db.query("select * from recurring_occurrences")).rows,
+        beforeOccurrence,
+      );
+      assertEquals(
+        (await db.query(`select account_id, parent_recurring_id, deleted_at,
+        amount_cents::int as cents, currency, provider_transaction_id,
+        provider_fields #>> '{recurring_reconciliation,reason}' as reason
+        from expenses where id='${imported}'`)).rows,
+        [{
+          account_id: wallet,
+          parent_recurring_id: null,
+          deleted_at: null,
+          cents: 11760,
+          currency: "CAD",
+          provider_transaction_id: "bank-payment",
+          reason: "manual_wallet_mismatch",
+        }],
+      );
+      const beforeReplay =
+        (await db.query(`select * from expenses where id='${imported}'`)).rows;
+      assertEquals(
+        (await db.query(
+          "select reconcile_bank_recurring_occurrences_for_sync_v1($1,null,$2) as count",
+          [user, [bank]],
+        )).rows,
+        [{ count: 0 }],
+      );
+      assertEquals(
+        (await db.query(`select * from expenses where id='${imported}'`)).rows,
+        beforeReplay,
+      );
+      // An explicit wallet correction later permits the existing canonical-ID merge.
+      await db.exec(
+        `update expenses set account_id='${wallet}' where id='${actual}'`,
+      );
+      assertEquals(
+        (await db.query(
+          "select reconcile_bank_recurring_occurrences_for_sync_v1($1,null,$2) as count",
+          [user, [bank]],
+        )).rows,
+        [{ count: 1 }],
+      );
+      await assertOnePayment(db, actual);
+      assertEquals(
+        (await db.query(
+          `select provider_fields ? 'recurring_reconciliation' as review from expenses where id='${actual}'`,
+        )).rows,
+        [{ review: false }],
+      );
+    } finally {
+      await db.close();
+    }
+  },
+);
+
+for (
+  const [name, mutation] of [
+    [
+      "foreign owner",
+      `update expenses set user_id='00000000-0000-4000-8000-000000000099' where id='${actual}'`,
+    ],
+    [
+      "different Space",
+      `update expenses set household_id='00000000-0000-4000-8000-000000000099' where id='${actual}'`,
+    ],
+    [
+      "manual split",
+      `update expenses set split_group_id='${actual}' where id='${actual}'`,
+    ],
+    [
+      "template split",
+      `update expenses set split_group_id='${series}' where id='${series}'`,
+    ],
+    [
+      "bank override",
+      `update expenses set user_overrides='{"amount_cents":true}' where id='${imported}'`,
+    ],
+    [
+      "existing bank link",
+      `update expenses set parent_recurring_id='${series}' where id='${imported}'`,
+    ],
+  ] as const
+) {
+  Deno.test(`bank recurring: wallet deferral preserves strict ${name} guard`, async () => {
+    const db = await fixture();
+    try {
+      await manual(db);
+      await db.exec(
+        `update expenses set account_id='00000000-0000-4000-8000-000000000016' where id='${actual}'`,
+      );
+      await importPayment(db);
+      await db.exec(mutation);
+      const before =
+        (await db.query("select * from expenses order by id")).rows;
+      await assertRejects(() =>
+        db.query(
+          "select reconcile_bank_recurring_occurrences_for_sync_v1($1,null,$2)",
+          [user, [bank]],
+        )
+      );
+      assertEquals(
+        (await db.query("select * from expenses order by id")).rows,
+        before,
+      );
+    } finally {
+      await db.close();
+    }
+  });
+}
+
+Deno.test("bank recurring: deferred wallet mismatch survives real pending-posted sync and replay", async () => {
+  const db = await fixture(true);
+  try {
+    await manual(db);
+    const otherWallet = "00000000-0000-4000-8000-000000000016";
+    await db.exec(
+      `insert into accounts(id,user_id,currency) values ('${otherWallet}','${user}','CAD');
+      update expenses set account_id='${otherWallet}' where id='${actual}'`,
+    );
+    const beforeActual =
+      (await db.query(`select * from expenses where id='${actual}'`)).rows;
+    const beforeOccurrence =
+      (await db.query("select * from recurring_occurrences")).rows;
+    const pending: PlaidTransaction = {
+      transaction_id: "pending-payment",
+      account_id: "provider-account",
+      name: "Provider transaction",
+      amount: 117.6,
+      iso_currency_code: "CAD",
+      date: "2024-09-23",
+      pending: true,
+      personal_finance_category: {
+        primary: "GENERAL_SERVICES",
+        detailed: "GENERAL_SERVICES_OTHER_GENERAL_SERVICES",
+        confidence_level: "VERY_HIGH",
+      },
+    };
+    const apply = async (transaction: PlaidTransaction) => {
+      const existing = await db.query<ExistingExpenseProjectionRow>(
+        "select * from expenses where provider='plaid' and deleted_at is null",
+      );
+      const generation = (await db.query<{ cursor_generation: number }>(
+        "select cursor_generation from bank_connections",
+      )).rows[0].cursor_generation;
+      const record = {
+        ...mapPlaidTransactionToExpense({
+          userId: user,
+          bankAccountId: bank,
+          defaultCurrency: "CAD",
+          accountType: "credit",
+          transaction,
+        }),
+        account_id: wallet,
+      };
+      const plan = buildBankExpenseMutationPlan({
+        records: [record],
+        transactions: [transaction],
+        existingRows: existing.rows,
+        cursorGeneration: generation,
+        providerPendingTransactionIds: new Map(
+          transaction.pending_transaction_id
+            ? [[transaction.transaction_id, transaction.pending_transaction_id]]
+            : [],
+        ),
+      });
+      await db.query(
+        `select apply_plaid_sync_batch_v2($1,$2,$3,'after',$4,$5,$6,$7,$7,
+        '[]','{}','[]','{}',true,true,$8,null)`,
+        [
+          user,
+          connection,
+          generation,
+          JSON.stringify(plan.inserts),
+          JSON.stringify(plan.updates),
+          transaction.pending ? [] : [pending.transaction_id],
+          [bank],
+          actual,
+        ],
+      );
+    };
+    await apply(pending);
+    assertEquals(
+      (await db.query(
+        "select analytics_is_final from expenses where provider='plaid'",
+      )).rows,
+      [{ analytics_is_final: false }],
+    );
+    const bankId = (await db.query<{ id: string }>(
+      "select id from expenses where provider='plaid'",
+    )).rows[0].id;
+    const posted = {
+      ...pending,
+      transaction_id: "bank-payment",
+      pending_transaction_id: pending.transaction_id,
+      pending: false,
+      date: "2024-09-25",
+      amount: 118.6,
+    };
+    await apply(posted);
+    await apply(posted);
+    assertEquals(
+      (await db.query(
+        `select id,account_id,amount_cents::int as cents,provider_transaction_id,
+      parent_recurring_id,analytics_is_final,provider_fields #>> '{recurring_reconciliation,reason}' as reason
+      from expenses where provider='plaid' and deleted_at is null`,
+      )).rows,
+      [{
+        id: bankId,
+        account_id: wallet,
+        cents: 11860,
+        provider_transaction_id: "bank-payment",
+        parent_recurring_id: null,
+        analytics_is_final: true,
+        reason: "manual_wallet_mismatch",
+      }],
+    );
+    assertEquals(
+      (await db.query(`select * from expenses where id='${actual}'`)).rows,
+      beforeActual,
+    );
+    assertEquals(
+      (await db.query("select * from recurring_occurrences")).rows,
+      beforeOccurrence,
+    );
+    assertEquals(
+      (await db.query("select cursor,cursor_generation from bank_connections"))
+        .rows,
+      [{ cursor: "after", cursor_generation: 3 }],
+    );
+  } finally {
+    await db.close();
+  }
+});

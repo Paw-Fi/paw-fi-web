@@ -11,7 +11,7 @@ export const ANDROID_NOTIFICATION_MODELS = GEMINI_MODEL_FALLBACKS;
 // Bump when model, prompt, or validation behavior changes so old terminal
 // failures can be evaluated by the new pipeline.
 export const ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION =
-  "android_notification_classifier_v16";
+  "android_notification_classifier_v17";
 const TERMINAL_CLASSIFICATION_ERRORS = new Set([
   "NOTIFICATION_VERIFICATION_BLOCKED",
   "CLASSIFICATION_RETRY_EXHAUSTED",
@@ -142,9 +142,9 @@ export function notificationUsesProviderSource(
   );
   return Boolean(
     source &&
-    normalizeProvenanceComparison(classification.merchant) === source &&
-    normalizeProvenanceComparison(classification.merchantEvidenceRaw) ===
-      source,
+      normalizeProvenanceComparison(classification.merchant) === source &&
+      normalizeProvenanceComparison(classification.merchantEvidenceRaw) ===
+        source,
   );
 }
 
@@ -254,6 +254,9 @@ export interface AndroidNotificationModelDiagnostic {
   candidatesTokenCount?: number | null;
   thoughtsTokenCount?: number | null;
   totalTokenCount?: number | null;
+  requestFailureCode?: string;
+  httpStatus?: number;
+  failureLocation?: string;
 }
 
 export class AndroidNotificationClassificationError extends Error {
@@ -266,10 +269,8 @@ export class AndroidNotificationClassificationError extends Error {
   }
 }
 
-export interface AndroidNotificationFailureResult extends Record<
-  string,
-  unknown
-> {
+export interface AndroidNotificationFailureResult
+  extends Record<string, unknown> {
   success: false;
   error: "Classification failed";
   diagnosticCode: string;
@@ -515,6 +516,54 @@ function buildModelDiagnostic(params: {
           ),
         }
       : {}),
+  };
+}
+
+function buildModelRequestFailureDiagnostic(params: {
+  error: unknown;
+  phase: "classification" | "verification";
+  model: string;
+  latencyMs: number;
+}): AndroidNotificationModelDiagnostic {
+  const error =
+    params.error && typeof params.error === "object"
+      ? (params.error as Record<string, unknown>)
+      : {};
+  const status = error.status ?? error.statusCode;
+  const httpStatus =
+    typeof status === "number" &&
+    Number.isInteger(status) &&
+    status >= 400 &&
+    status <= 599
+      ? status
+      : undefined;
+  // Never retain provider prose or response bodies: they may echo notification
+  // content. Only known machine codes, status and application source locations.
+  const requestFailureCode =
+    error.message === "NOTIFICATION_CLASSIFICATION_TIMEOUT" ||
+    error.message === "MODEL_OUTPUT_TRUNCATED"
+      ? error.message
+      : httpStatus
+        ? "MODEL_HTTP_ERROR"
+        : "MODEL_REQUEST_FAILED";
+  const failureLocation =
+    typeof error.stack === "string"
+      ? /^\s+at (?:[^()\n]+ \()?file:\/\/\/[^()\s]*\/functions\/([a-z0-9_/-]+\.ts:\d+:\d+)\)?$/im
+          .exec(error.stack)?.[1]
+          ?.slice(0, 200)
+      : undefined;
+  return {
+    ...buildModelDiagnostic({
+      response: {},
+      phase: params.phase,
+      model: params.model,
+      expectedName: "",
+      latencyMs: params.latencyMs,
+      calls: [],
+    }),
+    requestFailureCode,
+    ...(httpStatus !== undefined ? { httpStatus } : {}),
+    ...(failureLocation ? { failureLocation } : {}),
   };
 }
 
@@ -1026,7 +1075,7 @@ export function normalizeAndroidNotificationClassification(
   };
 }
 
-function buildClassifierSchema(params: ClassifyAndroidNotificationParams) {
+function buildClassifierSchema() {
   return {
     type: "OBJECT",
     properties: {
@@ -1065,9 +1114,8 @@ function buildClassifierSchema(params: ClassifyAndroidNotificationParams) {
       date: { type: "STRING" },
       category: {
         type: "STRING",
-        enum: [
-          ...new Set([...params.expenseCategories, ...params.incomeCategories]),
-        ],
+        // Large catalog enums can exceed Vertex's schema complexity limit.
+        // The prompt supplies every label; server-side catalog checks apply.
       },
       description: { type: "STRING" },
       isRecurring: { type: "BOOLEAN" },
@@ -1229,6 +1277,7 @@ async function verifyAndroidNotificationClassification(
   let lastError: unknown = null;
   for (const verifierModel of verifierModels) {
     const startedAt = Date.now();
+    let receivedResponse = false;
     try {
       const model = params.genAI.getGenerativeModel({
         model: verifierModel,
@@ -1264,13 +1313,6 @@ async function verifyAndroidNotificationClassification(
                   },
                   category: {
                     type: "STRING",
-                    enum: [
-                      ...new Set([
-                        "",
-                        ...params.expenseCategories,
-                        ...params.incomeCategories,
-                      ]),
-                    ],
                   },
                 },
                 required: ["financialVerdict", "categoryVerdict", "category"],
@@ -1280,6 +1322,7 @@ async function verifyAndroidNotificationClassification(
           { signal },
         ),
       );
+      receivedResponse = true;
       const assessment = structuredResponseObject(result.response);
       // Legacy enum verdicts carry no semantic category approval.
       const verdict =
@@ -1352,6 +1395,16 @@ async function verifyAndroidNotificationClassification(
       );
     } catch (error) {
       if (error instanceof AndroidNotificationClassificationError) throw error;
+      if (!receivedResponse) {
+        diagnostics.push(
+          buildModelRequestFailureDiagnostic({
+            error,
+            phase: "verification",
+            model: verifierModel,
+            latencyMs: Date.now() - startedAt,
+          }),
+        );
+      }
       lastError = error;
     }
   }
@@ -1372,11 +1425,12 @@ export async function classifyAndroidNotification(
   let verificationUnavailable = false;
   let decisionConflict = false;
   const diagnostics: AndroidNotificationModelDiagnostic[] = [];
-  const responseSchema = buildClassifierSchema(params);
+  const responseSchema = buildClassifierSchema();
   const prompt = buildClassifierPrompt(params);
 
   for (const modelName of ANDROID_NOTIFICATION_MODELS) {
     const startedAt = Date.now();
+    let receivedResponse = false;
     try {
       const model = params.genAI.getGenerativeModel({
         model: modelName,
@@ -1405,6 +1459,7 @@ export async function classifyAndroidNotification(
           { signal },
         ),
       );
+      receivedResponse = true;
       const classificationArgs = structuredResponseObject(result.response);
       if (!classificationArgs) {
         const calls = responseFunctionCalls(result.response);
@@ -1545,6 +1600,15 @@ export async function classifyAndroidNotification(
       lastError = error;
       if (error instanceof AndroidNotificationClassificationError) {
         diagnostics.push(...error.diagnostics);
+      } else if (!receivedResponse) {
+        diagnostics.push(
+          buildModelRequestFailureDiagnostic({
+            error,
+            phase: "classification",
+            model: modelName,
+            latencyMs: Date.now() - startedAt,
+          }),
+        );
       }
       if (verificationUnavailable) break;
     }
