@@ -51,6 +51,62 @@ Deno.test("pocket review keeps rounded targets within a budget cap", () => {
   );
 });
 
+Deno.test(
+  "over-budget targets are fitted proportionally instead of rejected",
+  () => {
+    const result = roundPocketReviewPlan({
+      amounts: [
+        { envelopeId: "home", amountCents: 60000 },
+        { envelopeId: "food", amountCents: 30000 },
+        { envelopeId: "travel", amountCents: 10000 },
+      ],
+      maximumBudgetCents: 50000,
+    });
+    assert(result.totalCents === 50000, "The saved budget remains the ceiling");
+    assert(result.amounts.get("home") === 30000, "Keep relative priorities");
+    assert(result.amounts.get("food") === 15000, "Keep relative priorities");
+    assert(result.amounts.get("travel") === 5000, "Keep relative priorities");
+    assert(
+      formatPocketReviewMoneyTokens(
+        "目標 {{pocket:food}}、合計 {{budget}}、先月 {{money:30000}}",
+        "EUR",
+        "zh",
+        result,
+      ) ===
+        formatPocketReviewMoneyTokens(
+          "目標 {{money:15000}}、合計 {{money:50000}}、先月 {{money:30000}}",
+          "EUR",
+          "zh",
+        ),
+      "Target references use final amounts without rewriting historical facts",
+    );
+  },
+);
+
+Deno.test(
+  "a small positive budget never rounds every proposed allocation to zero",
+  () => {
+    for (const maximumBudgetCents of [1, 99, 100]) {
+      const result = roundPocketReviewPlan({
+        amounts: [
+          { envelopeId: "a", amountCents: 10000 },
+          { envelopeId: "b", amountCents: 10000 },
+          { envelopeId: "c", amountCents: 10000 },
+        ],
+        maximumBudgetCents,
+      });
+      assert(
+        result.totalCents > 0 && result.totalCents <= maximumBudgetCents,
+        "Small budgets remain a valid capped plan",
+      );
+      assert(
+        [...result.amounts.values()].every(Number.isSafeInteger),
+        "All allocations remain integer cents",
+      );
+    }
+  },
+);
+
 Deno.test("pocket review uses localized currency symbols in AI prose", () => {
   const euro = buildPocketReviewCurrencyContext("EUR", "de-DE");
   const japanese = buildPocketReviewCurrencyContext("JPY", "ja-JP");
@@ -85,8 +141,11 @@ Deno.test("pocket review uses localized currency symbols in AI prose", () => {
     "Raw currency symbols with localized digits are rejected",
   );
   assert(
-    formatPocketReviewMoneyTokens("{{money:1000000000000}}", "USD", "en-US") ===
-      null,
+    formatPocketReviewMoneyTokens(
+      "{{money:9007199254740992}}",
+      "USD",
+      "en-US",
+    ) === null,
     "Out-of-range money tokens are rejected",
   );
 });

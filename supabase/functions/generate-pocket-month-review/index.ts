@@ -7,6 +7,11 @@ import {
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { calculateNextMonthCarryCents } from "./rollover.ts";
 import {
+  fetchUserCustomCategories,
+  fetchUserHiddenCategories,
+  mergeAllowedCategories,
+} from "../shared/user-categories.ts";
+import {
   loadPocketReviewContactContext,
   loadPocketReviewEvidence,
 } from "./review-evidence.ts";
@@ -68,7 +73,11 @@ const aiPocketSuggestionSchema = z
       .min(1)
       .max(200)
       .optional(),
-    suggested_amount_cents: z.number().int().min(0).max(100000000000),
+    suggested_amount_cents: z
+      .number()
+      .int()
+      .min(0)
+      .max(Number.MAX_SAFE_INTEGER),
     reason: z.string().trim().min(1).max(350),
     tip: z.string().trim().min(1).max(350).optional(),
   })
@@ -92,7 +101,7 @@ const aiPocketInsightSchema = z
       .number()
       .int()
       .min(0)
-      .max(100000000000)
+      .max(Number.MAX_SAFE_INTEGER)
       .optional(),
     envelope_id: z.string().min(1).optional(),
   })
@@ -105,7 +114,11 @@ const aiPocketMonthReviewSchema = z
     income_coverage_status: z.enum(["covered", "tight", "deficit", "unknown"]),
     month_funding_status: z.enum(["funded", "shortfall", "unknown"]),
     insights: z.array(aiPocketInsightSchema).max(4),
-    suggested_total_budget_cents: z.number().int().min(0).max(100000000000),
+    suggested_total_budget_cents: z
+      .number()
+      .int()
+      .min(0)
+      .max(Number.MAX_SAFE_INTEGER),
     suggestions: z.array(aiPocketSuggestionSchema).max(MAX_SUGGESTIONS),
   })
   .strict();
@@ -212,6 +225,7 @@ interface PocketActivityContext {
 }
 
 interface SuggestionContext extends PocketMonthContext {
+  allowed_expense_categories?: string[];
   regional_context?: ReturnType<typeof pocketReviewRegionalContext>;
   space?: { kind: string; name: string | null; member_count: number };
   previous_recorded_income_cents?: number;
@@ -334,11 +348,11 @@ export function schema(context: SuggestionContext) {
       summary: { type: "STRING" },
       income_coverage_status: {
         type: "STRING",
-        enum: ["covered", "tight", "deficit", "unknown"],
+        enum: [context.cash_flow.income_coverage_status],
       },
       month_funding_status: {
         type: "STRING",
-        enum: ["funded", "shortfall", "unknown"],
+        enum: [context.cash_flow.month_funding_status],
       },
       insights: {
         type: "ARRAY",
@@ -369,6 +383,8 @@ export function schema(context: SuggestionContext) {
       suggested_total_budget_cents: { type: "INTEGER" },
       suggestions: {
         type: "ARRAY",
+        minItems: firstPlan ? 1 : context.pockets.length,
+        maxItems: firstPlan ? 8 : context.pockets.length,
         items: {
           type: "OBJECT",
           properties: {
@@ -377,6 +393,7 @@ export function schema(context: SuggestionContext) {
             pocket_name: { type: "STRING" },
             categories: {
               type: "ARRAY",
+              minItems: 1,
               items: {
                 type: "STRING",
                 ...(firstPlan ? { enum: firstPlanCategories(context) } : {}),
@@ -824,18 +841,13 @@ export function normalize(
     (sum, item) => sum + item.suggested_amount_cents,
     0,
   );
-  if (raw.suggested_total_budget_cents !== rawTotal) {
+  if (
+    context.total_budget_cents === 0 &&
+    raw.suggested_total_budget_cents !== rawTotal
+  ) {
     return reject("suggested_total_mismatch", {
       declared_total_is_zero: raw.suggested_total_budget_cents === 0,
       calculated_total_is_zero: rawTotal === 0,
-    });
-  }
-  if (
-    context.total_budget_cents > 0 &&
-    raw.suggested_total_budget_cents > context.total_budget_cents
-  ) {
-    return reject("suggested_total_exceeds_budget", {
-      budget_is_zero: context.total_budget_cents === 0,
     });
   }
   const roundedPlan = roundPocketReviewPlan({
@@ -864,6 +876,7 @@ export function normalize(
       item.reason.trim().replace(/\s+/g, " "),
       context.currency,
       locale,
+      roundedPlan,
     );
     const tip =
       item.tip == null
@@ -872,6 +885,7 @@ export function normalize(
             item.tip.trim().replace(/\s+/g, " "),
             context.currency,
             locale,
+            roundedPlan,
           );
     if (
       amount == null ||
@@ -930,6 +944,7 @@ export function normalize(
     raw.summary.trim().replace(/\s+/g, " "),
     context.currency,
     locale,
+    roundedPlan,
   );
   if (!summary || summary.length > 500) {
     return reject("summary_invalid", { summary_length: summary?.length ?? 0 });
@@ -938,6 +953,7 @@ export function normalize(
     raw.headline.trim().replace(/\s+/g, " "),
     context.currency,
     locale,
+    roundedPlan,
   );
   if (!headline || headline.length > 140) {
     return reject("headline_invalid", {
@@ -967,11 +983,13 @@ export function normalize(
       item.title.trim().replace(/\s+/g, " "),
       context.currency,
       locale,
+      roundedPlan,
     );
     const insightSummary = formatPocketReviewMoneyTokens(
       item.summary.trim().replace(/\s+/g, " "),
       context.currency,
       locale,
+      roundedPlan,
     );
     const action =
       item.action == null
@@ -980,6 +998,7 @@ export function normalize(
             item.action.trim().replace(/\s+/g, " "),
             context.currency,
             locale,
+            roundedPlan,
           );
     if (!title || !insightSummary || (item.action != null && !action)) {
       return reject("insight_text_invalid", {
@@ -1052,16 +1071,7 @@ export function normalize(
 }
 
 function firstPlanCategories(context: SuggestionContext): string[] {
-  return [
-    ...new Set([
-      ...(context.previous_cycle?.category_spending ?? [])
-        .filter((row) => row.actual_transaction_count > 0)
-        .map((row) => row.category),
-      ...context.current_cycle.category_spending
-        .filter((row) => row.projected_recurring_count > 0)
-        .map((row) => row.category),
-    ]),
-  ];
+  return context.allowed_expense_categories ?? [];
 }
 
 function parseJsonResponse(text: string): unknown {
@@ -1112,7 +1122,9 @@ function extractAllTextFromRaw(raw: unknown): string {
 async function generate(context: SuggestionContext, locale: string | null) {
   const firstPlan = context.pockets.length === 0;
   const budgetConstraint =
-    "suggested_total_budget_cents must exactly equal the sum of suggested_amount_cents. It is a recommendation, not a saved budget or a statement of money in the user's accounts.";
+    context.total_budget_cents > 0
+      ? "The user has already set the budget. suggested_total_budget_cents and the sum of suggested_amount_cents must both equal total_budget_cents exactly. Do not replace the user's budget. This allocation is a plan, not a statement of money in accounts."
+      : "suggested_total_budget_cents must exactly equal the sum of suggested_amount_cents. Recommend a realistic amount from supplied performance and commitments, not a generic template or a statement of money in accounts.";
   const maxOutputTokens = firstPlan
     ? 3000
     : Math.min(5000, 1400 + context.pockets.length * 110);
@@ -1125,6 +1137,16 @@ async function generate(context: SuggestionContext, locale: string | null) {
     currency: context.currency,
     currency_display: currencyDisplay,
     total_budget_cents: context.total_budget_cents,
+    budget_policy:
+      context.total_budget_cents > 0
+        ? {
+            mode: "split_fixed_budget",
+            fixed_total_cents: context.total_budget_cents,
+          }
+        : {
+            mode: "recommend_from_recorded_performance",
+            fixed_total_cents: null,
+          },
     total_added_to_pockets_cents: context.total_added_to_pockets_cents,
     unallocated_budget_cents: context.unallocated_budget_cents,
     pockets: context.pockets.map(
@@ -1164,7 +1186,8 @@ Language and readability requirements:
 - A summary and each reason may use at most two short sentences. Each tip must be one practical sentence.
 - Explain carry in ordinary language, such as "money left from last month", when that is clearer in the requested language.
 - Every natural-language field in the response must be newly written from the supplied context. Do not use canned or generic copy.
-- For every monetary value in natural-language fields, use exactly {{money:<integer cents>}}. The server renders that token with the user's currency symbol and locale; do not write raw money amounts, currency codes, or dollar examples yourself. For example, ${currencyDisplay.example} must be written as {{money:123400}}.
+- For recorded facts in natural-language fields, use exactly {{money:<integer cents>}}. The server renders that token with the user's currency symbol and locale; do not write raw money amounts, currency codes, or dollar examples yourself. For example, ${currencyDisplay.example} must be written as {{money:123400}}.
+- For any proposed pocket target in prose, use {{pocket:<envelope_id>}}; for the proposed plan total use {{budget}}. Never hardcode proposed amounts with money tokens or plain numbers. The server fits targets proportionally to the fixed selected budget and rounds them, then resolves these references to the final amounts. Historical money tokens are unchanged. Describe constrained allocations as adjustable spending limits, not proof that all costs are covered.
 
 Authoritative planning context:
 - regional_context is only a timezone-based regional hint. Never infer country from currency or language; country is unknown when not independently established. Do not invent local costs or benchmarks.
@@ -1172,7 +1195,7 @@ Authoritative planning context:
 - Shared-space income may be incomplete because member privacy hides records. previous_recorded_income_cents is historical evidence only, never this month's confirmed income or proof that everyone pools earnings.
 - ${
     firstPlan
-      ? "FIRST PLAN: No current or previous pockets exist. Propose a few localized pocket names by semantically grouping only allowed_new_pocket_categories from observed canonical previous-cycle spending and current recurring evidence. Aim for 3-8 pockets, fewer if evidence has fewer categories; never exceed 8 (30 is the overall hard schema limit). Each suggestion requires pocket_name and a nonempty categories array. Use unique draft IDs such as draft-1, draft-2; never database UUIDs. Each category must exactly match an allowed category and may belong to only one pocket. Never invent rollover, carry, or prior allocations. These proposals are review-only and are not saved. Existing clients can display them but CANNOT apply brand-new pockets; do not claim applying this plan will create or save them."
+      ? "FIRST PLAN: No current or previous pockets exist. Propose a few localized pocket names by semantically grouping spending and recurring evidence into only allowed_new_pocket_categories, the existing Moneko expense catalog including the user's existing custom categories. Aim for 3-8 pockets, fewer when evidence is thin; never exceed 8. Each suggestion requires pocket_name and a nonempty categories array. Category keys must be copied exactly from the catalog, never invented or translated, even though pocket names and prose use the requested language. Interpret historical category labels semantically; a legacy label is evidence, not permission to create a category. Use unique draft IDs such as draft-1, draft-2; never database UUIDs. Each category may belong to only one pocket. Never invent rollover, carry, or prior allocations. These proposals are review-only and are not saved. Existing clients can display them but CANNOT apply brand-new pockets; do not claim applying this plan will create or save them."
       : "EXISTING PLAN: Include every listed pocket exactly once using its exact known envelope_id. Do not invent pockets or change category assignments."
   }
 - Suggestion Source: ${
@@ -1184,6 +1207,8 @@ Authoritative planning context:
   }
 - Currency: ${context.currency || "the requested currency"}
 - This month's total_budget_cents is the new money the user has chosen for this cycle. total_added_to_pockets_cents is how much is already assigned; unallocated_budget_cents is still free to assign. Do not treat carried money as new budget money.
+- When budget_policy.mode is split_fixed_budget, the user has ALREADY SET the budget. Do not recommend a different total: split exactly fixed_total_cents across the pockets using realistic category priorities grounded in previous actual spending and current commitments. If known costs exceed the fixed budget, explain the shortfall; do not claim the budget covers them or raise it.
+- Only when budget_policy.mode is recommend_from_recorded_performance may you recommend a total. Use previous-cycle net spending, purchase/refund patterns, older-cycle consistency and known current commitments. Do not invent category costs, country averages, extra income or arbitrary percentage increases. Explain material departures from observed performance and distinguish one-off spikes from repeated expenses. Missing income evidence is uncertainty, not zero income.
 - historical_cycles contains up to three completed financial cycles, newest first. Each pocket's history_analysis contains deterministic averages, ranges, budget outcomes, utilization, and largest-transaction concentration. Use these facts to distinguish repeated behavior from a possible one-off; a concentrated month is evidence for caution, not proof of why a purchase happened.
 - The root pockets always describe this month's plan. For a pocket carried forward from last month, current_added_cents starts at zero, incoming_carry_cents is the exact balance brought forward under its rollover policy, and previous_cycle inside that pocket is its complete historical record.
 - The current_cycle separates actual spending already recorded from future scheduled recurring expenses. Its pocket_activity applies current spending and upcoming recurring commitments to each listed pocket by its linked categories, including when the current month has not yet created pocket rows.
@@ -1216,7 +1241,7 @@ Instructions for each pocket in 'suggestions':
    - If 'rollover_negative' is true and 'incoming_carry_cents' is negative, note how the new target handles the deficit recovery.
    - If 'rollover_cap_cents' is set, respect the cap limits.
    - Use actual_spend_cents as completed spending and projected_recurring_cents only as known upcoming commitments. Never describe future projected expenses as money already spent.
-    - Keep the total within total_budget_cents when it is positive. When it is zero, propose a conservative total. ${
+    - Split exactly total_budget_cents when it is positive. When it is zero, propose a realistic total grounded in observed performance and known commitments. ${
       firstPlan
         ? "Explain that this is a review-only draft; existing clients cannot apply brand-new proposals."
         : "Explain that applying the plan will set that amount as this month's budget."
@@ -1452,12 +1477,26 @@ const handler = withCors(async (req) => {
       auth.userId,
     );
     const configuredStartDay = contact.financial_month_start_day;
-    const evidence = await loadPocketReviewEvidence(
-      userScopedSupabase,
-      auth.userId,
-      input,
-      configuredStartDay,
-    );
+    const [evidence, customCategories, hiddenCategories] = await Promise.all([
+      loadPocketReviewEvidence(
+        userScopedSupabase,
+        auth.userId,
+        input,
+        configuredStartDay,
+      ),
+      fetchUserCustomCategories({
+        supabase: userScopedSupabase,
+        userId: auth.userId,
+      }),
+      fetchUserHiddenCategories({
+        supabase: userScopedSupabase,
+        userId: auth.userId,
+      }),
+    ]);
+    const { expenseCategories } = mergeAllowedCategories({
+      customCategories,
+      hiddenCategories,
+    });
     stage = "load_current_month";
     const { data: month, error: monthError } = await userScopedSupabase.rpc(
       "get_pockets_month_v3",
@@ -1659,9 +1698,16 @@ const handler = withCors(async (req) => {
     context.space = evidence.space;
     context.previous_recorded_income_cents =
       evidence.previousRecordedIncomeCents;
+    context.allowed_expense_categories = expenseCategories;
     if (
       context.pockets.length === 0 &&
-      firstPlanCategories(context).length === 0
+      ![
+        ...(context.previous_cycle?.category_spending ?? []),
+        ...context.current_cycle.category_spending,
+      ].some(
+        (row) =>
+          row.actual_gross_spend_cents > 0 || row.projected_recurring_cents > 0,
+      )
     ) {
       return jsonResponse(
         {

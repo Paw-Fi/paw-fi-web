@@ -12,7 +12,7 @@ const categoryKey = (value: string) => value.trim().toLowerCase();
 export function validatePocketProposals<T extends Proposal>(
   suggestions: T[],
   knownIds: string[],
-  evidenceCategories: string[],
+  categoryCatalog: string[],
   total: number,
   selectedBudget: number,
   onReject?: (reason: string, details?: Record<string, unknown>) => void,
@@ -27,12 +27,9 @@ export function validatePocketProposals<T extends Proposal>(
     total < 0 ||
     !Number.isSafeInteger(selectedBudget) ||
     selectedBudget < 0 ||
-    (firstPlan && total === 0)
+    (firstPlan && selectedBudget === 0 && total === 0)
   ) {
     return reject("invalid_plan_total");
-  }
-  if (selectedBudget > 0 && total > selectedBudget) {
-    return reject("total_exceeds_selected_budget");
   }
   if (
     suggestions.length === 0 ||
@@ -47,13 +44,7 @@ export function validatePocketProposals<T extends Proposal>(
       first_plan: firstPlan,
     });
   }
-  const allowedCategories = new Set(evidenceCategories.map(categoryKey));
-  if (firstPlan && suggestions.length < Math.min(3, allowedCategories.size)) {
-    return reject("too_few_proposed_pockets", {
-      returned_count: suggestions.length,
-      minimum_count: Math.min(3, allowedCategories.size),
-    });
-  }
+  const allowedCategories = new Set(categoryCatalog.map(categoryKey));
   const assigned = new Set<string>();
   const seenIds = new Set<string>();
   let sum = 0;
@@ -87,14 +78,18 @@ export function validatePocketProposals<T extends Proposal>(
     const categories = row.categories.map(categoryKey);
     for (const category of categories) {
       if (!allowedCategories.has(category))
-        return reject("category_not_in_evidence");
+        return reject("category_not_in_catalog");
       if (assigned.has(category))
         return reject("category_assigned_more_than_once");
       assigned.add(category);
     }
     result.push({ ...row, pocket_name: name, categories, new_pocket: true });
   }
-  return sum === total ? result : reject("suggested_total_mismatch");
+  if (selectedBudget > 0 && sum === 0)
+    return reject("suggested_allocations_empty");
+  return selectedBudget > 0 || sum === total
+    ? result
+    : reject("suggested_total_mismatch");
 }
 
 export function overlayPocketReviewActuals(

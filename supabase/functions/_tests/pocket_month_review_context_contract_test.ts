@@ -125,7 +125,7 @@ Deno.test(
         ) &&
         functionSource.includes("suggestedTotalBudgetCents = total") &&
         functionSource.includes(
-          "raw.suggested_total_budget_cents > context.total_budget_cents",
+          "maximumBudgetCents: context.total_budget_cents",
         ),
       "The response must reject a mismatched raw plan and return a rounded total that exactly matches its pocket amounts",
     );

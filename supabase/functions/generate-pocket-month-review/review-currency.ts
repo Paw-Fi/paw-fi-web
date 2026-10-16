@@ -1,7 +1,7 @@
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 const CENTS_PER_MAJOR_UNIT = 100;
-const MAX_MONEY_TOKEN_CENTS = 100000000000;
+const MAX_MONEY_TOKEN_CENTS = Number.MAX_SAFE_INTEGER;
 
 export interface PocketReviewCurrencyContext {
   currency: string;
@@ -51,7 +51,6 @@ export function formatPocketReviewMoneyCents(
       currency: normalizedCurrency,
       currencyDisplay: "narrowSymbol",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
     }).format(amount);
   } catch {
     return `${getCurrencySymbol(normalizedCurrency)}${Math.round(amount)}`;
@@ -65,6 +64,38 @@ export function roundPocketReviewPlan({
   amounts: PocketReviewAmount[];
   maximumBudgetCents: number;
 }): RoundedPocketReviewPlan {
+  const maximum = Math.max(0, Math.round(maximumBudgetCents));
+  const requestedTotal = amounts.reduce(
+    (sum, item) => sum + item.amountCents,
+    0,
+  );
+  // A saved budget is fixed, not an AI recommendation. Apportion every unit
+  // deterministically so both over- and under-budget model output fit it exactly.
+  if (maximum > 0 && requestedTotal > 0) {
+    const step =
+      maximum % CENTS_PER_MAJOR_UNIT === 0 ? CENTS_PER_MAJOR_UNIT : 1;
+    const totalUnits = maximum / step;
+    const allocations = amounts
+      .map(({ envelopeId, amountCents }) => {
+        const exact = (amountCents / requestedTotal) * totalUnits;
+        return { envelopeId, units: Math.floor(exact), remainder: exact % 1 };
+      })
+      .sort(
+        (a, b) =>
+          b.remainder - a.remainder || a.envelopeId.localeCompare(b.envelopeId),
+      );
+    let remaining =
+      totalUnits - allocations.reduce((sum, item) => sum + item.units, 0);
+    return {
+      amounts: new Map(
+        allocations.map((item) => [
+          item.envelopeId,
+          (item.units + (remaining-- > 0 ? 1 : 0)) * step,
+        ]),
+      ),
+      totalCents: maximum,
+    };
+  }
   const rounded = amounts
     .map(({ envelopeId, amountCents }) => ({
       envelopeId,
@@ -75,24 +106,7 @@ export function roundPocketReviewPlan({
         b.amountCents - a.amountCents ||
         a.envelopeId.localeCompare(b.envelopeId),
     );
-  const maximum = Math.max(0, Math.round(maximumBudgetCents));
-  let totalCents = rounded.reduce((sum, item) => sum + item.amountCents, 0);
-
-  while (maximum > 0 && totalCents > maximum) {
-    const candidate = rounded.find((item) => item.amountCents > 0);
-    if (!candidate) break;
-    const reduction = Math.min(
-      pocketReviewRoundingStepCents(candidate.amountCents),
-      candidate.amountCents,
-    );
-    candidate.amountCents -= reduction;
-    totalCents -= reduction;
-    rounded.sort(
-      (a, b) =>
-        b.amountCents - a.amountCents ||
-        a.envelopeId.localeCompare(b.envelopeId),
-    );
-  }
+  const totalCents = rounded.reduce((sum, item) => sum + item.amountCents, 0);
 
   return {
     amounts: new Map(
@@ -106,7 +120,22 @@ export function formatPocketReviewMoneyTokens(
   text: string,
   currency: string,
   locale: string | null,
+  plan?: RoundedPocketReviewPlan,
 ): string | null {
+  let unresolvedTarget = false;
+  text = text.replace(
+    /\{\{(?:budget|pocket:([^{}]+))\}\}/g,
+    (_, id: string | undefined) => {
+      const amount =
+        id === undefined ? plan?.totalCents : plan?.amounts.get(id);
+      if (amount === undefined) {
+        unresolvedTarget = true;
+        return "";
+      }
+      return `{{money:${amount}}}`;
+    },
+  );
+  if (unresolvedTarget) return null;
   const withoutMoneyTokens = text.replace(/\{\{money:-?\d+\}\}/g, "");
   const moneyTokens = [...text.matchAll(/\{\{money:(-?\d+)\}\}/g)];
   if (
@@ -135,10 +164,8 @@ export function formatPocketReviewMoneyTokens(
   ) {
     return null;
   }
-  return text.replace(
-    /\{\{money:(-?\d+)\}\}/g,
-    (_, cents: string) =>
-      formatPocketReviewMoneyCents(Number(cents), currency, locale),
+  return text.replace(/\{\{money:(-?\d+)\}\}/g, (_, cents: string) =>
+    formatPocketReviewMoneyCents(Number(cents), currency, locale),
   );
 }
 

@@ -50,22 +50,88 @@ function firstPlanContext() {
     ),
     "current",
   );
-  return endpoint.buildSuggestionContext(
-    current,
-    current,
-    [previous],
-    deriveKnownCashFlow({
-      dataStatus: "complete",
-      recordedIncomeCents: 50000,
-      projectedRecurringIncomeCents: 0,
-      actualExpenseCents: 2500,
-      projectedRecurringExpenseCents: 5000,
-      incomingCarryCents: 0,
-    }),
-    [],
-    [],
-  );
+  return {
+    ...endpoint.buildSuggestionContext(
+      current,
+      current,
+      [previous],
+      deriveKnownCashFlow({
+        dataStatus: "complete",
+        recordedIncomeCents: 50000,
+        projectedRecurringIncomeCents: 0,
+        actualExpenseCents: 2500,
+        projectedRecurringExpenseCents: 5000,
+        incomingCarryCents: 0,
+      }),
+      [],
+      [],
+    ),
+    allowed_expense_categories: ["سكن", "食料品", "transport"],
+  };
 }
+
+Deno.test(
+  "existing budget is fully split even when AI proposes a higher or lower total",
+  () => {
+    for (const factor of [0.5, 2]) {
+      const context = firstPlanContext();
+      const result = endpoint.normalize(
+        {
+          headline: "計画 {{budget}}",
+          summary: "記録に基づく配分 {{budget}}",
+          insights: [],
+          income_coverage_status: context.cash_flow.income_coverage_status,
+          month_funding_status: context.cash_flow.month_funding_status,
+          suggested_total_budget_cents: 35000 * factor + 1,
+          suggestions: rows().map((row) => ({
+            ...row,
+            suggested_amount_cents: row.suggested_amount_cents * factor,
+            reason: `配分 {{pocket:${row.envelope_id}}}`,
+          })),
+        },
+        context,
+        "zh",
+      );
+      assert(
+        result !== null,
+        "Over-budget model output must not reject the plan",
+      );
+      assert(result.suggested_total_budget_cents === 40000);
+      assert(
+        result.suggestions.reduce(
+          (sum, row) => sum + row.suggested_amount_cents,
+          0,
+        ) === 40000,
+      );
+      assert(!result.summary.includes("{{"));
+      assert(result.suggestions.every((row) => !row.reason.includes("{{")));
+    }
+  },
+);
+
+Deno.test(
+  "without a saved budget the reviewed total comes from the evidence-based recommendation",
+  () => {
+    const context = { ...firstPlanContext(), total_budget_cents: 0 };
+    const result = endpoint.normalize(
+      {
+        headline: "Plan",
+        summary: "Based on recorded spending",
+        insights: [],
+        income_coverage_status: context.cash_flow.income_coverage_status,
+        month_funding_status: context.cash_flow.month_funding_status,
+        suggested_total_budget_cents: 35000,
+        suggestions: rows().map((row) => ({
+          ...row,
+          reason: "Recorded activity",
+        })),
+      },
+      context,
+      "en",
+    );
+    assert(result?.suggested_total_budget_cents === 35000);
+  },
+);
 
 Deno.test(
   "first-plan model schema requires the metadata enforced by validation",
@@ -101,7 +167,7 @@ Deno.test(
         reject,
       ) === null,
     );
-    assert(JSON.stringify(failures) === '["category_not_in_evidence"]');
+    assert(JSON.stringify(failures) === '["category_not_in_catalog"]');
     failures.length = 0;
     assert(
       validatePocketProposals(
@@ -111,9 +177,12 @@ Deno.test(
         35000,
         30000,
         reject,
-      ) === null,
+      ) !== null,
     );
-    assert(JSON.stringify(failures) === '["total_exceeds_selected_budget"]');
+    assert(
+      failures.length === 0,
+      "The final allocator enforces the budget cap",
+    );
     failures.length = 0;
     assert(
       validatePocketProposals(
@@ -121,7 +190,7 @@ Deno.test(
         [],
         ["سكن", "食料品", "transport"],
         35001,
-        40000,
+        0,
         reject,
       ) === null,
     );
@@ -450,6 +519,17 @@ Deno.test(
           is_portfolio: scope === "portfolio",
         });
       }
+      if (url.pathname.endsWith("/user_transaction_categories")) {
+        return reply(
+          ["سكن", "食料品", "transport"].map((name) => ({
+            name,
+            transaction_type: "expense",
+          })),
+        );
+      }
+      if (url.pathname.endsWith("/user_hidden_transaction_categories")) {
+        return reply([]);
+      }
       if (url.pathname.endsWith("/household_members")) {
         return method === "HEAD"
           ? new Response(null, { headers: { "content-range": "0-2/3" } })
@@ -595,6 +675,17 @@ Deno.test(
         const response = await handler(request());
         const body = await response.json();
         assert(response.status === 200, JSON.stringify(body));
+        assert(body.suggestions.suggested_total_budget_cents === 40000);
+        assert(
+          (suppliedContext.budget_policy as { mode: string }).mode ===
+            "split_fixed_budget",
+        );
+        assert(
+          (suppliedContext.allowed_new_pocket_categories as string[]).includes(
+            "groceries",
+          ),
+          "Use the app catalog, not invented or translated historical labels",
+        );
         assert(
           body.suggestions.suggestions.every(
             (row: { new_pocket?: boolean }) => row.new_pocket,
@@ -768,10 +859,10 @@ Deno.test(
 );
 
 Deno.test(
-  "first plan enforces exact positive safe-cent totals and selected cap",
+  "first plan validates exact safe-cent totals before capped allocation",
   () => {
-    assert(validate(rows(), 35001) === null);
-    assert(validate(rows(), 35000, 34999) === null);
+    assert(validate(rows(), 35001, 0) === null);
+    assert(validate(rows(), 35000, 34999) !== null);
     assert(validate(rows(), 35000, Number.MAX_SAFE_INTEGER + 1) === null);
     for (const amount of [
       -1,
@@ -788,6 +879,7 @@ Deno.test(
       validate(
         rows().map((row) => ({ ...row, suggested_amount_cents: 0 })),
         0,
+        0,
       ) === null,
     );
     assert(validate(rows(), 35000, 0) !== null);
@@ -797,7 +889,7 @@ Deno.test(
 Deno.test(
   "first plan permits few categories but never more than eight draft pockets",
   () => {
-    assert(validate(rows().slice(0, 1), 20000) === null);
+    assert(validate(rows().slice(0, 1), 20000) !== null);
     assert(
       validatePocketProposals(rows().slice(0, 1), [], ["سكن"], 20000, 0) !==
         null,
