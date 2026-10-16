@@ -7,6 +7,7 @@ import {
 } from "../generate-pocket-month-review/review-proposals.ts";
 
 import { deriveKnownCashFlow } from "../generate-pocket-month-review/review-analysis.ts";
+import { buildPocketReviewResponseSchema } from "../generate-pocket-month-review/review-generation.ts";
 
 // Import production pure functions without opening the Edge HTTP listener.
 const serve = Deno.serve;
@@ -136,17 +137,12 @@ Deno.test(
 Deno.test(
   "first-plan model schema requires the metadata enforced by validation",
   () => {
-    const context = firstPlanContext();
-    const schema = endpoint.schema(context);
+    const schema = buildPocketReviewResponseSchema(true);
     const suggestion = schema.properties.suggestions.items;
     assert(suggestion.required.includes("pocket_name"));
     assert(suggestion.required.includes("categories"));
-    assert(
-      JSON.stringify(suggestion.properties.categories.items.enum) ===
-        JSON.stringify(["سكن", "食料品", "transport"]),
-    );
-    assert(suggestion.properties.envelope_id.enum?.includes("draft-1"));
-    assert(suggestion.properties.envelope_id.enum?.length === 8);
+    assert(!("enum" in suggestion.properties.categories.items));
+    assert(!("enum" in suggestion.properties.envelope_id));
   },
 );
 

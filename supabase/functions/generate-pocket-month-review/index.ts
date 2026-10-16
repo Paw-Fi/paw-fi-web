@@ -6,6 +6,7 @@ import {
 } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { calculateNextMonthCarryCents } from "./rollover.ts";
+import { sendPocketReviewMessage } from "./review-generation.ts";
 import {
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
@@ -334,93 +335,6 @@ function parseRequest(value: unknown): PocketReviewRequest | null {
     return null;
   }
   return { scope, householdId, currency, cycleStart, locale };
-}
-
-export function schema(context: SuggestionContext) {
-  const firstPlan = context.pockets.length === 0;
-  const allowedIds = firstPlan
-    ? Array.from({ length: 8 }, (_, index) => `draft-${index + 1}`)
-    : context.pockets.map((pocket) => pocket.id);
-  return {
-    type: "OBJECT",
-    properties: {
-      headline: { type: "STRING" },
-      summary: { type: "STRING" },
-      income_coverage_status: {
-        type: "STRING",
-        enum: [context.cash_flow.income_coverage_status],
-      },
-      month_funding_status: {
-        type: "STRING",
-        enum: [context.cash_flow.month_funding_status],
-      },
-      insights: {
-        type: "ARRAY",
-        items: {
-          type: "OBJECT",
-          properties: {
-            type: {
-              type: "STRING",
-              enum: [
-                "cash_flow",
-                "upcoming_commitment",
-                "budget_adjustment",
-                "spending_pattern",
-                "reallocation",
-                "positive_progress",
-                "rollover",
-              ],
-            },
-            title: { type: "STRING" },
-            summary: { type: "STRING" },
-            action: { type: "STRING" },
-            estimated_impact_cents: { type: "INTEGER" },
-            envelope_id: { type: "STRING", enum: allowedIds },
-          },
-          required: ["type", "title", "summary"],
-        },
-      },
-      suggested_total_budget_cents: { type: "INTEGER" },
-      suggestions: {
-        type: "ARRAY",
-        minItems: firstPlan ? 1 : context.pockets.length,
-        maxItems: firstPlan ? 8 : context.pockets.length,
-        items: {
-          type: "OBJECT",
-          properties: {
-            envelope_id: { type: "STRING", enum: allowedIds },
-            suggested_amount_cents: { type: "INTEGER" },
-            pocket_name: { type: "STRING" },
-            categories: {
-              type: "ARRAY",
-              minItems: 1,
-              items: {
-                type: "STRING",
-                ...(firstPlan ? { enum: firstPlanCategories(context) } : {}),
-              },
-            },
-            reason: { type: "STRING" },
-            tip: { type: "STRING" },
-          },
-          required: [
-            "envelope_id",
-            "suggested_amount_cents",
-            "reason",
-            ...(firstPlan ? ["pocket_name", "categories"] : []),
-          ],
-        },
-      },
-    },
-    required: [
-      "headline",
-      "summary",
-      "income_coverage_status",
-      "month_funding_status",
-      "insights",
-      "suggested_total_budget_cents",
-      "suggestions",
-    ],
-  };
 }
 
 function sumCategories(
@@ -1119,7 +1033,11 @@ function extractAllTextFromRaw(raw: unknown): string {
     .trim();
 }
 
-async function generate(context: SuggestionContext, locale: string | null) {
+async function generate(
+  context: SuggestionContext,
+  locale: string | null,
+  requestId: string,
+) {
   const firstPlan = context.pockets.length === 0;
   const budgetConstraint =
     context.total_budget_cents > 0
@@ -1297,23 +1215,29 @@ ${JSON.stringify(modelContext)}`;
         systemInstruction:
           "You are Moneko's careful personal budgeting coach. Diagnose known cash flow before recommending a plan, separate sustainable income coverage from carry-funded availability, distinguish persistent patterns from uncertainty, and turn only supplied financial evidence into realistic monthly decisions. Never invent context, motives, or generic filler advice.",
       });
-      const response = await sendGeminiMessageWithRetry(
-        {
-          sendMessage: (content) =>
-            chat
-              .sendMessage(content, {
-                generationConfig: {
-                  temperature: 0.2,
-                  maxOutputTokens,
-                  responseMimeType: "application/json",
-                  responseSchema: schema(context),
-                },
-              })
-              .then((result) => result.response),
-        },
+      const response = await sendPocketReviewMessage({
         prompt,
-        { logPrefix: "pocket-month-suggestions" },
-      );
+        firstPlan,
+        maxOutputTokens,
+        send: (content, generationConfig) =>
+          sendGeminiMessageWithRetry(
+            {
+              sendMessage: () =>
+                chat
+                  .sendMessage(content, { generationConfig })
+                  .then((result) => result.response),
+            },
+            content,
+            { logPrefix: "pocket-month-suggestions" },
+          ),
+        onSchemaRejected: () =>
+          logReviewEvent(requestId, "provider_schema_rejected", {
+            model,
+            status_code: 400,
+            provider_code: "INVALID_ARGUMENT",
+            retry_mode: "json",
+          }),
+      });
       const responseText = response.text();
       try {
         return { model, value: parseJsonResponse(responseText) };
@@ -1746,7 +1670,7 @@ const handler = withCors(async (req) => {
           ? contact.preferred_language
           : "en");
       stage = "generate_ai_review";
-      const generated = await generate(context, locale);
+      const generated = await generate(context, locale, requestId);
       logReviewEvent(requestId, "ai_review_generated", {
         model: generated.model,
       });
