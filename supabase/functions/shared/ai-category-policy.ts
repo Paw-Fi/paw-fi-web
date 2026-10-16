@@ -19,10 +19,7 @@ export function isGenericAiCategory(category: string): boolean {
   return ["other", "uncategorized", "miscellaneous"].includes(category);
 }
 
-export function buildCategoryAssignmentTools(
-  allowedCategories: string[],
-  count: number,
-) {
+export function buildCategoryAssignmentTools(count: number) {
   return [
     {
       functionDeclarations: [
@@ -39,7 +36,8 @@ export function buildCategoryAssignmentTools(
                 maxItems: count,
                 items: {
                   type: "string",
-                  enum: [...new Set(allowedCategories)],
+                  // Keep the full catalog in the prompt, not a large schema
+                  // enum. readCategoryAssignments checks type-specific catalogs.
                 },
               },
             },

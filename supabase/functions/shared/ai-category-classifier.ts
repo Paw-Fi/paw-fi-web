@@ -134,10 +134,7 @@ export async function classifyTransactionCategories(params: {
       const model = params.genAI.getGenerativeModel({
         model: models[index],
         systemInstruction: `${AI_CATEGORY_POLICY}\nReturn one exact allowed category per input in the same order by calling categorize_transactions. This is a focused category recovery pass: an earlier generic answer is not evidence that no category fits. Reconsider the actual purchase or income source against the ENTIRE allowed catalog, including broad supported categories and custom categories. Use the original notification/source evidence instead of relying solely on the bank, processor or a short generated description. A transaction sourceTextIndex points to sourceTexts at that index; original image/audio parts are shared source evidence. Match the source evidence to each transaction rather than borrowing another transaction's purchase purpose. Return a generic category only when no more informative allowed category is supported; do not fabricate missing purchase details.`,
-        tools: buildCategoryAssignmentTools(
-          pending.flatMap((i) => [...allowed[i]]),
-          pending.length,
-        ),
+        tools: buildCategoryAssignmentTools(pending.length),
       });
       const response = await runWithTimeout({
         timeoutMs: budgetMs,
