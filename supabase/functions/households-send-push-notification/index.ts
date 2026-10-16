@@ -1,3 +1,4 @@
+import { createNotificationTranslator } from "../shared/notification-localization.ts";
 import { createEmailTranslator } from "../shared/automated-email-localization.ts";
 /// <reference lib="deno.ns" />
 
@@ -935,11 +936,16 @@ serve(async (req: Request) => {
       ? prefsQuery.eq("household_id", household_id)
       : prefsQuery.is("household_id", null);
     const { data: prefs } = await prefsQuery.maybeSingle();
-    const { data: contact } = await supabase
+    const { data: contact, error: contactError } = await supabase
       .from("user_contacts")
-      .select("preferred_timezone")
+      .select("preferred_timezone, preferred_language")
       .eq("user_id", user_id)
+      .order("id", { ascending: false })
+      .limit(1)
       .maybeSingle();
+    if (contactError) {
+      throw new Error("Failed to load notification language preference");
+    }
 
     // Check if notifications are disabled for this user
     if (!isImmediateTransactionEvent && prefs && !prefs.enable_nudges) {
@@ -1136,6 +1142,7 @@ serve(async (req: Request) => {
       event_type,
       hydratedPayload,
       recipientSplit,
+      contact?.preferred_language,
     );
 
     // Send push notification to all active devices using FCM V1 API
@@ -1248,19 +1255,21 @@ function buildNotificationMessage(
   eventType: string,
   payload: Record<string, any>,
   recipientSplit?: RecipientSplitContext,
+  language = "en",
 ): {
   title: string;
   body: string;
   data: Record<string, string>;
 } {
+  const { t } = createNotificationTranslator(language);
   const expenseData = (payload.expense_data || {}) as Record<string, any>;
   const actor = (expenseData.actor_name ||
     payload.actor_name ||
-    "Someone") as string;
-  const householdName = (payload.household_name || "your household") as string;
+    t("Someone")) as string;
+  const householdName = (payload.household_name || t("your household")) as string;
   const isRecurring =
     payload.is_recurring === true || expenseData.is_recurring === true;
-  const recurringLabel = isRecurring ? "recurring " : "";
+  const recurringLabel = isRecurring ? t("recurring ") : "";
 
   switch (eventType) {
     case "expense_added": {
@@ -1270,12 +1279,12 @@ function buildNotificationMessage(
         const recurringSuffix =
           recurringCount > 0
             ? recurringCount === batchCount
-              ? " (all recurring)"
-              : ` (${recurringCount} recurring)`
+              ? t(" (all recurring)")
+              : t` (${recurringCount} recurring)`
             : "";
         return {
           title: actor,
-          body: `added ${batchCount} expenses${recurringSuffix} to ${householdName}`,
+          body: t`added ${batchCount} expenses${recurringSuffix} to ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
@@ -1293,11 +1302,11 @@ function buildNotificationMessage(
       const isSplit = recipientSplit?.isSplitForRecipient === true;
 
       const body = isSplit
-        ? `split ${amount} ${recurringLabel}expense with you${
-            note ? `: ${note}` : ` in ${householdName}`
+        ? t`split ${amount} ${recurringLabel}expense with you${
+            note ? `: ${note}` : t` in ${householdName}`
           }`
-        : `added ${amount} ${recurringLabel}expense${
-            note ? `: ${note}` : ` to ${householdName}`
+        : t`added ${amount} ${recurringLabel}expense${
+            note ? `: ${note}` : t` to ${householdName}`
           }`;
 
       return {
@@ -1317,30 +1326,30 @@ function buildNotificationMessage(
         expenseData.new_currency) as string | undefined;
       const symbol = getCurrencySymbol(code);
 
-      let body = `modified a ${recurringLabel}expense in ${householdName}`;
+      let body = t`modified a ${recurringLabel}expense in ${householdName}`;
 
       // Show specific change for single field edits
       if (fields.length === 1) {
         if (fields.indexOf("amount_cents") !== -1) {
           const oldC = Number(expenseData.old_amount_cents ?? 0);
           const newC = Number(expenseData.new_amount_cents ?? 0);
-          body = `changed expense amount from ${symbol}${(oldC / 100).toFixed(
+          body = t`changed expense amount from ${symbol}${(oldC / 100).toFixed(
             2,
           )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
           const newCat = String(expenseData.new_category ?? "");
-          body = `changed expense category to ${newCat}`;
+          body = t`changed expense category to ${newCat}`;
         } else if (fields.indexOf("currency") !== -1) {
           const newCur = String(expenseData.new_currency ?? "");
-          body = `changed expense currency to ${newCur}`;
+          body = t`changed expense currency to ${newCur}`;
         } else if (fields.indexOf("date") !== -1) {
           const newDate = String(expenseData.new_date ?? "");
-          body = `changed expense date to ${newDate}`;
+          body = t`changed expense date to ${newDate}`;
         } else if (fields.indexOf("raw_text") !== -1) {
           const newN = String(expenseData.new_note ?? "").trim();
           body = newN
-            ? `updated expense note: ${newN}`
-            : `removed expense note`;
+            ? t`updated expense note: ${newN}`
+            : t`removed expense note`;
         }
       }
 
@@ -1361,12 +1370,12 @@ function buildNotificationMessage(
         const recurringSuffix =
           recurringCount > 0
             ? recurringCount === batchCount
-              ? " (all recurring)"
-              : ` (${recurringCount} recurring)`
+              ? t(" (all recurring)")
+              : t` (${recurringCount} recurring)`
             : "";
         return {
           title: actor,
-          body: `deleted ${batchCount} expenses${recurringSuffix} from ${householdName}`,
+          body: t`deleted ${batchCount} expenses${recurringSuffix} from ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
@@ -1376,7 +1385,7 @@ function buildNotificationMessage(
       const symbol = getCurrencySymbol(code);
       const cents = Number(expenseData.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-      const body = `deleted ${amount} ${recurringLabel}expense from ${householdName}`;
+      const body = t`deleted ${amount} ${recurringLabel}expense from ${householdName}`;
 
       return {
         title: actor,
@@ -1389,7 +1398,7 @@ function buildNotificationMessage(
     }
 
     case "budget_warn": {
-      const budgetName = (payload.budget_name || "Budget") as string;
+      const budgetName = (payload.budget_name || t("Budget")) as string;
       const code = payload.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
       const budgetAmount = Number(payload.budget_cents ?? 0) / 100;
@@ -1397,13 +1406,13 @@ function buildNotificationMessage(
       const percentage = Number(payload.percentage_used ?? 0).toFixed(0);
 
       return {
-        title: `${budgetName} Budget`,
-        body: `⚠️ ${percentage}% used - ${symbol}${spentAmount.toFixed(
+        title: t`${budgetName} Budget`,
+        body: t`⚠️ ${percentage}% used - ${symbol}${spentAmount.toFixed(
           2,
         )} of ${symbol}${budgetAmount.toFixed(2)} spent in ${householdName}`,
         data: {
           budget_id: payload.budget_id || "",
-          budget_name: budgetName,
+          budget_name: payload.budget_name || "Budget",
           spent_cents: String(payload.spent_cents ?? 0),
           budget_cents: String(payload.budget_cents ?? 0),
           percentage_used: String(percentage),
@@ -1412,7 +1421,7 @@ function buildNotificationMessage(
     }
 
     case "budget_alert": {
-      const budgetName = (payload.budget_name || "Budget") as string;
+      const budgetName = (payload.budget_name || t("Budget")) as string;
       const code = payload.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
       const budgetAmount = Number(payload.budget_cents ?? 0) / 100;
@@ -1421,11 +1430,11 @@ function buildNotificationMessage(
       const overAmount = (spentAmount - budgetAmount).toFixed(2);
 
       return {
-        title: `${budgetName} Budget`,
-        body: `🚨 Over budget! ${percentage}% used - ${symbol}${overAmount} over limit in ${householdName}`,
+        title: t`${budgetName} Budget`,
+        body: t`🚨 Over budget! ${percentage}% used - ${symbol}${overAmount} over limit in ${householdName}`,
         data: {
           budget_id: payload.budget_id || "",
-          budget_name: budgetName,
+          budget_name: payload.budget_name || "Budget",
           spent_cents: String(payload.spent_cents ?? 0),
           budget_cents: String(payload.budget_cents ?? 0),
           percentage_used: String(percentage),
@@ -1436,10 +1445,10 @@ function buildNotificationMessage(
     case "invite_accepted": {
       const memberName = (payload.member_name ||
         payload.member_email ||
-        "Someone") as string;
+        t("Someone")) as string;
       return {
         title: memberName,
-        body: `accepted your invitation and joined ${householdName}`,
+        body: t`accepted your invitation and joined ${householdName}`,
         data: {
           invite_id: payload.invite_id || "",
           household_id: payload.household_id || "",
@@ -1450,10 +1459,10 @@ function buildNotificationMessage(
     case "member_joined": {
       const memberName = (payload.member_name ||
         payload.member_email ||
-        "Someone") as string;
+        t("Someone")) as string;
       return {
         title: memberName,
-        body: `joined ${householdName}`,
+        body: t`joined ${householdName}`,
         data: {
           member_id: payload.member_id || "",
           household_id: payload.household_id || "",
@@ -1469,7 +1478,7 @@ function buildNotificationMessage(
 
       return {
         title: actor,
-        body: `created a ${amount} expense split for you in ${householdName}`,
+        body: t`created a ${amount} expense split for you in ${householdName}`,
         data: {
           split_group_id: payload.split_group_id || payload.split_id || "",
           split_id: payload.split_id || payload.split_group_id || "",
@@ -1481,16 +1490,16 @@ function buildNotificationMessage(
 
     case "income_acknowledged": {
       const acknowledgerName = String(
-        expenseData.acknowledger_name || payload.acknowledger_name || "Someone",
+        expenseData.acknowledger_name || payload.acknowledger_name || t("Someone"),
       );
       const code = expenseData.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
       const cents = Number(expenseData.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-      const category = String(expenseData.category || "income");
+      const category = String(expenseData.category || t("income"));
       return {
         title: acknowledgerName,
-        body: `acknowledged your ${amount} ${category} income`,
+        body: t`acknowledged your ${amount} ${category} income`,
         data: {
           expense_id: payload.expense_id || "",
           household_id: payload.household_id || "",
@@ -1505,12 +1514,12 @@ function buildNotificationMessage(
         const recurringSuffix =
           recurringCount > 0
             ? recurringCount === batchCount
-              ? " (all recurring)"
-              : ` (${recurringCount} recurring)`
+              ? t(" (all recurring)")
+              : t` (${recurringCount} recurring)`
             : "";
         return {
           title: actor,
-          body: `added ${batchCount} income entries${recurringSuffix} to ${householdName}`,
+          body: t`added ${batchCount} income entries${recurringSuffix} to ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
@@ -1523,8 +1532,8 @@ function buildNotificationMessage(
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
       const source = String(expenseData.source ?? "").trim();
       const body = source
-        ? `added ${amount} ${recurringLabel}income from ${source} in ${householdName}`
-        : `added ${amount} ${recurringLabel}income in ${householdName}`;
+        ? t`added ${amount} ${recurringLabel}income from ${source} in ${householdName}`
+        : t`added ${amount} ${recurringLabel}income in ${householdName}`;
 
       return {
         title: actor,
@@ -1543,32 +1552,32 @@ function buildNotificationMessage(
         expenseData.new_currency) as string | undefined;
       const symbol = getCurrencySymbol(code);
 
-      let body = `modified a ${recurringLabel}income entry in ${householdName}`;
+      let body = t`modified a ${recurringLabel}income entry in ${householdName}`;
 
       if (fields.length === 1) {
         if (fields.indexOf("amount_cents") !== -1) {
           const oldC = Number(expenseData.old_amount_cents ?? 0);
           const newC = Number(expenseData.new_amount_cents ?? 0);
-          body = `changed income amount from ${symbol}${(oldC / 100).toFixed(
+          body = t`changed income amount from ${symbol}${(oldC / 100).toFixed(
             2,
           )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
           const newCat = String(expenseData.new_category ?? "");
-          body = `changed income category to ${newCat}`;
+          body = t`changed income category to ${newCat}`;
         } else if (fields.indexOf("currency") !== -1) {
           const newCur = String(expenseData.new_currency ?? "");
-          body = `changed income currency to ${newCur}`;
+          body = t`changed income currency to ${newCur}`;
         } else if (fields.indexOf("date") !== -1) {
           const newDate = String(expenseData.new_date ?? "");
-          body = `changed income date to ${newDate}`;
+          body = t`changed income date to ${newDate}`;
         } else if (fields.indexOf("raw_text") !== -1) {
           const newN = String(expenseData.new_note ?? "").trim();
-          body = newN ? `updated income note: ${newN}` : `removed income note`;
+          body = newN ? t`updated income note: ${newN}` : t`removed income note`;
         } else if (fields.indexOf("source") !== -1) {
           const newSource = String(expenseData.source ?? "").trim();
           body = newSource
-            ? `changed income source to ${newSource}`
-            : `removed income source`;
+            ? t`changed income source to ${newSource}`
+            : t`removed income source`;
         }
       }
 
@@ -1583,20 +1592,20 @@ function buildNotificationMessage(
     }
 
     case "member_reminded": {
-      const senderName = (payload.sender_name || "A member") as string;
+      const senderName = (payload.sender_name || t("A member")) as string;
       const customMessage = payload.message as string | undefined;
 
       const body =
         customMessage && customMessage.trim().length > 0
           ? customMessage
-          : `sent you a spending reminder for ${householdName}`;
+          : t`sent you a spending reminder for ${householdName}`;
 
       return {
         title: senderName,
         body,
         data: {
           sender_id: payload.sender_id || "",
-          sender_name: senderName,
+          sender_name: payload.sender_name || "A member",
           message: customMessage || "",
           household_id: payload.household_id || "",
         },
@@ -1604,18 +1613,18 @@ function buildNotificationMessage(
     }
 
     case "recurring_reminder": {
-      return buildRecurringReminderNotification(payload);
+      return buildRecurringReminderNotification(payload, undefined, language);
     }
 
     case "log_expense_reminder": {
-      return buildLogExpenseReminderMessage(payload);
+      return buildLogExpenseReminderMessage(payload, language);
     }
 
     case "pockets_month_review": {
-      const cycleLabel = String(payload.financial_cycle_label || "this cycle");
+      const cycleLabel = String(payload.financial_cycle_label || t("this cycle"));
       return {
-        title: `Review your ${cycleLabel} plan`,
-        body: "Review and update your pockets whenever you are ready.",
+        title: t`Review your ${cycleLabel} plan`,
+        body: t("Review and update your pockets whenever you are ready."),
         data: {
           type: "openPocketsPage",
           action: "openPocketsPage",
@@ -1629,11 +1638,11 @@ function buildNotificationMessage(
       const captureSource = String(payload.capture_source || "");
       const feature =
         captureSource === "ios_wallet_shortcut"
-          ? "Apple Pay capture"
-          : "Notification capture";
+          ? t("Apple Pay capture")
+          : t("Notification capture");
       return {
-        title: "Moneko Plus required",
-        body: `${feature} is available with an active Moneko Plus plan. Start a trial or subscribe to continue.`,
+        title: t("Moneko Plus required"),
+        body: t`${feature} is available with an active Moneko Plus plan. Start a trial or subscribe to continue.`,
         data: {
           capture_source: captureSource,
           pricing_url: PRICING_URL,
@@ -1644,7 +1653,7 @@ function buildNotificationMessage(
 
     case "settlement_completed":
     case "split_settled": {
-      const actorName = (payload.actor_name || "Someone") as string;
+      const actorName = (payload.actor_name || t("Someone")) as string;
       const code = payload.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
       const youOweCents = Number(
@@ -1663,10 +1672,10 @@ function buildNotificationMessage(
       const title = actorName;
       const baseBody =
         netPayCents > 0
-          ? `settled ${symbol}${(netPayCents / 100).toFixed(
+          ? t`settled ${symbol}${(netPayCents / 100).toFixed(
               2,
             )} with you in ${householdName}`
-          : `settled up with you in ${householdName}`;
+          : t`settled up with you in ${householdName}`;
       const body = note ? `${baseBody}: ${note}` : baseBody;
 
       return {
@@ -1681,9 +1690,9 @@ function buildNotificationMessage(
     case "invite_reminder_inviter": {
       const inviteeName = (payload.invitee_name ||
         payload.invited_email ||
-        "Your invitee") as string;
-      const title = "Pending Invitation";
-      const body = `${inviteeName} hasn't joined ${householdName} yet`;
+        t("Your invitee")) as string;
+      const title = t("Pending Invitation");
+      const body = t`${inviteeName} hasn't joined ${householdName} yet`;
 
       return {
         title,
@@ -1697,7 +1706,7 @@ function buildNotificationMessage(
     }
 
     case "invite_reminder_invitee": {
-      const inviterName = (payload.inviter_name || "Someone") as string;
+      const inviterName = (payload.inviter_name || t("Someone")) as string;
       const reminderTier = Number(payload.reminder_tier ?? 1);
 
       let title: string;
@@ -1705,16 +1714,16 @@ function buildNotificationMessage(
 
       if (reminderTier === 3) {
         // Tier 3: Expiring soon - urgency
-        title = "Invitation Expiring Soon";
-        body = `Your invitation to ${householdName} expires in 2 days`;
+        title = t("Invitation Expiring Soon");
+        body = t`Your invitation to ${householdName} expires in 2 days`;
       } else if (reminderTier === 2) {
         // Tier 2: Follow-up reminder - stronger nudge
-        title = `${inviterName} is waiting`;
-        body = `Accept your invitation to ${householdName} on Moneko`;
+        title = t`${inviterName} is waiting`;
+        body = t`Accept your invitation to ${householdName} on Moneko`;
       } else {
         // Tier 1: Gentle reminder
-        title = `Invitation from ${inviterName}`;
-        body = `Join ${householdName} on Moneko to track finances together`;
+        title = t`Invitation from ${inviterName}`;
+        body = t`Join ${householdName} on Moneko to track finances together`;
       }
 
       return {
@@ -1733,8 +1742,8 @@ function buildNotificationMessage(
 
     default:
       return {
-        title: "Moneko",
-        body: `New activity in ${householdName}`,
+        title: t("Moneko"),
+        body: t`New activity in ${householdName}`,
         data: {},
       };
   }

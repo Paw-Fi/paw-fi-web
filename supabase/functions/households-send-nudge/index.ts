@@ -1,3 +1,4 @@
+import { createNotificationTranslator } from "../shared/notification-localization.ts";
 /// <reference lib="deno.ns" />
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -234,7 +235,9 @@ serve(async (req) => {
       });
     }
 
-    if (!isServiceRoleRequest(req, supabaseServiceRoleKey, supabaseSecretKeys)) {
+    if (
+      !isServiceRoleRequest(req, supabaseServiceRoleKey, supabaseSecretKeys)
+    ) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -298,7 +301,8 @@ serve(async (req) => {
           success: false,
           sent_count: 0,
           failed_count: 0,
-          error: `Rate limit: ${nudge_type} nudge was sent within last 24 hours`,
+          error:
+            `Rate limit: ${nudge_type} nudge was sent within last 24 hours`,
         } as SendNudgeResponse),
         {
           status: 429,
@@ -420,19 +424,13 @@ serve(async (req) => {
       );
     }
 
-    // Determine nudge message based on type
-    let title: string;
-    let body: string;
-    let emoji: string;
-
-    if (nudge_type === "warn") {
-      title = "Budget Boop! 🐾";
-      emoji = "⚠️";
-      body = `"${household.name}" has used ${percentage_used.toFixed(0)}% of your ${currency} budget. Gentle reminder to keep an eye on spending!`;
-    } else {
-      title = "Purr-suasive Nudge! 😸";
-      emoji = "🚨";
-      body = `"${household.name}" has reached ${percentage_used.toFixed(0)}% of your ${currency} budget. Time to pause and review!`;
+    const { data: contacts, error: contactsError } = await supabase
+      .from("user_contacts")
+      .select("user_id, preferred_language")
+      .in("user_id", memberUserIds)
+      .order("id", { ascending: false });
+    if (contactsError) {
+      throw new Error("Failed to load notification language preferences");
     }
 
     // Get OAuth access token for FCM V1 API
@@ -458,6 +456,14 @@ serve(async (req) => {
     let failedCount = 0;
 
     const pushPromises = devices.map(async (device) => {
+      const { title, body } = buildBudgetNudgeMessage(
+        nudge_type,
+        household,
+        percentage_used,
+        currency,
+        contacts?.find((contact) => contact.user_id === device.user_id)
+          ?.preferred_language,
+      );
       const success = await sendFCMv1Notification(
         device.push_token,
         title,
@@ -526,3 +532,28 @@ serve(async (req) => {
     );
   }
 });
+
+function buildBudgetNudgeMessage(
+  nudge_type: NudgeType,
+  household: { name: string },
+  percentage_used: number,
+  currency: string,
+  language = "en",
+) {
+  const { t } = createNotificationTranslator(language);
+  let title: string;
+  let body: string;
+  if (nudge_type === "warn") {
+    title = t("Budget Boop! 🐾");
+    body = t`"${household.name}" has used ${
+      percentage_used.toFixed(0)
+    }% of your ${currency} budget. Gentle reminder to keep an eye on spending!`;
+  } else {
+    title = t("Purr-suasive Nudge! 😸");
+    body = t`"${household.name}" has reached ${
+      percentage_used.toFixed(0)
+    }% of your ${currency} budget. Time to pause and review!`;
+  }
+
+  return { title, body };
+}

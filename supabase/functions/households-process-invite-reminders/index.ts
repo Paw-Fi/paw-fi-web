@@ -231,6 +231,8 @@ async function createReminderNotifications(
   invite: EligibleInvite,
   reminderTier: number,
 ): Promise<{ inviterNotified: boolean; inviteeNotified: boolean }> {
+  // Keep push payloads language-neutral; delivery resolves each recipient’s
+  // current preferred_language when rendering the queued notification.
   const notifications: any[] = [];
 
   // Determine who to notify based on tier

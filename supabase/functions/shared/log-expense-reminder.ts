@@ -1,3 +1,4 @@
+import { createNotificationTranslator } from "./notification-localization.ts";
 import { formatMoney } from "./currency-symbols.ts";
 
 interface PickIndexOptions {
@@ -87,7 +88,12 @@ function buildExpenseContext(payload: Record<string, any>) {
   return `You recently logged an expense for ${amountText}.`;
 }
 
-export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
+export function buildLogExpenseReminderMessage(
+  payload: Record<string, any>,
+  language = "en",
+  now = new Date(),
+) {
+  const { t } = createNotificationTranslator(language);
   const inactivityDays = Number(payload.inactivity_days ?? 0);
 
   const recipientKey = String(
@@ -101,45 +107,45 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
       : Math.abs(Number(forcedVariantRaw));
 
   const todayKey = String(
-    payload.local_date ?? payload.day_key ?? getLocalDateKey(),
+    payload.local_date ?? payload.day_key ?? getLocalDateKey(now),
   );
 
   const titlesDaily = [
-    "Anything to add?",
-    "A quick money check-in",
-    "Remember a recent purchase?",
-    "Keep your spending in view",
-    "One quick expense update",
+    t("Anything to add?"),
+    t("A quick money check-in"),
+    t("Remember a recent purchase?"),
+    t("Keep your spending in view"),
+    t("One quick expense update"),
   ];
 
   const titlesLong = [
-    "Ready for a quick update?",
-    "Anything recent to add?",
-    "See where your money stands",
-    "Pick up where you left off",
-    "Start with your latest expense",
+    t("Ready for a quick update?"),
+    t("Anything recent to add?"),
+    t("See where your money stands"),
+    t("Pick up where you left off"),
+    t("Start with your latest expense"),
   ];
 
   const dailySet = [
-    "Log a recent purchase while it’s still fresh.",
-    "Got an expense in mind? Add it in just a few taps.",
-    "Add any recent spending to keep your overview current.",
-    "A quick expense update helps you see where your money is going.",
-    "Remember something you bought recently? Log it now.",
-    "Take a moment to add your latest expense.",
-    "Add a recent purchase and keep your spending easy to follow.",
-    "One quick entry can keep your budget up to date.",
+    t("Log a recent purchase while it’s still fresh."),
+    t("Got an expense in mind? Add it in just a few taps."),
+    t("Add any recent spending to keep your overview current."),
+    t("A quick expense update helps you see where your money is going."),
+    t("Remember something you bought recently? Log it now."),
+    t("Take a moment to add your latest expense."),
+    t("Add a recent purchase and keep your spending easy to follow."),
+    t("One quick entry can keep your budget up to date."),
   ];
 
   const longSet = [
-    "Start with your latest expense and update the rest whenever you’re ready.",
-    "Add a recent purchase to get a clearer view of your spending.",
-    "Remember any recent spending? Start with just one expense.",
-    "Pick up where you left off by logging your latest purchase.",
-    "A quick expense update can help you see where your money stands.",
-    "Add your most recent expense now and come back to the rest later.",
-    "Log any recent spending you remember—one entry is a good start.",
-    "Start with the easiest purchase to remember.",
+    t("Start with your latest expense and update the rest whenever you’re ready."),
+    t("Add a recent purchase to get a clearer view of your spending."),
+    t("Remember any recent spending? Start with just one expense."),
+    t("Pick up where you left off by logging your latest purchase."),
+    t("A quick expense update can help you see where your money stands."),
+    t("Add your most recent expense now and come back to the rest later."),
+    t("Log any recent spending you remember—one entry is a good start."),
+    t("Start with the easiest purchase to remember."),
   ];
 
   const poolBody = inactivityDays > 14 ? longSet : dailySet;
@@ -148,7 +154,9 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
   const bodyIndex = pickDeterministicIndex({
     recipientKey,
     dayKey: todayKey,
-    namespace: `log_expense_reminder:${inactivityDays > 14 ? "long" : "daily"}:body`,
+    namespace: `log_expense_reminder:${
+      inactivityDays > 14 ? "long" : "daily"
+    }:body`,
     poolLength: poolBody.length,
     forcedVariant,
   });
@@ -156,7 +164,9 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
   const titleIndex = pickDeterministicIndex({
     recipientKey,
     dayKey: todayKey,
-    namespace: `log_expense_reminder:${inactivityDays > 14 ? "long" : "daily"}:title`,
+    namespace: `log_expense_reminder:${
+      inactivityDays > 14 ? "long" : "daily"
+    }:title`,
     poolLength: poolTitle.length,
     forcedVariant: forcedVariant === null ? null : forcedVariant + 101,
   });
@@ -172,8 +182,9 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
     chosen_title_index: String(titleIndex),
   };
 
-  if (payload.last_amount_cents != null)
+  if (payload.last_amount_cents != null) {
     data.last_amount_cents = String(payload.last_amount_cents);
+  }
   if (payload.last_currency) data.last_currency = String(payload.last_currency);
   if (payload.last_category) data.last_category = String(payload.last_category);
   if (payload.last_source) data.last_source = String(payload.last_source);

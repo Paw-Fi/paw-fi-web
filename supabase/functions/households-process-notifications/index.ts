@@ -1,3 +1,4 @@
+import { createNotificationTranslator } from "../shared/notification-localization.ts";
 /// <reference lib="deno.ns" />
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -621,25 +622,17 @@ serve(async (req) => {
         }
 
         // Determine notification content based on event type
-        let title: string;
-        let body: string;
-        let targetUserId: string | null = event.user_id;
-        let messageData: Record<string, string> = {};
-        const payloadExpenseData =
-          event.payload?.expense_data &&
-          typeof event.payload.expense_data === "object" &&
-          !Array.isArray(event.payload.expense_data)
-            ? event.payload.expense_data
-            : {};
-        const isRecurringEvent =
-          event.payload?.is_recurring === true ||
-          payloadExpenseData.is_recurring === true;
+
+        const targetUserId: string | null = event.user_id;
+        const messageNow = new Date();
+        const { data: messageData } = buildQueuedNotificationMessage(
+          event, "en", messageNow,
+        );
 
         if (event.event_type === "pockets_month_review") {
-          const expiresAt =
-            typeof event.payload?.expires_at === "string"
-              ? Date.parse(event.payload.expires_at)
-              : Number.NaN;
+          const expiresAt = typeof event.payload?.expires_at === "string"
+            ? Date.parse(event.payload.expires_at)
+            : Number.NaN;
           if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
             await supabase
               .from("notification_events")
@@ -655,6 +648,27 @@ serve(async (req) => {
         }
 
         switch (event.event_type) {
+          case "invite_accepted":
+          case "member_joined":
+          case "member_left":
+          case "member_removed":
+          case "member_reminded":
+          case "split_created":
+          case "split_settled":
+          case "expense_added":
+          case "expense_edited":
+          case "expense_deleted":
+          case "income_added":
+          case "income_edited":
+          case "income_acknowledged":
+          case "recurring_reminder":
+          case "invite_reminder_inviter":
+          case "invite_reminder_invitee":
+          case "log_expense_reminder":
+          case "pockets_month_review":
+          case "budget_warn":
+          case "budget_alert":
+            break;
           case "invite_sent":
             await supabase
               .from("notification_events")
@@ -666,251 +680,6 @@ serve(async (req) => {
               })
               .eq("id", event.id);
             continue;
-
-          case "invite_accepted":
-          case "member_joined": {
-            const memberName = (event.payload?.member_name ||
-              "Someone") as string;
-            title = "🎉 New Member!";
-            body = `${memberName} just joined your household "${
-              event.payload.household_name || "household"
-            }"`;
-            // Target all household members except the joiner
-            break;
-          }
-
-          case "member_left":
-          case "member_removed": {
-            const memberName = (event.payload?.member_name ||
-              "A member") as string;
-            title = "👋 Member Left";
-            body = `${memberName} has left "${
-              event.payload.household_name || "household"
-            }"`;
-            break;
-          }
-
-          case "member_reminded": {
-            const senderName = (event.payload?.sender_name ||
-              "A member") as string;
-            const householdName = (event.payload?.household_name ||
-              "your household") as string;
-            const customMessage = (event.payload?.message || "") as string;
-
-            title = "🔔 Household Reminder";
-            body =
-              customMessage.trim().length > 0
-                ? `${senderName} reminded you in "${householdName}": ${customMessage.trim()}`
-                : `${senderName} reminded you about "${householdName}"`;
-            break;
-          }
-
-          case "split_created":
-            title = "💰 New Expense Split";
-            body = `A new expense has been split in "${
-              event.payload.household_name || "household"
-            }"`;
-            break;
-
-          case "split_settled":
-            title = "✅ Split Settled";
-            body = `An expense split has been marked as settled`;
-            break;
-
-          case "expense_added":
-            {
-              const batchCount = Number(event.payload?.batch_count ?? 0);
-              const recurringCount = Number(
-                event.payload?.recurring_count ?? 0,
-              );
-              const isRecurring = isRecurringEvent;
-              if (batchCount > 1) {
-                title = "💸 Expenses Added";
-                const recurringSuffix =
-                  recurringCount > 0
-                    ? recurringCount === batchCount
-                      ? " (all recurring)"
-                      : ` (${recurringCount} recurring)`
-                    : "";
-                body = `${batchCount} expenses were added in your household${recurringSuffix}`;
-              } else {
-                title = isRecurring
-                  ? "🔁 New Recurring Expense Added"
-                  : "💸 New Expense Added";
-                body = isRecurring
-                  ? `A new recurring expense was added in your household`
-                  : `A new expense was added in your household`;
-              }
-            }
-            break;
-
-          case "expense_edited":
-            if (isRecurringEvent) {
-              title = "🔁 Recurring Expense Updated";
-              body = `A recurring expense was modified in your household`;
-            } else {
-              title = "✏️ Expense Updated";
-              body = `An expense was modified in your household`;
-            }
-            break;
-
-          case "expense_deleted":
-            {
-              const batchCount = Number(event.payload?.batch_count ?? 0);
-              const recurringCount = Number(
-                event.payload?.recurring_count ?? 0,
-              );
-              const isRecurring = isRecurringEvent;
-              if (batchCount > 1) {
-                title = "🗑️ Expenses Deleted";
-                const recurringSuffix =
-                  recurringCount > 0
-                    ? recurringCount === batchCount
-                      ? " (all recurring)"
-                      : ` (${recurringCount} recurring)`
-                    : "";
-                body = `${batchCount} expenses were deleted in your household${recurringSuffix}`;
-              } else {
-                title = isRecurring
-                  ? "🔁 Recurring Expense Deleted"
-                  : "🗑️ Expense Deleted";
-                body = isRecurring
-                  ? `A recurring expense was deleted in your household`
-                  : `An expense was deleted in your household`;
-              }
-            }
-            break;
-
-          case "income_added": {
-            const batchCount = Number(event.payload?.batch_count ?? 0);
-            const recurringCount = Number(event.payload?.recurring_count ?? 0);
-            const isRecurring = isRecurringEvent;
-            if (batchCount > 1) {
-              title = "💰 Income Added";
-              const recurringSuffix =
-                recurringCount > 0
-                  ? recurringCount === batchCount
-                    ? " (all recurring)"
-                    : ` (${recurringCount} recurring)`
-                  : "";
-              body = `${batchCount} income entries were added in your household${recurringSuffix}`;
-            } else {
-              title = isRecurring
-                ? "🔁 Recurring Income Added"
-                : "💰 Income Added";
-              body = isRecurring
-                ? `A new recurring income entry was added in your household`
-                : `A new income entry was added in your household`;
-            }
-            break;
-          }
-
-          case "income_edited":
-            if (isRecurringEvent) {
-              title = "🔁 Recurring Income Updated";
-              body = `A recurring income entry was modified in your household`;
-            } else {
-              title = "✏️ Income Updated";
-              body = `An income entry was modified in your household`;
-            }
-            break;
-
-          case "income_acknowledged": {
-            const acknowledgerName = String(
-              payloadExpenseData.acknowledger_name || "Someone",
-            );
-            const symbol = getCurrencySymbol(
-              payloadExpenseData.currency as string | undefined,
-            );
-            const cents = Number(payloadExpenseData.amount_cents ?? 0);
-            const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-            title = acknowledgerName;
-            body = `acknowledged your ${amount} ${String(
-              payloadExpenseData.category || "income",
-            )} income`;
-            break;
-          }
-
-          case "recurring_reminder": {
-            const recurringReminder = buildRecurringReminderNotification(
-              event.payload ?? {},
-            );
-            title = recurringReminder.title;
-            body = recurringReminder.body;
-            messageData = recurringReminder.data;
-            break;
-          }
-
-          case "invite_reminder_inviter": {
-            const householdName = (event.payload?.household_name ||
-              "your household") as string;
-            const inviteeName = (event.payload?.invitee_name ||
-              event.payload?.invited_email ||
-              "your invitee") as string;
-
-            title = "⏰ Invitation Reminder";
-            body = `${inviteeName} has not joined "${householdName}" yet`;
-            break;
-          }
-
-          case "invite_reminder_invitee": {
-            const householdName = (event.payload?.household_name ||
-              "a household") as string;
-            const inviterName = (event.payload?.inviter_name ||
-              "Someone") as string;
-
-            title = "📨 Invitation Reminder";
-            body = `${inviterName} invited you to join "${householdName}"`;
-            break;
-          }
-
-          case "log_expense_reminder": {
-            const reminderMessage = buildLogExpenseReminderMessage(
-              event.payload ?? {},
-            );
-            title = reminderMessage.title;
-            body = reminderMessage.body;
-            messageData = reminderMessage.data;
-            break;
-          }
-
-          case "pockets_month_review": {
-            const cycleLabel = String(
-              event.payload?.financial_cycle_label || "this cycle",
-            );
-            title = `Review your ${cycleLabel} plan`;
-            body = "Review and update your pockets whenever you are ready.";
-            messageData = {
-              type: "openPocketsPage",
-              action: "openPocketsPage",
-              cycle_start: String(event.payload?.cycle_start || ""),
-              deep_link: "moneko://pockets",
-            };
-            break;
-          }
-
-          case "budget_warn":
-          case "budget_alert": {
-            const percentage = Number(event.payload?.percentage_used ?? 0);
-            title =
-              event.event_type === "budget_alert"
-                ? "Purr-suasive Nudge! 😸"
-                : "Budget Boop! 🐾";
-            body =
-              event.event_type === "budget_alert"
-                ? `Your ${String(
-                    event.payload?.currency || "",
-                  )} budget has reached ${percentage.toFixed(
-                    0,
-                  )}%. Time to pause and review!`
-                : `Your ${String(
-                    event.payload?.currency || "",
-                  )} budget has used ${percentage.toFixed(
-                    0,
-                  )}%. Keep an eye on spending!`;
-            break;
-          }
-
           case "invite_revoked":
             await supabase
               .from("notification_events")
@@ -922,7 +691,6 @@ serve(async (req) => {
               })
               .eq("id", event.id);
             continue;
-
           default:
             console.warn(`Unknown event type: ${event.event_type}`);
             await supabase
@@ -931,7 +699,8 @@ serve(async (req) => {
                 is_sent: true,
                 sent_at: new Date().toISOString(),
                 processing_started_at: null,
-                error_message: `Unsupported push event type: ${event.event_type}`,
+                error_message:
+                  `Unsupported push event type: ${event.event_type}`,
               })
               .eq("id", event.id);
             continue;
@@ -992,10 +761,14 @@ serve(async (req) => {
           );
         }
         const { data: preferences } = await preferencesQuery;
-        const { data: contacts } = await supabase
+        const { data: contacts, error: contactsError } = await supabase
           .from("user_contacts")
-          .select("user_id, preferred_timezone")
-          .in("user_id", userIds);
+          .select("user_id, preferred_timezone, preferred_language")
+          .in("user_id", userIds)
+          .order("id", { ascending: false });
+        if (contactsError) {
+          throw new Error("Failed to load notification language preferences");
+        }
 
         const isImmediateTransactionEvent =
           event.event_type === "expense_added" ||
@@ -1028,8 +801,8 @@ serve(async (req) => {
           if (!isImmediateTransactionEvent) {
             if (isLogExpenseReminder) {
               const quietStart = Number.isFinite(
-                Number(event.payload?.quiet_start),
-              )
+                  Number(event.payload?.quiet_start),
+                )
                 ? Number(event.payload.quiet_start)
                 : 22;
               const quietEnd = Number.isFinite(Number(event.payload?.quiet_end))
@@ -1130,27 +903,25 @@ serve(async (req) => {
         let eventSentCount = 0;
         let eventFailedCount = 0;
 
-        const payloadData =
-          event.payload &&
-          typeof event.payload === "object" &&
-          !Array.isArray(event.payload)
-            ? Object.fromEntries(
-                Object.entries(event.payload).map(([k, v]) => [
-                  k,
-                  v != null && typeof v === "object"
-                    ? JSON.stringify(v)
-                    : String(v),
-                ]),
-              )
-            : {};
+        const payloadData = event.payload &&
+            typeof event.payload === "object" &&
+            !Array.isArray(event.payload)
+          ? Object.fromEntries(
+            Object.entries(event.payload).map(([k, v]) => [
+              k,
+              v != null && typeof v === "object"
+                ? JSON.stringify(v)
+                : String(v),
+            ]),
+          )
+          : {};
         const normalizedPayloadData = normalizeNotificationPayloadData(
           payloadData,
           messageData,
         );
         const mergedData = {
           ...normalizedPayloadData,
-          deep_link:
-            payloadData.deep_link ||
+          deep_link: payloadData.deep_link ||
             messageData.deep_link ||
             buildDeepLink(event.event_type, {
               ...normalizedPayloadData,
@@ -1158,6 +929,12 @@ serve(async (req) => {
         };
 
         const pushPromises = devices.map(async (device) => {
+          const { title, body } = buildQueuedNotificationMessage(
+            event,
+            contacts?.find((contact) => contact.user_id === device.user_id)
+              ?.preferred_language,
+            messageNow,
+          );
           const success = await sendFCMv1Notification(
             device.push_token,
             title,
@@ -1194,10 +971,9 @@ serve(async (req) => {
             is_sent: eventSentCount > 0,
             sent_at: eventSentCount > 0 ? new Date().toISOString() : null,
             processing_started_at: null,
-            error_message:
-              eventFailedCount > 0
-                ? `Failed to send to ${eventFailedCount} devices`
-                : null,
+            error_message: eventFailedCount > 0
+              ? `Failed to send to ${eventFailedCount} devices`
+              : null,
             payload: {
               ...event.payload,
               sent_count: eventSentCount,
@@ -1226,8 +1002,9 @@ serve(async (req) => {
           },
         });
         failedCount++;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
         errors.push(`Event ${event.id}: ${errorMessage}`);
 
         // Update event with error
@@ -1278,3 +1055,267 @@ serve(async (req) => {
     );
   }
 });
+
+function buildQueuedNotificationMessage(
+  event: {
+    event_type: string;
+    payload: Record<string, unknown> & {
+      expense_data?: Record<string, unknown>;
+    };
+  },
+  language = "en",
+  now = new Date(),
+) {
+  const { t } = createNotificationTranslator(language);
+  let title = "";
+  let body = "";
+  let messageData: Record<string, string> = {};
+  const payloadExpenseData = event.payload?.expense_data &&
+      typeof event.payload.expense_data === "object" &&
+      !Array.isArray(event.payload.expense_data)
+    ? event.payload.expense_data
+    : {};
+  const isRecurringEvent = event.payload?.is_recurring === true ||
+    payloadExpenseData.is_recurring === true;
+  switch (event.event_type) {
+    case "invite_accepted":
+    case "member_joined": {
+      const memberName = (event.payload?.member_name ||
+        t("Someone")) as string;
+      title = t("🎉 New Member!");
+      body = t`${memberName} just joined your household "${
+        event.payload.household_name || t("household")
+      }"`;
+      // Target all household members except the joiner
+      break;
+    }
+    case "member_left":
+    case "member_removed": {
+      const memberName = (event.payload?.member_name ||
+        t("A member")) as string;
+      title = t("👋 Member Left");
+      body = t`${memberName} has left "${
+        event.payload.household_name || t("household")
+      }"`;
+      break;
+    }
+    case "member_reminded": {
+      const senderName = (event.payload?.sender_name ||
+        t("A member")) as string;
+      const householdName = (event.payload?.household_name ||
+        t("your household")) as string;
+      const customMessage = (event.payload?.message || "") as string;
+
+      title = t("🔔 Household Reminder");
+      body = customMessage.trim().length > 0
+        ? t`${senderName} reminded you in "${householdName}": ${customMessage.trim()}`
+        : t`${senderName} reminded you about "${householdName}"`;
+      break;
+    }
+    case "split_created":
+      title = t("💰 New Expense Split");
+      body = t`A new expense has been split in "${
+        event.payload.household_name || t("household")
+      }"`;
+      break;
+    case "split_settled":
+      title = t("✅ Split Settled");
+      body = t`An expense split has been marked as settled`;
+      break;
+    case "expense_added":
+      {
+        const batchCount = Number(event.payload?.batch_count ?? 0);
+        const recurringCount = Number(
+          event.payload?.recurring_count ?? 0,
+        );
+        const isRecurring = isRecurringEvent;
+        if (batchCount > 1) {
+          title = t("💸 Expenses Added");
+          const recurringSuffix = recurringCount > 0
+            ? recurringCount === batchCount
+              ? t(" (all recurring)")
+              : t` (${recurringCount} recurring)`
+            : "";
+          body =
+            t`${batchCount} expenses were added in your household${recurringSuffix}`;
+        } else {
+          title = isRecurring
+            ? t("🔁 New Recurring Expense Added")
+            : t("💸 New Expense Added");
+          body = isRecurring
+            ? t`A new recurring expense was added in your household`
+            : t`A new expense was added in your household`;
+        }
+      }
+      break;
+    case "expense_edited":
+      if (isRecurringEvent) {
+        title = t("🔁 Recurring Expense Updated");
+        body = t`A recurring expense was modified in your household`;
+      } else {
+        title = t("✏️ Expense Updated");
+        body = t`An expense was modified in your household`;
+      }
+      break;
+    case "expense_deleted":
+      {
+        const batchCount = Number(event.payload?.batch_count ?? 0);
+        const recurringCount = Number(
+          event.payload?.recurring_count ?? 0,
+        );
+        const isRecurring = isRecurringEvent;
+        if (batchCount > 1) {
+          title = t("🗑️ Expenses Deleted");
+          const recurringSuffix = recurringCount > 0
+            ? recurringCount === batchCount
+              ? t(" (all recurring)")
+              : t` (${recurringCount} recurring)`
+            : "";
+          body =
+            t`${batchCount} expenses were deleted in your household${recurringSuffix}`;
+        } else {
+          title = isRecurring
+            ? t("🔁 Recurring Expense Deleted")
+            : t("🗑️ Expense Deleted");
+          body = isRecurring
+            ? t`A recurring expense was deleted in your household`
+            : t`An expense was deleted in your household`;
+        }
+      }
+      break;
+    case "income_added": {
+      const batchCount = Number(event.payload?.batch_count ?? 0);
+      const recurringCount = Number(event.payload?.recurring_count ?? 0);
+      const isRecurring = isRecurringEvent;
+      if (batchCount > 1) {
+        title = t("💰 Income Added");
+        const recurringSuffix = recurringCount > 0
+          ? recurringCount === batchCount
+            ? t(" (all recurring)")
+            : t` (${recurringCount} recurring)`
+          : "";
+        body =
+          t`${batchCount} income entries were added in your household${recurringSuffix}`;
+      } else {
+        title = isRecurring
+          ? t("🔁 Recurring Income Added")
+          : t("💰 Income Added");
+        body = isRecurring
+          ? t`A new recurring income entry was added in your household`
+          : t`A new income entry was added in your household`;
+      }
+      break;
+    }
+    case "income_edited":
+      if (isRecurringEvent) {
+        title = t("🔁 Recurring Income Updated");
+        body = t`A recurring income entry was modified in your household`;
+      } else {
+        title = t("✏️ Income Updated");
+        body = t`An income entry was modified in your household`;
+      }
+      break;
+    case "income_acknowledged": {
+      const acknowledgerName = String(
+        payloadExpenseData.acknowledger_name || t("Someone"),
+      );
+      const symbol = getCurrencySymbol(
+        payloadExpenseData.currency as string | undefined,
+      );
+      const cents = Number(payloadExpenseData.amount_cents ?? 0);
+      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+      title = acknowledgerName;
+      body = t`acknowledged your ${amount} ${
+        String(
+          payloadExpenseData.category || t("income"),
+        )
+      } income`;
+      break;
+    }
+    case "recurring_reminder": {
+      const recurringReminder = buildRecurringReminderNotification(
+        event.payload ?? {},
+        now,
+        language,
+      );
+      title = recurringReminder.title;
+      body = recurringReminder.body;
+      messageData = recurringReminder.data;
+      break;
+    }
+    case "invite_reminder_inviter": {
+      const householdName = (event.payload?.household_name ||
+        t("your household")) as string;
+      const inviteeName = (event.payload?.invitee_name ||
+        event.payload?.invited_email ||
+        t("your invitee")) as string;
+
+      title = t("⏰ Invitation Reminder");
+      body = t`${inviteeName} has not joined "${householdName}" yet`;
+      break;
+    }
+    case "invite_reminder_invitee": {
+      const householdName = (event.payload?.household_name ||
+        t("a household")) as string;
+      const inviterName = (event.payload?.inviter_name ||
+        t("Someone")) as string;
+
+      title = t("📨 Invitation Reminder");
+      body = t`${inviterName} invited you to join "${householdName}"`;
+      break;
+    }
+    case "log_expense_reminder": {
+      const reminderMessage = buildLogExpenseReminderMessage(
+        event.payload ?? {},
+        language,
+        now,
+      );
+      title = reminderMessage.title;
+      body = reminderMessage.body;
+      messageData = reminderMessage.data;
+      break;
+    }
+    case "pockets_month_review": {
+      const cycleLabel = String(
+        event.payload?.financial_cycle_label || t("this cycle"),
+      );
+      title = t`Review your ${cycleLabel} plan`;
+      body = t("Review and update your pockets whenever you are ready.");
+      messageData = {
+        type: "openPocketsPage",
+        action: "openPocketsPage",
+        cycle_start: String(event.payload?.cycle_start || ""),
+        deep_link: "moneko://pockets",
+      };
+      break;
+    }
+    case "budget_warn":
+    case "budget_alert": {
+      const percentage = Number(event.payload?.percentage_used ?? 0);
+      title = event.event_type === "budget_alert"
+        ? t("Purr-suasive Nudge! 😸")
+        : t("Budget Boop! 🐾");
+      body = event.event_type === "budget_alert"
+        ? t`Your ${
+          String(
+            event.payload?.currency || "",
+          )
+        } budget has reached ${
+          percentage.toFixed(
+            0,
+          )
+        }%. Time to pause and review!`
+        : t`Your ${
+          String(
+            event.payload?.currency || "",
+          )
+        } budget has used ${
+          percentage.toFixed(
+            0,
+          )
+        }%. Keep an eye on spending!`;
+      break;
+    }
+  }
+  return { title, body, data: messageData };
+}
