@@ -44,11 +44,17 @@ function extractStatusCode(error: unknown): number | null {
   ];
 
   for (const value of candidates) {
-    if (typeof value === "number" && Number.isFinite(value)) {
+    if (
+      typeof value === "number" &&
+      Number.isFinite(value) &&
+      value >= 100 &&
+      value <= 599
+    ) {
       return Math.trunc(value);
     }
     if (typeof value === "string" && /^\d{3}$/.test(value.trim())) {
-      return Number(value.trim());
+      const status = Number(value.trim());
+      if (status >= 100 && status <= 599) return status;
     }
   }
 

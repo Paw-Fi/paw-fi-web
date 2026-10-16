@@ -147,6 +147,45 @@ Deno.test(
 );
 
 Deno.test(
+  "translated model statuses and invalid optional insight types preserve valid pocket allocations",
+  () => {
+    const context = firstPlanContext();
+    const omitted: string[] = [];
+    const result = endpoint.normalize(
+      {
+        headline: "本月计划",
+        summary: "根据已记录的开支分配预算",
+        income_coverage_status: "充裕",
+        month_funding_status: "已覆盖",
+        insights: [
+          {
+            type: "预算建议",
+            title: "开支记录",
+            summary: "根据实际开支制定计划",
+          },
+        ],
+        suggested_total_budget_cents: 35000,
+        suggestions: rows().map((row) => ({
+          ...row,
+          reason: "根据已有记录分配",
+        })),
+      },
+      context,
+      "zh",
+      undefined,
+      (paths) => omitted.push(...paths),
+    );
+    assert(result !== null);
+    assert(
+      result.financial_status === context.cash_flow.income_coverage_status,
+    );
+    assert(result.suggested_total_budget_cents === 40000);
+    assert(result.insights.length === 0);
+    assert(JSON.stringify(omitted) === '["insights.0.type"]');
+  },
+);
+
+Deno.test(
   "proposal rejection logs identify constraints without exposing financial data",
   () => {
     const failures: string[] = [];

@@ -90,7 +90,7 @@ Deno.test(
       "The prompt must document the privacy boundary",
     );
     assert(
-      functionSource.includes("aiPocketMonthReviewSchema.safeParse(value)"),
+      functionSource.includes("aiPocketMonthReviewSchema.safeParse(prepared)"),
       "AI response content must pass Zod validation before it reaches the app",
     );
     assert(
@@ -178,9 +178,9 @@ Deno.test(
       "The response must support dynamic, actionable insight cards",
     );
     assert(
-      functionSource.includes("raw.income_coverage_status !==") &&
-        functionSource.includes("raw.month_funding_status !=="),
-      "The model must not reinterpret deterministic cash-flow statuses",
+      functionSource.includes("preparePocketReviewResponse(") &&
+        functionSource.includes("context.cash_flow,"),
+      "The backend must own deterministic cash-flow statuses rather than trusting model strings",
     );
     assert(
       functionSource.includes("GEMINI_MODEL_FALLBACKS[1]") &&
