@@ -7,6 +7,7 @@ import * as lifecycle from "../shared/plaid-lifecycle.ts";
 import * as updateMode from "../shared/plaid-update-mode.ts";
 import * as country from "../shared/plaid-country.ts";
 import { isPlaidConnectionTerminalForWebhook } from "../shared/plaid-webhook-security.ts";
+import * as emailLocalization from "../shared/automated-email-localization.ts";
 
 const user = "00000000-0000-4000-8000-000000000001";
 const connectionId = "00000000-0000-4000-8000-000000000002";
@@ -15,6 +16,7 @@ const household = "00000000-0000-4000-8000-000000000003";
 async function handler(endpoint, client, overrides = {}) {
   let serve;
   const exportsByFile = {
+    "automated-email-localization.ts": emailLocalization,
     "cors.ts": { corsHeaders: {}, getCorsHeaders: () => ({}) },
     "auth.ts": { authenticateUser: async () => ({ success: true, userId: user }) },
     "edge-error-alert.ts": { reportEdgeFunctionError: async () => {} },

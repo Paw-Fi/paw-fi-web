@@ -1,16 +1,17 @@
+import { createEmailTranslator } from "../shared/automated-email-localization.ts";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { corsHeaders, withCors } from "../shared/cors.ts";
 import {
+  EmailOptions,
   sendEmail,
   sendUserEmail,
-  EmailOptions,
 } from "../shared/email-service.ts";
 import { LINKS } from "../shared/email-security.ts";
 import {
-  welcomeTemplate,
-  notificationTemplate,
   mobileBetaWelcomeTemplate,
+  notificationTemplate,
+  welcomeTemplate,
 } from "../shared/email-templates.ts";
 import { resolveUserDisplayName } from "../shared/user-display-name.ts";
 
@@ -149,7 +150,9 @@ serve(withCors(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: `Server error: ${error instanceof Error ? error.message : String(error)}`,
+        error: `Server error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       }),
       {
         status: 500,
@@ -234,8 +237,7 @@ async function handleWebhookEmail(
         webhook.old_record
       ) {
         // Detect first login after verification (when last_login changes from null to a timestamp)
-        const wasFirstLogin =
-          webhook.old_record.last_login === null &&
+        const wasFirstLogin = webhook.old_record.last_login === null &&
           webhook.record.last_login !== null;
 
         if (wasFirstLogin) {
@@ -244,8 +246,8 @@ async function handleWebhookEmail(
           );
 
           // Verify user is actually confirmed by checking auth.users
-          const { data: authUser, error: authError } =
-            await supabase.auth.admin.getUserById(webhook.record.id);
+          const { data: authUser, error: authError } = await supabase.auth.admin
+            .getUserById(webhook.record.id);
 
           if (authError) {
             console.error("Error fetching auth user:", authError);
@@ -328,24 +330,34 @@ async function handleWebhookEmail(
           userData.email,
           "",
         );
+        const localizeCopy = (language: string) => {
+          const { t } = createEmailTranslator(language);
+          return {
+            title: status === "trialing"
+              ? t("Your Moneko Plus Trial Is Active")
+              : isLifetime
+              ? t("Welcome to Moneko Plus Lifetime")
+              : t("Welcome to Moneko Plus"),
+            message: status === "trialing"
+              ? t`Your trial is now active. Explore ${t(PLUS_FEATURE_SUMMARY)}.`
+              : isLifetime
+              ? t`Your Moneko Plus Lifetime access is now active. Get started with ${
+                t(PLUS_FEATURE_SUMMARY)
+              }.`
+              : t`Your Plus access is now active. Get started with ${
+                t(PLUS_FEATURE_SUMMARY)
+              }.`,
+            actionUrl: "moneko://home",
+            actionText: status === "trialing"
+              ? t("Explore Moneko Plus")
+              : t("Open Moneko"),
+            priority: "high" as const,
+          };
+        };
         const template = notificationTemplate({
           name: fullName,
-          title:
-            status === "trialing"
-              ? "Your Moneko Plus Trial Is Active"
-              : isLifetime
-                ? "Welcome to Moneko Plus Lifetime"
-                : "Welcome to Moneko Plus",
-          message:
-            status === "trialing"
-              ? `Your trial is now active. Explore ${PLUS_FEATURE_SUMMARY}.`
-              : isLifetime
-                ? `Your Moneko Plus Lifetime access is now active. Get started with ${PLUS_FEATURE_SUMMARY}.`
-                : `Your Plus access is now active. Get started with ${PLUS_FEATURE_SUMMARY}.`,
-          actionUrl: "moneko://home",
-          actionText:
-            status === "trialing" ? "Explore Moneko Plus" : "Open Moneko",
-          priority: "high",
+          ...localizeCopy("en"),
+          localizedCopy: localizeCopy,
         });
 
         return await sendUserEmail(userData.email, fullName, template);
@@ -369,120 +381,11 @@ async function handleWebhookEmail(
 
         console.log(`Sending subscription update email to: ${userData.email}`);
 
-        // Determine what changed and create appropriate message
-        let title = "Your Moneko Subscription Is Up to Date";
-        let message =
-          "Your Moneko account is up to date and your current access is unchanged.";
-        let actionUrl = "moneko://home";
-        let actionText = "Open Moneko";
-        let priority: "low" | "medium" | "high" = "medium";
-
-        if (webhook.record.status !== webhook.old_record.status) {
-          const status = String(webhook.record.status || "").toLowerCase();
-          const previousStatus = String(
-            webhook.old_record.status || "",
-          ).toLowerCase();
-          const plan = String(webhook.record.plan || "").toLowerCase();
-          const periodEnd = formatSubscriptionDate(
-            webhook.record.current_period_end,
-          );
-
-          if (status === "active") {
-            if (plan === "lifetime") {
-              title = "Your Moneko Plus Lifetime Access Is Active";
-              message = `Your lifetime access is ready. You can start using ${PLUS_FEATURE_SUMMARY}.`;
-            } else {
-              title = "Your Moneko Plus Subscription Is Active";
-              message =
-                previousStatus === "trialing"
-                  ? `Your trial has ended, and your Moneko Plus subscription is now active. You can continue using ${PLUS_FEATURE_SUMMARY}.`
-                  : `Your Plus access is ready. You can start using ${PLUS_FEATURE_SUMMARY}.`;
-            }
-            priority = "high";
-          } else if (status === "trialing") {
-            title = "Your Moneko Plus Trial Is Active";
-            message = `Your trial is now active. Explore ${PLUS_FEATURE_SUMMARY}.`;
-            priority = "high";
-          } else if (status === "past_due") {
-            title = "We Couldn’t Process Your Moneko Payment";
-            message =
-              "Please update your payment details to keep your Moneko Plus access active.";
-            actionUrl = LINKS.membership;
-            actionText = "Update Payment Details";
-            priority = "high";
-          } else if (status === "canceled" || status === "expired") {
-            const hasRemainingAccess = isFutureSubscriptionDate(
-              webhook.record.current_period_end,
-            );
-            title = hasRemainingAccess
-              ? "Your Moneko Plus Cancellation Is Confirmed"
-              : "Your Moneko Plus Access Has Ended";
-            message =
-              hasRemainingAccess && periodEnd
-                ? `You’ll continue to have access to all Moneko Plus features until ${periodEnd}.`
-                : "Your Moneko Plus access has ended, but you can continue using Moneko Free. You can reactivate Moneko Plus whenever you’re ready.";
-            actionUrl = hasRemainingAccess
-              ? "moneko://home"
-              : "https://moneko.io/pricing";
-            actionText = hasRemainingAccess ? "Open Moneko" : "View Plans";
-            priority = "medium";
-          } else {
-            return { success: true, id: "subscription-status-unrecognized" };
-          }
-        } else if (webhook.record.plan !== webhook.old_record.plan) {
-          const plan = toUserPlanLabel(webhook.record.plan);
-          const normalizedPlan = String(
-            webhook.record.plan || "",
-          ).toLowerCase();
-          const hadPlusAccess = isPlusPlan(webhook.old_record.plan);
-          const hasPlusAccess = isPlusPlan(webhook.record.plan);
-
-          if (normalizedPlan === "lifetime" && hadPlusAccess) {
-            title = "Your Moneko Plus Lifetime Access Is Ready";
-            message = `Your upgrade is complete, and your Moneko Plus Lifetime access is now active. You can continue using ${PLUS_FEATURE_SUMMARY}.`;
-            priority = "high";
-          } else if (normalizedPlan === "lifetime") {
-            title = "Welcome to Moneko Plus Lifetime";
-            message = `Your Moneko Plus Lifetime access is now active. Get started with ${PLUS_FEATURE_SUMMARY}.`;
-            priority = "high";
-          } else if (!hadPlusAccess && hasPlusAccess) {
-            title = "Welcome to Moneko Plus";
-            message = `Your upgrade is complete. You now have access to ${PLUS_FEATURE_SUMMARY}.`;
-            actionText = "Explore Moneko Plus";
-            priority = "high";
-          } else if (hadPlusAccess && !hasPlusAccess) {
-            title = "Your Moneko Plan Has Been Updated";
-            message =
-              "Your Moneko Plus access has ended, but you can continue tracking and managing your finances with Moneko Free.";
-            actionUrl = "https://moneko.io/pricing";
-            actionText = "View Plans";
-            priority = "medium";
-          } else {
-            title = "Your Moneko Plan Has Changed";
-            message =
-              plan === "Moneko Free"
-                ? "Your plan is now Moneko Free. You can continue using all features included with the free plan."
-                : `Your plan is now ${plan}, and your updated access is ready to use.`;
-          }
-        } else if (
-          webhook.record.current_period_end !==
-          webhook.old_record.current_period_end
-        ) {
-          if (String(webhook.record.plan || "").toLowerCase() === "lifetime") {
-            return { success: true, id: "lifetime-renewal-no-email" };
-          }
-
-          title = "Your Moneko Plus Subscription Has Renewed";
-          const periodEnd = formatSubscriptionDate(
-            webhook.record.current_period_end,
-          );
-          message = periodEnd
-            ? `Your subscription renewed successfully. Your Moneko Plus access is active through ${periodEnd}.`
-            : "Your subscription renewed successfully, and your Moneko Plus access remains active.";
-          priority = "medium";
-        } else {
-          return { success: true, id: "subscription-update-no-email" };
-        }
+        const copy = buildSubscriptionUpdateEmailCopy(
+          webhook.record,
+          webhook.old_record,
+        );
+        if ("success" in copy) return copy;
 
         // Send notification for subscription update
         const fullName = resolveUserDisplayName(
@@ -492,11 +395,15 @@ async function handleWebhookEmail(
         );
         const template = notificationTemplate({
           name: fullName,
-          title,
-          message,
-          actionUrl,
-          actionText,
-          priority,
+          ...copy,
+          localizedCopy: (language) => {
+            const translated = buildSubscriptionUpdateEmailCopy(
+              webhook.record,
+              webhook.old_record,
+              language,
+            );
+            return "success" in translated ? copy : translated;
+          },
         });
 
         return await sendUserEmail(userData.email, fullName, template);
@@ -531,11 +438,14 @@ function toUserPlanLabel(plan: unknown): string {
   return "Moneko Free";
 }
 
-function formatSubscriptionDate(value: unknown): string | null {
+function formatSubscriptionDate(
+  value: unknown,
+  language = "en-US",
+): string | null {
   if (!value) return null;
   const date = new Date(String(value));
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(language, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -546,4 +456,160 @@ function isFutureSubscriptionDate(value: unknown): boolean {
   if (!value) return false;
   const date = new Date(String(value));
   return !Number.isNaN(date.getTime()) && date.getTime() > Date.now();
+}
+
+interface SubscriptionNotificationCopy {
+  title: string;
+  message: string;
+  actionUrl: string;
+  actionText: string;
+  priority: "low" | "medium" | "high";
+}
+
+function buildSubscriptionUpdateEmailCopy(
+  record: Record<string, unknown>,
+  previous: Record<string, unknown>,
+  language = "en",
+): SubscriptionNotificationCopy | { success: true; id: string } {
+  const { t } = createEmailTranslator(language);
+  // Determine what changed and create appropriate message
+  let title = t("Your Moneko Subscription Is Up to Date");
+  let message = t(
+    "Your Moneko account is up to date and your current access is unchanged.",
+  );
+  let actionUrl = "moneko://home";
+  let actionText = t("Open Moneko");
+  let priority: "low" | "medium" | "high" = "medium";
+
+  if (record.status !== previous.status) {
+    const status = String(record.status || "").toLowerCase();
+    const previousStatus = String(
+      previous.status || "",
+    ).toLowerCase();
+    const plan = String(record.plan || "").toLowerCase();
+    const periodEnd = formatSubscriptionDate(
+      record.current_period_end,
+      language,
+    );
+
+    if (status === "active") {
+      if (plan === "lifetime") {
+        title = t("Your Moneko Plus Lifetime Access Is Active");
+        message = t`Your lifetime access is ready. You can start using ${
+          t(PLUS_FEATURE_SUMMARY)
+        }.`;
+      } else {
+        title = t("Your Moneko Plus Subscription Is Active");
+        message = previousStatus === "trialing"
+          ? t`Your trial has ended, and your Moneko Plus subscription is now active. You can continue using ${
+            t(PLUS_FEATURE_SUMMARY)
+          }.`
+          : t`Your Plus access is ready. You can start using ${
+            t(PLUS_FEATURE_SUMMARY)
+          }.`;
+      }
+      priority = "high";
+    } else if (status === "trialing") {
+      title = t("Your Moneko Plus Trial Is Active");
+      message = t`Your trial is now active. Explore ${
+        t(PLUS_FEATURE_SUMMARY)
+      }.`;
+      priority = "high";
+    } else if (status === "past_due") {
+      title = t("We Couldn’t Process Your Moneko Payment");
+      message = t(
+        "Please update your payment details to keep your Moneko Plus access active.",
+      );
+      actionUrl = LINKS.membership;
+      actionText = t("Update Payment Details");
+      priority = "high";
+    } else if (status === "canceled" || status === "expired") {
+      const hasRemainingAccess = isFutureSubscriptionDate(
+        record.current_period_end,
+      );
+      title = hasRemainingAccess
+        ? t("Your Moneko Plus Cancellation Is Confirmed")
+        : t("Your Moneko Plus Access Has Ended");
+      message = hasRemainingAccess && periodEnd
+        ? t`You’ll continue to have access to all Moneko Plus features until ${periodEnd}.`
+        : t(
+          "Your Moneko Plus access has ended, but you can continue using Moneko Free. You can reactivate Moneko Plus whenever you’re ready.",
+        );
+      actionUrl = hasRemainingAccess
+        ? "moneko://home"
+        : "https://moneko.io/pricing";
+      actionText = hasRemainingAccess ? t("Open Moneko") : t("View Plans");
+      priority = "medium";
+    } else {
+      return { success: true, id: "subscription-status-unrecognized" };
+    }
+  } else if (record.plan !== previous.plan) {
+    const plan = toUserPlanLabel(record.plan);
+    const normalizedPlan = String(
+      record.plan || "",
+    ).toLowerCase();
+    const hadPlusAccess = isPlusPlan(previous.plan);
+    const hasPlusAccess = isPlusPlan(record.plan);
+
+    if (normalizedPlan === "lifetime" && hadPlusAccess) {
+      title = t("Your Moneko Plus Lifetime Access Is Ready");
+      message =
+        t`Your upgrade is complete, and your Moneko Plus Lifetime access is now active. You can continue using ${
+          t(PLUS_FEATURE_SUMMARY)
+        }.`;
+      priority = "high";
+    } else if (normalizedPlan === "lifetime") {
+      title = t("Welcome to Moneko Plus Lifetime");
+      message =
+        t`Your Moneko Plus Lifetime access is now active. Get started with ${
+          t(PLUS_FEATURE_SUMMARY)
+        }.`;
+      priority = "high";
+    } else if (!hadPlusAccess && hasPlusAccess) {
+      title = t("Welcome to Moneko Plus");
+      message = t`Your upgrade is complete. You now have access to ${
+        t(PLUS_FEATURE_SUMMARY)
+      }.`;
+      actionText = t("Explore Moneko Plus");
+      priority = "high";
+    } else if (hadPlusAccess && !hasPlusAccess) {
+      title = t("Your Moneko Plan Has Been Updated");
+      message = t(
+        "Your Moneko Plus access has ended, but you can continue tracking and managing your finances with Moneko Free.",
+      );
+      actionUrl = "https://moneko.io/pricing";
+      actionText = t("View Plans");
+      priority = "medium";
+    } else {
+      title = t("Your Moneko Plan Has Changed");
+      message = plan === "Moneko Free"
+        ? t(
+          "Your plan is now Moneko Free. You can continue using all features included with the free plan.",
+        )
+        : t`Your plan is now ${plan}, and your updated access is ready to use.`;
+    }
+  } else if (
+    record.current_period_end !==
+      previous.current_period_end
+  ) {
+    if (String(record.plan || "").toLowerCase() === "lifetime") {
+      return { success: true, id: "lifetime-renewal-no-email" };
+    }
+
+    title = t("Your Moneko Plus Subscription Has Renewed");
+    const periodEnd = formatSubscriptionDate(
+      record.current_period_end,
+      language,
+    );
+    message = periodEnd
+      ? t`Your subscription renewed successfully. Your Moneko Plus access is active through ${periodEnd}.`
+      : t(
+        "Your subscription renewed successfully, and your Moneko Plus access remains active.",
+      );
+    priority = "medium";
+  } else {
+    return { success: true, id: "subscription-update-no-email" };
+  }
+
+  return { title, message, actionUrl, actionText, priority };
 }

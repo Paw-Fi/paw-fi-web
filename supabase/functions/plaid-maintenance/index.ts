@@ -1,3 +1,4 @@
+import { createEmailTranslator } from "../shared/automated-email-localization.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
@@ -207,8 +208,8 @@ function hasWarningAtOrAfter(params: {
   return warningDate.getTime() >= anchorDate.getTime();
 }
 
-function formatReminderDate(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
+function formatReminderDate(date: Date, language = "en-US"): string {
+  return new Intl.DateTimeFormat(language, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -219,16 +220,24 @@ function buildPlaidRemovalReminderEmail(params: {
   name: string;
   removalDate: Date;
 }): { subject: string; html: string; text: string } {
-  const removalDate = formatReminderDate(params.removalDate);
   const membershipUrl = `${APP_URL}/dashboard/user-settings/membership`;
 
+  const localizedCopy = (language: string) => {
+    const { t } = createEmailTranslator(language);
+    const removalDate = formatReminderDate(params.removalDate, language);
+    return {
+      title: t("Reminder: keep your bank connection active"),
+      message:
+        t`Your Moneko subscription is no longer active, so your linked bank connection is scheduled to be disconnected on ${removalDate}. This helps prevent additional Plaid charges for inactive accounts. If you want to keep automatic bank syncing, renew your membership before that date.`,
+      actionUrl: membershipUrl,
+      actionText: t("Manage Membership"),
+      priority: "high" as const,
+    };
+  };
   return notificationTemplate({
     name: params.name || "there",
-    title: "Reminder: keep your bank connection active",
-    message: `Your Moneko subscription is no longer active, so your linked bank connection is scheduled to be disconnected on ${removalDate}. This helps prevent additional Plaid charges for inactive accounts. If you want to keep automatic bank syncing, renew your membership before that date.`,
-    actionUrl: membershipUrl,
-    actionText: "Manage Membership",
-    priority: "high",
+    ...localizedCopy("en-US"),
+    localizedCopy,
   });
 }
 

@@ -1,3 +1,8 @@
+import {
+  type LocalizedEmailContent,
+  withEmailLocalization,
+} from "../shared/automated-email-localization.ts";
+import { createEmailTranslator } from "../shared/automated-email-localization.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
@@ -734,6 +739,7 @@ async function sendSubscriptionBindingEmails(params: {
         subject: inviterTemplate.subject,
         html: inviterTemplate.html,
         text: inviterTemplate.text,
+        localize: inviterTemplate.localize,
       });
       if (!inviterSend.success) {
         console.error(
@@ -755,6 +761,7 @@ async function sendSubscriptionBindingEmails(params: {
         subject: inviteeTemplate.subject,
         html: inviteeTemplate.html,
         text: inviteeTemplate.text,
+        localize: inviteeTemplate.localize,
       });
       if (!inviteeSend.success) {
         console.error(
@@ -781,51 +788,62 @@ function buildInviterSubscriptionBindingEmail(data: {
   grantOwnerName: string;
   isInviterGrantOwner: boolean;
   isOwnerTrialing: boolean;
-}) {
+}, language = "en"): LocalizedEmailContent {
+  const { t, h } = createEmailTranslator(language);
+
   const ownershipText = data.isInviterGrantOwner
-    ? "your subscription"
-    : `${escapeHtml(data.grantOwnerName)}'s subscription`;
-  const remainingText =
-    data.remainingGrantCount === 1
-      ? "1 more person"
-      : `${data.remainingGrantCount} more people`;
-  const content = `
-    <h1 class="title">${escapeHtml(data.inviteeName)} joined ${escapeHtml(
+    ? t("your subscription")
+    : t`${escapeHtml(data.grantOwnerName)}'s subscription`;
+  const remainingText = data.remainingGrantCount === 1
+    ? t("1 more person")
+    : t`${data.remainingGrantCount} more people`;
+  const content = h`
+    <h1 class="title">${escapeHtml(data.inviteeName)} joined ${
+    escapeHtml(
       data.householdName,
-    )}</h1>
-    <p class="subtitle">${escapeHtml(data.inviteeName)} now has ${escapeHtml(
+    )
+  }</h1>
+    <p class="subtitle">${escapeHtml(data.inviteeName)} now has ${
+    escapeHtml(
       data.planName,
-    )} access through ${ownershipText}.</p>
+    )
+  } access through ${ownershipText}.</p>
     <p>Your household is using <strong>${data.grantedUserCount}/${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT}</strong> shared subscription seats.</p>
-    <p>You can still share subscription access with <strong>${escapeHtml(
+    <p>You can still share subscription access with <strong>${
+    escapeHtml(
       remainingText,
-    )}</strong> on the current plan.</p>
+    )
+  }</strong> on the current plan.</p>
     ${
-      data.isOwnerTrialing
-        ? `
-      <p>${escapeHtml(data.inviteeName)}'s subscription is linked to yours. When you upgrade to Moneko Plus, they'll automatically share your upgraded plan.</p>
+    data.isOwnerTrialing
+      ? h`
+      <p>${
+        escapeHtml(data.inviteeName)
+      }'s subscription is linked to yours. When you upgrade to Moneko Plus, they'll automatically share your upgraded plan.</p>
     `
-        : ""
-    }
+      : ""
+  }
     <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 28px 0;" />
     <p><strong>FAQ: What if I invite more than ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users?</strong></p>
     <p>You can invite unlimited people to your household, but only ${HOUSEHOLD_SUBSCRIPTION_GRANT_LIMIT} users can share subscription access with your current plan. Additional members can still join the household; they just keep their own subscription status.</p>
     <p>The Moneko Team</p>
   `;
 
-  return {
+  return withEmailLocalization({
     html: baseTemplate(
       content,
       renderFooter({
-        customReason:
+        customReason: t(
           "You're receiving this email because a household member joined and received shared subscription access.",
-      }),
+        ),
+      }, language),
+      language,
     ),
     text: htmlToText(content),
     subject: sanitizeSubject(
-      `${data.inviteeName} joined ${data.householdName} on Moneko`,
+      t`${data.inviteeName} joined ${data.householdName} on Moneko`,
     ),
-  };
+  }, (locale) => buildInviterSubscriptionBindingEmail(data, locale));
 }
 
 function buildInviteeSubscriptionBindingEmail(data: {
@@ -833,33 +851,43 @@ function buildInviteeSubscriptionBindingEmail(data: {
   householdName: string;
   planName: string;
   grantOwnerName: string;
-}) {
-  const content = `
+}, language = "en"): LocalizedEmailContent {
+  const { t, h } = createEmailTranslator(language);
+
+  const content = h`
     <h1 class="title">Your ${escapeHtml(data.planName)} access is ready</h1>
-    <p class="subtitle">Hi ${escapeHtml(
+    <p class="subtitle">Hi ${
+    escapeHtml(
       data.inviteeName,
-    )}, your subscription access is now bound to ${escapeHtml(
+    )
+  }, your subscription access is now bound to ${
+    escapeHtml(
       data.grantOwnerName,
-    )}'s ${escapeHtml(data.planName)} plan through ${escapeHtml(
+    )
+  }'s ${escapeHtml(data.planName)} plan through ${
+    escapeHtml(
       data.householdName,
-    )}.</p>
+    )
+  }.</p>
     <p>Enjoy your Plus benefits in the Moneko app, including WhatsApp and Telegram integrations, email receipt capture, Apple Pay and Android notification capture, and bank sync for US and Canada banks.</p>
-    ${mobileDownloadCtasHtml()}
+    ${mobileDownloadCtasHtml(language)}
     <p>If you have any questions, just reply to this email and our support team will help.</p>
     <p>The Moneko Team</p>
   `;
 
-  return {
+  return withEmailLocalization({
     html: baseTemplate(
       content,
       renderFooter({
-        customReason:
+        customReason: t(
           "You're receiving this email because you joined a household with shared subscription access.",
-      }),
+        ),
+      }, language),
+      language,
     ),
     text: htmlToText(content),
-    subject: sanitizeSubject(`Your ${data.planName} access is ready`),
-  };
+    subject: sanitizeSubject(t`Your ${data.planName} access is ready`),
+  }, (locale) => buildInviteeSubscriptionBindingEmail(data, locale));
 }
 
 function formatPlanName(plan: string): string {

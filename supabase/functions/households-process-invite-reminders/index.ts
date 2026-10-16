@@ -314,7 +314,7 @@ async function createReminderNotifications(
     // Invitee reminder
     const inviteeEmail = invite.invited_email;
     const inviteeName = invite.invitee_name || undefined;
-    const { html, text, subject } = inviteReminderInviteeTemplate({
+    const { html, text, subject, localize } = inviteReminderInviteeTemplate({
       inviteeName,
       inviterName: invite.inviter_name,
       householdName: invite.household_name,
@@ -330,6 +330,8 @@ async function createReminderNotifications(
       subject,
       html,
       text,
+      localize,
+      recipientUserId: invite.invited_user_id ?? undefined,
     });
 
     if (!inviteeSend.success) {
@@ -347,6 +349,7 @@ async function createReminderNotifications(
           html: iHtml,
           text: iText,
           subject: iSubject,
+          localize: iLocalize,
         } = inviteReminderInviterTemplate({
           inviterName: invite.inviter_name,
           inviteeName: invite.invited_email,
@@ -361,6 +364,8 @@ async function createReminderNotifications(
           subject: iSubject,
           html: iHtml,
           text: iText,
+          localize: iLocalize,
+          recipientUserId: invite.inviter_id,
         });
 
         if (!inviterSend.success) {

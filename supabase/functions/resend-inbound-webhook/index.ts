@@ -1608,6 +1608,7 @@ export async function handleResendInboundWebhook(
                 subject: unavailable.subject,
                 html: unavailable.html,
                 text: unavailable.text,
+                localize: unavailable.localize,
               });
             } catch (sideEffectError) {
               console.error(
@@ -1638,6 +1639,8 @@ export async function handleResendInboundWebhook(
                 subject: unavailable.subject,
                 html: unavailable.html,
                 text: unavailable.text,
+                localize: unavailable.localize,
+                recipientUserId: owner.userId,
               });
             } catch (sideEffectError) {
               console.error(
@@ -1684,6 +1687,8 @@ export async function handleResendInboundWebhook(
                   subject: unavailable.subject,
                   html: unavailable.html,
                   text: unavailable.text,
+                  localize: unavailable.localize,
+                  recipientUserId: owner.userId,
                 });
               } catch (sideEffectError) {
                 console.error(
@@ -1772,6 +1777,8 @@ export async function handleResendInboundWebhook(
               subject: unavailable.subject,
               html: unavailable.html,
               text: unavailable.text,
+              localize: unavailable.localize,
+              recipientUserId: owner.userId,
             });
           } catch (sideEffectError) {
             console.error(
@@ -1838,6 +1845,8 @@ export async function handleResendInboundWebhook(
               subject: unavailable.subject,
               html: unavailable.html,
               text: unavailable.text,
+              localize: unavailable.localize,
+              recipientUserId: owner.userId,
             });
           } catch (sideEffectError) {
             console.error(
@@ -2494,6 +2503,8 @@ export async function handleResendInboundWebhook(
               subject: followup.subject,
               html: followup.html,
               text: followup.text,
+              localize: followup.localize,
+              recipientUserId: owner.userId,
             });
           } catch (sideEffectError) {
             console.error(
@@ -2564,6 +2575,8 @@ export async function handleResendInboundWebhook(
               subject: email.subject,
               html: email.html,
               text: email.text,
+              localize: email.localize,
+              recipientUserId: owner.userId,
             });
           } catch (error) {
             await releaseInboundReviewAfterDeliveryFailure({
@@ -2762,6 +2775,8 @@ export async function handleResendInboundWebhook(
               subject: email.subject,
               html: email.html,
               text: email.text,
+              localize: email.localize,
+              recipientUserId: owner.userId,
             });
           } catch (error) {
             await releaseInboundReviewAfterDeliveryFailure({
@@ -2810,6 +2825,8 @@ export async function handleResendInboundWebhook(
               subject: followup.subject,
               html: followup.html,
               text: followup.text,
+              localize: followup.localize,
+              recipientUserId: owner.userId,
             });
             setStage("send_followup_email_complete");
           } catch (sideEffectError) {
@@ -2932,6 +2949,7 @@ export async function handleResendInboundWebhook(
       subject: unavailable.subject,
       html: unavailable.html,
       text: unavailable.text,
+      localize: unavailable.localize,
     });
   }
   return jsonResponse(

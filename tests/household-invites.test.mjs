@@ -4,6 +4,7 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { createHouseholdInvite } from "../supabase/functions/shared/household-invites.ts";
+import * as emailLocalization from "../supabase/functions/shared/automated-email-localization.ts";
 
 const householdId = "11111111-1111-4111-8111-111111111111";
 const userId = "22222222-2222-4222-8222-222222222222";
@@ -149,6 +150,7 @@ function harness(endpoint, options = {}) {
     },
   };
   const dependencies = {
+    "../shared/automated-email-localization.ts": emailLocalization,
     "../shared/cors.ts": { getCorsHeaders: () => ({}) },
     "../shared/household-invites.ts": { createHouseholdInvite },
     "../shared/edge-error-alert.ts": {

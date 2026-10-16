@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 import { getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { buildFounderFollowupEmail } from "./email-copy.ts";
 
 interface SubscriptionRecord {
   id?: string | null;
@@ -44,6 +45,7 @@ interface DeleteWebhookPayload extends BaseWebhookPayload {
 interface UserContact {
   email: string;
   full_name: string | null;
+  preferred_language: string | null;
 }
 
 interface QueueEnqueueResult {
@@ -52,8 +54,8 @@ interface QueueEnqueueResult {
 }
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY =
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  "";
 const QUEUE_TABLE = "subscription_followup_email_queue";
 const DEFAULT_SEND_DELAY_MINUTES = 4 * 60;
 const SEND_DELAY_MINUTES = readPositiveIntegerEnv(
@@ -180,10 +182,9 @@ serve(async (req: Request) => {
     return jsonResponse(
       {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to process subscription webhook",
+        error: error instanceof Error
+          ? error.message
+          : "Failed to process subscription webhook",
       },
       500,
       corsHeaders,
@@ -233,8 +234,11 @@ async function handleInsert(
 
   const recipientName = resolveRecipientName(user.full_name);
   const planLabel = resolvePlanLabel(subscription);
-  const text = buildWelcomeEmailText(recipientName);
-  const subject = buildWelcomeEmailSubject();
+  const { subject, bodyText } = buildFounderFollowupEmail(
+    "welcome",
+    recipientName,
+    user.preferred_language,
+  );
   const dedupeKey = buildInsertDedupeKey(subscription);
 
   const queueResult = await enqueueFounderFollowupEmail({
@@ -245,7 +249,7 @@ async function handleInsert(
     recipientName,
     planLabel,
     subject,
-    bodyText: text,
+    bodyText,
     dedupeKey,
   });
 
@@ -301,8 +305,11 @@ async function handleUpdate(
 
   const recipientName = resolveRecipientName(user.full_name);
   const planLabel = resolvePlanLabel(payload.record);
-  const text = buildCancellationEmailText(recipientName);
-  const subject = buildCancellationEmailSubject();
+  const { subject, bodyText } = buildFounderFollowupEmail(
+    "cancellation",
+    recipientName,
+    user.preferred_language,
+  );
   const dedupeKey = buildCancellationDedupeKey(payload.record);
 
   const queueResult = await enqueueFounderFollowupEmail({
@@ -313,7 +320,7 @@ async function handleUpdate(
     recipientName,
     planLabel,
     subject,
-    bodyText: text,
+    bodyText,
     dedupeKey,
   });
 
@@ -347,9 +354,22 @@ async function loadUserContact(userId: string): Promise<UserContact | null> {
 
   const fullName = asNonEmptyString(data?.full_name);
 
+  const { data: contact, error: contactError } = await supabase
+    .from("user_contacts")
+    .select("preferred_language")
+    .eq("user_id", userId)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (contactError) {
+    throw new Error(`Failed to load user language: ${contactError.message}`);
+  }
+
   return {
     email,
     full_name: fullName,
+    preferred_language: asNonEmptyString(contact?.preferred_language),
   };
 }
 
@@ -361,8 +381,8 @@ function shouldSendWelcomeOnInsert(subscription: SubscriptionRecord): boolean {
     return false;
   }
 
-  const shouldDisplayWelcomeStatus =
-    status === "active" || status === "trialing";
+  const shouldDisplayWelcomeStatus = status === "active" ||
+    status === "trialing";
   const isPaidPlan = plan !== "free";
 
   return shouldDisplayWelcomeStatus && isPaidPlan;
@@ -407,11 +427,6 @@ function resolveRecipientName(fullName: string | null): string {
   return firstSegment ?? "";
 }
 
-function buildGreeting(name: string): string {
-  const trimmed = asNonEmptyString(name);
-  return trimmed ? `Hi ${trimmed},` : "Hi,";
-}
-
 function resolvePlanLabel(subscription: SubscriptionRecord): string {
   const plan = asNonEmptyString(subscription.plan)?.toLowerCase();
   const billingInterval = asNonEmptyString(
@@ -435,44 +450,6 @@ function resolvePlanLabel(subscription: SubscriptionRecord): string {
   }
 
   return `${plan} plan`;
-}
-
-function buildWelcomeEmailText(name: string): string {
-  return [
-    buildGreeting(name),
-    "",
-    "Yifan here, one of the co-founders of Moneko. I saw you joined recently and thought I’d say hi.",
-    "",
-    "Out of curiosity, what were you using to manage your money before Moneko?",
-    "",
-    "Yifan",
-    "Co-founder, Moneko",
-  ].join("\n");
-}
-
-function buildWelcomeEmailSubject(): string {
-  return "Quick question about Moneko";
-}
-
-function buildCancellationEmailSubject(): string {
-  return "Quick question about your Moneko subscription";
-}
-
-function buildCancellationEmailText(name: string): string {
-  return [
-    buildGreeting(name),
-    "",
-    "Yifan here, co-founder of Moneko. I saw you recently cancelled your subscription and wanted to ask you directly.",
-    "",
-    "What made you decide to stop using Moneko?",
-    "",
-    "Feel free to be completely honest — if something was frustrating, missing, too expensive, or just not useful enough, I’d like to know.",
-    "",
-    "If you’re open to giving Moneko another try, I’d be happy to offer you 50% off. Just reply to this email and I’ll sort it out for you.",
-    "",
-    "Yifan",
-    "Co-founder, Moneko",
-  ].join("\n");
 }
 
 async function enqueueFounderFollowupEmail(params: {

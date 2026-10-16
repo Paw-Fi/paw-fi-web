@@ -118,7 +118,7 @@ function harness(options = {}) {
     require: (specifier) => {
       if (specifier.startsWith("https://esm.sh/@supabase/"))
         return { createClient: () => client };
-      if (specifier === "../shared/cors.ts") return { corsHeaders: {} };
+      if (specifier === "../shared/cors.ts") return { corsHeaders: {}, withCors: (handler) => handler };
       if (specifier === "../shared/accounts.ts")
         return {
           assertAccountInScope: async () => options.accountInScope !== false,

@@ -1,3 +1,8 @@
+import {
+  type LocalizedEmailContent,
+  withEmailLocalization,
+} from "./automated-email-localization.ts";
+import { createEmailTranslator } from "./automated-email-localization.ts";
 import { baseTemplate, renderButton, renderFooter } from "./email-layout.ts";
 import { escapeHtml } from "./email-utils.ts";
 
@@ -59,29 +64,35 @@ export async function hashSenderVerificationToken(
 export function buildSenderVerificationEmail(params: {
   accountEmail: string;
   verificationUrl: string;
-}) {
+}, language = "en"): LocalizedEmailContent {
+  const { t, h } = createEmailTranslator(language);
+
   const text =
-    `Confirm this email as a receipt sender for your Moneko account (${params.accountEmail}).\n\n` +
-    `Open this link to verify automatically in Moneko:\n${params.verificationUrl}\n\n` +
-    "Open this email on a device with Moneko installed. If your email app blocks the button, open the link in your browser and allow it to launch Moneko.\n\n" +
-    "This link expires in 24 hours. Forwarded receipts will be imported into every enabled account you authorize that has active Plus access.\n\n" +
-    "If you didn't request this, ignore this email. No new sender authorization is active until you verify.";
-  return {
-    subject: "Verify your receipt sender for Moneko",
+    t`Confirm this email as a receipt sender for your Moneko account (${params.accountEmail}).\n\n` +
+    t`Open this link to verify automatically in Moneko:\n${params.verificationUrl}\n\n` +
+    t("Open this email on a device with Moneko installed. If your email app blocks the button, open the link in your browser and allow it to launch Moneko.\n\n") +
+    t("This link expires in 24 hours. Forwarded receipts will be imported into every enabled account you authorize that has active Plus access.\n\n") +
+    t("If you didn't request this, ignore this email. No new sender authorization is active until you verify.");
+  return withEmailLocalization({
+    subject: t("Verify your receipt sender for Moneko"),
     text,
     html: baseTemplate(
-      `<h1 class="title">Verify your receipt sender</h1>
-      <p>Authorize this mailbox for your Moneko account <strong>${escapeHtml(params.accountEmail)}</strong>.</p>
-      ${renderButton("Verify in Moneko", params.verificationUrl)}
+      h`<h1 class="title">Verify your receipt sender</h1>
+      <p>Authorize this mailbox for your Moneko account <strong>${
+        escapeHtml(params.accountEmail)
+      }</strong>.</p>
+      ${renderButton(t("Verify in Moneko"), params.verificationUrl)}
       <p>Open this email on a device with Moneko installed. If your email app blocks the button, open the link in your browser and allow it to launch Moneko.</p>
       <p>This link expires in 24 hours. Forwarded receipts will be imported into every enabled account you authorize that has active Plus access.</p>
       <p>If you didn't request this, ignore this email. No new authorization is active until you verify.</p>`,
       renderFooter({
-        customReason:
+        customReason: t(
           "You're receiving this email because a request was made to authorize this mailbox as a Moneko receipt sender.",
-      }),
+        ),
+      }, language),
+      language,
     ),
-  };
+  }, (locale) => buildSenderVerificationEmail(params, locale));
 }
 
 export async function resolveVerifiedSenderAccountIds(

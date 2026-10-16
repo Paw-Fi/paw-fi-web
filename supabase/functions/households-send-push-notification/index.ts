@@ -1,3 +1,4 @@
+import { createEmailTranslator } from "../shared/automated-email-localization.ts";
 /// <reference lib="deno.ns" />
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -79,18 +80,29 @@ async function sendPocketsMonthReviewEmail({
 
   const displayName = resolveEmailDisplayName(user?.full_name, email, "");
   const pocketsLink = "moneko://pockets";
+  const localizedCopy = (language: string) => {
+    const { t } = createEmailTranslator(language);
+    return {
+      subject: t("Your new budget cycle starts today ✨"),
+      preheader: t(
+        "See how last cycle went and let Moneko AI plan your next one.",
+      ),
+      title: t`A fresh start for ${cycleLabel} ✨`,
+      message: t(
+        "Your new budget cycle is here! Moneko AI can review how you did last cycle, spot where your money went, and help you build personalized Pockets and budgets for the weeks ahead.",
+      ),
+      actionUrl: pocketsLink,
+      actionText: t("Build My New Plan"),
+      supportingMessage: t(
+        "Start with what worked, adjust what didn’t, and make this cycle even better.",
+      ),
+      priority: "medium" as const,
+    };
+  };
   const template = notificationTemplate({
     name: displayName,
-    subject: "Your new budget cycle starts today ✨",
-    preheader: "See how last cycle went and let Moneko AI plan your next one.",
-    title: `A fresh start for ${cycleLabel} ✨`,
-    message:
-      "Your new budget cycle is here! Moneko AI can review how you did last cycle, spot where your money went, and help you build personalized Pockets and budgets for the weeks ahead.",
-    actionUrl: pocketsLink,
-    actionText: "Build My New Plan",
-    supportingMessage:
-      "Start with what worked, adjust what didn’t, and make this cycle even better.",
-    priority: "medium",
+    ...localizedCopy("en"),
+    localizedCopy,
   });
   const result = await sendUserEmail(
     email,

@@ -1,12 +1,19 @@
 // Email template rendering utilities
-import { sanitizeUrl, LINKS } from './email-security.ts';
-import { escapeHtml } from './email-utils.ts';
+import { LINKS, sanitizeUrl } from "./email-security.ts";
+import { escapeHtml } from "./email-utils.ts";
+import { createEmailTranslator } from "./automated-email-localization.ts";
+import { resolveEmailLanguage } from "./email-language.ts";
 
 // Base email template with modern design and dark mode support
-export function baseTemplate(content: string, footer?: string): string {
+export function baseTemplate(
+  content: string,
+  footer?: string,
+  language = "en",
+): string {
+  const locale = resolveEmailLanguage(language);
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${locale}"${locale === "ur" ? ' dir="rtl"' : ""}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -227,7 +234,7 @@ export function baseTemplate(content: string, footer?: string): string {
       <div class="content">
         ${content}
       </div>
-      ${footer ? `<div class="footer">${footer}</div>` : ''}
+      ${footer ? `<div class="footer">${footer}</div>` : ""}
     </div>
   </div>
 </body>
@@ -236,14 +243,18 @@ export function baseTemplate(content: string, footer?: string): string {
 }
 
 // Centralized CTA renderer factory
-export function renderButton(text: string, url: string, variant: 'primary' | 'secondary' | 'apple' = 'primary'): string {
+export function renderButton(
+  text: string,
+  url: string,
+  variant: "primary" | "secondary" | "apple" = "primary",
+): string {
   const safeUrl = sanitizeUrl(url);
   const safeText = escapeHtml(text);
-  
+
   switch (variant) {
-    case 'apple':
+    case "apple":
       return appStoreCtaHtml();
-    case 'secondary':
+    case "secondary":
       return `
         <a href="${safeUrl}" class="button secondary" style="display:inline-block;background-color:transparent !important;color:#7458FF !important;padding:14px 24px;border:2px solid #7458FF;border-radius:9999px;font-weight:500;font-size:16px;text-decoration:none !important;margin:24px 0;">
           ${safeText}
@@ -264,33 +275,46 @@ export function renderFooter(options: {
   showSupport?: boolean;
   customReason?: string;
   unsubscribeUrl?: string;
-} = {}): string {
-  const { showUnsubscribe = false, showSupport = true, customReason, unsubscribeUrl } = options;
-  
-  let footerContent = '<p>&copy; 2026 Moneko. All rights reserved.</p>';
-  
+} = {}, language = "en"): string {
+  const { h } = createEmailTranslator(language);
+  const {
+    showUnsubscribe = false,
+    showSupport = true,
+    customReason,
+    unsubscribeUrl,
+  } = options;
+
+  let footerContent = h("<p>&copy; 2026 Moneko. All rights reserved.</p>");
+
   if (customReason) {
     footerContent += `<p>${escapeHtml(customReason)}</p>`;
   } else {
-    footerContent += '<p>You\'re receiving this email because you joined Moneko.</p>';
+    footerContent += h(
+      "<p>You're receiving this email because you joined Moneko.</p>",
+    );
   }
-  
+
   if (showSupport) {
-    footerContent += `<p>Questions? <a href="${sanitizeUrl(LINKS.support)}" style="color: #7458FF; text-decoration: none;">Contact Support</a></p>`;
+    footerContent += h`<p>Questions? <a href="${
+      sanitizeUrl(LINKS.support)
+    }" style="color: #7458FF; text-decoration: none;">Contact Support</a></p>`;
   }
-  
+
   if (showUnsubscribe) {
     if (unsubscribeUrl) {
-      footerContent += `<p><a href="${sanitizeUrl(unsubscribeUrl)}" style="color: #7458FF; text-decoration: none;">Unsubscribe</a></p>`;
+      footerContent += h`<p><a href="${
+        sanitizeUrl(unsubscribeUrl)
+      }" style="color: #7458FF; text-decoration: none;">Unsubscribe</a></p>`;
     }
     // If showUnsubscribe is true but no unsubscribeUrl provided, omit the link entirely
   }
-  
+
   return footerContent;
 }
 
 // Shared Button Base Style (Flex & Reset)
-const baseBtnStyle = 'display: inline-flex; align-items: center; justify-content: center; height: 56px; background-color: #000000; color: #ffffff; text-decoration: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); transition: opacity 0.2s ease; box-sizing: border-box;';
+const baseBtnStyle =
+  "display: inline-flex; align-items: center; justify-content: center; height: 56px; background-color: #000000; color: #ffffff; text-decoration: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); transition: opacity 0.2s ease; box-sizing: border-box;";
 
 // Apple Specific Style (rounded-xl -> 12px, px-6 -> 24px)
 const appleBtnStyle = `${baseBtnStyle} padding: 0 24px; border-radius: 12px;`;
@@ -299,10 +323,13 @@ const appleBtnStyle = `${baseBtnStyle} padding: 0 24px; border-radius: 12px;`;
 const androidBtnStyle = `${baseBtnStyle} padding: 0 16px; border-radius: 8px;`;
 
 // App Store CTA helper
-export function appStoreCtaHtml(): string {
-  return `
+export function appStoreCtaHtml(language = "en"): string {
+  const { h } = createEmailTranslator(language);
+  return h`
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${sanitizeUrl(LINKS.appStore)}" target="_blank" rel="noopener noreferrer" style="${appleBtnStyle}">
+      <a href="${
+    sanitizeUrl(LINKS.appStore)
+  }" target="_blank" rel="noopener noreferrer" style="${appleBtnStyle}">
         <div style="margin-right: 12px; display: flex; align-items: center;">
           <svg viewBox="0 0 384 512" width="30" height="30" style="fill: currentColor; display: block;">
             <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"></path>
@@ -318,8 +345,9 @@ export function appStoreCtaHtml(): string {
 }
 
 // Google Play CTA helper
-export function googlePlayCtaHtml(): string {
-  return `
+export function googlePlayCtaHtml(language = "en"): string {
+  const { h } = createEmailTranslator(language);
+  return h`
  <div style="text-align: center; margin: 32px 0;">
       <a href="\${sanitizeUrl(LINKS.playStore)}" target="_blank" rel="noopener noreferrer" style="${androidBtnStyle}">
         <div style="margin-right: 12px; display: flex; align-items: center;">
@@ -340,11 +368,14 @@ export function googlePlayCtaHtml(): string {
 }
 
 // Combined CTA helper for mobile downloads (appStore + Google Play)
-export function mobileDownloadCtasHtml(): string {
-  return `
+export function mobileDownloadCtasHtml(language = "en"): string {
+  const { h } = createEmailTranslator(language);
+  return h`
     <div style="text-align: center; margin: 32px 0;">
       <div style="display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
-         <a href="${sanitizeUrl(LINKS.appStore)}" target="_blank" rel="noopener noreferrer" style="${appleBtnStyle}">
+         <a href="${
+    sanitizeUrl(LINKS.appStore)
+  }" target="_blank" rel="noopener noreferrer" style="${appleBtnStyle}">
            <div style="margin-right: 12px; display: flex; align-items: center;">
              <svg viewBox="0 0 384 512" width="30" height="30" style="fill: currentColor; display: block;">
                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"></path>
@@ -356,7 +387,9 @@ export function mobileDownloadCtasHtml(): string {
            </div>
          </a>
 
-         <a href="${sanitizeUrl(LINKS.playStore)}" target="_blank" rel="noopener noreferrer" style="${androidBtnStyle}">
+         <a href="${
+    sanitizeUrl(LINKS.playStore)
+  }" target="_blank" rel="noopener noreferrer" style="${androidBtnStyle}">
            <div style="margin-right: 12px; display: flex; align-items: center;">
              <svg viewBox="30 336.7 120.9 129.2" width="30" height="30" style="display: block;">
                <path fill="#FFD400" d="M119.2,421.2c15.3-8.4,27-14.8,28-15.3c3.2-1.7,6.5-6.2,0-9.7  c-2.1-1.1-13.4-7.3-28-15.3l-20.1,20.2L119.2,421.2z"></path>

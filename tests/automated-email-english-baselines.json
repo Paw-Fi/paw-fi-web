@@ -1,0 +1,262 @@
+{
+  "subscriptionCreatedTemplate:0": {
+    "html": "9f3bb833aefef7f094dd97c063b83ee29fcc1b508621f08a053bac58a020aa14",
+    "text": "a1de4d1605cbc7dad0fc36327235ac7e2393e4b4564734b1899b3523114e49b3",
+    "subject": "46c9bf5d10d43a195ee8d581b2ef7e2e0ef3cdb5e5366576bb4de544b2ad1f24"
+  },
+  "subscriptionCreatedTemplate:1": {
+    "html": "77d6b497283fd6b0a421a29335ba09f5fb3a20c1a9cd33dfd45a3a43bd6857d1",
+    "text": "6f8357b1f310a9f7f180c4e0d1d9096ac994eafa39de15e2905accba001aaee2",
+    "subject": "186c2083787921ebad9667baa31da822e3b16c37b2fcd1d9e03ec2d607093b3f"
+  },
+  "subscriptionCreatedTemplate:2": {
+    "html": "7c60ae8242e1bff5b531ebdf4baa8aed27a5907d8a190bffd26767556078d8c0",
+    "text": "7096726da1795c476f0584f9a92731b9562b119181192c6c00630210a087e657",
+    "subject": "46c9bf5d10d43a195ee8d581b2ef7e2e0ef3cdb5e5366576bb4de544b2ad1f24"
+  },
+  "subscriptionUpdatedTemplate:0": {
+    "html": "1d6ffb29cc86e1961d80e0fe785fb0f4db6db8624d88daecbff21ee67091cda4",
+    "text": "1e0335212d4383779ea96647f9733f676d7bf1c6ea553abbfd0942e436e28f7b",
+    "subject": "46c9bf5d10d43a195ee8d581b2ef7e2e0ef3cdb5e5366576bb4de544b2ad1f24"
+  },
+  "subscriptionUpdatedTemplate:1": {
+    "html": "f01b3a2b226184aa752969ae86ba68c9e209b2ebde86d5321e6b9a04eefad8c1",
+    "text": "45267c5355217a9635074093ac07d56689b7acf378b3665c2861277526e1f4ee",
+    "subject": "a5fdf825dc3d64311c4e2603c476a81405076e13cdf76b3ddb0e2bb7b63b6cca"
+  },
+  "subscriptionUpdatedTemplate:2": {
+    "html": "67533817583fd8696663d2bd11cabc599e28e80240eff026ea84d4dd1ab5080e",
+    "text": "f65204ca80f49f4041fa696d67dfa040167aa53ed7e2c37fbff3fa5f09865f98",
+    "subject": "442d5b5dce327600a6a60c6bc9fba47efccd809be235733725a6a81cf4c506f2"
+  },
+  "subscriptionUpdatedTemplate:3": {
+    "html": "2a7502ebbcfdc0b2188179def54178a27d4ea6cd816a72245d40726e08307ac1",
+    "text": "a44454c6cb50ffeb16a1222c8e4f4c82f0572d751862d99484e476bba7d90bf1",
+    "subject": "ce9b71ef8e5bd0bd7487e735729f30348d9dfa76ca80d0b05fbe6d6a4733fd1b"
+  },
+  "subscriptionCanceledTemplate:0": {
+    "html": "8f30cf6883837477ca3a5c29effa636289910ddf7c73fb56add639c8fba7b2f6",
+    "text": "6c11ea9d672a01106314bc01fe24ce4475e781f700d0dcd8247d71a5d93be152",
+    "subject": "b3da5a814b6d9f2631fdbd8b285bae040c98109f8f0966474deec4ad3d4ab2ee"
+  },
+  "subscriptionCanceledTemplate:1": {
+    "html": "9c895623f493ff0b7965aac1ddbeeeceaf4aa3356877423a7da40eeefc9f1665",
+    "text": "4f34fd72113a910015d4edf986b106031ffc55c3133c80634f00cd1448e97493",
+    "subject": "198daa434f6b636e38054574f5d41526dc4259051a30de516499771784d10c89"
+  },
+  "subscriptionCanceledTemplate:2": {
+    "html": "04e06c43d574790ef77213f9b3bdcde2dd7449eb795a6ad8d6bab545cbf7f3a6",
+    "text": "4e1cde12616410c9454f5486cc4a408cf44f2f9e48efb134f4efa73d0e8dfd25",
+    "subject": "198daa434f6b636e38054574f5d41526dc4259051a30de516499771784d10c89"
+  },
+  "subscriptionPausedTemplate:0": {
+    "html": "45b855e049a300e792c617a8ec5bab6428e3e2f144738aeb2e5f0d3652bd4b16",
+    "text": "9eb2aa6d7dcf9ddf3389ba09678999f6a95f563ad28f04eb9ddb471864f0839a",
+    "subject": "b9b9ab9685d520584ea1d5dbb893f08f04709db279884dd350fb14cef3c954f0"
+  },
+  "subscriptionResumedTemplate:0": {
+    "html": "9ef48e534536e51b79d0fb6672ba6f867f1f4b984aac4521b0636e1b5e7f2c91",
+    "text": "33c54525886c4c9217245b84c259272a919115e93f581d129a48fe3a8fade198",
+    "subject": "30c4158a7f3fe85d0199646ed86aeb483e95eeb15a74b0863af7c874b0120ae1"
+  },
+  "refundProcessedTemplate:0": {
+    "html": "aadeac152880e768f8f6f17c4cd21af7cbd1b264f54e8016321106d532870e34",
+    "text": "6ff608b491b86142d74ba59b82004cc3aa9c42c558744e67764d8e6b74fefb99",
+    "subject": "a51007e8c38a38d77948baf8a5599962c8b69d173990abc41aab31d164076f24"
+  },
+  "refundFailedTemplate:0": {
+    "html": "4a93df80ff737c276603668bf9bf802bc724f00c12ef10b3112074850d8236a8",
+    "text": "25ecfde7eb83b6e9aca60239acd7a5b9437061159601e3d6462aa6678d94613a",
+    "subject": "b02f58b1c8b4042d3bcc4ef5b843f1ba0dbf46ae57509b57e560fdadfa8ae352"
+  },
+  "refundFailedTemplate:1": {
+    "html": "bfc9104c7df76b7ba67c42a4b248c043e32926702e3966742b9765cdcac681d5",
+    "text": "7efcaccb5433b740dfc954b3f83002fa1e2c10f493387582fc46c298b57e03c9",
+    "subject": "b02f58b1c8b4042d3bcc4ef5b843f1ba0dbf46ae57509b57e560fdadfa8ae352"
+  },
+  "refundFailedTemplate:2": {
+    "html": "74a60fd677db67c8b847c3f2b8da22699659af8996d16c973c3e63d9d69e5e8d",
+    "text": "a794476a7a9404e85427b8fed31edafee10db230a5118de9946e61f3a5c7c34e",
+    "subject": "b02f58b1c8b4042d3bcc4ef5b843f1ba0dbf46ae57509b57e560fdadfa8ae352"
+  },
+  "paymentFailedTemplate:0": {
+    "html": "bf10a424beeb8f4652902ea5b3c408614600846290f642cb28753becb048b416",
+    "text": "ded196518ec61609f1b13df3c9876a46852714cb66278c55edcfb8d361469f25",
+    "subject": "2e39a14fa7a2fdfaaa122aba9a42c81afdec06d18e4099ba6803e1034609c80c"
+  },
+  "paymentFailedTemplate:1": {
+    "html": "d5ba8e9d3e9976d225285d6c810eec167b3e4d9cb240ff50a2f1d37016729f87",
+    "text": "781eeb7cd28c44d7c19edf6124351886f74cbc9b6e9dbed009d101d790c43040",
+    "subject": "2e39a14fa7a2fdfaaa122aba9a42c81afdec06d18e4099ba6803e1034609c80c"
+  },
+  "paymentFailedTemplate:2": {
+    "html": "1af81adea140da51119177b1ad5ec597e211fdd0a491525172a011836a86b947",
+    "text": "b3cca4055b096583729fd71a9289777f7ca82fe88956a36d2e95dd1fc816e3e9",
+    "subject": "2e39a14fa7a2fdfaaa122aba9a42c81afdec06d18e4099ba6803e1034609c80c"
+  },
+  "trialEndingTemplate:0": {
+    "html": "726aa02911c112eb7b4cb673868dedbc366a4e3488f9d95e6c13d1a4c1227eb8",
+    "text": "8e624a9a0ee6e87cac6ce6015bdfdb7e6eed589fc73541488e478ab3b5911f70",
+    "subject": "e3d9174fce37f3373f18671f54d3ef4b79dd03bba81182d9feec9a64ae3bcab1"
+  },
+  "referralAcceptedTemplate:0": {
+    "html": "4b3cdd1128f0ccf2588cc1249e0653b66ae5b94a7e5ec326f8d48d431697cb6c",
+    "text": "1e8743c769cf02f3ad55345c0b3d26bc03b79c20c7a91709594a32ed11c8ab4d",
+    "subject": "74160e3e99cd5aa02feb98d3a3e35c82b330ad5392fe30d333493169f0dcb390"
+  },
+  "referralAcceptedTemplate:1": {
+    "html": "fd91b4dc42996c70835cb440dea53b7142ddaa36c29d065118f283afc60d8684",
+    "text": "a51a46e58a8f0daa2eb01c40e250f52dc255352da2b34bf87e020bf52733af00",
+    "subject": "74160e3e99cd5aa02feb98d3a3e35c82b330ad5392fe30d333493169f0dcb390"
+  },
+  "referralSuccessfulTemplate:0": {
+    "html": "b0a7b11dcbe77a315110cf4d9a8191fd4e8d1f35a91cab2e43e4ede591abfc88",
+    "text": "a367580731c315425aaf33b2b08c6892e229c828a31aa0c1193835029521f1cd",
+    "subject": "186c2083787921ebad9667baa31da822e3b16c37b2fcd1d9e03ec2d607093b3f"
+  },
+  "welcomeTemplate:0": {
+    "html": "a3bfe8541a2d82a07f8a33b80609769d54a033b71888a09384620eac3e1da68c",
+    "text": "46ec560d44da83461b2f58fa65fbbb0e8c99d51348623c03df05a315d0290e69",
+    "subject": "d167e2578fd71b580bf9c843850f1828ca37a2b3f218fa2ef6e3c934e24fccd4"
+  },
+  "householdInviteTemplate:0": {
+    "html": "a3bc2c53d3cdacb9c7755af1b3fa6b8cd909d71d66f72ef7e3684d8cd1dda576",
+    "text": "560119c1296a9714d5bbbd8f6a5c56c0a490517aa261a6385eee5e66de8eb3c3",
+    "subject": "ed19bd7c9c8c85edcec85b99fef25794f25fbb75d7fa409117657444c123c8ec"
+  },
+  "householdInviteTemplate:1": {
+    "html": "375ea96e0a0ea2bb1b0181c8373952a34f7b4edb09e209369edda4a32aae0c6e",
+    "text": "e38e4c95348e267d09928d26747b61ce20970c715fb838febf60c6998195d636",
+    "subject": "8de51d66b379806cc8a290d627831fee93d28b4da9b9559a9e873677f89d7334"
+  },
+  "householdInviteTemplate:2": {
+    "html": "ef105b9ca47f0eaa9ea2155b23c2e1c22c33c3d80b97c347f8d1559a8abb177b",
+    "text": "d53c749ad4230bc584977eb110dc6f06348e059f03ce3c4eb16bc561b3f650a7",
+    "subject": "695a265378e6df60ddfcba8a445b7fce570cd02cd5874c4db4fab7569d428280"
+  },
+  "householdInviteTemplate:3": {
+    "html": "2f6da7dd550701c37b0f799ff5a2b16c84a3444890ae7deba4f5381a9af838d7",
+    "text": "f122931580aa1da3cbaf9c4b8c7dce29465e31b517cbdccba4fbda0a783219be",
+    "subject": "2e3a71e83e4552b3b40916154a8da1dbc7cf424ed50c45cea69d7a6c39d165dd"
+  },
+  "courseCompletionTemplate:0": {
+    "html": "854ec6d3b998b17334fd2e28809b05798bd269e3f239eb61ae9969778473cc66",
+    "text": "05dfc33fe0ed262e434cc76e2a340b9e9bbc4c790d84d993fb92695532ab5690",
+    "subject": "5bf3204db1deed668d033ac2008833bdc9711b0feb6eb59970991f80adcd3a4d"
+  },
+  "courseCompletionTemplate:1": {
+    "html": "5bac8411e41fb58763d84f895a195cd332ffec0212d60da165fc9192825cc1e8",
+    "text": "a872743e31e4e04bc8fb46ef9db47167ba02277e348ab79af76c9c5ea2622ca5",
+    "subject": "5bf3204db1deed668d033ac2008833bdc9711b0feb6eb59970991f80adcd3a4d"
+  },
+  "invoiceFinalizedTemplate:0": {
+    "html": "a8d9f75035ee7961e08ad4fea160632d864650d250385b4592891438bbeff7ed",
+    "text": "aa4458fe34961426fc6052c5fe2d34299d578013396d1f1589ea87528e3bce60",
+    "subject": "301c8aa69716d420c4cf75afb66b4e67c17fce3e5ae382b22cda71c18979a64c"
+  },
+  "invoiceFinalizedTemplate:1": {
+    "html": "4005ab80ae82feaa8bcd4bde95799877cef6f5f0dc18753ffcd2e2f7d29c91ce",
+    "text": "128bba9e0738209e7da58cf7758cf46bb4b8fef6dacaec62cf362afbfb4e48b0",
+    "subject": "301c8aa69716d420c4cf75afb66b4e67c17fce3e5ae382b22cda71c18979a64c"
+  },
+  "invoiceLocationRequiredTemplate:0": {
+    "html": "8952b6a8e61ff52cd15261a021fccea5b6422a66b46d6ddcd88d315f1f3da623",
+    "text": "80cf5406873b934883eff8a982635ca802cef2cb422714d9e55632d66006a839",
+    "subject": "2aad5400aebf1ecfac1993f507f1251b55f15c614b3649e3e432568cb5930f80"
+  },
+  "invoiceUpcomingTemplate:0": {
+    "html": "1cd2b99f96298585bb4751474cd57d8ad0e6d5d49340337fa19c518bc82813f2",
+    "text": "ac0e7da015d6f81973b0daf165f9a5735805f639e2f1a1d185ca22b06393115f",
+    "subject": "4afe2109c43105fa7de70890c3ccaeb6e8da0636dfa0705e0c0c67a7a0b478ff"
+  },
+  "invoiceUpcomingTemplate:1": {
+    "html": "7a2da6cb84a1004efe11d8b2499b532dc7a71f38a898b7237982fd8942c36488",
+    "text": "7be945e3e239ef4426c6d8f4742f251b2bb4330efcd2694fe44753ff7a7fdde5",
+    "subject": "4afe2109c43105fa7de70890c3ccaeb6e8da0636dfa0705e0c0c67a7a0b478ff"
+  },
+  "invoiceUpcomingTemplate:2": {
+    "html": "7a2da6cb84a1004efe11d8b2499b532dc7a71f38a898b7237982fd8942c36488",
+    "text": "7be945e3e239ef4426c6d8f4742f251b2bb4330efcd2694fe44753ff7a7fdde5",
+    "subject": "4afe2109c43105fa7de70890c3ccaeb6e8da0636dfa0705e0c0c67a7a0b478ff"
+  },
+  "paymentActionRequiredTemplate:0": {
+    "html": "a20565e1c5f0ce7e312d18658900fe37788e3cde3aec56eca3216c4fa1805a83",
+    "text": "4c54ef908e53ea9225a1a5a0a6b619d2a14f64b5818d7f81819779ba716e9de6",
+    "subject": "0918a5a52e1d9ac93b5e88c74d123f5cda5ec7499bce4172151a8cc0d735e213"
+  },
+  "paymentActionRequiredTemplate:1": {
+    "html": "b22801b9839708af98ba99040209c04b516d05625731638133792c1b3dde50b1",
+    "text": "f21bdb2740f4bfdbf86d7bd8aa950ad5a0bc10d532c6a9c0cce7352ed23255d9",
+    "subject": "0918a5a52e1d9ac93b5e88c74d123f5cda5ec7499bce4172151a8cc0d735e213"
+  },
+  "paymentMethodUpdatedTemplate:0": {
+    "html": "218efc1a2a9089d675b18308d88f97eacecd8dc47b0309c26350f19ba85316d4",
+    "text": "cc5a09fa61186b55d35334ddb605591ad6f189e4065dae2e75989f4ad9e40893",
+    "subject": "ae7634b0c002044f856e364a1544ed33a21a705dc6474cf1aa56117cabd75ded"
+  },
+  "discountExpiringTemplate:0": {
+    "html": "d48977b3a90f4dc65e2427a4c5fe0a02110ddccfed2412c3fc2a5620fce9009e",
+    "text": "8b19a5fa9fab323754881171c76d2b2013b541373ad49a5d6a78790d2bee605d",
+    "subject": "75b02cbe19ace3bf09a714bddce058c981c51418781f45193a5237c2104eb178"
+  },
+  "invoicePaymentSucceededTemplate:0": {
+    "html": "127196e907dcf6e2ef96d566faea15d4ec16c354e9e39a156dd595487acb7fc3",
+    "text": "981dc898d71faa9e906646a2ec95e512680eca84dfc8a34106f0b76fd86cbb6e",
+    "subject": "979a668590bddf6c42c8bd811c480e11fbe4b2ec16c6010693c9648f7d746b8d"
+  },
+  "invoicePaymentSucceededTemplate:1": {
+    "html": "1535f5ef0848c13cd122ae26cbc12c411c5973598c43ddb582f2bf313c97fc92",
+    "text": "11ed72cfcb9c3731bfcb46f679c1d3ea040614e60ec26d81ef4ca3240852c9fe",
+    "subject": "ce607fc8e35c493630988f3f1d0d5dcedd2ee205f1b77f1994a554017b8fd812"
+  },
+  "invoicePaymentSucceededTemplate:2": {
+    "html": "d1d20a4cee1c3ae17e4ae6fa27e5221ab2f8118c8d10fc2db33d4eb0557e74fa",
+    "text": "e4042d381b3d52eaf1e96fcbd1a15c48235b7ed0599adcd2504f6b43d3abfe88",
+    "subject": "979a668590bddf6c42c8bd811c480e11fbe4b2ec16c6010693c9648f7d746b8d"
+  },
+  "notificationTemplate:0": {
+    "html": "a7cec6573f459f66f77cb8385dc4c21a35675abad95dbc5b9647b4b17742cddc",
+    "text": "b182f0c9b6e7132b7f41937f5cec3a4a5f226becc45315e3f54c8312e5d49655",
+    "subject": "c0dcca6e534b709d255167a93263f0cf331e9cb1b3f611295724ecf401935da6"
+  },
+  "notificationTemplate:1": {
+    "html": "32d60fa0be1096ec7e01b9b74c9326aea49f43e36680198974b0e5c08417911f",
+    "text": "5e200510114a22e0b279ca39bf877c96e90fd52e34df6aa1bcb24131f6ea178a",
+    "subject": "a9f687b02e335f3f034c02a376ba98387c3e90687919a54c624645f1ebb66828"
+  },
+  "mobileBetaWelcomeTemplate:0": {
+    "html": "87f06276054fa727a49d615531607c66e8a4f135f7aad0ba79bb611575a46581",
+    "text": "1e407c031c7dfa74ebb2a25f6d5cfc382d36e349cd6c09697786f7922063a9e6",
+    "subject": "0f56ad2ad0a3bf407f29d72b1a96d4ec1d401b96156838b257d0209b6b53fd18"
+  },
+  "inviteReminderInviterTemplate:0": {
+    "html": "c9cb36b30b1a7022a48084bc82a6000f1484e78d0f06603f2731d53dec29c9f7",
+    "text": "e9aa1011bc8048eb41fa26323c65aabd2b4f7e50a08b7c00805015a49dea3f29",
+    "subject": "209e5a2c225a6ab6170f8c48ab7846110b683f081fa024aacc4de795be4ffd14"
+  },
+  "inviteReminderInviterTemplate:1": {
+    "html": "2b07ee3f0347cb6616e0d85bde6a59bd658a753392be652118bbfe9d886626a0",
+    "text": "08b997c1929f58099d256b04e704bbacebcde0f10ee047da10a70353c4aff0aa",
+    "subject": "209e5a2c225a6ab6170f8c48ab7846110b683f081fa024aacc4de795be4ffd14"
+  },
+  "inviteReminderInviterTemplate:2": {
+    "html": "d51739bb4680714432bd860a71503aeac05882e61a331a0e7893baab6b0b7dbf",
+    "text": "74039cc83b0cdb4635526451414b817e051ec628ae6a83f253c6122fcbd3423a",
+    "subject": "79086c55658e13b7382a61119b832dfad1495b8f0cd31fa8d3a3c7b3ad22c583"
+  },
+  "inviteReminderInviteeTemplate:0": {
+    "html": "42fb7fbb68dccc72cced2f55e61a796be545c6bf088d8c2ec66374d692f94dcd",
+    "text": "1c421f4d05971e61f85221fc516ef681b0164f4166f9655c7744fc080b08c47f",
+    "subject": "a7d4feaa364f47f45b202c00375a4968c917dd4f5a552e5aacbab29ec409d5d2"
+  },
+  "inviteReminderInviteeTemplate:1": {
+    "html": "32d90a713496a26f4a92115d81c827f706852a4902da3896712bbe4ccd724c03",
+    "text": "0d7876af405c1e65fa312391ee3afe75d11d6429b4198283de7ab619861ca629",
+    "subject": "373d36f2891ebba4ce0d807c183f35bb7d8dcf0f4a277dcee4f863242a5edc36"
+  },
+  "inviteReminderInviteeTemplate:2": {
+    "html": "02bb94dcf14456039ef56ae0713b876ad2727710b1b1006872c094572185149c",
+    "text": "0443e02ba003244bf9edc08c879eccebeda8ce674e60a979d7cf64211768c286",
+    "subject": "ee0e1d1cf2e1152f5a195a2c8c16883d610e22cd5890db16ec3e40f622b21e55"
+  }
+}

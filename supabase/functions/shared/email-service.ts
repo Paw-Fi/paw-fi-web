@@ -3,6 +3,11 @@
 // which currently breaks Supabase Edge Function bundling through esm.sh.
 
 import { reportEdgeFunctionError } from "./edge-error-alert.ts";
+import { loadRecipientEmailLanguage } from "./email-language.ts";
+import type {
+  EmailContent,
+  LocalizedEmailContent,
+} from "./automated-email-localization.ts";
 
 // Constants
 const DEFAULT_FROM = "Moneko Team <hello@moneko.io>";
@@ -23,6 +28,8 @@ export interface EmailOptions {
   bcc?: string | string[];
   attachments?: any[];
   idempotencyKey?: string;
+  localize?: (language: string) => EmailContent;
+  recipientUserId?: string;
 }
 
 interface ResendApiResponse {
@@ -66,8 +73,17 @@ export async function sendEmail({
   bcc,
   attachments,
   idempotencyKey,
+  localize,
+  recipientUserId,
 }: EmailOptions) {
   try {
+    if (localize) {
+      const language = await loadRecipientEmailLanguage(to, recipientUserId);
+      const localized = localize(language);
+      subject = localized.subject;
+      html = localized.html;
+      text = localized.text;
+    }
     // For testing/development: log email instead of sending
     if (Deno.env.get("EMAIL_TEST_MODE") === "true") {
       console.log("SENDING EMAIL (TEST MODE):");
@@ -118,8 +134,7 @@ export async function sendEmail({
             `Resend API request failed with status ${response.status}`,
           );
           const errorType = result.name || "";
-          const isModifiedIdempotentRequest =
-            response.status === 409 &&
+          const isModifiedIdempotentRequest = response.status === 409 &&
             (errorType === "invalid_idempotent_request" ||
               message.includes(
                 "idempotency key has been used with this HTTP method and endpoint",
@@ -137,8 +152,7 @@ export async function sendEmail({
             };
           }
 
-          const isConcurrentIdempotentRequest =
-            response.status === 409 &&
+          const isConcurrentIdempotentRequest = response.status === 409 &&
             (errorType === "concurrent_idempotent_requests" ||
               message.includes("original request is still in progress"));
           if (isConcurrentIdempotentRequest && attempt < maxAttempts - 1) {
@@ -163,7 +177,7 @@ export async function sendEmail({
           if (response.status >= 500 && attempt < maxAttempts - 1) {
             attempt++;
             await new Promise((resolve) =>
-              setTimeout(resolve, 1000 * 2 ** (attempt - 1)),
+              setTimeout(resolve, 1000 * 2 ** (attempt - 1))
             );
             continue;
           }
@@ -211,11 +225,7 @@ export async function sendEmail({
 export async function sendUserEmail(
   email: string,
   name: string,
-  emailTemplate: {
-    html: string;
-    text: string;
-    subject: string;
-  },
+  emailTemplate: LocalizedEmailContent,
   idempotencyKey?: string,
 ) {
   // Replace template variables
@@ -235,12 +245,36 @@ export async function sendUserEmail(
       `https://moneko.io/unsubscribe?email=${encodeURIComponent(email)}`,
     );
 
-  return sendEmail({
+  return await sendEmail({
     to: email,
     subject: emailTemplate.subject,
     html,
     text,
     replyTo: "hello@moneko.io",
     idempotencyKey,
+    localize: emailTemplate.localize
+      ? (language) => {
+        const localized = emailTemplate.localize!(language);
+        return {
+          subject: localized.subject,
+          html: localized.html
+            .replace(/{{email}}/g, () => email)
+            .replace(/{{name}}/g, () => name)
+            .replace(/{{unsubscribeUrl}}/g, () =>
+              `https://moneko.io/unsubscribe?email=${
+                encodeURIComponent(email)
+              }`),
+          text: localized.text
+            .replace(/{{email}}/g, () =>
+              email)
+            .replace(/{{name}}/g, () =>
+              name)
+            .replace(/{{unsubscribeUrl}}/g, () =>
+              `https://moneko.io/unsubscribe?email=${
+                encodeURIComponent(email)
+              }`),
+        };
+      }
+      : undefined,
   });
 }

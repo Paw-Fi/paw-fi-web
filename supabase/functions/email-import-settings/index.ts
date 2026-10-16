@@ -487,6 +487,7 @@ async function handleRequest(req: Request): Promise<Response> {
       const sent = await sendEmail({
         to: normalizedEmail,
         ...email,
+        recipientUserId: userId,
         idempotencyKey: `email-sender-verification:${request.verificationId}`,
       });
       if (!sent.success) {

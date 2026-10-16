@@ -1,8 +1,13 @@
+import {
+  type LocalizedEmailContent,
+  localizedPluralize,
+  withEmailLocalization,
+} from "../../shared/automated-email-localization.ts";
+import { createEmailTranslator } from "../../shared/automated-email-localization.ts";
 import { baseTemplate, renderFooter } from "../../shared/email-layout.ts";
 import {
   escapeHtml,
   formatCurrency,
-  pluralize,
   sanitizeSubject,
 } from "../../shared/email-utils.ts";
 
@@ -38,15 +43,24 @@ export function createFollowupEmailBuilder(config: FollowupEmailBuilderConfig) {
 function buildFollowupEmail(
   params: FollowupEmailParams,
   config: FollowupEmailBuilderConfig,
-) {
+  language = "en",
+): LocalizedEmailContent {
+  const { t } = createEmailTranslator(language);
+
   const appTransactionsUrl = params.appTransactionsUrl ??
     config.appTransactionsUrl;
   const didFail = params.savedCount === 0 && params.duplicateCount === 0 &&
     params.failedCount > 0;
   const didSkipDuplicatesOnly = params.savedCount === 0 &&
     params.duplicateCount > 0 && params.failedCount === 0;
-  const attachmentLines = renderAttachmentLines(params.attachmentResults);
-  const transactionLines = renderTransactionLines(params.transactions);
+  const attachmentLines = renderAttachmentLines(
+    params.attachmentResults,
+    language,
+  );
+  const transactionLines = renderTransactionLines(
+    params.transactions,
+    language,
+  );
   const content = renderContent(
     params,
     appTransactionsUrl,
@@ -54,9 +68,11 @@ function buildFollowupEmail(
     transactionLines,
     didFail,
     didSkipDuplicatesOnly,
+    language,
   );
-  const footerReason =
-    "Moneko does not store forwarded attachments or email content on our servers. We process them temporarily only to extract transactions. Replies are not monitored.";
+  const footerReason = t(
+    "Moneko does not store forwarded attachments or email content on our servers. We process them temporarily only to extract transactions. Replies are not monitored.",
+  );
   const text = buildTextEmail(
     params,
     config,
@@ -64,24 +80,26 @@ function buildFollowupEmail(
     footerReason,
     didFail,
     didSkipDuplicatesOnly,
+    language,
   );
 
-  return {
+  return withEmailLocalization({
     subject: sanitizeSubject(
       didSkipDuplicatesOnly
-        ? "This Moneko import was already logged"
+        ? t("This Moneko import was already logged")
         : didFail
-        ? "Moneko could not complete your import"
-        : "Your Moneko import is complete",
+        ? t("Moneko could not complete your import")
+        : t("Your Moneko import is complete"),
     ),
     html: baseTemplate(
       content,
       renderFooter({
         customReason: footerReason,
-      }),
+      }, language),
+      language,
     ),
     text,
-  };
+  }, (locale) => buildFollowupEmail(params, config, locale));
 }
 
 function renderContent(
@@ -91,36 +109,48 @@ function renderContent(
   transactionLines: string,
   didFail: boolean,
   didSkipDuplicatesOnly: boolean,
+  language = "en",
 ): string {
-  return `
+  const { t, h } = createEmailTranslator(language);
+
+  return h`
     <h1 class="title">${
     didSkipDuplicatesOnly
-      ? "This import was already logged"
+      ? t("This import was already logged")
       : didFail
-      ? "Moneko could not complete your import"
-      : "Your Moneko import is complete"
+      ? t("Moneko could not complete your import")
+      : t("Your Moneko import is complete")
   }</h1>
     <p class="subtitle">${
     didSkipDuplicatesOnly
-      ? "We found transaction content in the import forwarded from"
+      ? t("We found transaction content in the import forwarded from")
       : didFail
-      ? "We could not extract a transaction from the import content forwarded from"
-      : "We finished processing the import content forwarded from"
+      ? t(
+        "We could not extract a transaction from the import content forwarded from",
+      )
+      : t("We finished processing the import content forwarded from")
   } ${escapeHtml(params.senderEmail)}${
     didSkipDuplicatesOnly
-      ? ", but it matched a transaction already logged in Moneko, so nothing new was saved."
+      ? t(
+        ", but it matched a transaction already logged in Moneko, so nothing new was saved.",
+      )
       : "."
   }</p>
-    ${renderOpenTransactionsButton(appTransactionsUrl)}
-    ${renderImportSummary(params)}
+    ${renderOpenTransactionsButton(appTransactionsUrl, language)}
+    ${renderImportSummary(params, language)}
     <p><strong>Import source summary</strong></p>
     <ul>${attachmentLines}</ul>
-    ${renderSavedTransactionsSection(transactionLines)}
+    ${renderSavedTransactionsSection(transactionLines, language)}
   `;
 }
 
-function renderOpenTransactionsButton(appTransactionsUrl: string): string {
-  return `
+function renderOpenTransactionsButton(
+  appTransactionsUrl: string,
+  language = "en",
+): string {
+  const { h } = createEmailTranslator(language);
+
+  return h`
     <p>
       <a href="${
     escapeHtml(appTransactionsUrl)
@@ -131,18 +161,25 @@ function renderOpenTransactionsButton(appTransactionsUrl: string): string {
   `;
 }
 
-function renderImportSummary(params: FollowupEmailParams): string {
-  return `
+function renderImportSummary(
+  params: FollowupEmailParams,
+  language = "en",
+): string {
+  const { h } = createEmailTranslator(language);
+
+  return h`
     <p><strong>Saved:</strong> ${params.savedCount} ${
-    pluralize(params.savedCount, "transaction")
+    localizedPluralize(params.savedCount, "transaction", undefined, language)
   }</p>
     <p><strong>Duplicates skipped:</strong> ${params.duplicateCount}</p>
     <p><strong>Failed:</strong> ${params.failedCount}</p>
-    ${renderFailureReasons(params.failureReasons)}
+    ${renderFailureReasons(params.failureReasons, language)}
   `;
 }
 
-function renderFailureReasons(reasons?: string[]): string {
+function renderFailureReasons(reasons?: string[], language = "en"): string {
+  const { h } = createEmailTranslator(language);
+
   const uniqueReasons = Array.from(
     new Set(
       (reasons ?? [])
@@ -153,28 +190,36 @@ function renderFailureReasons(reasons?: string[]): string {
 
   if (uniqueReasons.length === 0) return "";
 
-  return `<p><strong>Failure ${
-    pluralize(uniqueReasons.length, "reason")
+  return h`<p><strong>Failure ${
+    localizedPluralize(uniqueReasons.length, "reason", undefined, language)
   }:</strong> ${uniqueReasons.map(escapeHtml).join("; ")}</p>`;
 }
 
-function renderSavedTransactionsSection(transactionLines: string): string {
+function renderSavedTransactionsSection(
+  transactionLines: string,
+  language = "en",
+): string {
+  const { h } = createEmailTranslator(language);
+
   if (!transactionLines) return "";
-  return `<p><strong>Saved transactions</strong></p><ul>${transactionLines}</ul>`;
+  return h`<p><strong>Saved transactions</strong></p><ul>${transactionLines}</ul>`;
 }
 
 function renderAttachmentLines(
   attachmentResults: FollowupAttachmentResult[],
+  language = "en",
 ): string {
+  const { t, h } = createEmailTranslator(language);
+
   return attachmentResults
     .map((item) => {
       if (!item.success) {
-        return `<li>${escapeHtml(item.filename)}: ${
-          escapeHtml(item.error || "analysis failed")
+        return h`<li>${escapeHtml(item.filename)}: ${
+          escapeHtml(item.error || t("analysis failed"))
         }</li>`;
       }
-      return `<li>${escapeHtml(item.filename)}: ${item.itemCount} ${
-        pluralize(item.itemCount, "transaction")
+      return h`<li>${escapeHtml(item.filename)}: ${item.itemCount} ${
+        localizedPluralize(item.itemCount, "transaction", undefined, language)
       } found</li>`;
     })
     .join("");
@@ -182,24 +227,34 @@ function renderAttachmentLines(
 
 function renderTransactionLines(
   transactions: Array<Record<string, unknown>>,
+  language = "en",
 ): string {
-  const lines = transactions.slice(0, 30).map(renderTransactionLine).join("");
+  const { h } = createEmailTranslator(language);
+
+  const lines = transactions.slice(0, 30).map((item) =>
+    renderTransactionLine(item, language)
+  ).join("");
   if (transactions.length <= 30) return lines;
-  return `${lines}<li>...</li>`;
+  return h`${lines}<li>...</li>`;
 }
 
-function renderTransactionLine(item: Record<string, unknown>): string {
-  const type = resolveTransactionType(item);
+function renderTransactionLine(
+  item: Record<string, unknown>,
+  language = "en",
+): string {
+  const { t, h } = createEmailTranslator(language);
+
+  const type = t(resolveTransactionType(item));
   const amount = Number(item.amount ?? 0);
   const currency = resolveTransactionCurrency(item);
   const category = resolveTransactionCategory(item);
-  const description = resolveTransactionDescription(item);
+  const description = resolveTransactionDescription(item, language);
   const dateText = renderTransactionDate(item);
 
-  return `<li><strong>${escapeHtml(type)}</strong>: ${
+  return h`<li><strong>${escapeHtml(type)}</strong>: ${
     escapeHtml(description)
   } · ${escapeHtml(category)} · ${
-    escapeHtml(formatCurrency(amount, currency))
+    escapeHtml(formatCurrency(amount, currency, language))
   }${dateText}</li>`;
 }
 
@@ -224,7 +279,10 @@ function renderTransactionDate(item: Record<string, unknown>): string {
   return ` · ${escapeHtml(item.date)}`;
 }
 
-function resolveTransactionDescription(item: Record<string, unknown>): string {
+function resolveTransactionDescription(
+  item: Record<string, unknown>,
+  language = "en",
+): string {
   if (
     typeof item.description === "string" &&
     item.description.trim().length > 0
@@ -234,7 +292,7 @@ function resolveTransactionDescription(item: Record<string, unknown>): string {
   if (typeof item.merchant === "string" && item.merchant.trim().length > 0) {
     return item.merchant.trim();
   }
-  return "Imported transaction";
+  return createEmailTranslator(language).t("Imported transaction");
 }
 
 function buildTextEmail(
@@ -244,7 +302,10 @@ function buildTextEmail(
   footerReason: string,
   didFail: boolean,
   didSkipDuplicatesOnly: boolean,
+  language = "en",
 ): string {
+  const { t } = createEmailTranslator(language);
+
   const failureReasons = Array.from(
     new Set(
       (params.failureReasons ?? [])
@@ -253,15 +314,15 @@ function buildTextEmail(
     ),
   );
   const failureText = failureReasons.length > 0
-    ? ` Failure ${pluralize(failureReasons.length, "reason")}: ${
-      failureReasons.join("; ")
-    }.`
+    ? t` Failure ${
+      localizedPluralize(failureReasons.length, "reason", undefined, language)
+    }: ${failureReasons.join("; ")}.`
     : "";
 
   const statusText = didSkipDuplicatesOnly
-    ? "Moneko skipped this duplicate import"
+    ? t("Moneko skipped this duplicate import")
     : didFail
-    ? "Moneko could not complete the import"
-    : "Moneko completed the import";
-  return `${statusText} from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} Open transactions in Moneko: ${appTransactionsUrl}. ${footerReason} Contact ${config.supportEmail} if you need help.`;
+    ? t("Moneko could not complete the import")
+    : t("Moneko completed the import");
+  return t`${statusText} from ${params.senderEmail}. Import inbox: ${config.importInboxEmail}. Saved: ${params.savedCount}. Duplicates skipped: ${params.duplicateCount}. Failed: ${params.failedCount}.${failureText} Open transactions in Moneko: ${appTransactionsUrl}. ${footerReason} Contact ${config.supportEmail} if you need help.`;
 }

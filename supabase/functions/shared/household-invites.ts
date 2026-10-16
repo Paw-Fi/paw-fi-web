@@ -1,3 +1,4 @@
+import { loadRecipientEmailLanguageWithClient } from "./email-language.ts";
 import { householdInviteTemplate } from "./email-templates.ts";
 
 type SupabaseLike = {
@@ -132,6 +133,7 @@ export async function createHouseholdInvite(params: {
 
   if (invitedEmail) {
     const emailResult = await sendInviteEmail({
+      supabase: params.supabase,
       apiKey: params.resendApiKey,
       from: params.resendFrom,
       to: invitedEmail,
@@ -191,6 +193,7 @@ function validateInviteTtl(
 }
 
 async function sendInviteEmail(params: {
+  supabase: SupabaseLike;
   apiKey?: string | null;
   from: string;
   to: string;
@@ -203,12 +206,22 @@ async function sendInviteEmail(params: {
     return failure(502, "RESEND_API_KEY is not configured");
   }
 
-  const { html, text, subject } = householdInviteTemplate({
+  let language: string;
+  try {
+    language = await loadRecipientEmailLanguageWithClient(
+      params.supabase,
+      params.to,
+    );
+  } catch {
+    return failure(502, "Failed to resolve invitation recipient language");
+  }
+  const template = householdInviteTemplate({
     inviteUrl: params.inviteUrl,
     personalMessage: params.personalMessage,
     inviterName: params.inviterName,
     householdName: params.householdName,
   });
+  const { html, text, subject } = template.localize?.(language) ?? template;
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
