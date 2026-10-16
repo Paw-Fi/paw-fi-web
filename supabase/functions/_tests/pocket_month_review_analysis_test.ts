@@ -189,3 +189,53 @@ Deno.test("copied pockets retain history through their rollover group", () => {
     "A copied pocket must keep its prior budget evidence despite a new ID",
   );
 });
+
+Deno.test(
+  "category evidence nets refunds without inflating purchase concentration",
+  () => {
+    const [category] = buildCategorySpending({
+      actual_expenses: [
+        { category: "食料品", amount_cents: 10000, date: "2026-09-03" },
+        { category: "食料品", amount_cents: -4000, date: "2026-09-04" },
+      ],
+    });
+    assert(category.actual_spend_cents === 6000, "Refunds reduce actual spend");
+    assert(
+      category.actual_transaction_count === 2,
+      "Both financial events count",
+    );
+    assert(category.actual_active_day_count === 2, "Both event dates count");
+    assert(
+      category.actual_gross_spend_cents === 10000,
+      "Keep gross purchase evidence",
+    );
+    assert(
+      category.actual_refund_cents === 4000,
+      "Keep refund evidence separate",
+    );
+    assert(
+      category.largest_actual_transaction_share_bps === 10000,
+      "Purchase concentration uses gross purchases, not net spend",
+    );
+  },
+);
+
+Deno.test(
+  "refund-only category remains signed evidence rather than disappearing",
+  () => {
+    const [category] = buildCategorySpending({
+      actual_expenses: [
+        { category: "سكن", amount_cents: -4000, date: "2026-09-04" },
+      ],
+    });
+    assert(
+      category.actual_spend_cents === -4000,
+      "Keep the refund-only net effect",
+    );
+    assert(category.actual_refund_cents === 4000, "Keep refunded amount");
+    assert(
+      category.largest_actual_transaction_share_bps === 0,
+      "No invented purchases",
+    );
+  },
+);

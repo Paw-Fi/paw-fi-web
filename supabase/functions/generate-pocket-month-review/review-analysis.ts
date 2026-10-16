@@ -1,6 +1,8 @@
 export interface CategorySpendContext {
   category: string;
   actual_spend_cents: number;
+  actual_gross_spend_cents: number;
+  actual_refund_cents: number;
   actual_transaction_count: number;
   actual_active_day_count: number;
   average_actual_transaction_cents: number;
@@ -12,6 +14,7 @@ export interface CategorySpendContext {
 
 export interface PocketCycleEvidence {
   actual_spend_cents: number;
+  actual_gross_spend_cents?: number;
   available_cents?: number;
   actual_transaction_count: number;
   largest_actual_transaction_cents: number;
@@ -89,6 +92,8 @@ export function financialCycleEndKey(cycleStart: string): string {
 
 interface SpendAccumulator {
   total: number;
+  gross: number;
+  refunds: number;
   count: number;
   dates: Set<string>;
   largest: number;
@@ -106,7 +111,7 @@ export function deriveKnownCashFlow(
     0,
     finiteCents(input.projectedRecurringIncomeCents),
   );
-  const actualExpenses = Math.max(0, finiteCents(input.actualExpenseCents));
+  const actualExpenses = finiteCents(input.actualExpenseCents);
   const projectedExpenses = Math.max(
     0,
     finiteCents(input.projectedRecurringExpenseCents),
@@ -208,7 +213,10 @@ function positiveExpenseAmount(value: unknown): number {
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount) : 0;
 }
 
-function aggregateRows(rows: unknown): Map<string, SpendAccumulator> {
+function aggregateRows(
+  rows: unknown,
+  signed = false,
+): Map<string, SpendAccumulator> {
   const totals = new Map<string, SpendAccumulator>();
   if (!Array.isArray(rows)) return totals;
 
@@ -216,16 +224,24 @@ function aggregateRows(rows: unknown): Map<string, SpendAccumulator> {
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
     const row = value as Record<string, unknown>;
     if (String(row.type ?? "expense").toLowerCase() === "income") continue;
-    const amount = positiveExpenseAmount(row.amount_cents);
+    const rawAmount = Number(row.amount_cents);
+    const amount =
+      signed && Number.isSafeInteger(rawAmount)
+        ? rawAmount
+        : positiveExpenseAmount(row.amount_cents);
     if (amount === 0) continue;
     const category = normalizedCategory(row.category);
     const current = totals.get(category) ?? {
       total: 0,
+      gross: 0,
+      refunds: 0,
       count: 0,
       dates: new Set<string>(),
       largest: 0,
     };
     current.total += amount;
+    current.gross += Math.max(0, amount);
+    current.refunds += Math.max(0, -amount);
     current.count += 1;
     current.largest = Math.max(current.largest, amount);
     if (typeof row.date === "string" && row.date.trim().length > 0) {
@@ -239,7 +255,7 @@ function aggregateRows(rows: unknown): Map<string, SpendAccumulator> {
 export function buildCategorySpending(
   month: Record<string, unknown>,
 ): CategorySpendContext[] {
-  const actual = aggregateRows(month.actual_expenses);
+  const actual = aggregateRows(month.actual_expenses, true);
   const projected = aggregateRows(month.projected_recurring_expenses);
   const categories = new Set([...actual.keys(), ...projected.keys()]);
 
@@ -253,14 +269,16 @@ export function buildCategorySpending(
       return {
         category,
         actual_spend_cents: actualSpend,
+        actual_gross_spend_cents: actualStats?.gross ?? 0,
+        actual_refund_cents: actualStats?.refunds ?? 0,
         actual_transaction_count: actualCount,
         actual_active_day_count: actualStats?.dates.size ?? 0,
         average_actual_transaction_cents:
           actualCount > 0 ? Math.round(actualSpend / actualCount) : 0,
         largest_actual_transaction_cents: largestActual,
         largest_actual_transaction_share_bps:
-          actualSpend > 0
-            ? Math.round((largestActual * 10000) / actualSpend)
+          (actualStats?.gross ?? 0) > 0
+            ? Math.round((largestActual * 10000) / actualStats!.gross)
             : 0,
         projected_recurring_cents: projectedStats?.total ?? 0,
         projected_recurring_count: projectedStats?.count ?? 0,
@@ -279,7 +297,8 @@ export function derivePocketHistoryAnalysis(
   cycles: PocketCycleEvidence[],
 ): PocketHistoryAnalysis {
   const observed = cycles.filter(
-    (cycle) => cycle.actual_spend_cents > 0 || (cycle.available_cents ?? 0) > 0,
+    (cycle) =>
+      cycle.actual_transaction_count > 0 || (cycle.available_cents ?? 0) > 0,
   );
   const spends = observed.map((cycle) => cycle.actual_spend_cents);
   const minimumSpend = spends.length > 0 ? Math.min(...spends) : 0;
@@ -315,10 +334,11 @@ export function derivePocketHistoryAnalysis(
         }
       : {}),
     latest_largest_transaction_share_bps:
-      latest != null && latest.actual_spend_cents > 0
+      latest != null &&
+      (latest.actual_gross_spend_cents ?? latest.actual_spend_cents) > 0
         ? Math.round(
             (latest.largest_actual_transaction_cents * 10000) /
-              latest.actual_spend_cents,
+              (latest.actual_gross_spend_cents ?? latest.actual_spend_cents),
           )
         : 0,
   };

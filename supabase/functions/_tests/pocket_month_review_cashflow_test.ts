@@ -1,6 +1,7 @@
 /// <reference lib="deno.ns" />
 
 import {
+  buildCategorySpending,
   deriveKnownCashFlow,
   financialCycleEndKey,
 } from "../generate-pocket-month-review/review-analysis.ts";
@@ -43,6 +44,30 @@ Deno.test("comfortable known cash flow reports sustainable coverage", () => {
   assert(
     result.safe_to_spend_status === "unavailable",
     "Safe-to-spend must remain unavailable without essential-spend classification",
+  );
+});
+
+Deno.test("refunds offset current commitments without becoming income", () => {
+  const categories = buildCategorySpending({
+    actual_expenses: [{ category: "返金", amount_cents: -4000 }],
+  });
+  const result = deriveKnownCashFlow({
+    dataStatus: "complete",
+    recordedIncomeCents: 10000,
+    projectedRecurringIncomeCents: 0,
+    actualExpenseCents: categories.reduce(
+      (sum, row) => sum + row.actual_spend_cents,
+      0,
+    ),
+    projectedRecurringExpenseCents: 12000,
+    incomingCarryCents: 0,
+  });
+  assert(result.actual_expense_cents === -4000, "Keep signed refund effect");
+  assert(result.known_outflow_cents === 8000, "Refund reduces net outflow");
+  assert(result.recorded_income_cents === 10000, "Refund is not income");
+  assert(
+    result.income_coverage_status === "covered",
+    "Use net outflow for coverage",
   );
 });
 

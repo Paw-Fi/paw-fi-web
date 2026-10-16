@@ -11,6 +11,12 @@ const analysisSource = await Deno.readTextFile(
     import.meta.url,
   ),
 );
+const evidenceSource = await Deno.readTextFile(
+  new URL(
+    "../generate-pocket-month-review/review-evidence.ts",
+    import.meta.url,
+  ),
+);
 const reviewSource = `${functionSource}\n${analysisSource}`;
 const emptyMonthActualsMigration = await Deno.readTextFile(
   new URL(
@@ -26,41 +32,39 @@ function assert(condition: boolean, message: string) {
 Deno.test(
   "pocket month review provides personal aggregate context without transaction descriptions",
   () => {
-    for (
-      const requiredContext of [
-        "actual_expenses",
-        "projected_recurring_expenses",
-        "category_links",
-        "actual_spend_cents",
-        "projected_recurring_cents",
-        "unassigned_spending",
-        "total_added_to_pockets_cents",
-        "unallocated_budget_cents",
-        "category_spending",
-        "actual_transaction_count",
-        "actual_active_day_count",
-        "average_actual_transaction_cents",
-        "largest_actual_transaction_cents",
-        "largest_actual_transaction_share_bps",
-        "projected_recurring_count",
-        "history_analysis",
-        "cash_flow",
-        "recorded_income_cents",
-        "projected_recurring_income_cents",
-        "income_coverage_status",
-        "month_funding_status",
-        "upcoming_recurring_expenses",
-        "current_cycle",
-        "previous_cycle",
-        "historical_cycles",
-        "pocket_id",
-        "incoming_carry_cents",
-        "rollover_cap_cents",
-        "opening_rollover_cents",
-        "rollover_from_previous_cents",
-        "rollover_group_id",
-      ]
-    ) {
+    for (const requiredContext of [
+      "actual_expenses",
+      "projected_recurring_expenses",
+      "category_links",
+      "actual_spend_cents",
+      "projected_recurring_cents",
+      "unassigned_spending",
+      "total_added_to_pockets_cents",
+      "unallocated_budget_cents",
+      "category_spending",
+      "actual_transaction_count",
+      "actual_active_day_count",
+      "average_actual_transaction_cents",
+      "largest_actual_transaction_cents",
+      "largest_actual_transaction_share_bps",
+      "projected_recurring_count",
+      "history_analysis",
+      "cash_flow",
+      "recorded_income_cents",
+      "projected_recurring_income_cents",
+      "income_coverage_status",
+      "month_funding_status",
+      "upcoming_recurring_expenses",
+      "current_cycle",
+      "previous_cycle",
+      "historical_cycles",
+      "pocket_id",
+      "incoming_carry_cents",
+      "rollover_cap_cents",
+      "opening_rollover_cents",
+      "rollover_from_previous_cents",
+      "rollover_group_id",
+    ]) {
       assert(
         reviewSource.includes(requiredContext),
         `Missing AI planning context: ${requiredContext}`,
@@ -164,7 +168,7 @@ Deno.test(
     assert(
       functionSource.includes("get_projected_scoped_recurring_expenses_v1") &&
         functionSource.includes("analytics_counts_toward_income") &&
-        functionSource.includes('input.scope === "portfolio"'),
+        evidenceSource.includes('input.scope === "portfolio"'),
       "Income context must include recurring income and preserve private portfolio ownership",
     );
     assert(
