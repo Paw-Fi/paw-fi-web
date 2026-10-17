@@ -62,8 +62,8 @@ Deno.test(
       pushDelivery.includes("sendPocketsMonthReviewEmail") &&
         pushDelivery.includes("notificationTemplate") &&
         pushDelivery.includes('const pocketsLink = "moneko://pockets"') &&
-        pushDelivery.includes('actionText: "Build My New Plan"') &&
-        pushDelivery.includes('subject: "Your new budget cycle starts today ✨"') &&
+        pushDelivery.includes('actionText: t("Build My New Plan")') &&
+        pushDelivery.includes('subject: t("Your new budget cycle starts today ✨")') &&
         pushDelivery.includes("pockets-month-review:${notificationEventId}"),
       "The primary delivery path must use the shared notification template, compelling Pocket-plan CTA copy, the Pockets deep link, and an event-scoped idempotency key",
     );

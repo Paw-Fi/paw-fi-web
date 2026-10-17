@@ -2042,12 +2042,12 @@ export async function handleResendInboundWebhook(
               ? Array.from(
                   new Set(
                     result.items
-                      .map((item) =>
+                      .map((item: { currency?: unknown } | null | undefined) =>
                         typeof item?.currency === "string"
                           ? item.currency.trim().toUpperCase()
                           : "",
                       )
-                      .filter((currency) => currency.length > 0),
+                      .filter((currency: string) => currency.length > 0),
                   ),
                 )
               : [];

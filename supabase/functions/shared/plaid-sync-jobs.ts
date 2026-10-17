@@ -6,7 +6,7 @@ export interface EnqueuePlaidSyncJobParams {
     rpc: (
       functionName: string,
       parameters: Record<string, unknown>,
-    ) => Promise<{
+    ) => PromiseLike<{
       data: unknown;
       error: any;
     }>;

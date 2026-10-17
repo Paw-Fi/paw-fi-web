@@ -1280,7 +1280,7 @@ export const inviteReminderInviterTemplate = localizedEmailTemplate((data: {
     text: htmlToText(content),
     subject: sanitizeSubject(
       data.reminderTier === 3
-        ? `Reminder: Your invitation to ${data.householdName} expires soon`
+        ? t`Reminder: Your invitation to ${data.householdName} expires soon`
         : t`${
           data.inviteeName || t("Your invitee")
         } hasn't joined ${data.householdName} yet`,
@@ -1334,7 +1334,7 @@ export const inviteReminderInviteeTemplate = localizedEmailTemplate((data: {
       )
     }.`;
   } else if (data.reminderTier === 2) {
-    title = `Reminder: Your Invitation to ${
+    title = t`Reminder: Your Invitation to ${
       escapeHtml(
         data.householdName,
       )
@@ -1407,7 +1407,7 @@ export const inviteReminderInviteeTemplate = localizedEmailTemplate((data: {
           )
         }`
         : data.reminderTier === 2
-        ? `Reminder: Your invitation to ${data.householdName} is still available`
+        ? t`Reminder: Your invitation to ${data.householdName} is still available`
         : t`${data.inviterName} invited you to join ${data.householdName} on Moneko`,
     ),
   };

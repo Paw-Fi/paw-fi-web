@@ -520,3 +520,48 @@ test("raw custom emails keep their supplied copy and require no preference looku
     globalThis.Deno = originalDeno;
   }
 });
+
+test("all translated invitation reminder headings and subjects use their catalog entries", () => {
+  for (
+    const language of Object.keys(messages.reminderYourInvitationToExpiresSoon)
+  ) {
+    if (language === "en") continue;
+    const fill = (entry) =>
+      entry[language].replace(/\{0\}/g, () => data.householdName);
+    const inviter = templates.inviteReminderInviterTemplate({
+      ...data,
+      reminderTier: 3,
+    }).localize(language);
+    const invitee = templates.inviteReminderInviteeTemplate({
+      ...data,
+      reminderTier: 2,
+    }).localize(language);
+    assert.equal(
+      inviter.subject,
+      fill(messages.reminderYourInvitationToExpiresSoon),
+      language,
+    );
+    assert.equal(
+      invitee.subject,
+      fill(messages.reminderYourInvitationToIsStillAvailable),
+      language,
+    );
+    assert.ok(
+      invitee.text.includes(
+        fill(messages.reminderYourInvitationToIsStillAvailableTitle),
+      ),
+      language,
+    );
+  }
+});
+
+test("translated email copyright renders as a symbol without double-escaped entities", () => {
+  for (
+    const language of Object.keys(messages.copy2026MonekoAllRightsReserved)
+  ) {
+    if (language === "en") continue;
+    const email = templates.welcomeTemplate(data).localize(language);
+    assert.ok(email.html.includes("© 2026 Moneko"), language);
+    assert.ok(!email.html.includes("&amp;copy;"), language);
+  }
+});

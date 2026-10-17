@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { runInNewContext } from "node:vm";
+import process from "node:process";
 import test from "node:test";
 import ts from "typescript";
 import {
@@ -268,14 +269,30 @@ for (
     ],
   ]
 ) {
-  test(`${name}: English copy and routing data match the original implementation`, () =>
-    assert.deepEqual(
-      cases.map((value) => hash(render(value))),
-      baseline[name],
-    ));
+  test(`${name}: English copy and routing data match the original implementation`, (context) => {
+    const originalDate = Date;
+    const originalTimezone = process.env.TZ;
+    process.env.TZ = "UTC";
+    context.mock.timers.enable({
+      apis: ["Date"],
+      now: new Date("2026-10-16T12:00:00Z"),
+    });
+    // Endpoint renderers run in VM contexts; use the same clock as their imports.
+    for (const scope of [primary, queued, nudge]) scope.Date = Date;
+    try {
+      assert.deepEqual(
+        cases.map((value) => hash(render(value))),
+        baseline[name],
+      );
+    } finally {
+      for (const scope of [primary, queued, nudge]) scope.Date = originalDate;
+      if (originalTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTimezone;
+    }
+  });
 }
 
-test("one notification catalog contains English plus 14 blank language slots", () => {
+test("one notification catalog contains English plus all 14 supported languages", () => {
   const languages = [
     "en",
     "de",
@@ -312,7 +329,11 @@ test("one notification catalog contains English plus 14 blank language slots", (
 
 test("blank, unsupported and damaged translations use exact English", () => {
   const saved = notificationCatalogs.fr;
+  const savedTraditionalChinese = notificationCatalogs["zh-TW"];
+  const savedUrdu = notificationCatalogs.ur;
   notificationCatalogs.fr = { "Review your {0} plan": "incorrect {1}" };
+  notificationCatalogs["zh-TW"] = {};
+  notificationCatalogs.ur = {};
   try {
     for (const language of [undefined, "pt-BR", "fr-CA", "zh_TW", "ur"]) {
       assert.deepEqual(
@@ -333,6 +354,8 @@ test("blank, unsupported and damaged translations use exact English", () => {
     }
   } finally {
     notificationCatalogs.fr = saved;
+    notificationCatalogs["zh-TW"] = savedTraditionalChinese;
+    notificationCatalogs.ur = savedUrdu;
   }
 });
 
@@ -792,4 +815,19 @@ test("queued recipients share one rendering clock for reminder variants and due-
     new Date("2099-01-01T00:00:00Z"),
   );
   assert.ok(recurring.body.includes("tomorrow"));
+});
+
+test("both apostrophe-sensitive reminder variants select the real translations in every language", () => {
+  for (
+    const [key, inactivity_days] of [
+      ["logARecentPurchaseWhileItSStillFresh", 0],
+      ["startWithYourLatestExpenseAndUpdateTheRestWheneverYouReReady", 15],
+    ]
+  ) {
+    const reminder = { ...payload, variant: 0, inactivity_days };
+    for (const language of Object.keys(messages[key])) {
+      const result = buildLogExpenseReminderMessage(reminder, language);
+      assert.equal(result.body, messages[key][language], `${key}.${language}`);
+    }
+  }
 });

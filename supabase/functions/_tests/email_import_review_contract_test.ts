@@ -97,13 +97,14 @@ Deno.test(
     assertStringIncludes(webhook, 'event_type: "email_import_review_required"');
     assertStringIncludes(webhook, 'deep_link: "moneko://home"');
     assertEquals(webhook.includes("#${token}"), false);
+    const normalizedWebhook = webhook.replace(/\s+/g, " ");
     assertStringIncludes(
-      webhook,
-      'if (reviewCandidates.length === 0) {\n        try {\n          ensureSoftDeadline(processingStartedAtMs, "send_followup_email")',
+      normalizedWebhook,
+      'if (reviewCandidates.length === 0) { try { ensureSoftDeadline(processingStartedAtMs, "send_followup_email")',
     );
     assertStringIncludes(
-      webhook,
-      'if (reviewCandidates.length === 0) {\n        try {\n          ensureSoftDeadline(processingStartedAtMs, "push_notification")',
+      normalizedWebhook,
+      'if (reviewCandidates.length === 0) { try { ensureSoftDeadline(processingStartedAtMs, "push_notification")',
     );
   },
 );
