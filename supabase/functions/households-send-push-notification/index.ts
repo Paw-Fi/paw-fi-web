@@ -1,4 +1,7 @@
-import { createNotificationTranslator } from "../shared/notification-localization.ts";
+import {
+  createNotificationTranslator,
+  localizeNotificationCategory,
+} from "../shared/notification-localization.ts";
 import { createEmailTranslator } from "../shared/automated-email-localization.ts";
 /// <reference lib="deno.ns" />
 
@@ -1326,7 +1329,9 @@ function buildNotificationMessage(
             2,
           )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
-          const newCat = String(expenseData.new_category ?? "");
+          const rawCategory = String(expenseData.new_category ?? "");
+          const newCat = localizeNotificationCategory(rawCategory, language) ??
+            rawCategory;
           body = t`changed expense category to ${newCat}`;
         } else if (fields.indexOf("currency") !== -1) {
           const newCur = String(expenseData.new_currency ?? "");
@@ -1485,7 +1490,8 @@ function buildNotificationMessage(
       const symbol = getCurrencySymbol(code);
       const cents = Number(expenseData.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-      const category = String(expenseData.category || t("income"));
+      const rawCategory = String(expenseData.category || t("income"));
+      const category = localizeNotificationCategory(rawCategory, language) ?? rawCategory;
       return {
         title: acknowledgerName,
         body: t`acknowledged your ${amount} ${category} income`,
@@ -1551,7 +1557,9 @@ function buildNotificationMessage(
             2,
           )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
-          const newCat = String(expenseData.new_category ?? "");
+          const rawCategory = String(expenseData.new_category ?? "");
+          const newCat = localizeNotificationCategory(rawCategory, language) ??
+            rawCategory;
           body = t`changed income category to ${newCat}`;
         } else if (fields.indexOf("currency") !== -1) {
           const newCur = String(expenseData.new_currency ?? "");

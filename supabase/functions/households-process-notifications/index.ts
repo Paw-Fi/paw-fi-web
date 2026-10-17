@@ -1,4 +1,7 @@
-import { createNotificationTranslator } from "../shared/notification-localization.ts";
+import {
+  createNotificationTranslator,
+  localizeNotificationCategory,
+} from "../shared/notification-localization.ts";
 /// <reference lib="deno.ns" />
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -1202,12 +1205,10 @@ function buildQueuedNotificationMessage(
       );
       const cents = Number(payloadExpenseData.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+      const rawCategory = String(payloadExpenseData.category || t("income"));
+      const category = localizeNotificationCategory(rawCategory, language) ?? rawCategory;
       title = acknowledgerName;
-      body = t`acknowledged your ${amount} ${
-        String(
-          payloadExpenseData.category || t("income"),
-        )
-      } income`;
+      body = t`acknowledged your ${amount} ${category} income`;
       break;
     }
     case "recurring_reminder": {

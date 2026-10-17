@@ -10,6 +10,7 @@ import {
 } from "../supabase/functions/shared/notification-delivery.ts";
 import {
   createNotificationTranslator,
+  localizeNotificationCategory,
   notificationCatalogs,
 } from "../supabase/functions/shared/notification-localization.ts";
 import messages from "../supabase/functions/shared/notification-translations.json" with {
@@ -123,6 +124,7 @@ function fixture(options = {}) {
   };
   const scope = {
     createNotificationTranslator,
+    localizeNotificationCategory,
     buildFcmDeliveryContent,
     buildNotificationDeepLink,
     formatMoney,
@@ -242,7 +244,9 @@ test("every budget/pocket scenario and all 14 app locales translate without chan
         );
         assert.ok(
           translated.body.startsWith(
-            "DESTINATION your private space / €12.50\nCATEGORY Groceries\n",
+            `DESTINATION your private space / €12.50\nCATEGORY ${
+              localizeNotificationCategory("groceries", language)
+            }\n`,
           ),
         );
         assert.equal(translated.scenario, expected.scenario);
@@ -375,7 +379,16 @@ test("missing, blank, unsupported and invalid catalog values use the original En
       const app = fixture(options);
       await app.send();
       assert.equal(app.sent[0].notification.title, baselines[0].expected.title);
-      assert.equal(app.sent[0].notification.body, baselines[0].expected.body);
+      assert.equal(
+        app.sent[0].notification.body,
+        baselines[0].expected.body.replace(
+          "🏷️ Groceries",
+          `🏷️ ${
+            localizeNotificationCategory("groceries", options.language) ??
+              "Groceries"
+          }`,
+        ),
+      );
     }
   } finally {
     notificationCatalogs.fr = saved;

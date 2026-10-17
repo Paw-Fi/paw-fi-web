@@ -1,4 +1,7 @@
-import { createNotificationTranslator } from "./notification-localization.ts";
+import {
+  createNotificationTranslator,
+  localizeNotificationCategory,
+} from "./notification-localization.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
 
 export interface RecurringReminderNotification {
@@ -55,7 +58,8 @@ export function buildRecurringReminderNotification(
     : t("soon");
   const isIncome = transactionType === "income";
   const displayCategory = category
-    ? category.charAt(0).toUpperCase() + category.slice(1)
+    ? localizeNotificationCategory(category, language) ??
+      (category.charAt(0).toUpperCase() + category.slice(1))
     : isIncome
     ? t("Income")
     : t("Expense");

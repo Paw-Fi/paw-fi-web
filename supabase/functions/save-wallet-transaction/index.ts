@@ -78,7 +78,10 @@ import {
   buildFcmDeliveryContent,
   buildNotificationDeepLink,
 } from "../shared/notification-delivery.ts";
-import { createNotificationTranslator } from "../shared/notification-localization.ts";
+import {
+  createNotificationTranslator,
+  localizeNotificationCategory,
+} from "../shared/notification-localization.ts";
 import { type AnalyzedMerchantIdentity } from "../shared/merchant-analysis.ts";
 import { enrichSourceVerifiedMerchantItems } from "../shared/merchant-source-verification.ts";
 import { merchantAutoResolutionPatch } from "../shared/merchant-auto-resolution-policy.ts";
@@ -441,6 +444,8 @@ function formatWalletNotificationCategory(
   language: unknown = "en",
 ): string {
   const { t } = createNotificationTranslator(language);
+  const translated = localizeNotificationCategory(value, language);
+  if (translated) return translated;
   const normalized = value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 
   if (!normalized || normalized === "other") return t("Other");

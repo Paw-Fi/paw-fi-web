@@ -7,6 +7,7 @@ import test from "node:test";
 import ts from "typescript";
 import {
   createNotificationTranslator,
+  localizeNotificationCategory,
   notificationCatalogs,
 } from "../supabase/functions/shared/notification-localization.ts";
 import { buildLogExpenseReminderMessage } from "../supabase/functions/shared/log-expense-reminder.ts";
@@ -65,7 +66,7 @@ export function loadEndpoint(name, {
         };
       }
       if (path.endsWith("notification-localization.ts")) {
-        return { createNotificationTranslator };
+        return { createNotificationTranslator, localizeNotificationCategory };
       }
       if (path.endsWith("log-expense-reminder.ts")) {
         return { buildLogExpenseReminderMessage };
@@ -315,11 +316,14 @@ test("one notification catalog contains English plus all 14 supported languages"
     "vi",
   ].sort();
   const seen = new Set();
-  for (const entry of Object.values(messages)) {
+  for (const [key, entry] of Object.entries(messages)) {
     assert.deepEqual(Object.keys(entry).sort(), languages);
     assert.ok(entry.en.trim());
-    assert.ok(!seen.has(entry.en));
-    seen.add(entry.en);
+    const identity = key.startsWith("notificationCategory")
+      ? `category:${entry.en}`
+      : entry.en;
+    assert.ok(!seen.has(identity));
+    seen.add(identity);
     for (const [locale, text] of Object.entries(entry)) {
       if (locale !== "en" && text.trim()) {
         assert.deepEqual(
@@ -839,7 +843,10 @@ test("every authored translation lookup in these notification builders exists in
         "buildQueuedNotificationMessage",
       ],
       ["households-send-nudge/index.ts", "buildBudgetNudgeMessage"],
-      ["shared/notification-special-messages.ts", "buildSpecialNotificationMessage"],
+      [
+        "shared/notification-special-messages.ts",
+        "buildSpecialNotificationMessage",
+      ],
       ["shared/log-expense-reminder.ts", "buildLogExpenseReminderMessage"],
       [
         "shared/recurring-reminder-notification.ts",
@@ -917,5 +924,42 @@ test("both apostrophe-sensitive reminder variants select the real translations i
       const result = buildLogExpenseReminderMessage(reminder, language);
       assert.equal(result.body, messages[key][language], `${key}.${language}`);
     }
+  }
+});
+
+test("category edits, acknowledgements and recurring reminders display mobile labels while routing stays canonical", () => {
+  for (const language of ["fr", "ja", "ur", "zh_TW"]) {
+    const label = localizeNotificationCategory("groceries", language);
+    assert.ok(label);
+    const value = {
+      ...payload,
+      category: "groceries",
+      expense_data: {
+        ...payload.expense_data,
+        category: "groceries",
+        new_category: "groceries",
+        updated_fields: ["category"],
+      },
+    };
+    for (
+      const type of ["expense_edited", "income_edited", "income_acknowledged"]
+    ) {
+      const english = primary.render(type, value, undefined, "en");
+      const localized = primary.render(type, value, undefined, language);
+      assert.ok(localized.body.includes(label), `${type}/${language}`);
+      assert.deepEqual(localized.data, english.data);
+    }
+    const acknowledged = queued.render({
+      event_type: "income_acknowledged",
+      payload: value,
+    }, language);
+    assert.ok(acknowledged.body.includes(label));
+    const recurring = buildRecurringReminderNotification(
+      value,
+      new Date("2099-01-01T00:00:00Z"),
+      language,
+    );
+    assert.ok(recurring.body.includes(label));
+    assert.equal(recurring.data.category, "groceries");
   }
 });
