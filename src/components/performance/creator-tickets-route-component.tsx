@@ -13,6 +13,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   User,
+  Copy,
   MonitorSmartphone,
   Code2,
   ZoomIn,
@@ -732,6 +733,34 @@ function TicketDataTable({
                         {selectedTicket.users.email}
                       </p>
                     )}
+                    <div className="flex items-start gap-1.5 pt-1">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+                          User ID
+                        </p>
+                        <p className="break-all font-mono text-xs text-white/60">
+                          {selectedTicket.user_id}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="mt-3 h-6 w-6 shrink-0 text-white/50 hover:bg-white/10 hover:text-white"
+                        aria-label="Copy user ID"
+                        title="Copy user ID"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(selectedTicket.user_id);
+                            toast.success("User ID copied");
+                          } catch {
+                            toast.error("Unable to copy user ID");
+                          }
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <h3 className="flex items-center gap-1 text-xs font-medium text-white/50">
