@@ -11,6 +11,9 @@ const classificationSource = await Deno.readTextFile(
 const pushSource = await Deno.readTextFile(
   new URL("../households-send-push-notification/index.ts", import.meta.url),
 );
+const specialMessageSource = await Deno.readTextFile(
+  new URL("../shared/notification-special-messages.ts", import.meta.url),
+);
 const provenanceMigration = await Deno.readTextFile(
   new URL(
     "../../migrations/20260728120000_notification_capture_field_provenance.sql",
@@ -41,8 +44,15 @@ Deno.test(
     assertStringIncludes(saveSource, "hasCapturePlusEntitlement");
     assertStringIncludes(saveSource, "queueCapturePlusRequiredNotification");
     assertStringIncludes(pushSource, 'case "capture_plus_required"');
-    assertStringIncludes(pushSource, 'title: "Moneko Plus required"');
-    assertStringIncludes(pushSource, "deep_link: PRICING_URL");
+    assertStringIncludes(
+      pushSource,
+      "buildSpecialNotificationMessage(eventType, payload, language)",
+    );
+    assertStringIncludes(
+      specialMessageSource,
+      'title: t("Moneko Plus required")',
+    );
+    assertStringIncludes(specialMessageSource, "deep_link: PRICING_URL");
     assertStringIncludes(capturePlusEventMigration, "capture_plus_required");
   },
 );
@@ -219,8 +229,9 @@ Deno.test(
     );
     assertStringIncludes(
       classificationSource,
-      "error: new Error(failureResult.diagnosticCode)",
+      "const reportError = new Error(failureResult.diagnosticCode)",
     );
+    assertStringIncludes(classificationSource, "error: reportError");
     assertStringIncludes(
       classificationSource,
       "diagnostics: failureResult.diagnostics",
@@ -229,7 +240,10 @@ Deno.test(
       classificationSource,
       "WALLET_CAPTURE_SAVE_HTTP_${saved.response.status}",
     );
-    assertStringIncludes(classificationSource, 'stage: "wallet_capture_save"');
+    assertStringIncludes(
+      classificationSource,
+      'stage = occurrence ? "recurring_confirmation" : "wallet_capture_save"',
+    );
     assertStringIncludes(
       classificationSource,
       "dependencyCode: optionalString(saved.payload.code, 80)",

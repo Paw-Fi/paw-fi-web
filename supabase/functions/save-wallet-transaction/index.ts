@@ -74,7 +74,11 @@ import {
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
 import { normalizePreferredCurrency } from "../shared/user-preferred-currency.ts";
-import { buildNotificationDeepLink } from "../shared/notification-delivery.ts";
+import {
+  buildFcmDeliveryContent,
+  buildNotificationDeepLink,
+} from "../shared/notification-delivery.ts";
+import { createNotificationTranslator } from "../shared/notification-localization.ts";
 import { type AnalyzedMerchantIdentity } from "../shared/merchant-analysis.ts";
 import { enrichSourceVerifiedMerchantItems } from "../shared/merchant-source-verification.ts";
 import { merchantAutoResolutionPatch } from "../shared/merchant-auto-resolution-policy.ts";
@@ -432,10 +436,14 @@ function formatCurrencyAmount(cents: number, currency: string): string {
   return formatMoney(cents, currency);
 }
 
-function formatWalletNotificationCategory(value: string): string {
+function formatWalletNotificationCategory(
+  value: string,
+  language: unknown = "en",
+): string {
+  const { t } = createNotificationTranslator(language);
   const normalized = value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 
-  if (!normalized) return "Other";
+  if (!normalized || normalized === "other") return t("Other");
 
   return normalized
     .split(" ")
@@ -575,14 +583,12 @@ async function sendFcmV1Notification(params: {
     const message = {
       message: {
         token: deviceToken,
-        notification: {
+        ...buildFcmDeliveryContent(
           title,
           body,
-        },
-        data: {
-          ...data,
-          click_action: "FLUTTER_NOTIFICATION_CLICK",
-        },
+          { ...data, click_action: "FLUTTER_NOTIFICATION_CLICK" },
+          isWeb,
+        ),
         android: {
           priority: "high",
           notification: {
@@ -605,19 +611,6 @@ async function sendFcmV1Notification(params: {
             click_action: "FLUTTER_NOTIFICATION_CLICK",
           },
         },
-        ...(isWeb
-          ? {
-              webpush: {
-                data: {
-                  ...data,
-                  deep_link: deepLink,
-                },
-                fcm_options: {
-                  link: "https://moneko.io/dashboard",
-                },
-              },
-            }
-          : {}),
       },
     };
 
@@ -937,11 +930,13 @@ async function resolveWalletNotificationSpaceLabel(params: {
   supabase: any;
   householdId: string | null;
   isPortfolio: boolean;
+  language?: unknown;
 }): Promise<string> {
-  const { supabase, householdId, isPortfolio } = params;
+  const { supabase, householdId, isPortfolio, language } = params;
+  const { t } = createNotificationTranslator(language);
 
   if (!householdId) {
-    return "your personal space";
+    return t("your personal space");
   }
 
   try {
@@ -965,7 +960,7 @@ async function resolveWalletNotificationSpaceLabel(params: {
     // Non-blocking best-effort lookup only.
   }
 
-  return isPortfolio ? "your private space" : "your shared space";
+  return isPortfolio ? t("your private space") : t("your shared space");
 }
 
 function buildWalletPocketNotificationMessage(params: {
@@ -974,21 +969,22 @@ function buildWalletPocketNotificationMessage(params: {
   currency: string;
   category: string;
   spaceLabel: string;
+  language?: unknown;
 }): { title: string; body: string; scenario: string } {
-  const { insight, amountCents, currency, category, spaceLabel } = params;
+  const { insight, amountCents, currency, category, spaceLabel, language } = params;
+  const { t } = createNotificationTranslator(language);
   const amountLabel = formatCurrencyAmount(amountCents, currency);
-  const prettyCategory = category.trim().length > 0 ? category : "other";
-  const displayCategory = formatWalletNotificationCategory(prettyCategory);
-  const title = `Moneko captured ${amountLabel}`;
-  const headerLine = `💸 ${amountLabel} -> ${spaceLabel}`;
-  const categoryLine = `🏷️ ${displayCategory}`;
+  const displayCategory = formatWalletNotificationCategory(category, language);
+  const title = t`Moneko captured ${amountLabel}`;
+  const headerLine = t`💸 ${amountLabel} -> ${spaceLabel}`;
+  const categoryLine = t`🏷️ ${displayCategory}`;
   const buildBody = (thirdLine: string) =>
     `${headerLine}\n${categoryLine}\n${thirdLine}`;
 
   if (insight.scenario === "no_budget") {
     return {
       title,
-      body: buildBody(`💰 No budget set for ${spaceLabel}`),
+      body: buildBody(t`💰 No budget set for ${spaceLabel}`),
       scenario: insight.scenario,
     };
   }
@@ -1000,7 +996,7 @@ function buildWalletPocketNotificationMessage(params: {
     );
     return {
       title,
-      body: buildBody(`💰 ${budgetLabel} budget this month`),
+      body: buildBody(t`💰 ${budgetLabel} budget this month`),
       scenario: insight.scenario,
     };
   }
@@ -1008,7 +1004,7 @@ function buildWalletPocketNotificationMessage(params: {
   if (insight.scenario === "category_unlinked") {
     return {
       title,
-      body: buildBody("🎯 Link this category to a pocket"),
+      body: buildBody(t("🎯 Link this category to a pocket")),
       scenario: insight.scenario,
     };
   }
@@ -1017,7 +1013,7 @@ function buildWalletPocketNotificationMessage(params: {
   if (!pocket) {
     return {
       title,
-      body: buildBody("👝 Pocket status updated"),
+      body: buildBody(t("👝 Pocket status updated")),
       scenario: "linked",
     };
   }
@@ -1025,7 +1021,7 @@ function buildWalletPocketNotificationMessage(params: {
   if (pocket.limitCents <= 0) {
     return {
       title,
-      body: buildBody(`🎯 Set a limit on ${pocket.name}`),
+      body: buildBody(t`🎯 Set a limit on ${pocket.name}`),
       scenario: "linked_no_limit",
     };
   }
@@ -1037,7 +1033,7 @@ function buildWalletPocketNotificationMessage(params: {
     );
     return {
       title,
-      body: buildBody(`⚠️ ${overLabel} over on ${pocket.name}`),
+      body: buildBody(t`⚠️ ${overLabel} over on ${pocket.name}`),
       scenario: "linked_over",
     };
   }
@@ -1045,7 +1041,7 @@ function buildWalletPocketNotificationMessage(params: {
   const remainingLabel = formatCurrencyAmount(pocket.remainingCents, currency);
   return {
     title,
-    body: buildBody(`🪙 ${remainingLabel} left on ${pocket.name}`),
+    body: buildBody(t`🪙 ${remainingLabel} left on ${pocket.name}`),
     scenario: "linked",
   };
 }
@@ -1077,6 +1073,16 @@ async function sendWalletPocketNotificationBestEffort(params: {
     const devices = await fetchActiveDevices(supabase, userId);
     if (!devices.length) return;
 
+    const { data: contact, error: contactError } = await supabase
+      .from("user_contacts")
+      .select("preferred_language")
+      .eq("user_id", userId)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (contactError) throw new Error("Wallet notification language lookup failed");
+    const language = contact?.preferred_language;
+
     const accessToken = await getFcmAccessToken();
     if (!accessToken) return;
 
@@ -1084,6 +1090,7 @@ async function sendWalletPocketNotificationBestEffort(params: {
       supabase,
       householdId,
       isPortfolio,
+      language,
     });
 
     const insight = await buildWalletPocketInsight({
@@ -1101,6 +1108,7 @@ async function sendWalletPocketNotificationBestEffort(params: {
       currency,
       category,
       spaceLabel,
+      language,
     });
     const deepLink = buildNotificationDeepLink("expense_added", {
       expense_id: expenseId,
@@ -2975,7 +2983,7 @@ Deno.serve(async (req: Request) => {
 
     if (householdId && requiresHouseholdSplit) {
       if (!isNotificationCapture) {
-        let actorName = "Someone";
+        let actorName: string | null = null;
         try {
           const { data: appUser } = await supabase
             .from("users")
