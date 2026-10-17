@@ -60,13 +60,11 @@ const copy = {
   "Moneko captured {0}": "CAPTURE {0}",
   "💸 {0} -> {1}": "DESTINATION {1} / {0}",
   "🏷️ {0}": "CATEGORY {0}",
-  "💰 No budget set for {0}": "NO BUDGET {0}",
-  "💰 {0} budget this month": "BUDGET {0}",
-  "🎯 Link this category to a pocket": "LINK CATEGORY",
-  "👝 Pocket status updated": "POCKET UPDATED",
-  "🎯 Set a limit on {0}": "SET LIMIT {0}",
-  "⚠️ {0} over on {1}": "OVER {1} / {0}",
-  "🪙 {0} left on {1}": "REMAINING {1} / {0}",
+  "🪙 {0} left for {1} this month": "REMAINING {1} / {0}",
+  "⚠️ {0} over budget for {1} this month": "OVER {1} / {0}",
+  "🪙 {0} left in your budget this month": "BUDGET REMAINING {0}",
+  "⚠️ {0} over budget this month": "BUDGET OVER {0}",
+  "💰 {0} spent this month": "MONTH SPENT {0}",
   "your personal space": "PERSONAL",
   "your private space": "PRIVATE",
   "your shared space": "SHARED",
@@ -165,7 +163,7 @@ function fixture(options = {}) {
 }
 
 for (const [index, { params, expected }] of baselines.entries()) {
-  test(`wallet scenario ${index}: preserves exact original English copy and scenario`, () => {
+  test(`wallet scenario ${index}: uses the agreed English summary and scenario`, () => {
     const app = fixture();
     for (const language of [undefined, "en", "pt-BR"]) {
       assert.deepEqual(
@@ -205,7 +203,7 @@ test("all wallet-authored translation lookups are in the single notification cat
     };
     visit(fn);
   }
-  assert.equal(new Set(lookups).size, 14);
+  assert.equal(new Set(lookups).size, 12);
   for (
     const [key, entry] of Object.entries(messages).filter(([key]) =>
       key.startsWith("walletCapture")
@@ -251,7 +249,7 @@ test("every budget/pocket scenario and all 14 app locales translate without chan
         );
         assert.equal(translated.scenario, expected.scenario);
         assert.ok(!translated.body.includes("{1}"));
-        if (params.insight.pocket) {
+        if (params.insight.pocket?.limitCents > 0) {
           assert.ok(translated.body.includes(params.insight.pocket.name));
         }
       }
@@ -368,7 +366,7 @@ test("missing, blank, unsupported and invalid catalog values use the original En
   const saved = notificationCatalogs.fr;
   notificationCatalogs.fr = {
     "Moneko captured {0}": "broken {1}",
-    "💰 No budget set for {0}": "",
+    "💰 {0} spent this month": "",
   };
   try {
     for (

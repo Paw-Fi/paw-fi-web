@@ -92,6 +92,11 @@ import {
 } from "../shared/plus-entitlement.ts";
 import { queueCapturePlusRequiredNotification } from "../shared/capture-plus-notification.ts";
 import { resolveFinancialPeriodRangeForUser } from "../shared/budgets-helpers.ts";
+import {
+  type HouseholdEconomicTransaction,
+  householdSpendingEffectCents,
+} from "../shared/household-summary-economics.ts";
+import { readWalletLedgerPages } from "../shared/wallet-ledger-pages.ts";
 import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -196,12 +201,20 @@ interface AndroidWalletCaptureClaimResult {
 
 type WalletBudgetScope = "personal" | "portfolio" | "household";
 
+interface WalletNotificationExpense extends HouseholdEconomicTransaction {
+  id: string;
+  user_id: string;
+  privacy_scope: string | null;
+  category: string | null;
+}
+
 interface PocketSummary {
   id: string;
   name: string;
   limitCents: number;
   spentCents: number;
   remainingCents: number;
+  hasLimit: boolean;
 }
 
 interface WalletPocketInsight {
@@ -692,6 +705,14 @@ async function fetchActiveDevices(
     );
 }
 
+function requireWalletNotificationCents(value: unknown): number {
+  const cents = Number(value ?? 0);
+  if (!Number.isSafeInteger(cents)) {
+    throw new Error("Invalid wallet notification amount");
+  }
+  return cents;
+}
+
 async function buildWalletPocketInsight(params: {
   supabase: any;
   userId: string;
@@ -716,6 +737,52 @@ async function buildWalletPocketInsight(params: {
     await resolveFinancialPeriodRangeForUser(supabase, userId, dateYmd);
   const periodMonth = `${monthStart.slice(0, 7)}-01`;
 
+  // Read recorded spending even when no budget or pockets exist. Keyset paging
+  // avoids reporting a full budget from an API-capped or failed expense read.
+  const expenseRows = await readWalletLedgerPages<WalletNotificationExpense>((afterId) => {
+    let query = supabase
+      .from("expenses")
+      .select(
+        "id,user_id,privacy_scope,amount_cents,category,analytics_is_final,analytics_spending_multiplier",
+      )
+      .eq("currency", currency)
+      .eq("analytics_is_final", true)
+      .or("is_recurring.eq.false,is_recurring.is.null")
+      .is("deleted_at", null)
+      .gte("date", monthStart)
+      .lt("date", monthEndExclusive)
+      .order("id", { ascending: true })
+      .limit(1000);
+    query = applyWalletScopeFilter({ query, scope, userId, householdId });
+    if (afterId !== null) query = query.gt("id", afterId);
+    return query;
+  });
+  let monthTotalSpentCents = 0;
+  const spendByCategory = new Map<string, number>();
+  for (const row of expenseRows) {
+    const isOtherMember = scope === "household" && row.user_id !== userId;
+    if (
+      isOtherMember && row.privacy_scope !== "full" &&
+      row.privacy_scope !== "balances_only"
+    ) continue;
+    const spentCents = requireWalletNotificationCents(
+      householdSpendingEffectCents(row),
+    );
+    monthTotalSpentCents = requireWalletNotificationCents(
+      monthTotalSpentCents + spentCents,
+    );
+    // Balance-only activity contributes to the Space total without exposing
+    // another member's categories through a pocket-specific notification.
+    if (isOtherMember && row.privacy_scope === "balances_only") continue;
+    const normalized = normalizePocketCategory(row.category || "uncategorized");
+    spendByCategory.set(
+      normalized,
+      requireWalletNotificationCents(
+        (spendByCategory.get(normalized) ?? 0) + spentCents,
+      ),
+    );
+  }
+
   let budgetQuery = supabase
     .from("budgets")
     .select("id,total_budget_cents,currency")
@@ -728,14 +795,9 @@ async function buildWalletPocketInsight(params: {
     householdId,
   });
 
-  const { data: matchedBudget, error: matchedBudgetError } =
-    await budgetQuery.maybeSingle();
-  if (matchedBudgetError) {
-    console.error(
-      "[save-wallet-transaction] Failed to load scoped budget by currency:",
-      matchedBudgetError,
-    );
-  }
+  const { data: matchedBudget, error: matchedBudgetError } = await budgetQuery
+    .maybeSingle();
+  if (matchedBudgetError) throw matchedBudgetError;
 
   const budget = matchedBudget;
 
@@ -743,8 +805,8 @@ async function buildWalletPocketInsight(params: {
     return {
       scenario: "no_budget",
       monthTotalBudgetCents: 0,
-      monthTotalSpentCents: 0,
-      monthTotalRemainingCents: 0,
+      monthTotalSpentCents,
+      monthTotalRemainingCents: -monthTotalSpentCents,
     };
   }
 
@@ -752,11 +814,18 @@ async function buildWalletPocketInsight(params: {
     typeof budget.currency === "string" && budget.currency.trim().length > 0
       ? budget.currency.trim().toUpperCase()
       : currency;
-  const monthTotalBudgetCents = Number(budget.total_budget_cents ?? 0);
+  const monthTotalBudgetCents = requireWalletNotificationCents(
+    budget.total_budget_cents,
+  );
+  const monthTotalRemainingCents = requireWalletNotificationCents(
+    monthTotalBudgetCents - monthTotalSpentCents,
+  );
 
   let envelopeQuery = supabase
     .from("budget_envelopes")
-    .select("id,name,budget_amount_cents")
+    .select(
+      "id,name,budget_amount_cents,budget_percentage,rollover_enabled,rollover_group_id,opening_rollover_cents",
+    )
     .eq("budget_id", budget.id)
     .eq("currency", budgetCurrency);
   envelopeQuery = applyWalletScopeFilter({
@@ -767,21 +836,15 @@ async function buildWalletPocketInsight(params: {
   });
 
   const { data: envelopesData, error: envelopesError } = await envelopeQuery;
-  if (envelopesError) {
-    console.error(
-      "[save-wallet-transaction] Failed to load budget envelopes:",
-      envelopesError,
-    );
-  }
-  const envelopes = (
-    Array.isArray(envelopesData) ? envelopesData : []
-  ) as Array<any>;
+  if (envelopesError) throw envelopesError;
+  if (!Array.isArray(envelopesData)) throw new Error("Missing pocket rows");
+  const envelopes = envelopesData as Array<any>;
   if (envelopes.length === 0) {
     return {
       scenario: "no_pockets",
       monthTotalBudgetCents,
-      monthTotalSpentCents: 0,
-      monthTotalRemainingCents: monthTotalBudgetCents,
+      monthTotalSpentCents,
+      monthTotalRemainingCents,
     };
   }
 
@@ -795,122 +858,91 @@ async function buildWalletPocketInsight(params: {
       .select("envelope_id,amount_cents")
       .eq("period_month", periodMonth)
       .in("envelope_id", envelopeIds);
-  if (allocationRowsError) {
-    console.error(
-      "[save-wallet-transaction] Failed to load envelope allocations:",
-      allocationRowsError,
-    );
+  if (allocationRowsError) throw allocationRowsError;
+  if (!Array.isArray(allocationRowsData)) {
+    throw new Error("Missing pocket allocations");
   }
-  const allocationRows = (
-    Array.isArray(allocationRowsData) ? allocationRowsData : []
-  ) as Array<any>;
+  const allocationRows = allocationRowsData as Array<any>;
   const allocationByEnvelopeId = new Map<string, number>();
   for (const row of allocationRows) {
-    const envelopeId =
-      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    const envelopeId = typeof row?.envelope_id === "string"
+      ? row.envelope_id
+      : "";
     if (!envelopeId) continue;
-    const amountCents = Number(row?.amount_cents ?? 0);
-    if (Number.isFinite(amountCents) && amountCents > 0) {
-      allocationByEnvelopeId.set(envelopeId, Math.trunc(amountCents));
-    }
+    const amountCents = requireWalletNotificationCents(row?.amount_cents);
+    allocationByEnvelopeId.set(envelopeId, amountCents);
   }
 
   const { data: categoryLinksData, error: categoryLinksError } = await supabase
     .from("envelope_category_links")
     .select("envelope_id,category")
     .in("envelope_id", envelopeIds);
-  if (categoryLinksError) {
-    console.error(
-      "[save-wallet-transaction] Failed to load envelope category links:",
-      categoryLinksError,
-    );
+  if (categoryLinksError) throw categoryLinksError;
+  if (!Array.isArray(categoryLinksData)) {
+    throw new Error("Missing pocket links");
   }
-  const categoryLinks = (
-    Array.isArray(categoryLinksData) ? categoryLinksData : []
-  ) as Array<any>;
+  const categoryLinks = categoryLinksData as Array<any>;
   const categoriesByEnvelopeId = new Map<string, string[]>();
   for (const row of categoryLinks) {
-    const envelopeId =
-      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    const envelopeId = typeof row?.envelope_id === "string"
+      ? row.envelope_id
+      : "";
     const linkedCategory = normalizePocketCategory(row?.category);
     if (!envelopeId || !linkedCategory) continue;
     const current = categoriesByEnvelopeId.get(envelopeId) ?? [];
-    current.push(linkedCategory);
+    if (!current.includes(linkedCategory)) current.push(linkedCategory);
     categoriesByEnvelopeId.set(envelopeId, current);
   }
 
-  let expenseQuery = supabase
-    .from("expenses")
-    .select("amount_cents,category,type")
-    .eq("currency", budgetCurrency)
-    .is("deleted_at", null)
-    .gte("date", monthStart)
-    .lt("date", monthEndExclusive);
-  expenseQuery = applyWalletScopeFilter({
-    query: expenseQuery,
-    scope,
-    userId,
-    householdId,
-  });
-  const { data: expenseRowsData, error: expenseRowsError } = await expenseQuery;
-  if (expenseRowsError) {
-    console.error(
-      "[save-wallet-transaction] Failed to load scoped expenses for pocket insight:",
-      expenseRowsError,
-    );
-  }
-  const expenseRows = (
-    Array.isArray(expenseRowsData) ? expenseRowsData : []
-  ) as Array<any>;
-
-  let monthTotalSpentCents = 0;
-  const spendByCategory = new Map<string, number>();
-  for (const row of expenseRows) {
-    const type = normalizePocketCategory(row?.type);
-    if (type === "income") continue;
-
-    const amountCents = Number(row?.amount_cents ?? 0);
-    if (!Number.isFinite(amountCents) || amountCents <= 0) continue;
-
-    const normalized = normalizePocketCategory(
-      row?.category || "uncategorized",
-    );
-    monthTotalSpentCents += Math.trunc(amountCents);
-    spendByCategory.set(
-      normalized,
-      (spendByCategory.get(normalized) ?? 0) + Math.trunc(amountCents),
-    );
-  }
-
-  const pocketSummaries: PocketSummary[] = envelopes.map((row) => {
+  const linkedPocketSummaries: PocketSummary[] = [];
+  for (const row of envelopes) {
     const id = String(row.id);
     const linkedCategories = categoriesByEnvelopeId.get(id) ?? [];
-    const spentCents = linkedCategories.reduce(
+    if (!linkedCategories.includes(normalizedCategory)) continue;
+    const spentCents = requireWalletNotificationCents(linkedCategories.reduce(
       (sum, linked) => sum + (spendByCategory.get(linked) ?? 0),
       0,
+    ));
+    const baseLimit = requireWalletNotificationCents(
+      allocationByEnvelopeId.get(id) ?? row.budget_amount_cents ??
+        Math.round(
+          Number(row.budget_percentage ?? 0) / 100 * monthTotalBudgetCents,
+        ),
     );
-    const baseLimit = Number(row?.budget_amount_cents ?? 0);
-    const limitCents =
-      allocationByEnvelopeId.get(id) ??
-      (Number.isFinite(baseLimit) ? Math.trunc(baseLimit) : 0);
-    return {
+    let incomingRolloverCents = 0;
+    const rolloverEnabled = row.rollover_enabled === true;
+    if (rolloverEnabled) {
+      const { data, error } = await supabase.rpc(
+        "calculate_pocket_rollover_carry_v2",
+        {
+          p_user_id: userId,
+          p_scope: scope,
+          p_household_id: householdId,
+          p_currency: budgetCurrency,
+          p_envelope_name: row.name ?? "",
+          p_rollover_group_id: row.rollover_group_id ?? null,
+          p_budget_month: periodMonth,
+        },
+      );
+      if (error) throw error;
+      if (data == null) throw new Error("Missing pocket rollover");
+      incomingRolloverCents = requireWalletNotificationCents(data);
+    }
+    const limitCents = requireWalletNotificationCents(
+      baseLimit + incomingRolloverCents +
+        (rolloverEnabled
+          ? requireWalletNotificationCents(row.opening_rollover_cents)
+          : 0),
+    );
+    linkedPocketSummaries.push({
       id,
-      name:
-        typeof row?.name === "string" && row.name.trim().length > 0
-          ? row.name.trim()
-          : "Pocket",
+      name: typeof row.name === "string" ? row.name.trim() : "",
       limitCents,
+      hasLimit: baseLimit > 0 || rolloverEnabled,
       spentCents,
-      remainingCents: limitCents - spentCents,
-    };
-  });
-
-  const linkedPocketSummaries = pocketSummaries.filter((summary) => {
-    const categories = categoriesByEnvelopeId.get(summary.id) ?? [];
-    return categories.includes(normalizedCategory);
-  });
-
-  const monthTotalRemainingCents = monthTotalBudgetCents - monthTotalSpentCents;
+      remainingCents: requireWalletNotificationCents(limitCents - spentCents),
+    });
+  }
 
   if (linkedPocketSummaries.length === 0) {
     return {
@@ -921,7 +953,10 @@ async function buildWalletPocketInsight(params: {
     };
   }
 
-  linkedPocketSummaries.sort((a, b) => a.remainingCents - b.remainingCents);
+  linkedPocketSummaries.sort((a, b) =>
+    Number(b.hasLimit && Boolean(b.name)) - Number(a.hasLimit && Boolean(a.name)) ||
+    a.remainingCents - b.remainingCents
+  );
   return {
     scenario: "linked",
     monthTotalBudgetCents,
@@ -976,7 +1011,8 @@ function buildWalletPocketNotificationMessage(params: {
   spaceLabel: string;
   language?: unknown;
 }): { title: string; body: string; scenario: string } {
-  const { insight, amountCents, currency, category, spaceLabel, language } = params;
+  const { insight, amountCents, currency, category, spaceLabel, language } =
+    params;
   const { t } = createNotificationTranslator(language);
   const amountLabel = formatCurrencyAmount(amountCents, currency);
   const displayCategory = formatWalletNotificationCategory(category, language);
@@ -986,68 +1022,66 @@ function buildWalletPocketNotificationMessage(params: {
   const buildBody = (thirdLine: string) =>
     `${headerLine}\n${categoryLine}\n${thirdLine}`;
 
-  if (insight.scenario === "no_budget") {
-    return {
-      title,
-      body: buildBody(t`💰 No budget set for ${spaceLabel}`),
-      scenario: insight.scenario,
-    };
-  }
-
-  if (insight.scenario === "no_pockets") {
-    const budgetLabel = formatCurrencyAmount(
-      insight.monthTotalBudgetCents,
+  const pocket = insight.scenario === "linked" ? insight.pocket : undefined;
+  const hasPocketLimit = pocket && pocket.hasLimit && pocket.name;
+  if (hasPocketLimit) {
+    if (pocket.remainingCents < 0) {
+      const overLabel = formatCurrencyAmount(
+        Math.abs(pocket.remainingCents),
+        currency,
+      );
+      return {
+        title,
+        body: buildBody(
+          t`⚠️ ${overLabel} over budget for ${pocket.name} this month`,
+        ),
+        scenario: "linked_over",
+      };
+    }
+    const remainingLabel = formatCurrencyAmount(
+      pocket.remainingCents,
       currency,
     );
     return {
       title,
-      body: buildBody(t`💰 ${budgetLabel} budget this month`),
-      scenario: insight.scenario,
-    };
-  }
-
-  if (insight.scenario === "category_unlinked") {
-    return {
-      title,
-      body: buildBody(t("🎯 Link this category to a pocket")),
-      scenario: insight.scenario,
-    };
-  }
-
-  const pocket = insight.pocket;
-  if (!pocket) {
-    return {
-      title,
-      body: buildBody(t("👝 Pocket status updated")),
+      body: buildBody(
+        t`🪙 ${remainingLabel} left for ${pocket.name} this month`,
+      ),
       scenario: "linked",
     };
   }
 
-  if (pocket.limitCents <= 0) {
-    return {
-      title,
-      body: buildBody(t`🎯 Set a limit on ${pocket.name}`),
-      scenario: "linked_no_limit",
-    };
-  }
-
-  if (pocket.remainingCents < 0) {
-    const overLabel = formatCurrencyAmount(
-      Math.abs(pocket.remainingCents),
+  if (insight.monthTotalBudgetCents > 0) {
+    if (insight.monthTotalRemainingCents < 0) {
+      const overLabel = formatCurrencyAmount(
+        Math.abs(insight.monthTotalRemainingCents),
+        currency,
+      );
+      return {
+        title,
+        body: buildBody(t`⚠️ ${overLabel} over budget this month`),
+        scenario: insight.scenario,
+      };
+    }
+    const remainingLabel = formatCurrencyAmount(
+      insight.monthTotalRemainingCents,
       currency,
     );
     return {
       title,
-      body: buildBody(t`⚠️ ${overLabel} over on ${pocket.name}`),
-      scenario: "linked_over",
+      body: buildBody(t`🪙 ${remainingLabel} left in your budget this month`),
+      scenario: insight.scenario,
     };
   }
 
-  const remainingLabel = formatCurrencyAmount(pocket.remainingCents, currency);
+  const spentLabel = formatCurrencyAmount(
+    insight.monthTotalSpentCents,
+    currency,
+  );
   return {
     title,
-    body: buildBody(t`🪙 ${remainingLabel} left on ${pocket.name}`),
-    scenario: "linked",
+    body: buildBody(t`💰 ${spentLabel} spent this month`),
+    scenario: insight.scenario,
   };
 }
 

@@ -6,15 +6,15 @@
       "category": "groceries",
       "spaceLabel": "your personal space",
       "insight": {
-        "monthTotalBudgetCents": 20000,
+        "monthTotalBudgetCents": 0,
         "monthTotalSpentCents": 18000,
-        "monthTotalRemainingCents": 2000,
+        "monthTotalRemainingCents": -18000,
         "scenario": "no_budget"
       }
     },
     "expected": {
       "title": "Moneko captured €12.50",
-      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n💰 No budget set for your personal space",
+      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n💰 €180.00 spent this month",
       "scenario": "no_budget"
     }
   },
@@ -33,7 +33,7 @@
     },
     "expected": {
       "title": "Moneko captured €12.50",
-      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n💰 €200.00 budget this month",
+      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🪙 €20.00 left in your budget this month",
       "scenario": "no_pockets"
     }
   },
@@ -52,7 +52,7 @@
     },
     "expected": {
       "title": "Moneko captured €12.50",
-      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🎯 Link this category to a pocket",
+      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🪙 €20.00 left in your budget this month",
       "scenario": "category_unlinked"
     }
   },
@@ -71,7 +71,7 @@
     },
     "expected": {
       "title": "Moneko captured €12.50",
-      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n👝 Pocket status updated",
+      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🪙 €20.00 left in your budget this month",
       "scenario": "linked"
     }
   },
@@ -91,14 +91,15 @@
           "name": "家族 {0} $&",
           "limitCents": 0,
           "spentCents": 8000,
-          "remainingCents": 2000
+          "remainingCents": 2000,
+          "hasLimit": false
         }
       }
     },
     "expected": {
       "title": "Moneko captured €12.50",
-      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🎯 Set a limit on 家族 {0} $&",
-      "scenario": "linked_no_limit"
+      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🪙 €20.00 left in your budget this month",
+      "scenario": "linked"
     }
   },
   {
@@ -117,13 +118,14 @@
           "name": "家族 {0} $&",
           "limitCents": 10000,
           "spentCents": 8000,
-          "remainingCents": -1234
+          "remainingCents": -1234,
+          "hasLimit": true
         }
       }
     },
     "expected": {
       "title": "Moneko captured €12.50",
-      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n⚠️ €12.34 over on 家族 {0} $&",
+      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n⚠️ €12.34 over budget for 家族 {0} $& this month",
       "scenario": "linked_over"
     }
   },
@@ -143,13 +145,14 @@
           "name": "家族 {0} $&",
           "limitCents": 10000,
           "spentCents": 8000,
-          "remainingCents": 2000
+          "remainingCents": 2000,
+          "hasLimit": true
         }
       }
     },
     "expected": {
       "title": "Moneko captured €12.50",
-      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🪙 €20.00 left on 家族 {0} $&",
+      "body": "💸 €12.50 -> your personal space\n🏷️ Groceries\n🪙 €20.00 left for 家族 {0} $& this month",
       "scenario": "linked"
     }
   }
