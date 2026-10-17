@@ -13,6 +13,7 @@ import { buildLogExpenseReminderMessage } from "../supabase/functions/shared/log
 import { buildRecurringReminderNotification } from "../supabase/functions/shared/recurring-reminder-notification.ts";
 import * as currency from "../supabase/functions/shared/currency-symbols.ts";
 import * as delivery from "../supabase/functions/shared/notification-delivery.ts";
+import * as specialMessages from "../supabase/functions/shared/notification-special-messages.ts";
 import * as timezone from "../supabase/functions/shared/timezone.ts";
 import messages from "../supabase/functions/shared/notification-translations.json" with {
   type: "json",
@@ -74,6 +75,9 @@ export function loadEndpoint(name, {
       }
       if (path.endsWith("currency-symbols.ts")) return currency;
       if (path.endsWith("notification-delivery.ts")) return delivery;
+      if (path.endsWith("notification-special-messages.ts")) {
+        return specialMessages;
+      }
       if (path.endsWith("timezone.ts")) return timezone;
       if (path.endsWith("plus-entitlement.ts")) {
         return { PRICING_URL: "https://moneko.io/pricing" };
@@ -410,7 +414,15 @@ test("translated copy keeps names, custom notes, money and routing data opaque",
   }
 });
 
-function deliveryHarness(kind, { contactError = false } = {}) {
+function deliveryHarness(
+  kind,
+  {
+    contactError = false,
+    eventType = "member_joined",
+    platform = "android",
+    eventPayload = payload,
+  } = {},
+) {
   const sent = [], reads = [], writes = [];
   const users = ["fr-user", "en-user", "zh-user"];
   const contacts = [
@@ -437,8 +449,8 @@ function deliveryHarness(kind, { contactError = false } = {}) {
     id: "event-id",
     user_id: kind === "primary" ? users[0] : null,
     household_id: payload.household_id,
-    event_type: "member_joined",
-    payload,
+    event_type: eventType,
+    payload: eventPayload,
     is_sent: false,
   };
   const client = {
@@ -517,7 +529,7 @@ function deliveryHarness(kind, { contactError = false } = {}) {
             ? users.map((user_id) => ({
               user_id,
               push_token: `${user_id}-token`,
-              platform: "android",
+              platform,
             }))
             : table === "user_contacts"
             ? contacts
@@ -584,6 +596,81 @@ function deliveryHarness(kind, { contactError = false } = {}) {
       ),
   };
 }
+
+for (const eventType of ["capture_plus_required", "settlement_completed"]) {
+  test(`fallback delivers ${eventType} with the primary sender's localized copy and route`, async () => {
+    const eventPayload = {
+      ...payload,
+      actor_name: "Alex",
+      currency: "EUR",
+      amounts_before: {
+        you_owe_cents: 4200,
+        you_are_owed_cents: 1200,
+        net_pay_cents: 3000,
+      },
+      settlement_note: "ありがとう {0} $&",
+      capture_source: "ios_wallet_shortcut",
+    };
+    for (const language of ["en", ...Object.keys(notificationCatalogs)]) {
+      const expected = primary.render(
+        eventType,
+        eventPayload,
+        undefined,
+        language,
+      );
+      const actual = queued.render({
+        event_type: eventType,
+        payload: eventPayload,
+      }, language);
+      assert.equal(actual.title, expected.title, language);
+      assert.equal(actual.body, expected.body, language);
+      assert.deepEqual(
+        JSON.parse(JSON.stringify(actual.data)),
+        JSON.parse(JSON.stringify(expected.data)),
+        language,
+      );
+    }
+    const harness = deliveryHarness("queue", { eventType, eventPayload });
+    const result = await (await harness.invoke()).json();
+    assert.equal(result.sent, 1, JSON.stringify(result));
+    assert.equal(harness.sent.length, 3);
+    for (
+      const [user, language] of [["fr-user", "fr"], ["en-user", "en"], [
+        "zh-user",
+        "zh-TW",
+      ]]
+    ) {
+      const expected = primary.render(
+        eventType,
+        eventPayload,
+        undefined,
+        language,
+      );
+      const actual = harness.sent.find((message) =>
+        message.token === `${user}-token`
+      );
+      assert.equal(actual.notification.title, expected.title);
+      assert.equal(actual.notification.body, expected.body);
+      assert.equal(
+        actual.data.deep_link,
+        expected.data.deep_link || `moneko://household/${payload.household_id}`,
+      );
+    }
+  });
+}
+
+test("fallback browser pushes use data-only localized content for the service worker", async () => {
+  const harness = deliveryHarness("queue", { platform: "web" });
+  assert.equal((await harness.invoke()).status, 200);
+  assert.equal(harness.sent.length, 3);
+  for (const message of harness.sent) {
+    assert.equal(message.notification, undefined);
+    assert.ok(message.data.title);
+    assert.ok(message.data.body);
+    assert.equal(message.webpush.fcm_options, undefined);
+    assert.deepEqual(message.webpush.data, message.data);
+  }
+});
 
 for (const kind of ["primary", "queue", "nudge"]) {
   test(`${kind}: actual delivery selects each recipient's current language`, async () => {
@@ -752,6 +839,7 @@ test("every authored translation lookup in these notification builders exists in
         "buildQueuedNotificationMessage",
       ],
       ["households-send-nudge/index.ts", "buildBudgetNudgeMessage"],
+      ["shared/notification-special-messages.ts", "buildSpecialNotificationMessage"],
       ["shared/log-expense-reminder.ts", "buildLogExpenseReminderMessage"],
       [
         "shared/recurring-reminder-notification.ts",

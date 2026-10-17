@@ -8,7 +8,11 @@ import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
 import { buildRecurringReminderNotification } from "../shared/recurring-reminder-notification.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
-import { isServiceRoleRequest } from "../shared/notification-delivery.ts";
+import {
+  buildFcmDeliveryContent,
+  isServiceRoleRequest,
+} from "../shared/notification-delivery.ts";
+import { buildSpecialNotificationMessage } from "../shared/notification-special-messages.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -180,7 +184,6 @@ async function sendFCMv1Notification(
 
   try {
     const deepLink = data.deep_link || buildDeepLink(data.event_type, data);
-    const webLink = buildWebLink(data.event_type, data);
     const isWeb =
       typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
@@ -188,12 +191,9 @@ async function sendFCMv1Notification(
     const message = {
       message: {
         token: deviceToken,
-        notification: {
-          title,
-          body,
-          ...(imageUrl ? { image: imageUrl } : {}),
-        },
-        data,
+        ...buildFcmDeliveryContent(
+          title, body, { ...data, deep_link: deepLink }, isWeb, imageUrl,
+        ),
         android: {
           priority: "high",
           notification: {
@@ -220,19 +220,6 @@ async function sendFCMv1Notification(
             },
           },
         },
-        ...(isWeb && deepLink
-          ? {
-              webpush: {
-                data: {
-                  ...data,
-                  deep_link: deepLink,
-                },
-                fcm_options: {
-                  link: webLink,
-                },
-              },
-            }
-          : {}),
       },
     };
 
@@ -434,22 +421,6 @@ function normalizeNotificationPayloadData(
   if (householdId) normalized.household_id = householdId;
 
   return normalized;
-}
-
-function buildWebLink(
-  eventType: string | undefined,
-  data: Record<string, string>,
-): string {
-  const webBase = "https://moneko.io";
-
-  switch (eventType) {
-    case "invite_reminder_invitee":
-      return data.invite_token
-        ? `${webBase}/invites/${encodeURIComponent(data.invite_token)}`
-        : `${webBase}/dashboard`;
-    default:
-      return `${webBase}/dashboard`;
-  }
 }
 
 /**
@@ -655,6 +626,8 @@ serve(async (req) => {
           case "member_reminded":
           case "split_created":
           case "split_settled":
+          case "settlement_completed":
+          case "capture_plus_required":
           case "expense_added":
           case "expense_edited":
           case "expense_deleted":
@@ -1118,6 +1091,11 @@ function buildQueuedNotificationMessage(
         event.payload.household_name || t("household")
       }"`;
       break;
+    case "capture_plus_required":
+    case "settlement_completed":
+      return buildSpecialNotificationMessage(
+        event.event_type, event.payload, language,
+      );
     case "split_settled":
       title = t("✅ Split Settled");
       body = t`An expense split has been marked as settled`;

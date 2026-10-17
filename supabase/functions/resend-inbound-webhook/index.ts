@@ -7,7 +7,7 @@ import {
   buildInternalInvokeHeaders,
   resolveInternalFunctionKey,
 } from "../shared/auth.ts";
-import { sendEmail } from "../shared/email-service.ts";
+import { sendEmail, type EmailOptions } from "../shared/email-service.ts";
 import { pluralize } from "../shared/email-utils.ts";
 import { buildImportSemanticKey } from "../shared/import-dedupe.ts";
 import {
@@ -94,6 +94,16 @@ const REQUEST_SOFT_DEADLINE_MS = Number.parseInt(
   Deno.env.get("EMAIL_IMPORT_REQUEST_SOFT_DEADLINE_MS") || "300000",
   10,
 );
+
+// This handler's retry/review-release paths use exceptions. The shared sender
+// returns delivery failures as values, so bridge that contract at this boundary.
+async function sendInboundEmail(options: EmailOptions) {
+  const result = await sendEmail(options);
+  if (!result.success) {
+    throw new Error(result.error || "EMAIL_DELIVERY_FAILED");
+  }
+  return result;
+}
 
 interface ResendReceivedEvent {
   type: string;
@@ -1602,7 +1612,7 @@ export async function handleResendInboundWebhook(
           });
           if (recipientIds.length <= 1)
             try {
-              await sendEmail({
+              await sendInboundEmail({
                 to: senderEmail,
                 from: EMAIL_FROM,
                 subject: unavailable.subject,
@@ -1633,7 +1643,7 @@ export async function handleResendInboundWebhook(
           });
           if (recipientIds.length <= 1)
             try {
-              await sendEmail({
+              await sendInboundEmail({
                 to: senderEmail,
                 from: EMAIL_FROM,
                 subject: unavailable.subject,
@@ -1681,7 +1691,7 @@ export async function handleResendInboundWebhook(
             });
             if (recipientIds.length <= 1)
               try {
-                await sendEmail({
+                await sendInboundEmail({
                   to: senderEmail,
                   from: EMAIL_FROM,
                   subject: unavailable.subject,
@@ -1771,7 +1781,7 @@ export async function handleResendInboundWebhook(
             errorText: "SENDER_NOT_VERIFIED",
           });
           try {
-            await sendEmail({
+            await sendInboundEmail({
               to: senderEmail,
               from: EMAIL_FROM,
               subject: unavailable.subject,
@@ -1839,7 +1849,7 @@ export async function handleResendInboundWebhook(
             errorText: "NO_SUPPORTED_IMPORT_CONTENT",
           });
           try {
-            await sendEmail({
+            await sendInboundEmail({
               to: senderEmail,
               from: EMAIL_FROM,
               subject: unavailable.subject,
@@ -2497,7 +2507,7 @@ export async function handleResendInboundWebhook(
             },
           });
           try {
-            await sendEmail({
+            await sendInboundEmail({
               to: senderEmail,
               from: EMAIL_FROM,
               subject: followup.subject,
@@ -2569,7 +2579,7 @@ export async function handleResendInboundWebhook(
             reviewCount: reviewCandidates.length,
           });
           try {
-            await sendEmail({
+            await sendInboundEmail({
               to: owner.defaultEmail,
               from: EMAIL_FROM,
               subject: email.subject,
@@ -2769,7 +2779,7 @@ export async function handleResendInboundWebhook(
             reviewCount: reviewCandidates.length,
           });
           try {
-            await sendEmail({
+            await sendInboundEmail({
               to: owner.defaultEmail,
               from: EMAIL_FROM,
               subject: email.subject,
@@ -2819,7 +2829,7 @@ export async function handleResendInboundWebhook(
           try {
             ensureSoftDeadline(processingStartedAtMs, "send_followup_email");
             setStage("send_followup_email_start");
-            await sendEmail({
+            await sendInboundEmail({
               to: owner.defaultEmail,
               from: EMAIL_FROM,
               subject: followup.subject,
@@ -2943,7 +2953,7 @@ export async function handleResendInboundWebhook(
         ? importUnavailableReasons.subscriptionRequired
         : importUnavailableReasons.importDisabled,
     });
-    await sendEmail({
+    await sendInboundEmail({
       to: senderEmail,
       from: EMAIL_FROM,
       subject: unavailable.subject,

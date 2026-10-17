@@ -7,6 +7,7 @@ import * as emailImport from "../supabase/functions/shared/email-import.ts";
 import * as eventState from "../supabase/functions/shared/email-import-event-state.ts";
 import * as senderVerification from "../supabase/functions/shared/email-sender-verification.ts";
 import * as merchantPolicy from "../supabase/functions/shared/merchant-auto-resolution-policy.ts";
+import * as reviewTokens from "../supabase/functions/shared/email-import-review.ts";
 import {
   hasPlusEntitlement,
   loadLatestSubscriptionForUser,
@@ -45,10 +46,26 @@ function harness(options = {}) {
   const saves = [];
   const emails = [];
   const errors = [];
+  const reviews = [];
+  const failedEmails = new Set(options.failedEmails ?? []);
   const failUsers = new Set(options.failUsers ?? []);
   let authorizationReads = 0;
   const client = {
-    rpc: async (name) => {
+    rpc: async (name, args) => {
+      if (name === "create_email_import_review") {
+        const row = events.find((row) => row.id === args.p_event_id);
+        const review = { id: `review-${reviews.length + 1}`, eventId: row.id };
+        reviews.push(review);
+        row.status = "awaiting_review";
+        row.result = args.p_event_result;
+        return { data: review.id, error: null };
+      }
+      if (name === "release_email_import_review_delivery") {
+        const review = reviews.find((review) => review.id === args.p_review_id);
+        review.released = true;
+        events.find((row) => row.id === review.eventId).status = "processing";
+        return { data: true, error: null };
+      }
       assert.equal(name, "email_import_sender_accounts");
       authorizationReads++;
       return {
@@ -98,8 +115,9 @@ function harness(options = {}) {
                   row.provider_email_id === patch.provider_email_id &&
                   row.delivery_user_id === patch.delivery_user_id,
               )
-            )
+            ) {
               return { data: null, error: { code: "23505" } };
+            }
             const row = {
               id: `event-${events.length + 1}`,
               created_at: new Date().toISOString(),
@@ -109,7 +127,7 @@ function harness(options = {}) {
             return { data: { ...row }, error: null };
           }
           const row = events.find((value) =>
-            filters.every(([key, expected]) => value[key] === expected),
+            filters.every(([key, expected]) => value[key] === expected)
           );
           if (action === "update" && row) Object.assign(row, patch);
           return { data: row ? { ...row } : null, error: null };
@@ -117,12 +135,13 @@ function harness(options = {}) {
         const id = filters.find(
           ([key]) => key === "id" || key === "user_id",
         )?.[1];
-        if (table === "users")
+        if (table === "users") {
           return {
             data: { email: `${id}@example.com`, full_name: "Owner" },
             error: null,
           };
-        if (table === "user_contacts")
+        }
+        if (table === "user_contacts") {
           return {
             data: {
               email_import_enabled: !(options.disabledUsers ?? []).includes(id),
@@ -134,7 +153,8 @@ function harness(options = {}) {
             },
             error: null,
           };
-        if (table === "subscriptions")
+        }
+        if (table === "subscriptions") {
           return {
             data: {
               plan: (options.freeUsers ?? []).includes(id)
@@ -144,6 +164,7 @@ function harness(options = {}) {
             },
             error: null,
           };
+        }
         return { data: [], error: null };
       };
       return query;
@@ -161,6 +182,9 @@ function harness(options = {}) {
     "../shared/email-service.ts": {
       sendEmail: async (value) => {
         emails.push(value);
+        if (failedEmails.has(value.recipientUserId)) {
+          return { success: false, error: "MAIL_DELIVERY_FAILED" };
+        }
         return { success: true };
       },
     },
@@ -171,13 +195,12 @@ function harness(options = {}) {
       buildImportSemanticKey: (value) => JSON.stringify(value),
     },
     "../shared/email-import.ts": emailImport,
+    "../shared/email-import-review.ts": reviewTokens,
     "../shared/email-sender-verification.ts": senderVerification,
     "../shared/email-import-event-state.ts": eventState,
     "../shared/email-import-account.ts": {
-      createEmailImportAccountResolver:
-        ({ userId }) =>
-        async () =>
-          userId === userA ? walletA : walletB,
+      createEmailImportAccountResolver: ({ userId }) => async () =>
+        userId === userA ? walletA : walletB,
     },
     "../shared/analyzed-merchant-enrichment.ts": {
       runEnrichedTransactionAnalysis: async ({ body }) =>
@@ -188,19 +211,24 @@ function harness(options = {}) {
     },
     "../shared/email-import-ai-decision.ts": {
       classifyEmailImportWithAi: async () => [
-        {
-          kind: "accept",
-          transaction: {
-            ...transaction,
-            ...(options.blocked
-              ? {
+        ...(options.review
+          ? [{ kind: "review", candidate: transaction, issues: [] }]
+          : []),
+        ...(options.review === "only" ? [] : [
+          {
+            kind: "accept",
+            transaction: {
+              ...transaction,
+              ...(options.blocked
+                ? {
                   merchant_auto_resolution_blocked: true,
                   merchant_id: "untrusted",
                   merchant_structured_name: "Wrong",
                 }
-              : {}),
+                : {}),
+            },
           },
-        },
+        ]),
       ],
       emailImportSafeRejectionCodes: () => [],
       shouldEscalateEmailImportAiFailure: () => true,
@@ -223,6 +251,9 @@ function harness(options = {}) {
     },
     "./email-templates/import-followup-email.ts": {
       createFollowupEmailBuilder: () => () => email,
+    },
+    "./email-templates/import-review-required-email.ts": {
+      buildImportReviewRequiredEmail: () => email,
     },
     "./email-templates/import-unavailable-email.ts": {
       createImportUnavailableEmailBuilder: () => () => email,
@@ -271,30 +302,32 @@ function harness(options = {}) {
     fetch: async (url) =>
       new Response(
         JSON.stringify(
-          String(url).endsWith("/attachments")
-            ? { data: [] }
-            : {
-                text: "超市購物：USD 12.50，2026年10月3日",
-                headers: { "authentication-results": "dkim=pass" },
-              },
+          String(url).endsWith("/attachments") ? { data: [] } : {
+            text: "超市購物：USD 12.50，2026年10月3日",
+            headers: { "authentication-results": "dkim=pass" },
+          },
         ),
         { headers: { "content-type": "application/json" } },
       ),
     require: (name) => {
-      if (name.startsWith("https://esm.sh/@supabase/"))
+      if (name.startsWith("https://esm.sh/@supabase/")) {
         return { createClient: () => client };
-      if (name.startsWith("https://esm.sh/svix"))
+      }
+      if (name.startsWith("https://esm.sh/svix")) {
         return {
           Webhook: class {
             verify(body) {
-              if (options.invalidSignature)
+              if (options.invalidSignature) {
                 throw new Error("Invalid signature");
+              }
               return JSON.parse(body);
             }
           },
         };
-      if (name.includes("/encoding/base64.ts"))
+      }
+      if (name.includes("/encoding/base64.ts")) {
         return { encodeBase64: () => "" };
+      }
       return modules[name] ?? {};
     },
     Deno: {
@@ -314,6 +347,8 @@ function harness(options = {}) {
     events,
     saves,
     emails,
+    reviews,
+    failedEmails,
     failUsers,
     errors,
     async deliver() {
@@ -426,4 +461,38 @@ test("unverified senders and invalid webhook signatures never save", async () =>
   const unsigned = harness({ invalidSignature: true });
   assert.equal((await unsigned.deliver()).status, 401);
   assert.equal(unsigned.events.length, 0);
+});
+
+for (const review of ["only", "mixed"]) {
+  test(`${review}: failed review email releases the review and retries only the unfinished account`, async () => {
+    const app = harness({ review, failedEmails: [userB] });
+    const failed = await app.deliver();
+    assert.equal(failed.status, 503, JSON.stringify(app.errors));
+    assert.equal(app.reviews.length, 2);
+    assert.equal(app.reviews[0].released, undefined);
+    assert.equal(app.reviews[1].released, true);
+    assert.equal(app.events[0].status, "awaiting_review");
+    assert.equal(app.events[1].status, "processing");
+    app.failedEmails.clear();
+    assert.equal((await app.deliver()).status, 200, JSON.stringify(app.errors));
+    assert.equal(app.reviews.length, 3);
+    assert.equal(
+      app.emails.filter((email) => email.recipientUserId === userA).length,
+      1,
+    );
+    assert.equal(app.events[1].status, "awaiting_review");
+    assert.equal(app.saves.length, review === "only" ? 0 : 3);
+  });
+}
+
+test("failed post-save follow-up is logged without replaying a finalized import", async () => {
+  const app = harness({ failedEmails: [userB] });
+  assert.equal((await app.deliver()).status, 200);
+  assert.ok(
+    app.errors.some((values) =>
+      String(values[0]).includes("follow-up email failed after finalization")
+    ),
+  );
+  assert.equal((await app.deliver()).status, 200);
+  assert.equal(app.saves.length, 2);
 });

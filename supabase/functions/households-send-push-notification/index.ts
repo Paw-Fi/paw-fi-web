@@ -19,7 +19,10 @@ import {
   isServiceRoleRequest,
   shouldSkipPushEvent,
 } from "../shared/notification-delivery.ts";
-import { PRICING_URL } from "../shared/plus-entitlement.ts";
+import {
+  buildSpecialNotificationMessage,
+  getSettlementNote,
+} from "../shared/notification-special-messages.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -247,20 +250,6 @@ function getSettlementAmountCents(payload: Record<string, any>): number | null {
   return normalized > 0 ? normalized : null;
 }
 
-function getSettlementNote(payload: Record<string, any>): string | null {
-  const candidates = [
-    payload.settlement_note,
-    payload.message,
-    payload.note,
-    payload.settlement_message,
-  ];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim().length > 0) {
-      return candidate.trim();
-    }
-  }
-  return null;
-}
 
 async function resolveUserDisplayName(userId?: string): Promise<string | null> {
   if (!userId || userId.trim().length === 0) return null;
@@ -1634,58 +1623,10 @@ function buildNotificationMessage(
       };
     }
 
-    case "capture_plus_required": {
-      const captureSource = String(payload.capture_source || "");
-      const feature =
-        captureSource === "ios_wallet_shortcut"
-          ? t("Apple Pay capture")
-          : t("Notification capture");
-      return {
-        title: t("Moneko Plus required"),
-        body: t`${feature} is available with an active Moneko Plus plan. Start a trial or subscribe to continue.`,
-        data: {
-          capture_source: captureSource,
-          pricing_url: PRICING_URL,
-          deep_link: PRICING_URL,
-        },
-      };
-    }
-
+    case "capture_plus_required":
     case "settlement_completed":
-    case "split_settled": {
-      const actorName = (payload.actor_name || t("Someone")) as string;
-      const code = payload.currency as string | undefined;
-      const symbol = getCurrencySymbol(code);
-      const youOweCents = Number(
-        payload.amounts_before?.you_owe_cents ?? payload.amount_cents ?? 0,
-      );
-      const youAreOwedCents = Number(
-        payload.amounts_before?.you_are_owed_cents ?? 0,
-      );
-      const netPayCents = Number(
-        payload.amounts_before?.net_pay_cents ??
-          Math.max(youOweCents - youAreOwedCents, 0),
-      );
-
-      // First-person toward the recipient: actor settled with you
-      const note = getSettlementNote(payload);
-      const title = actorName;
-      const baseBody =
-        netPayCents > 0
-          ? t`settled ${symbol}${(netPayCents / 100).toFixed(
-              2,
-            )} with you in ${householdName}`
-          : t`settled up with you in ${householdName}`;
-      const body = note ? `${baseBody}: ${note}` : baseBody;
-
-      return {
-        title,
-        body,
-        data: {
-          household_id: payload.household_id || "",
-        },
-      };
-    }
+    case "split_settled":
+      return buildSpecialNotificationMessage(eventType, payload, language);
 
     case "invite_reminder_inviter": {
       const inviteeName = (payload.invitee_name ||

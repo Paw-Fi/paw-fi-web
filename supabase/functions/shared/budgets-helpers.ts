@@ -312,11 +312,11 @@ export function calculatePocketRolloverContributionLedger({
   for (const month of sortedMonths) {
     const periodMonth = month.periodMonth;
     if (previousMonth != null) {
-      const expected = new Date(
+      const expected: Date = new Date(
         `${previousMonth.slice(0, 7)}-01T00:00:00.000Z`,
       );
       expected.setUTCMonth(expected.getUTCMonth() + 1);
-      const expectedMonth = expected.toISOString().slice(0, 10);
+      const expectedMonth: string = expected.toISOString().slice(0, 10);
       if (expectedMonth !== periodMonth) {
         warnings.push(
           `Missing rollover month between ${previousMonth} and ${periodMonth}`,

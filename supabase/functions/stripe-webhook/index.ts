@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
@@ -264,7 +266,7 @@ function reportStripeWebhookError(
   phase: string,
   error: unknown,
   context?: Record<string, unknown>,
-): Promise<void> {
+): Promise<boolean> {
   const report = reportEdgeFunctionError({
     functionName: "stripe-webhook",
     error,
