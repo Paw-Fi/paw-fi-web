@@ -3,9 +3,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { sendEmail, type EmailOptions } from "../shared/email-service.ts";
+import { type EmailOptions, sendEmail } from "../shared/email-service.ts";
+import { buildTicketClosedEmail } from "../shared/ticket-closed-email.ts";
 
 interface SendEmailRawRequest {
+  template?: "ticket_closed";
+  ticketId?: string;
   to?: string;
   subject?: string;
   html?: string;
@@ -93,6 +96,37 @@ serve(async (req) => {
     );
   }
 
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return jsonResponse(
+      { success: false, error: "Invalid request body" },
+      400,
+      corsHeaders,
+    );
+  }
+
+  if (body.template !== undefined) {
+    if (body.template !== "ticket_closed") {
+      return jsonResponse(
+        { success: false, error: "Unknown email template" },
+        400,
+        corsHeaders,
+      );
+    }
+    if (
+      typeof body.ticketId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        body.ticketId,
+      )
+    ) {
+      return jsonResponse(
+        { success: false, error: "A valid ticketId is required" },
+        400,
+        corsHeaders,
+      );
+    }
+    return sendTicketClosedEmail(body.ticketId, corsHeaders);
+  }
+
   const validationError = validateRequest(body);
   if (validationError) {
     return jsonResponse(
@@ -105,17 +139,19 @@ serve(async (req) => {
   const html = body.html?.trim();
   const resolvedHtml = html ? html : buildHtmlFromText(body.text ?? "");
 
-  const result = await sendEmail({
-    to: body.to!,
-    subject: body.subject!,
-    html: resolvedHtml,
-    text: body.text,
-    from: body.from,
-    replyTo: body.replyTo,
-    cc: body.cc,
-    bcc: body.bcc,
-    attachments: body.attachments,
-  } satisfies EmailOptions);
+  const result = await sendEmail(
+    {
+      to: body.to!,
+      subject: body.subject!,
+      html: resolvedHtml,
+      text: body.text,
+      from: body.from,
+      replyTo: body.replyTo,
+      cc: body.cc,
+      bcc: body.bcc,
+      attachments: body.attachments,
+    } satisfies EmailOptions,
+  );
 
   return jsonResponse(
     {
@@ -128,6 +164,75 @@ serve(async (req) => {
     corsHeaders,
   );
 });
+
+async function sendTicketClosedEmail(
+  ticketId: string,
+  corsHeaders: Record<string, string>,
+) {
+  const { data: ticket, error: ticketError } = await supabase
+    .from("support_tickets")
+    .select("user_id, status, message")
+    .eq("id", ticketId)
+    .maybeSingle();
+  if (ticketError) {
+    return jsonResponse(
+      { success: false, error: "Unable to load ticket" },
+      500,
+      corsHeaders,
+    );
+  }
+  if (!ticket) {
+    return jsonResponse(
+      { success: false, error: "Ticket not found" },
+      404,
+      corsHeaders,
+    );
+  }
+  if (ticket.status !== "closed") {
+    return jsonResponse(
+      {
+        success: false,
+        error: "Ticket must be closed before sending an update",
+      },
+      409,
+      corsHeaders,
+    );
+  }
+
+  const { data: recipient, error: recipientError } = await supabase
+    .from("users")
+    .select("full_name, email")
+    .eq("id", ticket.user_id)
+    .maybeSingle();
+  if (recipientError) {
+    return jsonResponse(
+      { success: false, error: "Unable to load ticket owner" },
+      500,
+      corsHeaders,
+    );
+  }
+  const email = recipient?.email?.trim();
+  if (!recipient || !email) {
+    return jsonResponse(
+      { success: false, error: "Ticket owner has no email address" },
+      400,
+      corsHeaders,
+    );
+  }
+
+  const template = buildTicketClosedEmail({
+    fullName: recipient.full_name,
+    message: ticket.message,
+  });
+  const result = await sendEmail({
+    to: email,
+    from: "Moneko Team <hello@moneko.io>",
+    replyTo: "hello@moneko.io",
+    ...template,
+    recipientUserId: ticket.user_id,
+  });
+  return jsonResponse(result, result.success ? 200 : 500, corsHeaders);
+}
 
 function validateRequest(payload: SendEmailRawRequest): string | null {
   if (!payload.to?.trim()) {
@@ -157,7 +262,9 @@ function jsonResponse(
 }
 
 function buildHtmlFromText(text: string) {
-  return `<pre style="font-family: Arial, sans-serif; white-space: pre-wrap;">${escapeHtml(text)}</pre>`;
+  return `<pre style="font-family: Arial, sans-serif; white-space: pre-wrap;">${
+    escapeHtml(text)
+  }</pre>`;
 }
 
 function escapeHtml(value: string) {

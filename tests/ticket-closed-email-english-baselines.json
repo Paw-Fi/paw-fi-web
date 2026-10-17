@@ -1,0 +1,39 @@
+[
+  {
+    "ticket": {
+      "message": "Please check my account.",
+      "users": {
+        "full_name": "  Alex Smith  "
+      }
+    },
+    "hashes": {
+      "subject": "c104a90c3d5920fecc2c458f787aa869977fe0dd180d54046b893ed91662990d",
+      "html": "8f6f7a672b93120ecf15bec8a22f2710826d652ee18b1094d635f7d4b7a65ca7",
+      "text": "b912c780601c5224832529bfecf68b04db044d6e1205d085e52771c82c8afa4b"
+    }
+  },
+  {
+    "ticket": {
+      "message": "Original message\n第二行",
+      "users": null
+    },
+    "hashes": {
+      "subject": "c104a90c3d5920fecc2c458f787aa869977fe0dd180d54046b893ed91662990d",
+      "html": "1a96170c8ae307c28813c852c5335af9be11b55d56b2ee8577d2ffbbad9b0002",
+      "text": "57399c5303604af5fdbc6d19344e59b19cbae185b9cd2e7ab99e4b221340669f"
+    }
+  },
+  {
+    "ticket": {
+      "message": "<script>秘密</script> & {0} $&",
+      "users": {
+        "full_name": "小明<&> Family"
+      }
+    },
+    "hashes": {
+      "subject": "c104a90c3d5920fecc2c458f787aa869977fe0dd180d54046b893ed91662990d",
+      "html": "f97551381dbce596212efbf29a11fe5c70259bd3985b0e676917b6914959f91d",
+      "text": "398a092d1541d44dd275687c9041048624b18a8a02d6ac3e30e9f944bbfd0462"
+    }
+  }
+]
