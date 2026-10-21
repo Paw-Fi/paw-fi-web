@@ -8,6 +8,8 @@ import {
   interactiveAnalysisFailure,
   runInteractiveTransactionAnalysis,
 } from "../shared/interactive-transaction-analysis.ts";
+import { normalizeAudioContentType } from "../shared/audio-source.ts";
+import { parseInteractiveSource } from "../shared/interactive-transaction-contract.ts";
 import { resolveAiResponseLanguage } from "../shared/ai-response-language.ts";
 
 function fixture(results, source = { text: "買い物" }) {
@@ -111,6 +113,98 @@ test("extraction avoids complex constrained schema but retains independent verif
   assert.equal(requests[0].generationConfig.responseSchema, undefined);
   assert.match(requests[0].systemInstruction.parts[0].text, /explicitFields/);
   assert.equal(requests[1].generationConfig.responseSchema.properties.approved.type, "BOOLEAN");
+});
+
+test("a truncated extraction is retried once with more output tokens before validation", async () => {
+  const requests = [];
+  const client = createVertexGenerativeAI({
+    project: "test",
+    location: "global",
+    accessToken: "test",
+    fetchImpl: async (_url, init) => {
+      requests.push(JSON.parse(init.body));
+      if (requests.length === 1) {
+        return Response.json({
+          candidates: [
+            {
+              finishReason: "MAX_TOKENS",
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({ decision: "ready", items: [item] }),
+                  },
+                ],
+              },
+            },
+          ],
+        });
+      }
+      return Response.json({
+        candidates: [
+          {
+            finishReason: "STOP",
+            content: {
+              parts: [
+                { text: JSON.stringify({ decision: "ready", items: [item] }) },
+              ],
+            },
+          },
+        ],
+      });
+    },
+  });
+  const complete = createInteractiveCompletion(
+    { text: "買い物５０円" },
+    client,
+  );
+  assert.deepEqual(
+    await complete("extract", "test-model", { context, answers: [] }),
+    {
+      decision: "ready",
+      items: [item],
+    },
+  );
+  assert.deepEqual(
+    requests.map((request) => request.generationConfig.maxOutputTokens),
+    [12000, 24000],
+  );
+  assert.deepEqual(requests[1].contents, requests[0].contents);
+});
+
+test("repeated truncation fails closed after the bounded retry", async () => {
+  const requests = [];
+  const client = createVertexGenerativeAI({
+    project: "test",
+    location: "global",
+    accessToken: "test",
+    fetchImpl: async (_url, init) => {
+      requests.push(JSON.parse(init.body));
+      return Response.json({
+        candidates: [
+          {
+            finishReason: "MAX_TOKENS",
+            content: {
+              parts: [
+                { text: JSON.stringify({ decision: "ready", items: [item] }) },
+              ],
+            },
+          },
+        ],
+      });
+    },
+  });
+  const complete = createInteractiveCompletion(
+    { text: "買い物５０円" },
+    client,
+  );
+  await assert.rejects(
+    complete("verify", "test-model", { context, answers: [] }),
+    /MODEL_OUTPUT_TRUNCATED/,
+  );
+  assert.deepEqual(
+    requests.map((request) => request.generationConfig.maxOutputTokens),
+    [4096, 8192],
+  );
 });
 
 test("uncertain extraction returns an MCQ and no saveable transactions", async () => {
@@ -299,3 +393,203 @@ for (const language of ["ja", "ur", "zh-TW", "ko", "fr-CA"]) {
     }
   });
 }
+
+test("M4A mislabeled by Mobile is normalized without altering the original audio", async () => {
+  const data = Buffer.from("\0\0\0\x18ftypM4A \0\0\0\0M4A isom").toString(
+    "base64",
+  );
+  const audio = { data, contentType: "audio/aac" };
+  assert.equal(
+    parseInteractiveSource({ audio }).audio.contentType,
+    "audio/mp4",
+  );
+  assert.equal(
+    normalizeAudioContentType(
+      Buffer.from([255, 241, 80, 128]).toString("base64"),
+      "audio/aac",
+    ),
+    "audio/x-aac",
+  );
+  const { requests, complete } = fixture(
+    [{ decision: "ready", items: [item] }, { approved: true }],
+    { audio },
+  );
+  await runInteractiveTransactionAnalysis({
+    source: { audio },
+    context,
+    request: { version: 1, answers: [] },
+    complete,
+  });
+  assert.equal(requests.length, 2);
+  for (const request of requests)
+    assert.deepEqual(request.contents[0].parts[1], {
+      inlineData: { mimeType: "audio/mp4", data },
+    });
+});
+
+for (const [header, mime] of [
+  ["RIFFxxxxWAVE", "audio/wav"],
+  ["OggSxxxx", "audio/ogg"],
+  ["fLaCxxxx", "audio/flac"],
+  ["ID3xxxxx", "audio/mpeg"],
+]) {
+  test(`audio container header selects ${mime}`, () => {
+    assert.equal(
+      normalizeAudioContentType(
+        Buffer.from(header).toString("base64"),
+        "audio/aac",
+      ),
+      mime,
+    );
+  });
+}
+
+test("merchant source review shares the independent financial verifier and original speech", async () => {
+  const audio = { data: "c3BlZWNo", contentType: "audio/mp4" };
+  const merchantVerdicts = [{ itemIndex: 0, approved: false, evidence: "" }];
+  const { requests, complete } = fixture(
+    [
+      {
+        decision: "ready",
+        items: [{ ...item, merchant: "小商店", explicitFields: ["merchant"] }],
+      },
+      { approved: true, merchantVerdicts },
+    ],
+    { audio },
+  );
+  const result = await runInteractiveTransactionAnalysis({
+    source: { audio },
+    context,
+    request: { version: 1, answers: [] },
+    complete,
+    includeMerchantVerification: true,
+  });
+  assert.equal(result.requireCorrection, false);
+  assert.equal(result.items[0].amount, 50);
+  assert.deepEqual(result.merchantVerdicts, merchantVerdicts);
+  assert.equal(requests.length, 2);
+  assert.equal(
+    JSON.parse(requests[1].contents[0].parts[0].text).merchantProposals[0]
+      .merchant,
+    "小商店",
+  );
+  assert.equal(requests[1].contents[0].parts[1].inlineData.data, audio.data);
+  assert.equal(
+    requests[1].generationConfig.responseSchema.properties.merchantVerdicts
+      .type,
+    "ARRAY",
+  );
+  assert.equal(requests[1].generationConfig.maxOutputTokens, 8192);
+});
+
+test("merchant approval cannot override a financial verifier rejection", async () => {
+  const { complete } = fixture([
+    { decision: "ready", items: [{ ...item, merchant: "小商店" }] },
+    {
+      approved: false,
+      question: "金額は？",
+      choices: ["５０円", "５００円"],
+      merchantVerdicts: [{ itemIndex: 0, approved: true, evidence: "小商店" }],
+    },
+  ]);
+  const result = await runInteractiveTransactionAnalysis({
+    source: { text: "小商店" },
+    context,
+    request: { version: 1, answers: [] },
+    complete,
+    includeMerchantVerification: true,
+  });
+  assert.equal(result.requireCorrection, true);
+  assert.deepEqual(result.items, []);
+  assert.equal(result.merchantVerdicts, undefined);
+});
+
+for (const status of [400, 401, 403, 408, 429, 500, 502, 503, 504]) {
+  test(`provider HTTP ${status} has a bounded appropriate retry policy`, async () => {
+    let calls = 0;
+    const diagnostics = [];
+    const client = createVertexGenerativeAI({
+      project: "test",
+      location: "global",
+      accessToken: "test",
+      fetchImpl: async () => {
+        calls++;
+        if (calls === 1)
+          return Response.json(
+            { error: { message: "private provider message" } },
+            { status },
+          );
+        return Response.json({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { thought: true, text: "private reasoning" },
+                  { text: '{"approved":true}' },
+                ],
+              },
+            },
+          ],
+          usageMetadata: {
+            promptTokenCount: 100,
+            candidatesTokenCount: 8,
+            privateData: "secret",
+          },
+        });
+      },
+    });
+    const complete = createInteractiveCompletion(
+      { text: "private source" },
+      client,
+      { retryDelayMs: 0, onAttempt: (value) => diagnostics.push(value) },
+    );
+    if ([400, 401, 403].includes(status)) {
+      await assert.rejects(
+        complete("verify", "test-model", { context }),
+        /private provider message/,
+      );
+      assert.equal(calls, 1);
+    } else {
+      assert.deepEqual(await complete("verify", "test-model", { context }), {
+        approved: true,
+      });
+      assert.equal(calls, 2);
+      assert.equal(diagnostics[1].promptTokenCount, 100);
+    }
+    assert.equal(diagnostics[0].status, status);
+    assert.equal(JSON.stringify(diagnostics).includes("private"), false);
+    assert.equal(JSON.stringify(diagnostics).includes("secret"), false);
+  });
+}
+
+test("expired requests and cancelled retry backoff do not send another provider request", async () => {
+  let calls = 0;
+  const controller = new AbortController();
+  const client = createVertexGenerativeAI({
+    project: "test",
+    location: "global",
+    accessToken: "test",
+    fetchImpl: async () => {
+      calls++;
+      return Response.json({ error: { message: "busy" } }, { status: 503 });
+    },
+  });
+  await assert.rejects(
+    createInteractiveCompletion({ text: "text" }, client, {
+      deadlineAt: Date.now() - 1,
+    })("extract", "test", { context }),
+    /deadline/,
+  );
+  assert.equal(calls, 0);
+  const complete = createInteractiveCompletion({ text: "text" }, client, {
+    signal: controller.signal,
+    retryDelayMs: 10000,
+    onAttempt: () =>
+      setTimeout(
+        () => controller.abort(new DOMException("cancelled", "AbortError")),
+        0,
+      ),
+  });
+  await assert.rejects(complete("extract", "test", { context }), /cancelled/);
+  assert.equal(calls, 1);
+});

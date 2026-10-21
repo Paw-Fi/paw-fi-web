@@ -1,5 +1,6 @@
 import { VALID_CURRENCIES } from "./currency-validator.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
+import { normalizeAudioContentType } from "./audio-source.ts";
 
 export interface InteractiveRequest {
   version: 1;
@@ -52,17 +53,36 @@ export function parseInteractiveSource(value: unknown): InteractiveSource {
   }
   const audio = input.audio == null ? undefined : objectValue(input.audio);
   if (
-    audio && (!boundedText(audio.data, 16000000) ||
-      !["audio/aac", "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-m4a"]
-        .includes(String(audio.contentType)))
+    audio &&
+    (!boundedText(audio.data, 16000000) ||
+      ![
+        "audio/aac",
+        "audio/x-aac",
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/mpga",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/wav",
+        "audio/x-m4a",
+        "audio/ogg",
+        "audio/webm",
+        "audio/flac",
+      ].includes(String(audio.contentType)))
   ) {
     throw new Error("Invalid interactive audio");
   }
   const image = input.image == null ? undefined : objectValue(input.image);
   if (
-    image && (!boundedText(image.data, 16000000) ||
-      !["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
-        .includes(String(image.contentType)))
+    image &&
+    (!boundedText(image.data, 16000000) ||
+      ![
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif",
+      ].includes(String(image.contentType)))
   ) {
     throw new Error("Invalid interactive image");
   }
@@ -79,7 +99,10 @@ export function parseInteractiveSource(value: unknown): InteractiveSource {
       ? {
         audio: {
           data: audio.data as string,
-          contentType: audio.contentType as string,
+          contentType: normalizeAudioContentType(
+            audio.data as string,
+            audio.contentType as string,
+          ),
         },
       }
       : {}),

@@ -8,7 +8,10 @@ import {
   verifyMerchantSources,
 } from "../shared/merchant-source-verification.ts";
 import { enrichAnalyzedMerchantItems } from "../shared/merchant-analysis.ts";
-import { enrichVerifiedInteractiveItems } from "../shared/interactive-transaction-analysis.ts";
+import {
+  enrichVerifiedInteractiveItems,
+  runInteractiveTransactionAnalysis,
+} from "../shared/interactive-transaction-analysis.ts";
 import type { InteractiveItem } from "../shared/interactive-transaction-contract.ts";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 
@@ -103,7 +106,9 @@ Deno.test(
     );
     assertEquals(endpoint.includes("verifyMerchantSource:"), false);
     assertEquals(
-      endpoint.match(/merchantDeadlineAt: Date.now\(\)/g)?.length,
+      endpoint.match(
+        /merchantDeadlineAt: (?:execution\.)?deadlineAt - 1000|merchantDeadlineAt: analysisDeadlineAt - 1000/g,
+      )?.length,
       2,
     );
     assertStringIncludes(endpoint, "answers: request.answers");
@@ -523,3 +528,66 @@ Deno.test(
     assertEquals(result.merchant_auto_resolution_blocked, undefined);
   },
 );
+
+Deno.test("combined interactive review still validates original merchant evidence without another AI call", async () => {
+  for (
+    const [evidence, supported] of [["小商店", true], [
+      "invented evidence",
+      false,
+    ]] as const
+  ) {
+    let calls = 0;
+    const source = { text: "小商店で５０円を払った" };
+    const result = await runInteractiveTransactionAnalysis({
+      source,
+      context: {
+        userId: "me",
+        defaultSpaceId: "personal",
+        defaultWalletId: null,
+        currency: "JPY",
+        date: "2026-10-05",
+        language: "ja",
+        expenseCategories: ["groceries"],
+        incomeCategories: ["salary"],
+        spaces: [{
+          id: "personal",
+          name: "Personal",
+          isPortfolio: false,
+          members: [],
+        }],
+        wallets: [],
+      },
+      request: { version: 1, answers: [] },
+      includeMerchantVerification: true,
+      complete: async (phase) => {
+        calls++;
+        return phase === "extract"
+          ? {
+            decision: "ready",
+            items: [{
+              type: "expense",
+              amount: 50,
+              category: "groceries",
+              merchant: "小商店",
+              explicitFields: ["merchant"],
+            }],
+          }
+          : {
+            approved: true,
+            merchantVerdicts: [{ itemIndex: 0, approved: true, evidence }],
+          };
+      },
+    });
+    assertEquals(result.requireCorrection, false);
+    const verdicts = await verifyMerchantSources({
+      body: source,
+      items: result.items,
+      complete: async () => ({
+        verdicts: "merchantVerdicts" in result ? result.merchantVerdicts : [],
+      }),
+    });
+    assertEquals(Boolean(verdicts[0]), supported);
+    assertEquals(result.items[0].amount, 50);
+    assertEquals(calls, 2);
+  }
+});

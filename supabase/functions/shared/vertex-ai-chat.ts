@@ -261,8 +261,8 @@ function normalizeSendMessageInput(content: unknown): VertexContent {
 
   if (
     Array.isArray(content) &&
-    content.every((item) =>
-      item && typeof item === "object" && "functionResponse" in item
+    content.every(
+      (item) => item && typeof item === "object" && "functionResponse" in item,
     )
   ) {
     // Vertex generateContent accepts only `user` and `model` content roles.
@@ -306,7 +306,11 @@ function buildResponseWrapper(payload: any): VertexChatResponse {
   return {
     text() {
       return parts
-        .map((part: any) => typeof part?.text === "string" ? part.text : "")
+        .map((part: any) =>
+          part?.thought !== true && typeof part?.text === "string"
+            ? part.text
+            : ""
+        )
         .join("")
         .trim();
     },
@@ -498,11 +502,25 @@ export function createVertexGenerativeAI(options: VertexGenerativeAIOptions) {
               throw buildError(response.status, payload);
             }
             if (
-              payload?.candidates?.some((
-                candidate: { finishReason?: string },
-              ) => candidate.finishReason === "MAX_TOKENS")
+              payload?.candidates?.some(
+                (candidate: { finishReason?: string }) =>
+                  candidate.finishReason === "MAX_TOKENS",
+              )
             ) {
-              throw new Error("MODEL_OUTPUT_TRUNCATED");
+              const usage = payload?.usageMetadata;
+              throw Object.assign(new Error("MODEL_OUTPUT_TRUNCATED"), {
+                usageMetadata: Object.fromEntries(
+                  [
+                    "promptTokenCount",
+                    "candidatesTokenCount",
+                    "thoughtsTokenCount",
+                  ].flatMap((key) =>
+                    Number.isSafeInteger(usage?.[key]) && usage[key] >= 0
+                      ? [[key, usage[key]]]
+                      : []
+                  ),
+                ),
+              });
             }
 
             return {

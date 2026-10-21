@@ -4,24 +4,21 @@
 // Supports SSE streaming for real-time progress updates (opt-in via ?stream=true query param)
 
 import {
-  runWithTimeout,
   type AnalysisExecutionOptions,
+  runWithTimeout,
 } from "../shared/async-timeout.ts";
 import {
   createVertexGenerativeAI,
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
 import { corsHeaders, withCors } from "../shared/cors.ts";
-import {
+import type {
   AnalyzeRequestBody,
-  normalizePreferredTimezone,
   ProgressCallback,
   ProgressEvent,
 } from "../shared/analyze-core.ts";
-import {
-  type MerchantAnalysisContext,
-  runEnrichedTransactionAnalysis,
-} from "../shared/analyzed-merchant-enrichment.ts";
+import { normalizePreferredTimezone } from "../shared/merchant-regional-selection.ts";
+import type { MerchantAnalysisContext } from "../shared/merchant-analysis.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import {
@@ -42,8 +39,8 @@ import {
 } from "../shared/interactive-transaction-contract.ts";
 import { loadInteractiveTransactionContext } from "../shared/interactive-transaction-context.ts";
 import {
-  enrichVerifiedInteractiveItems,
   createInteractiveCompletion,
+  enrichVerifiedInteractiveItems,
   interactiveAnalysisFailure,
   runInteractiveTransactionAnalysis,
 } from "../shared/interactive-transaction-analysis.ts";
@@ -57,6 +54,16 @@ import {
   applyAiCaptureDefaults,
   parseAiCaptureDefaults,
 } from "../shared/ai-capture-defaults.ts";
+
+// Voice/text/image requests do not initialize PDF/OCR/spreadsheet runtimes.
+async function runEnrichedTransactionAnalysis(
+  params: Parameters<
+    typeof import("../shared/analyzed-merchant-enrichment.ts").runEnrichedTransactionAnalysis
+  >[0],
+) {
+  const legacy = await import("../shared/analyzed-merchant-enrichment.ts");
+  return legacy.runEnrichedTransactionAnalysis(params);
+}
 
 interface InteractiveAnalyzeBody extends AnalyzeRequestBody {
   captureContext?: unknown;
@@ -80,27 +87,33 @@ async function interactiveAnalysisResponse(
     ? AbortSignal.any([execution.signal, streamAbort.signal])
     : streamAbort.signal;
   let closed = false;
+  const requestId = crypto.randomUUID();
   const run = async (signal: AbortSignal) => {
-    const merchantDeadlineAt = execution.deadlineAt - 1000;
+    const startedAt = Date.now();
     const context = await loadInteractiveTransactionContext({
       supabase: supabaseAuthed,
       userId: merchantContext.userId,
       defaultSpaceId: body.householdId || "personal",
       defaultWalletId: body.accountId || null,
-      currency:
-        defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency)
-          ? defaultCurrency
-          : body.currency || "USD",
+      currency: defaultCurrency && VALID_CURRENCIES.includes(defaultCurrency)
+        ? defaultCurrency
+        : body.currency || "USD",
       date: body.date || formatDateInTimeZone(body.preferredTimezone),
       language: body.language || "en",
       preferredTimezone: body.preferredTimezone,
       expenseCategories: body.allowedExpenseCategories!,
       incomeCategories: body.allowedIncomeCategories!,
     });
+    console.log("[analyze-expense][interactive]", {
+      requestId,
+      stage: "context",
+      elapsedMs: Date.now() - startedAt,
+    });
     signal.throwIfAborted();
     const source = parseInteractiveSource(body);
     const result = await runInteractiveTransactionAnalysis({
       source,
+      includeMerchantVerification: true,
       complete: createInteractiveCompletion(
         source,
         createVertexGenerativeAI({
@@ -109,6 +122,16 @@ async function interactiveAnalysisResponse(
           deadlineAt: execution.deadlineAt,
           requestTimeoutMs: 45000,
         }),
+        {
+          signal,
+          deadlineAt: execution.deadlineAt,
+          onAttempt: (diagnostic) =>
+            console.log("[analyze-expense][interactive]", {
+              requestId,
+              source: source.audio ? "audio" : source.image ? "image" : "text",
+              ...diagnostic,
+            }),
+        },
       ),
       request,
       context,
@@ -120,24 +143,43 @@ async function interactiveAnalysisResponse(
         remaps: body.categoryRemaps ?? [],
       },
     });
+    const { merchantVerdicts, ...publicResult } = {
+      merchantVerdicts: [],
+      ...result,
+    };
+    const merchantStartedAt = Date.now();
     const items = result.requireCorrection
       ? []
       : await enrichVerifiedInteractiveItems(
-          result.items,
-          (items) =>
-            enrichSourceVerifiedMerchantItems({
-              body,
-              items,
-              answers: request.answers,
-              merchantContext,
-              deadlineAt: merchantDeadlineAt,
-              signal,
-            }),
-          true,
-        );
+        result.items,
+        (items) =>
+          enrichSourceVerifiedMerchantItems({
+            body,
+            items,
+            answers: request.answers,
+            merchantContext,
+            // The financial verifier already checked the original merchant source.
+            // Reuse that verdict through the same evidence validator; no third model call.
+            complete: async () => ({ verdicts: merchantVerdicts }),
+            deadlineAt: Math.min(
+              execution.deadlineAt - 1000,
+              Date.now() + 3000,
+            ),
+            signal,
+          }),
+        true,
+      );
+    console.log("[analyze-expense][interactive]", {
+      requestId,
+      stage: "complete",
+      elapsedMs: Date.now() - startedAt,
+      merchantElapsedMs: Date.now() - merchantStartedAt,
+      itemCount: items.length,
+      correction: result.requireCorrection,
+    });
     return {
       success: true,
-      data: { ...result, items, isAnalyzed: !result.requireCorrection },
+      data: { ...publicResult, items, isAnalyzed: !result.requireCorrection },
     };
   };
   if (!stream) {
@@ -354,9 +396,11 @@ function getElapsedMs(startedAt: number): number {
 
 function logStage(stage: string, startedAt: number) {
   console.log(
-    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(
-      startedAt,
-    )}`,
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${
+      getElapsedMs(
+        startedAt,
+      )
+    }`,
   );
 }
 
@@ -533,10 +577,10 @@ function createSSEStream(
             stream: true,
             hasImage: !!body.image,
             hasAudio: !!body.audio,
-            hasAttachments:
-              Array.isArray(body.attachments) && body.attachments.length > 0,
-            hasText:
-              typeof body.text === "string" && body.text.trim().length > 0,
+            hasAttachments: Array.isArray(body.attachments) &&
+              body.attachments.length > 0,
+            hasText: typeof body.text === "string" &&
+              body.text.trim().length > 0,
           },
         });
         if (closed) return;
@@ -577,8 +621,8 @@ Deno.serve(withCors(async (req: Request) => {
 
     const url = new URL(req.url);
     const isStreamMode = url.searchParams.get("stream") === "true";
-    const analysisDeadlineAt =
-      requestStartedAt + (isStreamMode ? 180000 : 140000);
+    const analysisDeadlineAt = requestStartedAt +
+      (isStreamMode ? 180000 : 140000);
 
     let body: InteractiveAnalyzeBody;
     let interactive: InteractiveRequest | null;
@@ -591,15 +635,21 @@ Deno.serve(withCors(async (req: Request) => {
     } catch (_error) {
       return errorResponse("Invalid analysis request", 400);
     }
-    const interactiveDefaultCurrency =
-      captureDefaults?.currency ?? body.currency?.trim().toUpperCase();
+    const interactiveDefaultCurrency = captureDefaults?.currency ??
+      body.currency?.trim().toUpperCase();
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get(
+      "SUPABASE_SERVICE_ROLE_KEY",
+    );
 
-    if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    if (
+      (!interactive && !GEMINI_API_KEY) ||
+      !SUPABASE_URL ||
+      !SUPABASE_ANON_KEY
+    ) {
       return errorResponse("Server configuration error", 500);
     }
 
@@ -618,8 +668,8 @@ Deno.serve(withCors(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } =
-      await supabaseAuthed.auth.getUser();
+    const { data: userData, error: userErr } = await supabaseAuthed.auth
+      .getUser();
     logStage("auth_get_user", requestStartedAt);
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
@@ -633,35 +683,76 @@ Deno.serve(withCors(async (req: Request) => {
     body.preferredTimezone = undefined;
     const preferredCurrencyReader = SUPABASE_SERVICE_ROLE_KEY
       ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false,
-          },
-          global: {
-            headers: { "X-Client-Info": "moneko-analyze-expense" },
-          },
-        })
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+        global: {
+          headers: { "X-Client-Info": "moneko-analyze-expense" },
+        },
+      })
       : supabaseAuthed;
     const logoDevSecretKey = Deno.env.get("LOGO_DEV_SECRET_KEY") ?? "";
-    body.currency = await loadLatestUserPreferredCurrency({
-      supabase: preferredCurrencyReader,
-      userId: callerId,
-      fallbackCurrency: body.currency,
-      onError: (error) =>
-        console.warn(
-          "[analyze-expense] Preferred currency lookup failed",
-          error,
-        ),
-    });
-    const { data: contact, error: preferenceError } =
-      await preferredCurrencyReader
-        .from("user_contacts")
-        .select("preferred_timezone, preferred_language")
-        .eq("user_id", callerId)
-        .order("id", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // These reads are independent after authentication. Do not load automatic
+    // category history for the source-verified path, which never uses it.
+    const [currencyRead, preferenceRead, categoryRead] = await runWithTimeout(
+      {
+        timeoutMs: Math.min(15000, analysisDeadlineAt - Date.now()),
+        timeoutMessage: "Analysis context timed out",
+        signal: req.signal,
+        operation: () =>
+          Promise.allSettled(
+            [
+              loadLatestUserPreferredCurrency({
+                supabase: preferredCurrencyReader,
+                userId: callerId,
+                fallbackCurrency: body.currency,
+                onError: (error) =>
+                  console.warn(
+                    "[analyze-expense] Preferred currency lookup failed",
+                    error,
+                  ),
+              }),
+              preferredCurrencyReader
+                .from("user_contacts")
+                .select("preferred_timezone, preferred_language")
+                .eq("user_id", callerId)
+                .order("id", { ascending: false })
+                .limit(1)
+                .maybeSingle(),
+              Promise.all([
+                getAllowedCategoriesCached({
+                  supabase: supabaseAuthed,
+                  userId: callerId,
+                }),
+                interactive
+                  ? Promise.resolve([])
+                  : getCategoryPreferencesCached({
+                    supabase: supabaseAuthed,
+                    userId: callerId,
+                  }),
+                getCategoryRemaps({
+                  supabase: supabaseAuthed,
+                  userId: callerId,
+                }),
+                fetchConfirmedCategoryPreferences({
+                  supabase: supabaseAuthed,
+                  userId: callerId,
+                }),
+              ]),
+            ] as const,
+          ),
+      },
+    );
+    if (currencyRead.status === "rejected") throw currencyRead.reason;
+    body.currency = currencyRead.value;
+    const preferenceError = preferenceRead.status === "rejected"
+      ? preferenceRead.reason
+      : preferenceRead.value.error;
+    const contact = preferenceRead.status === "fulfilled"
+      ? preferenceRead.value.data
+      : null;
     if (preferenceError) {
       console.warn(
         "[analyze-expense] Language/timezone preference lookup failed",
@@ -670,7 +761,8 @@ Deno.serve(withCors(async (req: Request) => {
       if (interactive) {
         return errorResponse(
           "Unable to load analysis language preference",
-          500,
+          503,
+          "AI_TEMPORARILY_UNAVAILABLE",
         );
       }
     } else {
@@ -682,34 +774,11 @@ Deno.serve(withCors(async (req: Request) => {
         contact?.preferred_timezone,
       );
     }
-
     body = applyAiCaptureDefaults(body, captureDefaults);
-
-    // Load per-user custom categories + learned preferences for category assignment
-    try {
-      const merged = await getAllowedCategoriesCached({
-        supabase: supabaseAuthed,
-        userId: callerId,
-      });
-      body.allowedExpenseCategories = merged.expenseCategories;
-      body.allowedIncomeCategories = merged.incomeCategories;
-      const [preferences, remaps] = await Promise.all([
-        getCategoryPreferencesCached({
-          supabase: supabaseAuthed,
-          userId: callerId,
-        }),
-        getCategoryRemaps({
-          supabase: supabaseAuthed,
-          userId: callerId,
-        }),
-      ]);
-      body.categoryPreferences = preferences;
-      body.categoryRemaps = remaps;
-      logStage("category_context_loading", requestStartedAt);
-    } catch (e) {
+    if (categoryRead.status === "rejected") {
       console.error(
         "[analyze-expense] Failed to load user categories/preferences:",
-        e,
+        categoryRead.reason,
       );
       return errorResponse(
         "Category context is temporarily unavailable. Please retry.",
@@ -717,41 +786,14 @@ Deno.serve(withCors(async (req: Request) => {
         "CATEGORY_CONTEXT_UNAVAILABLE",
       );
     }
-
-    if (
-      !Array.isArray(body.allowedExpenseCategories) ||
-      !Array.isArray(body.allowedIncomeCategories) ||
-      !Array.isArray(body.categoryPreferences) ||
-      !Array.isArray(body.categoryRemaps)
-    ) {
-      const [merged, preferences, remaps] = await Promise.all([
-        getAllowedCategoriesCached({
-          supabase: supabaseAuthed,
-          userId: callerId,
-        }),
-        getCategoryPreferencesCached({
-          supabase: supabaseAuthed,
-          userId: callerId,
-        }),
-        getCategoryRemaps({
-          supabase: supabaseAuthed,
-          userId: callerId,
-        }),
-      ]);
-      body.allowedExpenseCategories = merged.expenseCategories;
-      body.allowedIncomeCategories = merged.incomeCategories;
-      body.categoryPreferences = preferences;
-      body.categoryRemaps = remaps;
-      logStage("category_context_retry", requestStartedAt);
-    }
-
-    // Never serve a stale cached correction after a user edits a category.
-    body.confirmedCategoryPreferences = await fetchConfirmedCategoryPreferences(
-      {
-        supabase: supabaseAuthed,
-        userId: callerId,
-      },
-    );
+    const [merged, preferences, remaps, confirmedPreferences] =
+      categoryRead.value;
+    body.allowedExpenseCategories = merged.expenseCategories;
+    body.allowedIncomeCategories = merged.incomeCategories;
+    body.categoryPreferences = preferences;
+    body.categoryRemaps = remaps;
+    body.confirmedCategoryPreferences = confirmedPreferences;
+    logStage("category_context_loading", requestStartedAt);
 
     if (interactive) {
       return await interactiveAnalysisResponse(
@@ -789,15 +831,15 @@ Deno.serve(withCors(async (req: Request) => {
         const canAdminRead = !!SUPABASE_SERVICE_ROLE_KEY;
         const reader = canAdminRead
           ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!, {
-              auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-                detectSessionInUrl: false,
-              },
-              global: {
-                headers: { "X-Client-Info": "moneko-analyze-expense" },
-              },
-            })
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+              detectSessionInUrl: false,
+            },
+            global: {
+              headers: { "X-Client-Info": "moneko-analyze-expense" },
+            },
+          })
           : supabaseAuthed;
 
         const { data: members, error: membersError } = await reader
@@ -820,7 +862,7 @@ Deno.serve(withCors(async (req: Request) => {
 
       const stream = createSSEStream(
         body,
-        GEMINI_API_KEY,
+        GEMINI_API_KEY!,
         {
           supabase: preferredCurrencyReader,
           userId: callerId,
@@ -846,7 +888,7 @@ Deno.serve(withCors(async (req: Request) => {
         (signal) =>
           runEnrichedTransactionAnalysis({
             body,
-            apiKey: GEMINI_API_KEY,
+            apiKey: GEMINI_API_KEY!,
             execution: { deadlineAt: analysisDeadlineAt, signal },
             merchantDeadlineAt: analysisDeadlineAt - 1000,
             merchantContext: {
@@ -876,8 +918,8 @@ Deno.serve(withCors(async (req: Request) => {
           stream: false,
           hasImage: !!body.image,
           hasAudio: !!body.audio,
-          hasAttachments:
-            Array.isArray(body.attachments) && body.attachments.length > 0,
+          hasAttachments: Array.isArray(body.attachments) &&
+            body.attachments.length > 0,
           hasText: typeof body.text === "string" && body.text.trim().length > 0,
         },
       });

@@ -36,6 +36,7 @@ function fixture(options = {}) {
         TextEncoder,
         TextDecoder,
         AbortSignal,
+        AbortController,
         Date,
         Deno: { env: { get: () => undefined } },
         require(specifier) {

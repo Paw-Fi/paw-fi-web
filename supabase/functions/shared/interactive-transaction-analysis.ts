@@ -5,6 +5,12 @@ import {
 import { GEMINI_MODEL_FALLBACKS } from "./gemini-models.ts";
 import { buildAiResponseLanguageInstruction } from "./ai-response-language.ts";
 import { AI_CATEGORY_POLICY } from "./ai-category-policy.ts";
+import { normalizeAudioContentType } from "./audio-source.ts";
+import {
+  buildMerchantSourceProposals,
+  MERCHANT_SOURCE_RULES,
+  MERCHANT_SOURCE_SCHEMA,
+} from "./merchant-source-contract.ts";
 import {
   type CategoryContext,
   resolveCategory,
@@ -144,6 +150,7 @@ export async function runInteractiveTransactionAnalysis(params: {
   context: InteractiveContext;
   categoryContext?: CategoryContext;
   complete?: InteractiveCompletion;
+  includeMerchantVerification?: boolean;
 }) {
   const complete =
     params.complete ?? createInteractiveCompletion(params.source);
@@ -227,14 +234,29 @@ export async function runInteractiveTransactionAnalysis(params: {
       ? [{ itemIndex, category: item.category }]
       : [],
   );
-  const verificationPayload = { ...payload, items, categoryOverrides };
+  const verificationPayload = {
+    ...payload,
+    items,
+    categoryOverrides,
+    ...(params.includeMerchantVerification
+      ? { merchantProposals: buildMerchantSourceProposals(items) }
+      : {}),
+  };
   const hasSplits = items.some((item) => item.customSplits != null);
   const models = hasSplits
     ? [GEMINI_MODEL_FALLBACKS[1], GEMINI_MODEL_FALLBACKS[2]]
     : [GEMINI_MODEL_FALLBACKS[1]];
   const verdicts = await Promise.all(
-    models.map(async (model) =>
-      objectValue(await complete("verify", model, verificationPayload)),
+    models.map(async (model, index) =>
+      objectValue(
+        await complete(
+          "verify",
+          model,
+          index === 0
+            ? verificationPayload
+            : { ...payload, items, categoryOverrides },
+        ),
+      ),
     ),
   );
   const rejected = verdicts.find((verdict) => verdict.approved !== true);
@@ -246,6 +268,13 @@ export async function runInteractiveTransactionAnalysis(params: {
     items,
     language: params.context.language,
     preferredTimezone: params.context.preferredTimezone,
+    ...(params.includeMerchantVerification
+      ? {
+          merchantVerdicts: Array.isArray(verdicts[0].merchantVerdicts)
+            ? verdicts[0].merchantVerdicts
+            : [],
+        }
+      : {}),
   };
 }
 
@@ -271,9 +300,14 @@ export function createInteractiveCompletion(
   source: InteractiveSource,
   client = createVertexGenerativeAI({
     ...getVertexAiConfigFromEnv(),
-    fetchImpl: (input, init) =>
-      fetch(input, { ...init, signal: AbortSignal.timeout(45000) }),
+    requestTimeoutMs: 45000,
   }),
+  options: {
+    signal?: AbortSignal;
+    deadlineAt?: number;
+    retryDelayMs?: number;
+    onAttempt?: (diagnostic: Record<string, string | number>) => void;
+  } = {},
 ): InteractiveCompletion {
   return async (phase, model, payload) => {
     const languageInstruction = buildAiResponseLanguageInstruction(
@@ -287,6 +321,13 @@ export function createInteractiveCompletion(
               ? "You are an INDEPENDENT verifier. Check the original source and every clarification, not just internal consistency. Approve only if ALL transactions and explicit instructions are present, grounded, authorized, unambiguous and unchanged. Check category meaning against the actual purchase or income source, not merely membership in the allowed list; a generic category is justified only when no specific allowed category is supported, unless explicitly selected by the user. Check omitted fields, participant identity, payer, split semantics, regional numbers/dates and destination defaults. An authorized compatible dropdown default is sufficient for an omitted destination; it is not evidence of an explicit destination instruction. Do not reject or ask to reconfirm a valid default simply because the source did not mention it. Reject if any explicit detail was lost or inferred incorrectly, and ask a focused question with choices. Do not repair the proposal yourself."
               : "The server rejected the proposal or its clarification format. Use the supplied issues and invalidClarification, when present, with the original source and answers to identify the unresolved detail. Any supplied items are unapproved proposals, not verified facts. Return one nonempty question (at most 1200 characters) and 2-4 distinct nonempty string choices (at most 400 characters each) in context.language. Return only question and choices, never approval or transaction items. Do not change or repair the user's values automatically."
           }`;
+    const checksMerchants =
+      phase === "verify" &&
+      Array.isArray(payload.merchantProposals) &&
+      payload.merchantProposals.length > 0;
+    const merchantInstruction = checksMerchants
+      ? `\nIn this same independent source review, also check merchantProposals using the rules below. Return those optional verdicts in merchantVerdicts. Financial approved and merchant approval are separate: an uncertain merchant identity must never reject otherwise correct financial fields or invent a correction.\n${MERCHANT_SOURCE_RULES}\nFor this combined response use {approved, question?, choices?, merchantVerdicts}; put the merchant verdict array in merchantVerdicts, not verdicts.`
+      : "";
     const modelClient = client.getGenerativeModel({
       model,
       // Vertex can reject the deeply optional extraction schema with HTTP 400.
@@ -296,7 +337,7 @@ export function createInteractiveCompletion(
           ? `${instruction}\nReturn only a JSON object matching this output schema. Omit absent optional fields:\n${JSON.stringify(
               extractionSchema,
             )}\n${languageInstruction}`
-          : `${instruction}\n${languageInstruction}`,
+          : `${instruction}\n${languageInstruction}${merchantInstruction}`,
     });
     const generationRequest = {
       contents: [
@@ -308,7 +349,10 @@ export function createInteractiveCompletion(
               ? [
                   {
                     inlineData: {
-                      mimeType: source.audio.contentType,
+                      mimeType: normalizeAudioContentType(
+                        source.audio.data,
+                        source.audio.contentType,
+                      ),
                       data: source.audio.data,
                     },
                   },
@@ -329,27 +373,175 @@ export function createInteractiveCompletion(
       ],
       generationConfig: {
         temperature: 0,
-        maxOutputTokens: phase === "extract" ? 12000 : 4096,
+        maxOutputTokens:
+          phase === "extract" ? 12000 : checksMerchants ? 8192 : 4096,
         responseMimeType: "application/json",
         ...(phase === "extract"
           ? {}
           : {
               responseSchema:
-                phase === "verify" ? verificationSchema : questionSchema,
+                phase === "verify"
+                  ? {
+                      ...verificationSchema,
+                      properties: {
+                        ...verificationSchema.properties,
+                        ...(checksMerchants
+                          ? {
+                              merchantVerdicts:
+                                MERCHANT_SOURCE_SCHEMA.properties.verdicts,
+                            }
+                          : {}),
+                      },
+                    }
+                  : questionSchema,
             }),
       },
     };
+    let maxOutputTokens = generationRequest.generationConfig.maxOutputTokens;
     for (let attempt = 0; attempt < 2; attempt++) {
-      const response = await modelClient.generateContent(generationRequest);
+      options.signal?.throwIfAborted();
+      if (options.deadlineAt != null && Date.now() >= options.deadlineAt) {
+        throw new Error("Analysis timed out: request deadline exceeded");
+      }
+      const startedAt = Date.now();
+      let response;
       try {
-        return JSON.parse(response.response.text());
+        response = await modelClient.generateContent(
+          {
+            ...generationRequest,
+            generationConfig: {
+              ...generationRequest.generationConfig,
+              // A MAX_TOKENS response is incomplete even when its JSON parses.
+              // Retry once with more room for the model's output and thinking.
+              maxOutputTokens,
+            },
+          },
+          { signal: options.signal },
+        );
+      } catch (error) {
+        emitAttempt(options, {
+          phase,
+          model,
+          attempt: attempt + 1,
+          elapsedMs: Date.now() - startedAt,
+          outcome: "provider_error",
+          maxOutputTokens,
+          ...modelDiagnostics(error),
+        });
+        options.signal?.throwIfAborted();
+        const truncated =
+          error instanceof Error && error.message === "MODEL_OUTPUT_TRUNCATED";
+        if (
+          attempt === 0 &&
+          (truncated || isRetryableInteractiveError(error))
+        ) {
+          if (truncated) maxOutputTokens *= 2;
+          if (
+            options.deadlineAt != null &&
+            options.deadlineAt - Date.now() <= 1000
+          )
+            throw error;
+          await waitForInteractiveRetry(
+            options.retryDelayMs ?? 200,
+            options.signal,
+          );
+          continue;
+        }
+        throw error;
+      }
+      try {
+        const parsed = JSON.parse(response.response.text());
+        emitAttempt(options, {
+          phase,
+          model,
+          attempt: attempt + 1,
+          elapsedMs: Date.now() - startedAt,
+          outcome: "success",
+          maxOutputTokens,
+          ...modelDiagnostics(response.response.raw),
+        });
+        return parsed;
       } catch (error) {
         if (!(error instanceof SyntaxError)) throw error;
+        emitAttempt(options, {
+          phase,
+          model,
+          attempt: attempt + 1,
+          elapsedMs: Date.now() - startedAt,
+          outcome: "invalid_json",
+          maxOutputTokens,
+          ...modelDiagnostics(response.response.raw),
+        });
         if (attempt === 1) throw new InteractiveModelResponseError();
       }
     }
     throw new InteractiveModelResponseError();
   };
+}
+
+function emitAttempt(
+  options: {
+    onAttempt?: (diagnostic: Record<string, string | number>) => void;
+  },
+  diagnostic: Record<string, string | number>,
+) {
+  // Diagnostics contain only machine metadata, never audio, text or model output.
+  try {
+    options.onAttempt?.(diagnostic);
+  } catch {
+    /* Logging cannot fail analysis. */
+  }
+}
+
+function modelDiagnostics(value: unknown): Record<string, string | number> {
+  const data = objectValue(value);
+  const usage = objectValue(data.usageMetadata);
+  const result: Record<string, string | number> = {};
+  for (const key of [
+    "promptTokenCount",
+    "candidatesTokenCount",
+    "thoughtsTokenCount",
+  ]) {
+    const count = usage[key];
+    if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0)
+      result[key] = count;
+  }
+  const status = data.status ?? data.statusCode;
+  if (typeof status === "number" && Number.isInteger(status))
+    result.status = status;
+  if (value instanceof Error && value.message === "MODEL_OUTPUT_TRUNCATED")
+    result.finishReason = "MAX_TOKENS";
+  return result;
+}
+
+function isRetryableInteractiveError(error: unknown): boolean {
+  const status = Number(
+    objectValue(error).status ?? objectValue(error).statusCode,
+  );
+  return (
+    [408, 429, 500, 502, 503, 504].includes(status) ||
+    error instanceof TypeError ||
+    (error instanceof Error &&
+      (error.name === "TimeoutError" || error.message.includes("timed out")))
+  );
+}
+
+async function waitForInteractiveRetry(
+  delayMs: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  signal?.throwIfAborted();
+  await new Promise<void>((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, delayMs);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 const stringSchema = { type: "STRING" };

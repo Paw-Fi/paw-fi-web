@@ -13,6 +13,7 @@ interface CatalogFixture {
   responseLimit?: number;
   missingCountTable?: string;
   driftWalletCount?: boolean;
+  beforeRead?: (table: string) => Promise<void>;
 }
 
 const fixture = (): CatalogFixture => ({
@@ -91,8 +92,9 @@ function load(catalog: CatalogFixture) {
       eq: () => builder,
       in: () => builder,
       order: () => builder,
-      range: (from: number, to: number) =>
-        Promise.resolve({
+      range: async (from: number, to: number) => {
+        await catalog.beforeRead?.(table);
+        return {
           data: rows.slice(
             from,
             Math.min(to + 1, from + (catalog.responseLimit ?? Infinity)),
@@ -104,7 +106,8 @@ function load(catalog: CatalogFixture) {
           error: catalog.failedTable === table
             ? new Error("read failed")
             : null,
-        }),
+        };
+      },
     };
     return builder;
   };
@@ -138,11 +141,10 @@ function load(catalog: CatalogFixture) {
 
 Deno.test("interactive context: authorized catalogs retain native names, currencies and scope", async () => {
   const result = await load(fixture());
-  assertEquals(result.spaces.map((space) => space.id), [
-    "personal",
-    "family",
-    "work",
-  ]);
+  assertEquals(
+    result.spaces.map((space) => space.id),
+    ["personal", "family", "work"],
+  );
   assertEquals(result.spaces[1].members, [
     { userId: "me", name: "本人" },
     { userId: "alice", name: "أليس" },
@@ -151,9 +153,11 @@ Deno.test("interactive context: authorized catalogs retain native names, currenc
   assertEquals(result.spaces[1].autoSplitEnabled, false);
   assertEquals(result.spaces[2].members, []);
   assertEquals(
-    result.wallets.map((
-      wallet,
-    ) => [wallet.id, wallet.currency, wallet.spaceId]),
+    result.wallets.map((wallet) => [
+      wallet.id,
+      wallet.currency,
+      wallet.spaceId,
+    ]),
     [
       ["personal", "EUR", "personal"],
       ["family-wallet", "USD", "family"],
@@ -171,7 +175,10 @@ Deno.test("interactive context: a complete empty personal catalog is usable", as
     members: [],
     wallets: [],
   });
-  assertEquals(result.spaces.map((space) => space.id), ["personal"]);
+  assertEquals(
+    result.spaces.map((space) => space.id),
+    ["personal"],
+  );
   assertEquals(result.wallets, []);
 });
 
@@ -279,3 +286,56 @@ Deno.test("interactive context: duplicate or changing catalogs fail closed", asy
     load({ ...fixture(), wallets, driftWalletCount: true })
   );
 });
+
+Deno.test(
+  "interactive context: wallets begin loading alongside membership authorization",
+  async () => {
+    let walletsStarted = false;
+    const result = await load({
+      ...fixture(),
+      beforeRead: async (table) => {
+        if (table === "accounts") walletsStarted = true;
+        if (table === "household_members") {
+          await Promise.resolve();
+          assertEquals(walletsStarted, true);
+        }
+      },
+    });
+    assertEquals(result.wallets.length, 3);
+  },
+);
+
+Deno.test(
+  "interactive context: member reads are concurrent, bounded and preserve catalog order",
+  async () => {
+    const households = Array.from({ length: 9 }, (_, index) => ({
+      id: `space-${index}`,
+      name: `家族${index}`,
+      is_portfolio: false,
+    }));
+    let active = 0;
+    let peak = 0;
+    const result = await load({
+      ...fixture(),
+      households,
+      memberships: households.map((row) => ({ household_id: row.id })),
+      beforeRead: async (table) => {
+        if (table !== "get_household_home_members_v1") return;
+        active++;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        active--;
+      },
+    });
+    assertEquals(peak, 4);
+    assertEquals(active, 0);
+    assertEquals(
+      result.spaces.map((space) => space.id),
+      ["personal", ...households.map((row) => row.id)],
+    );
+    assertEquals(
+      result.spaces.slice(1).every((space) => space.members.length === 3),
+      true,
+    );
+  },
+);
