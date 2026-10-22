@@ -101,6 +101,79 @@ const context = {
 };
 const item = { type: "expense", amount: 50, category: "groceries", explicitFields: [] };
 
+test("every AI phase permits expense and income logging without selecting or creating a wallet", async () => {
+  const { requests, complete } = fixture([
+    { decision: "ready", items: [item] },
+    { approved: true },
+    { question: "日付は？", choices: ["今日", "昨日"] },
+  ]);
+  for (const phase of ["extract", "verify", "clarify"]) {
+    await complete(phase, "test-model", { context, answers: [] });
+  }
+  for (const request of requests) {
+    const instruction = request.systemInstruction.parts[0].text;
+    assert.ok(instruction.includes("A missing wallet selection is valid for BOTH expense and income"));
+    assert.ok(instruction.includes("an omitted account field may resolve an existing active, same-scope, same-currency primary wallet"));
+    assert.ok(instruction.includes("an explicitly null account field preserves an unassigned transaction"));
+    assert.ok(instruction.includes("not a request to create a wallet"));
+    assert.ok(instruction.includes("Neither analysis nor saving automatically creates a Spending wallet"));
+    assert.ok(instruction.includes("Never change expense to income or income to expense to work around wallet selection"));
+    assert.ok(instruction.includes("do not generate cancellation choices that would instead be submitted as clarification answers"));
+  }
+});
+
+for (const type of ["expense", "income"]) {
+  for (const selected of [false, true]) {
+    test(`${type} uses ${selected ? "selected POSB" : "automatic wallet resolution"} without a clarification`, async () => {
+      const scopedContext = {
+        ...context, currency: "SGD", defaultWalletId: selected ? "posb" : null,
+        wallets: [{ id: "posb", name: "POSB", currency: "SGD", spaceId: "personal" }],
+      };
+      const proposal = { ...item, type, category: type === "income" ? "salary" : "groceries" };
+      const { requests, complete } = fixture([{ decision: "ready", items: [proposal] }, { approved: true }]);
+      const result = await runInteractiveTransactionAnalysis({
+        source: { text: type === "income" ? "收到薪水５０新元" : "شراء طعام بـ ٥٠ دولار سنغافوري" },
+        request: { version: 1, answers: [] }, context: scopedContext, complete,
+      });
+      assert.equal(result.requireCorrection, false);
+      assert.equal(result.items[0].type, type);
+      assert.equal(result.items[0].currency, "SGD");
+      assert.equal(result.items[0].destination.accountId, selected ? "posb" : null);
+      assert.equal(requests.length, 2);
+      assert.deepEqual(JSON.parse(requests[0].contents[0].parts[0].text).context.wallets, scopedContext.wallets);
+    });
+  }
+  test(`${type} preserves native currency when no matching wallet exists`, async () => {
+    const proposal = { ...item, type, category: type === "income" ? "salary" : "groceries", currency: "EUR", explicitFields: ["currency"] };
+    const { complete } = fixture([{ decision: "ready", items: [proposal] }, { approved: true }]);
+    const result = await runInteractiveTransactionAnalysis({
+      source: { text: type === "income" ? "Gehalt 50,00 €" : "食費５０ユーロ" },
+      request: { version: 1, answers: [] }, context, complete,
+    });
+    assert.equal(result.requireCorrection, false);
+    assert.equal(result.items[0].currency, "EUR");
+    assert.equal(result.items[0].destination.accountId, null);
+  });
+  test(`${type} resolves an explicitly named existing POSB without a dropdown selection`, async () => {
+    const scopedContext = {
+      ...context, currency: "SGD",
+      wallets: [{ id: "posb", name: "POSB", currency: "SGD", spaceId: "personal" }],
+    };
+    const proposal = {
+      ...item, type, category: type === "income" ? "salary" : "groceries",
+      walletId: "posb", explicitFields: ["walletId"],
+    };
+    const { complete } = fixture([{ decision: "ready", items: [proposal] }, { approved: true }]);
+    const result = await runInteractiveTransactionAnalysis({
+      source: { text: type === "income" ? "POSB 收到薪水５０新元" : "POSBで食費５０シンガポールドル" },
+      request: { version: 1, answers: [] }, context: scopedContext, complete,
+    });
+    assert.equal(result.requireCorrection, false);
+    assert.equal(result.items[0].destination.accountId, "posb");
+    assert.equal(result.items[0].destination.accountCurrency, "SGD");
+  });
+}
+
 test("extraction avoids complex constrained schema but retains independent verification", async () => {
   const { requests, complete } = fixture([{ decision: "ready", items: [item] }, { approved: true }]);
   const result = await runInteractiveTransactionAnalysis({
