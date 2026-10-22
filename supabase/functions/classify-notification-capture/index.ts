@@ -10,6 +10,7 @@ import {
   ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
   type AndroidNotificationClassification,
   type AndroidNotificationInput,
+  type AndroidNotificationModelAttempt,
   buildAndroidNotificationClassificationContextHash,
   buildAndroidNotificationDependencyFailure,
   buildAndroidNotificationFailureResult,
@@ -19,6 +20,7 @@ import {
   httpStatusForAndroidNotificationFailure,
   notificationUsesProviderSource,
   NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES,
+  NOTIFICATION_CAPTURE_AI_BUDGET_MS,
 } from "../shared/android-notification-classifier.ts";
 import {
   assertAccountInScope,
@@ -435,11 +437,44 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, error: "Method not allowed" }, 405);
   }
 
+  const requestStartedAt = Date.now();
+  const requestId = crypto.randomUUID();
+  const stageTimingsMs: Record<string, number> = {};
+  const modelAttempts: AndroidNotificationModelAttempt[] = [];
+  let stageStartedAt = requestStartedAt;
+  let responseStatus = 500;
+  let outcome = "retryable_failure";
+  let cached = false;
+  const respond = (body: Record<string, unknown>, status = 200): Response => {
+    responseStatus = status;
+    outcome =
+      body.success === true
+        ? body.ignored === true
+          ? "ignored"
+          : body.duplicate === true
+            ? "duplicate"
+            : "saved"
+        : status === 409
+          ? "processing"
+          : status === 429
+            ? "rate_limited"
+            : status >= 500
+              ? "retryable_failure"
+              : "rejected";
+    return jsonResponse(body, status);
+  };
   let eventId: string | null = null;
   let processingToken: string | null = null;
   let attemptNumber = 0;
   let supabase: any = null;
   let stage = "request";
+  const setStage = (next: string) => {
+    const now = Date.now();
+    stageTimingsMs[stage] =
+      (stageTimingsMs[stage] ?? 0) + Math.max(0, now - stageStartedAt);
+    stage = next;
+    stageStartedAt = now;
+  };
   let committedResponse: {
     body: Record<string, unknown>;
     status: number;
@@ -450,19 +485,19 @@ Deno.serve(async (req: Request) => {
       new TextEncoder().encode(rawBody).length >
       NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES
     ) {
-      return jsonResponse({ success: false, error: "Payload too large" }, 413);
+      return respond({ success: false, error: "Payload too large" }, 413);
     }
     let body: NotificationCaptureRequest;
     try {
       body = JSON.parse(rawBody) as NotificationCaptureRequest;
     } catch {
-      return jsonResponse({ success: false, error: "Invalid JSON" }, 400);
+      return respond({ success: false, error: "Invalid JSON" }, 400);
     }
 
     const notification = sanitizeNotification(body.notification);
     const eventKey = optionalString(body.idempotencyKey, 300);
     if (!notification || !eventKey) {
-      return jsonResponse(
+      return respond(
         {
           success: false,
           error: "Valid notification and idempotency key required",
@@ -474,7 +509,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceRoleKey) {
-      return jsonResponse(
+      return respond(
         { success: false, error: "Server configuration error" },
         500,
       );
@@ -487,10 +522,10 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    stage = "authentication";
+    setStage("authentication");
     const auth = await authenticateUserOrInternalSecret(req, supabase);
     if (!auth.success) {
-      return jsonResponse(
+      return respond(
         { success: false, error: auth.error || "Unauthorized" },
         auth.statusCode ?? 401,
       );
@@ -499,13 +534,10 @@ Deno.serve(async (req: Request) => {
       ? sanitizeUuid(body.userId)
       : (auth.userId ?? null);
     if (!userId) {
-      return jsonResponse(
-        { success: false, error: "Unable to resolve user" },
-        401,
-      );
+      return respond({ success: false, error: "Unable to resolve user" }, 401);
     }
 
-    stage = "subscription";
+    setStage("subscription");
     const subscription = await loadLatestSubscriptionForUser(supabase, userId);
     if (!hasCapturePlusEntitlement(subscription)) {
       try {
@@ -520,10 +552,10 @@ Deno.serve(async (req: Request) => {
           notificationError,
         );
       }
-      return jsonResponse(jsonSubscriptionRequired("wallet capture"), 403);
+      return respond(jsonSubscriptionRequired("wallet capture"), 403);
     }
 
-    stage = "contact_context";
+    setStage("contact_context");
     const { data: contact, error: contactError } = await supabase
       .from("user_contacts")
       .select(
@@ -535,7 +567,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (contactError) throw contactError;
     if (contact?.wallet_capture_enabled === false) {
-      return jsonResponse(
+      return respond(
         { success: false, error: "Wallet capture is disabled" },
         403,
       );
@@ -544,7 +576,7 @@ Deno.serve(async (req: Request) => {
     const householdId = sanitizeUuid(body.householdId);
     const rawHouseholdId = optionalString(body.householdId, 80);
     if (rawHouseholdId && !householdId) {
-      return jsonResponse(
+      return respond(
         { success: false, error: "Valid household id required" },
         400,
       );
@@ -552,15 +584,15 @@ Deno.serve(async (req: Request) => {
     const requestedAccountId = sanitizeUuid(body.accountId);
     const rawAccountId = optionalString(body.accountId, 80);
     if (rawAccountId && !requestedAccountId) {
-      return jsonResponse(
+      return respond(
         { success: false, error: "Valid account id required" },
         400,
       );
     }
 
-    stage = "scope_resolution";
+    setStage("scope_resolution");
     if (!(await assertScopeAccess(supabase, userId, householdId))) {
-      return jsonResponse(
+      return respond(
         { success: false, error: "Destination scope is not accessible" },
         400,
       );
@@ -575,7 +607,7 @@ Deno.serve(async (req: Request) => {
         householdId,
       });
       if (!isAccountInScope) {
-        return jsonResponse(
+        return respond(
           {
             success: false,
             error: "Provided account does not belong to this scope",
@@ -589,16 +621,16 @@ Deno.serve(async (req: Request) => {
           ? account.currency.trim().toUpperCase()
           : null;
       if (!accountCurrency) {
-        return jsonResponse(
+        return respond(
           { success: false, error: "Selected account has no currency" },
           400,
         );
       }
     }
 
-    stage = "category_context";
+    setStage("category_context");
     const categoryContext = await loadCategoryContext({ supabase, userId });
-    stage = "classification_context";
+    setStage("classification_context");
     const preferredTimezone =
       typeof contact?.preferred_timezone === "string"
         ? contact.preferred_timezone
@@ -635,7 +667,7 @@ Deno.serve(async (req: Request) => {
         10,
       ) || DEFAULT_HOURLY_AI_LIMIT,
     );
-    stage = "event_claim";
+    setStage("event_claim");
     const claim = await claimClassificationEvent({
       supabase,
       userId,
@@ -645,8 +677,9 @@ Deno.serve(async (req: Request) => {
       contextHash,
     });
     if (claim.status === "cached") {
+      cached = true;
       if (claim.result.success === false && claim.result.retryable === false) {
-        return jsonResponse(
+        return respond(
           {
             success: false,
             code: "CLASSIFICATION_TERMINAL",
@@ -656,10 +689,10 @@ Deno.serve(async (req: Request) => {
           422,
         );
       }
-      return jsonResponse(claim.result);
+      return respond(claim.result);
     }
     if (claim.status === "processing") {
-      return jsonResponse(
+      return respond(
         {
           success: false,
           code: "REQUEST_IN_PROGRESS",
@@ -669,7 +702,7 @@ Deno.serve(async (req: Request) => {
       );
     }
     if (claim.status === "rate_limited") {
-      return jsonResponse(
+      return respond(
         {
           success: false,
           code: "RATE_LIMITED",
@@ -682,11 +715,13 @@ Deno.serve(async (req: Request) => {
     processingToken = claim.processingToken;
     attemptNumber = claim.attemptNumber;
 
-    stage = "model_configuration";
+    setStage("model_configuration");
     const genAI = createVertexGenerativeAI(getVertexAiConfigFromEnv());
-    stage = "classification";
+    setStage("classification");
     const classification = await classifyAndroidNotification({
       genAI,
+      deadlineAt: requestStartedAt + NOTIFICATION_CAPTURE_AI_BUDGET_MS,
+      onModelAttempt: (metric) => modelAttempts.push(metric),
       notification,
       fallbackDate,
       accountCurrency,
@@ -709,7 +744,7 @@ Deno.serve(async (req: Request) => {
         normalizationDiagnostics:
           classification.normalizationDiagnostics ?? null,
       };
-      stage = "event_finalization";
+      setStage("event_finalization");
       await finalizeClassificationEvent({
         supabase,
         eventId,
@@ -718,10 +753,10 @@ Deno.serve(async (req: Request) => {
         classification,
         result,
       });
-      return jsonResponse(result);
+      return respond(result);
     }
 
-    stage = "wallet_resolution";
+    setStage("wallet_resolution");
     const captureAccountId = await resolveWalletCaptureAccountForCurrency(
       supabase,
       {
@@ -735,7 +770,7 @@ Deno.serve(async (req: Request) => {
 
     // A one-off payment to the same business near a due date is not proof of
     // recurrence. Only independently verified recurring semantics authorize it.
-    stage = "recurring_resolution";
+    setStage("recurring_resolution");
     const schedules =
       classification.isRecurring &&
       classification.recurrenceRule &&
@@ -768,7 +803,7 @@ Deno.serve(async (req: Request) => {
         return data;
       },
     );
-    stage = occurrence ? "recurring_confirmation" : "wallet_capture_save";
+    setStage(occurrence ? "recurring_confirmation" : "wallet_capture_save");
     const saved = occurrence
       ? await invokeNotificationRecurringConfirmation({
           supabase,
@@ -811,7 +846,7 @@ Deno.serve(async (req: Request) => {
           },
         });
       }
-      stage = "event_finalization";
+      setStage("event_finalization");
       await finalizeClassificationEvent({
         supabase,
         eventId,
@@ -820,7 +855,7 @@ Deno.serve(async (req: Request) => {
         classification,
         result: saveFailureResult,
       });
-      return jsonResponse(saved.payload, saved.response.status);
+      return respond(saved.payload, saved.response.status);
     }
 
     const savedData =
@@ -846,7 +881,7 @@ Deno.serve(async (req: Request) => {
         pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
       },
     };
-    stage = "event_finalization";
+    setStage("event_finalization");
     await finalizeClassificationEvent({
       supabase,
       eventId,
@@ -858,7 +893,7 @@ Deno.serve(async (req: Request) => {
     });
     committedResponse = { body: result, status: saved.response.status };
 
-    return jsonResponse(result, saved.response.status);
+    return respond(result, saved.response.status);
   } catch (error) {
     if (committedResponse) {
       await reportEdgeFunctionError({
@@ -866,7 +901,7 @@ Deno.serve(async (req: Request) => {
         error: new Error("POST_SAVE_RECONCILIATION_FAILED"),
         context: { stage: "post_save_reconciliation", eventId },
       });
-      return jsonResponse(committedResponse.body, committedResponse.status);
+      return respond(committedResponse.body, committedResponse.status);
     }
     const failureResult = buildAndroidNotificationFailureResult(error);
     console.error("[classify-notification-capture] Request failed", {
@@ -903,7 +938,7 @@ Deno.serve(async (req: Request) => {
     }
     const failureStatus =
       httpStatusForAndroidNotificationFailure(failureResult);
-    return jsonResponse(
+    return respond(
       {
         success: false,
         code: failureResult.retryable
@@ -914,5 +949,20 @@ Deno.serve(async (req: Request) => {
       },
       failureStatus,
     );
+  } finally {
+    setStage(stage);
+    // No notification, financial values, category labels or model output.
+    console.info("[classify-notification-capture] Request metrics", {
+      requestId,
+      eventId,
+      attemptNumber,
+      pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
+      cached,
+      outcome,
+      status: responseStatus,
+      totalMs: Math.max(0, Date.now() - requestStartedAt),
+      stageTimingsMs,
+      modelAttempts,
+    });
   }
 });

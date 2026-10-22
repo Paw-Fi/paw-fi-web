@@ -164,7 +164,7 @@ Deno.test(
 );
 
 Deno.test(
-  "notification source is preserved outside the legacy dedup RPC boundary",
+  "notification source is preserved through the cross-source dedup RPC",
   () => {
     assertStringIncludes(
       classificationSource,
@@ -174,11 +174,11 @@ Deno.test(
     assertStringIncludes(saveSource, '"ios_notification_shortcut",');
     assertStringIncludes(
       saveSource,
-      'p_capture_source: "android_notification_listener"',
+      'p_capture_source: params.captureSource',
     );
     assertStringIncludes(
       saveSource,
-      "buildAndroidLogicalDuplicateResponse(result, params.captureSource)",
+      "buildWalletLogicalDuplicateResponse(result, params.captureSource)",
     );
   },
 );
@@ -242,7 +242,7 @@ Deno.test(
     );
     assertStringIncludes(
       classificationSource,
-      'stage = occurrence ? "recurring_confirmation" : "wallet_capture_save"',
+      'setStage(occurrence ? "recurring_confirmation" : "wallet_capture_save")',
     );
     assertStringIncludes(
       classificationSource,

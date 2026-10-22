@@ -159,14 +159,26 @@ function fakeGenAI(
           if (generationConfig?.responseMimeType === "application/json") {
             return Promise.resolve({
               response: {
-                text: () => JSON.stringify(call?.args ?? {}),
+                text: () =>
+                  JSON.stringify(
+                    call?.name === "verify_notification" ||
+                      call?.name === "verify_notification_classification"
+                      ? {
+                          financialVerdict:
+                            call.args.approved === true ? "APPROVE" : "REJECT",
+                          categoryVerdict: "UNRESOLVED",
+                          category: "",
+                        }
+                      : (call?.args ?? {}),
+                  ),
               },
             });
           }
           if (generationConfig?.responseMimeType === "text/x.enum") {
             return Promise.resolve({
               response: {
-                text: () => call?.args.approved === true ? "APPROVE" : "REJECT",
+                text: () =>
+                  call?.args.approved === true ? "APPROVE" : "REJECT",
               },
             });
           }
@@ -1505,7 +1517,7 @@ Deno.test("classifier rejects a response without structured JSON", async () => {
 });
 
 Deno.test(
-  "verifier uses independent enum output on the dedicated verifier model",
+  "verifier uses independent financial and category JSON on the dedicated verifier model",
   async () => {
     const modelOptions: Array<{ model: string; tools?: unknown }> = [];
     const requests: Array<Record<string, unknown>> = [];
@@ -1569,18 +1581,26 @@ Deno.test(
     assertEquals(requests[1].generationConfig, {
       maxOutputTokens: 2048,
       temperature: 0,
-      thinkingConfig: { thinkingLevel: "LOW" },
-      responseMimeType: "text/x.enum",
+      thinkingConfig: { thinkingLevel: "MINIMAL" },
+      responseMimeType: "application/json",
       responseSchema: {
-        type: "STRING",
-        enum: ["APPROVE", "REJECT"],
+        type: "OBJECT",
+        properties: {
+          financialVerdict: { type: "STRING", enum: ["APPROVE", "REJECT"] },
+          categoryVerdict: {
+            type: "STRING",
+            enum: ["SUPPORTED", "UNSUPPORTED", "UNRESOLVED"],
+          },
+          category: { type: "STRING" },
+        },
+        required: ["financialVerdict", "categoryVerdict", "category"],
       },
     });
   },
 );
 
 Deno.test(
-  "verifier remains independent when the fallback classifier is 3.1 Pro",
+  "verifier remains independent when the fallback classifier is 3.8 Flash",
   async () => {
     const capturedModels: string[] = [];
     const capturedRequests: Array<{
@@ -1624,7 +1644,7 @@ Deno.test(
     assertEquals(capturedRequests[1].request.generationConfig, {
       maxOutputTokens: 2048,
       temperature: 0,
-      thinkingConfig: { thinkingLevel: "LOW" },
+      thinkingConfig: { thinkingLevel: "MINIMAL" },
       responseMimeType: "application/json",
       responseSchema: (
         capturedRequests[0].request.generationConfig as Record<string, unknown>
@@ -2203,6 +2223,7 @@ Deno.test(
           reasonCode: "completed_transaction_present",
         }),
         modelCall("classify_notification", ignored),
+        modelCall("verify_notification_classification", { approved: false }),
       ]),
       notification: {
         packageName: "com.bank.app",
