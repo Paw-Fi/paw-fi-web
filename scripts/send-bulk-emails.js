@@ -254,10 +254,15 @@ function renderTemplate(shell, template) {
     /<title\b[^>]*>[\s\S]*?<\/title>/i,
     `<title>${escapeHtml(template.title)}</title>`,
   );
-  const content = addCampaignImages(template.body).replace(
-    CAMPAIGN_CHANGELOG_URL,
-    CAMPAIGN_BLOG_URL,
+  const isLegacyFourCampaign = template.body.includes(
+    "changelog?version=4.0.0",
   );
+  const content = isLegacyFourCampaign
+    ? addCampaignImages(template.body).replace(
+        CAMPAIGN_CHANGELOG_URL,
+        CAMPAIGN_BLOG_URL,
+      )
+    : template.body;
 
   return `${header}${shell.bodyTag}${content}${shell.footer}`;
 }
