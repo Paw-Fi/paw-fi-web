@@ -7,6 +7,9 @@ const MIN_AUTOSAVE_CONFIDENCE = 0.9;
 // Fits the bounded native envelope even with multibyte text and JSON escaping.
 export const NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES = 384_000;
 const CLASSIFICATION_TIMEOUT_MS = 15_000;
+// A proposal still needs an independent verifier. A slow classifier must not
+// consume the entire request budget before that verifier can even start.
+const CLASSIFICATION_ATTEMPT_MAX_MS = 6_000;
 // Measured from handler entry, leaving 10s of the native 30s response window
 // for wallet/recurring persistence and finalization. This bounds AI work only.
 export const NOTIFICATION_CAPTURE_AI_BUDGET_MS = 20_000;
@@ -14,7 +17,7 @@ export const ANDROID_NOTIFICATION_MODELS = GEMINI_MODEL_FALLBACKS;
 // Bump when model, prompt, or validation behavior changes so old terminal
 // failures can be evaluated by the new pipeline.
 export const ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION =
-  "android_notification_classifier_v18";
+  "android_notification_classifier_v19";
 const TERMINAL_CLASSIFICATION_ERRORS = new Set([
   "NOTIFICATION_VERIFICATION_BLOCKED",
   "CLASSIFICATION_RETRY_EXHAUSTED",
@@ -1286,11 +1289,12 @@ async function withTimeout<T extends { response: { raw?: unknown } }>(
   model: string,
   phase: AndroidNotificationModelAttempt["phase"],
   deadlineAt: number,
+  allocatedMs: number,
 ): Promise<T> {
   const startedAt = Date.now();
   const timeoutMs = Math.max(
     0,
-    Math.min(CLASSIFICATION_TIMEOUT_MS, deadlineAt - startedAt),
+    Math.min(CLASSIFICATION_TIMEOUT_MS, allocatedMs, deadlineAt - startedAt),
   );
   let outcome: AndroidNotificationModelAttempt["outcome"] = "response";
   let usage: Record<string, unknown> = {};
@@ -1302,7 +1306,7 @@ async function withTimeout<T extends { response: { raw?: unknown } }>(
       timeoutMessage: "NOTIFICATION_CLASSIFICATION_TIMEOUT",
     });
     // Do not accept a late response even if the event loop delayed the timer.
-    if (Date.now() >= deadlineAt) {
+    if (Date.now() >= startedAt + timeoutMs) {
       throw new Error("NOTIFICATION_CLASSIFICATION_TIMEOUT");
     }
     const raw = result.response.raw as Record<string, unknown> | undefined;
@@ -1353,6 +1357,7 @@ async function verifyAndroidNotificationClassification(
   classification: AndroidNotificationClassification,
   classifierModel: string,
   deadlineAt: number,
+  failedModels: Set<string>,
 ): Promise<{
   approved: boolean;
   confidence: number;
@@ -1362,12 +1367,18 @@ async function verifyAndroidNotificationClassification(
   category?: string;
 }> {
   const verifierModels = ANDROID_NOTIFICATION_MODELS.filter(
-    (model) => model !== classifierModel,
+    (model) => model !== classifierModel && !failedModels.has(model),
   );
+  if (verifierModels.length === 0) {
+    throw new AndroidNotificationClassificationError(
+      "NOTIFICATION_VERIFICATION_UNAVAILABLE",
+      [],
+    );
+  }
   const prompt = buildVerifierPrompt(params, classification);
   const diagnostics: AndroidNotificationModelDiagnostic[] = [];
   let lastError: unknown = null;
-  for (const verifierModel of verifierModels) {
+  for (const [index, verifierModel] of verifierModels.entries()) {
     const startedAt = Date.now();
     let receivedResponse = false;
     try {
@@ -1416,6 +1427,9 @@ async function verifyAndroidNotificationClassification(
         verifierModel,
         "verification",
         deadlineAt,
+        // Divide the remaining time before starting this attempt, so a slow
+        // verifier cannot starve its independent fallback. Calls stay serial.
+        Math.floor((deadlineAt - Date.now()) / (verifierModels.length - index)),
       );
       receivedResponse = true;
       const assessment = structuredResponseObject(result.response);
@@ -1491,6 +1505,7 @@ async function verifyAndroidNotificationClassification(
     } catch (error) {
       if (error instanceof AndroidNotificationClassificationError) throw error;
       if (!receivedResponse) {
+        failedModels.add(verifierModel);
         diagnostics.push(
           buildModelRequestFailureDiagnostic({
             error,
@@ -1526,10 +1541,14 @@ export async function classifyAndroidNotification(
   let verificationUnavailable = false;
   let decisionConflict = false;
   const diagnostics: AndroidNotificationModelDiagnostic[] = [];
+  // Request-local only: native retries may try recovered models later. Never
+  // immediately reuse a timed-out/throttled classifier as this request's verifier.
+  const failedModels = new Set<string>();
   const responseSchema = buildClassifierSchema();
   const prompt = buildClassifierPrompt(params);
 
   for (const modelName of ANDROID_NOTIFICATION_MODELS) {
+    if (failedModels.has(modelName)) continue;
     if (Date.now() >= deadlineAt) {
       throw new AndroidNotificationClassificationError(
         "NOTIFICATION_CLASSIFICATION_TIMEOUT",
@@ -1568,6 +1587,10 @@ export async function classifyAndroidNotification(
         modelName,
         "classification",
         deadlineAt,
+        Math.min(
+          CLASSIFICATION_ATTEMPT_MAX_MS,
+          Math.floor((deadlineAt - Date.now()) / 2),
+        ),
       );
       receivedResponse = true;
       const classificationArgs = structuredResponseObject(result.response);
@@ -1630,6 +1653,7 @@ export async function classifyAndroidNotification(
               classification,
               modelName,
               deadlineAt,
+              failedModels,
             );
           } catch (error) {
             verificationUnavailable = true;
@@ -1676,6 +1700,7 @@ export async function classifyAndroidNotification(
           classification,
           modelName,
           deadlineAt,
+          failedModels,
         );
       } catch (error) {
         verificationUnavailable = true;
@@ -1713,6 +1738,7 @@ export async function classifyAndroidNotification(
       if (error instanceof AndroidNotificationClassificationError) {
         diagnostics.push(...error.diagnostics);
       } else if (!receivedResponse) {
+        failedModels.add(modelName);
         diagnostics.push(
           buildModelRequestFailureDiagnostic({
             error,

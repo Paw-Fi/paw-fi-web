@@ -904,11 +904,28 @@ Deno.serve(async (req: Request) => {
       return respond(committedResponse.body, committedResponse.status);
     }
     const failureResult = buildAndroidNotificationFailureResult(error);
-    console.error("[classify-notification-capture] Request failed", {
-      error: failureResult.diagnosticCode,
+    const failureContext = {
       stage,
       eventId,
+      requestId,
+      attemptNumber,
+      pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
+      elapsedMs: Math.max(0, Date.now() - requestStartedAt),
+      stageTimingsMs: {
+        ...stageTimingsMs,
+        [stage]:
+          (stageTimingsMs[stage] ?? 0) +
+          Math.max(0, Date.now() - stageStartedAt),
+      },
+      // Include successful attempts too: failures alone hide the classifier
+      // that produced the proposal and the time left for its verifier.
+      modelAttempts,
+      diagnosticCode: failureResult.diagnosticCode,
       diagnostics: failureResult.diagnostics,
+    };
+    console.error("[classify-notification-capture] Request failed", {
+      error: failureResult.diagnosticCode,
+      ...failureContext,
     });
     if (attemptNumber <= 1) {
       const reportError = new Error(failureResult.diagnosticCode);
@@ -919,12 +936,7 @@ Deno.serve(async (req: Request) => {
       await reportEdgeFunctionError({
         functionName: "classify-notification-capture",
         error: reportError,
-        context: {
-          stage,
-          eventId,
-          diagnosticCode: failureResult.diagnosticCode,
-          diagnostics: failureResult.diagnostics,
-        },
+        context: failureContext,
       });
     }
     if (supabase && eventId && processingToken) {

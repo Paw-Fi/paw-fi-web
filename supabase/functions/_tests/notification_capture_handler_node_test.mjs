@@ -430,15 +430,15 @@ test("notification AI shares one deadline across classification and sequential v
   }).then(() => assert.fail("unverified result must not escape"), (error) => error);
   await flushMicrotasks();
   assert.equal(attempts.length, 2);
-  t.mock.timers.tick(15_000);
+  t.mock.timers.tick(10_000);
   await flushMicrotasks();
   assert.equal(attempts.length, 3);
-  t.mock.timers.tick(5_000);
+  t.mock.timers.tick(10_000);
   const error = await pending;
   assert.equal(error.message, "NOTIFICATION_CLASSIFICATION_TIMEOUT");
   assert.equal(classifier.buildAndroidNotificationFailureResult(error).retryable, true);
   assert.deepEqual(aborted, attempts.slice(1));
-  assert.deepEqual(metrics.map((metric) => metric.timeoutMs), [15_000, 15_000, 5_000]);
+  assert.deepEqual(metrics.map((metric) => metric.timeoutMs), [6_000, 10_000, 10_000]);
   assert.deepEqual(metrics.map((metric) => metric.outcome), ["response", "timeout", "timeout"]);
   assert.equal(Date.now(), 21_000);
 });
@@ -463,7 +463,7 @@ test("notification fallback can verify within the remaining budget without recla
     },
   });
   await flushMicrotasks();
-  t.mock.timers.tick(15_000);
+  t.mock.timers.tick(10_000);
   const result = await pending;
   assert.equal(result.action, "ignore");
   assert.equal(result.verificationModel, "gemini-3.8-flash");
@@ -505,18 +505,20 @@ test("classification time is deducted from the verifier budget and cancelled at 
     onModelAttempt: (metric) => metrics.push(metric),
     genAI: { getGenerativeModel: () => ({ generateContent: (_request, { signal }) => {
       calls++;
-      if (calls === 1) return new Promise((resolve) => setTimeout(() => resolve(modelResponse(ignoredProposal)), 12_000));
+      if (calls === 1) return new Promise((resolve) => setTimeout(() => resolve(modelResponse(ignoredProposal)), 4_000));
       return new Promise((_resolve, reject) => signal.addEventListener("abort", () => { cancelled = true; reject(signal.reason); }, { once: true }));
     } }) },
   }).then(() => assert.fail("must remain retryable"), (error) => error);
-  t.mock.timers.tick(12_000);
+  t.mock.timers.tick(4_000);
+  await flushMicrotasks();
+  t.mock.timers.tick(8_000);
   await flushMicrotasks();
   t.mock.timers.tick(8_000);
   const error = await pending;
   assert.equal(error.message, "NOTIFICATION_CLASSIFICATION_TIMEOUT");
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
   assert.equal(cancelled, true);
-  assert.deepEqual(metrics.map((metric) => metric.timeoutMs), [15_000, 8_000]);
+  assert.deepEqual(metrics.map((metric) => metric.timeoutMs), [6_000, 8_000, 8_000]);
 });
 
 test("successful and failed model telemetry retains bounded counts without notification or provider text", async () => {
@@ -739,7 +741,7 @@ test("request diagnostics preserve fallback order and independent financial/cate
   assert.deepEqual(models, [
     classifier.ANDROID_NOTIFICATION_MODELS[0],
     classifier.ANDROID_NOTIFICATION_MODELS[1],
-    classifier.ANDROID_NOTIFICATION_MODELS[0],
+    classifier.ANDROID_NOTIFICATION_MODELS[2],
   ]);
   assert.equal(result.action, "save_transaction");
   assert.equal(result.category, "other");
@@ -906,4 +908,177 @@ test("category recovery supports full catalogs with compact tools and type-speci
       assert.deepEqual(prompt.incomeCategories, schemaCatalog.incomeCategories);
     }
   }
+});
+
+async function replayNotificationProviderSchedule(t, schedule) {
+  fakeClassifierClock(t);
+  const text = "佐藤商店で THB 12.99 の支払い完了";
+  const financialProposal = {
+    ...proposal, subtype: "purchase", isRecurring: false,
+    currencySource: "notification_explicit", amountEvidenceRaw: "12.99",
+    currencyEvidenceRaw: "THB", merchantEvidenceRaw: "佐藤商店",
+    directionEvidenceRaw: "支払い", completionEvidenceRaw: "支払い完了",
+    transactionEvidenceRaw: text,
+  };
+  const attempts = [], metrics = [], aborted = [];
+  let settled;
+  const pending = classifier.classifyAndroidNotification({
+    ...classifierParams, notification: { packageName: "test.bank", text },
+    onModelAttempt: metric => metrics.push(metric),
+    genAI: { getGenerativeModel: ({ model, systemInstruction }) => ({
+      generateContent: (_request, { signal }) => {
+        const phase = systemInstruction.includes("independent") ? "verification" : "classification";
+        const key = `${phase}:${model}`;
+        attempts.push(key);
+        const step = schedule[key];
+        assert.ok(step, `unexpected attempt ${key}`);
+        return new Promise((resolve, reject) => {
+          let timer;
+          const abort = () => { clearTimeout(timer); aborted.push(key); reject(signal.reason); };
+          signal.addEventListener("abort", abort, { once: true });
+          if (step.delay != null) timer = setTimeout(() => {
+            signal.removeEventListener("abort", abort);
+            if (step.status) reject(failingProvider(step.status));
+            else resolve(modelResponse(phase === "classification" ? financialProposal : approval));
+          }, step.delay);
+        });
+      },
+    }) },
+  }).then(result => { settled = { result }; }, error => { settled = { error }; });
+  for (let elapsed = 0; elapsed <= 20_000 && !settled; elapsed += 100) {
+    t.mock.timers.tick(100);
+    await flushMicrotasks();
+  }
+  assert.ok(settled, "the shared deadline must settle the pipeline");
+  await pending;
+  return { ...settled, attempts, metrics, aborted };
+}
+
+const [lite31, lite35, flash38] = classifier.ANDROID_NOTIFICATION_MODELS;
+for (const [name, schedule, forbidden] of [
+  ["429 classifier is not immediately reused as verifier", {
+    [`classification:${lite31}`]: { delay: 400, status: 429 },
+    [`classification:${lite35}`]: { delay: 1700 },
+    [`verification:${lite31}`]: {},
+    [`verification:${flash38}`]: { delay: 4000 },
+  }, `verification:${lite31}`],
+  ["slow classifier leaves time for a healthy independent verifier", {
+    [`classification:${lite31}`]: {},
+    [`classification:${lite35}`]: { delay: 1000 },
+    [`verification:${lite31}`]: {},
+    [`verification:${flash38}`]: { delay: 4000 },
+  }, `verification:${lite31}`],
+  ["slow verifier leaves enough time for its healthy fallback", {
+    [`classification:${lite31}`]: { delay: 2000 },
+    [`verification:${lite35}`]: {},
+    [`verification:${flash38}`]: { delay: 4000 },
+  }, null],
+]) {
+  test(`production timeout schedule: ${name}`, async t => {
+    const run = await replayNotificationProviderSchedule(t, schedule);
+    assert.equal(run.error, undefined);
+    assert.equal(run.result.action, "save_transaction");
+    assert.equal(run.result.amount, 12.99);
+    assert.equal(run.result.currency, "THB");
+    assert.equal(run.result.verificationModel, flash38);
+    if (forbidden) assert.ok(!run.attempts.includes(forbidden));
+    assert.ok(Date.now() < 21_000);
+    assert.equal(run.attempts.length, 3);
+  });
+}
+
+test("unavailable independent verification never self-verifies and remains retryable", async () => {
+  const error = await classificationFailure([
+    failingProvider(429), failingProvider(503), ignoredProposal,
+  ]);
+  const failure = classifier.buildAndroidNotificationFailureResult(error);
+  assert.equal(failure.diagnosticCode, "NOTIFICATION_VERIFICATION_UNAVAILABLE");
+  assert.equal(failure.retryable, true);
+  assert.equal(failure.diagnostics.length, 2);
+  const response = await handlerFixture({ classificationError: error });
+  assert.equal(response.status, 503);
+  assert.equal(response.requests.length, 0);
+  assert.equal(response.writes.at(-1).status, "failed");
+
+  const models = [], responses = [ignoredProposal, approval];
+  const recovered = await classifier.classifyAndroidNotification({
+    ...classifierParams,
+    genAI: { getGenerativeModel: ({ model }) => {
+      models.push(model);
+      return { generateContent: async () => modelResponse(responses.shift()) };
+    } },
+  });
+  assert.equal(recovered.action, "ignore");
+  assert.deepEqual(models, [lite31, lite35]);
+});
+
+test("late classifier response cannot exceed its allocation even before the overall deadline", async t => {
+  fakeClassifierClock(t);
+  const models = [], metrics = [];
+  const result = await classifier.classifyAndroidNotification({
+    ...classifierParams,
+    onModelAttempt: metric => metrics.push(metric),
+    genAI: { getGenerativeModel: ({ model }) => {
+      models.push(model);
+      return { generateContent: async () => {
+        if (models.length === 1) t.mock.timers.setTime(Date.now() + 6100);
+        return modelResponse(models.length < 3 ? ignoredProposal : approval);
+      } };
+    } },
+  });
+  assert.equal(result.action, "ignore");
+  assert.deepEqual(models, [lite31, lite35, flash38]);
+  assert.equal(metrics[0].outcome, "timeout");
+  assert.equal(metrics[0].timeoutMs, 6000);
+  assert.equal(result.verificationModel, flash38);
+});
+
+test("failure digest includes successful attempt budgets and pipeline without private notification text", async () => {
+  const attempt = {
+    phase: "classification", model: lite35, latencyMs: 1700, timeoutMs: 6000,
+    outcome: "response", promptTokenCount: 100, candidatesTokenCount: 50,
+    thoughtsTokenCount: 0, totalTokenCount: 150,
+  };
+  const response = await handlerFixture({
+    classify: async params => {
+      params.onModelAttempt(attempt);
+      throw new classifier.AndroidNotificationClassificationError("NOTIFICATION_CLASSIFICATION_TIMEOUT", []);
+    },
+  });
+  const context = response.reports[0].context;
+  assert.equal(context.pipelineVersion, classifier.ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION);
+  assert.equal(context.attemptNumber, 1);
+  assert.equal(context.modelAttempts.length, 1);
+  assert.equal(context.modelAttempts[0].latencyMs, 1700);
+  assert.equal(context.modelAttempts[0].timeoutMs, 6000);
+  assert.ok(context.elapsedMs >= 0);
+  assert.ok(context.stageTimingsMs.classification >= 0);
+  assert.equal(typeof context.requestId, "string");
+  assert.equal(JSON.stringify(context).includes(proposal.merchant), false);
+});
+
+test("a failed verifier is also skipped if disagreement requires another classifier", async () => {
+  const attempts = [];
+  const outputs = {
+    [`classification:${lite31}`]: ignoredProposal,
+    [`verification:${lite35}`]: failingProvider(503),
+    [`verification:${flash38}`]: { financialVerdict: "REJECT" },
+    [`classification:${flash38}`]: ignoredProposal,
+    [`verification:${lite31}`]: approval,
+  };
+  const result = await classifier.classifyAndroidNotification({
+    ...classifierParams,
+    genAI: { getGenerativeModel: ({ model, systemInstruction }) => ({
+      generateContent: async () => {
+        const phase = systemInstruction.includes("independent") ? "verification" : "classification";
+        const key = `${phase}:${model}`;
+        attempts.push(key);
+        assert.ok(outputs[key], `unexpected retry of failed model ${key}`);
+        if (outputs[key] instanceof Error) throw outputs[key];
+        return modelResponse(outputs[key]);
+      },
+    }) },
+  });
+  assert.equal(result.action, "ignore");
+  assert.deepEqual(attempts, Object.keys(outputs));
 });
