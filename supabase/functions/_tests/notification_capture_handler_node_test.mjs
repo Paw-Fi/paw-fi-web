@@ -123,6 +123,12 @@ async function handlerFixture(options = {}) {
           }
           if (table === "notification_capture_classifications") {
             writes.push(patch);
+            if (patch?.analysis_checkpoint && options.checkpointError) {
+              return { data: null, error: options.checkpointError };
+            }
+            if (patch?.analysis_checkpoint && options.staleCheckpoint) {
+              return { data: null, error: null };
+            }
             if (options.finalizeError) {
               return { data: null, error: options.finalizeError };
             }
@@ -195,8 +201,8 @@ async function handlerFixture(options = {}) {
     },
     "android-recurring-capture.ts": recurring,
     "accounts.ts": {
-      assertAccountInScope: async () => true,
-      assertScopeAccess: async () => true,
+      assertAccountInScope: async () => options.accountAllowed ?? true,
+      assertScopeAccess: async () => options.scopeAllowed ?? true,
       getAccountOrNull: async () => ({ currency: "THB" }),
       resolveDefaultAccountIdStrict: async () => wallet,
     },
@@ -210,7 +216,7 @@ async function handlerFixture(options = {}) {
       reportEdgeFunctionError: async (report) => reports.push(report),
     },
     "plus-entitlement.ts": {
-      hasCapturePlusEntitlement: () => true,
+      hasCapturePlusEntitlement: () => options.entitled ?? true,
       loadLatestSubscriptionForUser: async () => {
         options.onContext?.();
         return {};
@@ -289,10 +295,11 @@ async function handlerFixture(options = {}) {
     new Request("https://test.invalid/classify", {
       method: "POST",
       body: JSON.stringify({
-        captureSource: "ios_notification_shortcut",
+        captureSource: options.captureSource ?? "ios_notification_shortcut",
+        clientCreatedAt: options.clientCreatedAt,
         idempotencyKey: "native-event",
         householdId: options.householdId,
-        notification: {
+        notification: options.notification ?? {
           packageName: "ios.shortcut.notification",
           title: "支払い完了",
         },
@@ -410,66 +417,104 @@ function fakeClassifierClock(t) {
   t.after(() => { delete classifierContext.Date; });
 }
 
-test("notification AI shares one deadline across classification and sequential verifier timeouts", async (t) => {
+test("notification AI obeys the whole request deadline and checkpoints its verifier fallback", async (t) => {
   fakeClassifierClock(t);
-  const attempts = [], aborted = [], metrics = [];
-  const pending = classifier.classifyAndroidNotification({
-    ...classifierParams,
-    onModelAttempt: (metric) => metrics.push(metric),
-    genAI: {
-      getGenerativeModel: ({ model }) => ({
-        generateContent: (_request, { signal }) => {
-          attempts.push(model);
-          if (attempts.length === 1) return Promise.resolve(modelResponse(ignoredProposal));
-          return new Promise((_resolve, reject) => {
-            signal.addEventListener("abort", () => { aborted.push(model); reject(signal.reason); }, { once: true });
-          });
-        },
-      }),
-    },
-  }).then(() => assert.fail("unverified result must not escape"), (error) => error);
+  const attempts = [],
+    aborted = [],
+    metrics = [];
+  let checkpoint;
+  const pending = classifier
+    .classifyAndroidNotification({
+      ...classifierParams,
+      onModelAttempt: (metric) => metrics.push(metric),
+      onCheckpoint: async (state) => {
+        checkpoint = structuredClone(state);
+      },
+      genAI: {
+        getGenerativeModel: ({ model }) => ({
+          generateContent: (_request, { signal }) => {
+            attempts.push(model);
+            if (attempts.length === 1)
+              return Promise.resolve(modelResponse(ignoredProposal));
+            return new Promise((_resolve, reject) =>
+              signal.addEventListener(
+                "abort",
+                () => {
+                  aborted.push(model);
+                  reject(signal.reason);
+                },
+                { once: true },
+              ),
+            );
+          },
+        }),
+      },
+    })
+    .catch((error) => error);
   await flushMicrotasks();
-  assert.equal(attempts.length, 2);
-  t.mock.timers.tick(10_000);
-  await flushMicrotasks();
-  assert.equal(attempts.length, 3);
-  t.mock.timers.tick(10_000);
+  t.mock.timers.tick(20_000);
   const error = await pending;
   assert.equal(error.message, "NOTIFICATION_CLASSIFICATION_TIMEOUT");
-  assert.equal(classifier.buildAndroidNotificationFailureResult(error).retryable, true);
-  assert.deepEqual(aborted, attempts.slice(1));
-  assert.deepEqual(metrics.map((metric) => metric.timeoutMs), [6_000, 10_000, 10_000]);
-  assert.deepEqual(metrics.map((metric) => metric.outcome), ["response", "timeout", "timeout"]);
+  assert.deepEqual(attempts, [lite31, lite35]);
+  assert.deepEqual(aborted, [lite35]);
+  assert.deepEqual(
+    metrics.map((metric) => metric.timeoutMs),
+    [20_000, 20_000],
+  );
+  assert.equal(checkpoint.verifierModel, flash38);
   assert.equal(Date.now(), 21_000);
 });
 
-test("notification fallback can verify within the remaining budget without reclassification", async (t) => {
+test("a verifier fallback resumes with a fresh budget and no reclassification", async (t) => {
   fakeClassifierClock(t);
   const requests = [];
-  let cancelled = false;
-  const pending = classifier.classifyAndroidNotification({
+  let checkpoint;
+  const params = {
     ...classifierParams,
+    checkpoint: {
+      version: 1,
+      model: lite31,
+      proposal: ignoredProposal,
+      verifierModel: lite35,
+    },
+    onCheckpoint: async (state) => {
+      checkpoint = structuredClone(state);
+    },
     genAI: {
       getGenerativeModel: ({ model }) => ({
         generateContent: (request, { signal }) => {
           requests.push({ model, request });
-          if (requests.length === 1) return Promise.resolve(modelResponse(ignoredProposal));
-          if (requests.length === 3) return Promise.resolve(modelResponse(approval));
-          return new Promise((_resolve, reject) => {
-            signal.addEventListener("abort", () => { cancelled = true; reject(signal.reason); }, { once: true });
-          });
+          if (model === flash38)
+            return Promise.resolve(modelResponse(approval));
+          return new Promise((_resolve, reject) =>
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            }),
+          );
         },
       }),
     },
-  });
+  };
+  const pending = classifier
+    .classifyAndroidNotification(params)
+    .catch((error) => error);
   await flushMicrotasks();
-  t.mock.timers.tick(10_000);
-  const result = await pending;
+  t.mock.timers.tick(20_000);
+  assert.equal((await pending).message, "NOTIFICATION_CLASSIFICATION_TIMEOUT");
+  const result = await classifier.classifyAndroidNotification({
+    ...params,
+    checkpoint,
+  });
   assert.equal(result.action, "ignore");
-  assert.equal(result.verificationModel, "gemini-3.8-flash");
-  assert.equal(cancelled, true);
-  assert.deepEqual(requests.map(({ request }) => request.generationConfig.thinkingConfig.thinkingLevel), ["MINIMAL", "MINIMAL", "LOW"]);
-  assert.equal(requests[1].request.contents[0].parts[0].text.includes('JSON data): [].'), true);
+  assert.equal(result.verificationModel, flash38);
+  assert.deepEqual(
+    requests.map((item) => item.model),
+    [lite35, flash38],
+  );
+  assert.equal(
+    requests[0].request.contents[0].parts[0].text.includes("JSON data): []."),
+    true,
+  );
 });
 
 test("exhausted notification budgets never dispatch a new model or return a late ignore", async (t) => {
@@ -509,16 +554,15 @@ test("classification time is deducted from the verifier budget and cancelled at 
       return new Promise((_resolve, reject) => signal.addEventListener("abort", () => { cancelled = true; reject(signal.reason); }, { once: true }));
     } }) },
   }).then(() => assert.fail("must remain retryable"), (error) => error);
+  await flushMicrotasks();
   t.mock.timers.tick(4_000);
   await flushMicrotasks();
-  t.mock.timers.tick(8_000);
-  await flushMicrotasks();
-  t.mock.timers.tick(8_000);
+  t.mock.timers.tick(16_000);
   const error = await pending;
   assert.equal(error.message, "NOTIFICATION_CLASSIFICATION_TIMEOUT");
-  assert.equal(calls, 3);
+  assert.equal(calls, 2);
   assert.equal(cancelled, true);
-  assert.deepEqual(metrics.map((metric) => metric.timeoutMs), [6_000, 8_000, 8_000]);
+  assert.deepEqual(metrics.map((metric) => metric.timeoutMs), [20_000, 16_000]);
 });
 
 test("successful and failed model telemetry retains bounded counts without notification or provider text", async () => {
@@ -910,48 +954,112 @@ test("category recovery supports full catalogs with compact tools and type-speci
   }
 });
 
-async function replayNotificationProviderSchedule(t, schedule) {
+async function replayNotificationProviderSchedule(
+  t,
+  schedule,
+  maxRequests = 4,
+) {
   fakeClassifierClock(t);
   const text = "佐藤商店で THB 12.99 の支払い完了";
   const financialProposal = {
-    ...proposal, subtype: "purchase", isRecurring: false,
-    currencySource: "notification_explicit", amountEvidenceRaw: "12.99",
-    currencyEvidenceRaw: "THB", merchantEvidenceRaw: "佐藤商店",
-    directionEvidenceRaw: "支払い", completionEvidenceRaw: "支払い完了",
+    ...proposal,
+    subtype: "purchase",
+    isRecurring: false,
+    currencySource: "notification_explicit",
+    amountEvidenceRaw: "12.99",
+    currencyEvidenceRaw: "THB",
+    merchantEvidenceRaw: "佐藤商店",
+    directionEvidenceRaw: "支払い",
+    completionEvidenceRaw: "支払い完了",
     transactionEvidenceRaw: text,
   };
-  const attempts = [], metrics = [], aborted = [];
-  let settled;
-  const pending = classifier.classifyAndroidNotification({
-    ...classifierParams, notification: { packageName: "test.bank", text },
-    onModelAttempt: metric => metrics.push(metric),
-    genAI: { getGenerativeModel: ({ model, systemInstruction }) => ({
-      generateContent: (_request, { signal }) => {
-        const phase = systemInstruction.includes("independent") ? "verification" : "classification";
-        const key = `${phase}:${model}`;
-        attempts.push(key);
-        const step = schedule[key];
-        assert.ok(step, `unexpected attempt ${key}`);
-        return new Promise((resolve, reject) => {
-          let timer;
-          const abort = () => { clearTimeout(timer); aborted.push(key); reject(signal.reason); };
-          signal.addEventListener("abort", abort, { once: true });
-          if (step.delay != null) timer = setTimeout(() => {
-            signal.removeEventListener("abort", abort);
-            if (step.status) reject(failingProvider(step.status));
-            else resolve(modelResponse(phase === "classification" ? financialProposal : approval));
-          }, step.delay);
-        });
-      },
-    }) },
-  }).then(result => { settled = { result }; }, error => { settled = { error }; });
-  for (let elapsed = 0; elapsed <= 20_000 && !settled; elapsed += 100) {
-    t.mock.timers.tick(100);
-    await flushMicrotasks();
+  const attempts = [],
+    metrics = [],
+    aborted = [],
+    checkpoints = [];
+  let settled,
+    checkpoint,
+    requestCount = 0;
+  for (; requestCount < maxRequests; requestCount++) {
+    settled = undefined;
+    const pending = classifier
+      .classifyAndroidNotification({
+        ...classifierParams,
+        notification: { packageName: "test.bank", text },
+        checkpoint,
+        onCheckpoint: async (state) => {
+          checkpoint = structuredClone(state);
+          checkpoints.push(checkpoint);
+        },
+        onModelAttempt: (metric) => metrics.push(metric),
+        genAI: {
+          getGenerativeModel: ({ model, systemInstruction }) => ({
+            generateContent: (_request, { signal }) => {
+              const phase = systemInstruction.includes("independent")
+                ? "verification"
+                : "classification";
+              const key = `${phase}:${model}`;
+              attempts.push(key);
+              const step = schedule[key];
+              assert.ok(step, `unexpected attempt ${key}`);
+              return new Promise((resolve, reject) => {
+                let timer;
+                const abort = () => {
+                  clearTimeout(timer);
+                  aborted.push(key);
+                  reject(signal.reason);
+                };
+                signal.addEventListener("abort", abort, { once: true });
+                if (step.delay != null)
+                  timer = setTimeout(() => {
+                    signal.removeEventListener("abort", abort);
+                    if (step.status) reject(failingProvider(step.status));
+                    else
+                      resolve(
+                        modelResponse(
+                          phase === "classification"
+                            ? (step.proposal ?? financialProposal)
+                            : (step.verdict ?? approval),
+                        ),
+                      );
+                  }, step.delay);
+              });
+            },
+          }),
+        },
+      })
+      .then(
+        (result) => {
+          settled = { result };
+        },
+        (error) => {
+          settled = { error };
+        },
+      );
+    for (let elapsed = 0; elapsed <= 20_000 && !settled; elapsed += 100) {
+      t.mock.timers.tick(100);
+      await flushMicrotasks();
+    }
+    assert.ok(settled, "the shared deadline must settle the pipeline");
+    await pending;
+    if (settled.result) {
+      requestCount++;
+      break;
+    }
+    assert.equal(
+      classifier.buildAndroidNotificationFailureResult(settled.error).retryable,
+      true,
+    );
   }
-  assert.ok(settled, "the shared deadline must settle the pipeline");
-  await pending;
-  return { ...settled, attempts, metrics, aborted };
+  return {
+    ...settled,
+    attempts,
+    metrics,
+    aborted,
+    checkpoint,
+    checkpoints,
+    requestCount,
+  };
 }
 
 const [lite31, lite35, flash38] = classifier.ANDROID_NOTIFICATION_MODELS;
@@ -981,9 +1089,10 @@ for (const [name, schedule, forbidden] of [
     assert.equal(run.result.amount, 12.99);
     assert.equal(run.result.currency, "THB");
     assert.equal(run.result.verificationModel, flash38);
-    if (forbidden) assert.ok(!run.attempts.includes(forbidden));
-    assert.ok(Date.now() < 21_000);
-    assert.equal(run.attempts.length, 3);
+    if (forbidden && run.requestCount === 1) assert.ok(!run.attempts.includes(forbidden));
+    assert.ok(run.requestCount <= 4);
+    assert.ok(run.metrics.every(metric => metric.timeoutMs <= 20000));
+    assert.equal(run.attempts.filter(key => key.startsWith("classification:")).length, name.startsWith("slow verifier") ? 1 : 2);
   });
 }
 
@@ -1012,25 +1121,31 @@ test("unavailable independent verification never self-verifies and remains retry
   assert.deepEqual(models, [lite31, lite35]);
 });
 
-test("late classifier response cannot exceed its allocation even before the overall deadline", async t => {
+test("a response after the full deadline cannot authorize an ignore and advances extraction", async (t) => {
   fakeClassifierClock(t);
-  const models = [], metrics = [];
-  const result = await classifier.classifyAndroidNotification({
-    ...classifierParams,
-    onModelAttempt: metric => metrics.push(metric),
-    genAI: { getGenerativeModel: ({ model }) => {
-      models.push(model);
-      return { generateContent: async () => {
-        if (models.length === 1) t.mock.timers.setTime(Date.now() + 6100);
-        return modelResponse(models.length < 3 ? ignoredProposal : approval);
-      } };
-    } },
-  });
-  assert.equal(result.action, "ignore");
-  assert.deepEqual(models, [lite31, lite35, flash38]);
-  assert.equal(metrics[0].outcome, "timeout");
-  assert.equal(metrics[0].timeoutMs, 6000);
-  assert.equal(result.verificationModel, flash38);
+  let checkpoint,
+    calls = 0;
+  await assert.rejects(
+    classifier.classifyAndroidNotification({
+      ...classifierParams,
+      onCheckpoint: async (state) => {
+        checkpoint = structuredClone(state);
+      },
+      genAI: {
+        getGenerativeModel: () => ({
+          generateContent: async () => {
+            calls++;
+            t.mock.timers.setTime(Date.now() + 20100);
+            return modelResponse(ignoredProposal);
+          },
+        }),
+      },
+    }),
+    /NOTIFICATION_CLASSIFICATION_TIMEOUT/,
+  );
+  assert.equal(calls, 1);
+  assert.equal(checkpoint.model, lite35);
+  assert.equal(checkpoint.proposal, undefined);
 });
 
 test("failure digest includes successful attempt budgets and pipeline without private notification text", async () => {
@@ -1081,4 +1196,508 @@ test("a failed verifier is also skipped if disagreement requires another classif
   });
   assert.equal(result.action, "ignore");
   assert.deepEqual(attempts, Object.keys(outputs));
+});
+
+for (const [name, schedule, maxRequests] of [
+  [
+    "7-second extraction and 2-second verification finish without premature cancellation",
+    {
+      [`classification:${lite31}`]: { delay: 7000 },
+      [`verification:${lite35}`]: { delay: 2000 },
+    },
+    1,
+  ],
+  [
+    "11-second primary verification retains its full opportunity",
+    {
+      [`classification:${lite31}`]: { delay: 1000 },
+      [`verification:${lite35}`]: { delay: 11000 },
+    },
+    1,
+  ],
+  [
+    "a clipped extraction resumes before retrying the first slow model",
+    {
+      [`classification:${lite31}`]: {},
+      [`classification:${lite35}`]: { delay: 7000 },
+      [`verification:${lite31}`]: { delay: 1000 },
+    },
+    2,
+  ],
+  [
+    "verification resumes without repeating a 14-second extraction",
+    {
+      [`classification:${lite31}`]: { delay: 14000 },
+      [`verification:${lite35}`]: { delay: 11000 },
+    },
+    2,
+  ],
+  [
+    "a clipped fallback verifier gets a full attempt on retry",
+    {
+      [`classification:${lite31}`]: { delay: 1000 },
+      [`verification:${lite35}`]: {},
+      [`verification:${flash38}`]: { delay: 11000 },
+    },
+    3,
+  ],
+  [
+    "two stalled classifiers do not permanently exclude a fast verifier",
+    {
+      [`classification:${lite31}`]: {},
+      [`classification:${lite35}`]: {},
+      [`classification:${flash38}`]: { delay: 1000 },
+      [`verification:${lite31}`]: { delay: 1000 },
+    },
+    3,
+  ],
+]) {
+  test(`durable scheduling: ${name}`, async (t) => {
+    const run = await replayNotificationProviderSchedule(
+      t,
+      schedule,
+      maxRequests,
+    );
+    assert.equal(run.error, undefined);
+    assert.equal(run.result.action, "save_transaction");
+    assert.equal(run.result.amount, 12.99);
+    assert.equal(run.result.currency, "THB");
+    assert.equal(run.result.merchant, proposal.merchant);
+    assert.notEqual(run.result.verificationModel, run.result.model);
+    assert.equal(run.requestCount, maxRequests);
+    if (
+      name.startsWith("verification resumes") ||
+      name.startsWith("a clipped fallback")
+    ) {
+      assert.equal(
+        run.attempts.filter((key) => key.startsWith("classification:")).length,
+        1,
+      );
+    }
+  });
+}
+
+test("partial unsupported or conflicting classification plus provider failure stays retryable", async () => {
+  for (const outputs of [
+    [proposal, failingProvider(429), failingProvider(503)],
+    [
+      ignoredProposal,
+      { financialVerdict: "REJECT" },
+      failingProvider(429),
+      failingProvider(503),
+    ],
+    [proposal, null, null],
+  ]) {
+    const error = await classificationFailure(outputs);
+    assert.equal(
+      classifier.buildAndroidNotificationFailureResult(error).retryable,
+      true,
+    );
+    const response = await handlerFixture({ classificationError: error });
+    assert.equal(response.status, 503);
+    assert.equal(response.writes.at(-1).status, "failed");
+    assert.equal(response.requests.length, 0);
+  }
+});
+
+test("checkpoint failures stop immediately before another model or financial mutation", async () => {
+  for (const failAt of [1, 2]) {
+    let calls = 0,
+      checkpoints = 0;
+    await assert.rejects(
+      classifier.classifyAndroidNotification({
+        ...classifierParams,
+        onCheckpoint: async () => {
+          if (++checkpoints === failAt) throw new Error("lost lease");
+        },
+        genAI: {
+          getGenerativeModel: () => ({
+            generateContent: async () => {
+              calls++;
+              return modelResponse(ignoredProposal);
+            },
+          }),
+        },
+      }),
+      /NOTIFICATION_CHECKPOINT_FAILED/,
+    );
+    assert.equal(calls, failAt - 1);
+  }
+});
+
+test("persisted proposal still requires evidence validation and independent verification", async () => {
+  for (const checkpoint of [
+    { version: 1, model: lite31, proposal }, // Source evidence is absent.
+    {
+      version: 1,
+      model: lite31,
+      proposal: ignoredProposal,
+      verifierModel: lite31,
+    }, // Self verifier is invalid.
+    { version: 99, model: lite31, proposal: ignoredProposal },
+  ]) {
+    const calls = [];
+    const result = await classifier.classifyAndroidNotification({
+      ...classifierParams,
+      checkpoint,
+      genAI: {
+        getGenerativeModel: ({ model, systemInstruction }) => ({
+          generateContent: async () => {
+            calls.push({
+              model,
+              verification: systemInstruction.includes("independent"),
+            });
+            return modelResponse(
+              systemInstruction.includes("independent")
+                ? approval
+                : ignoredProposal,
+            );
+          },
+        }),
+      },
+    });
+    assert.equal(result.action, "ignore");
+    assert.notEqual(result.model, result.verificationModel);
+    assert.equal(calls[0].verification, false);
+  }
+});
+
+test("resumed proposals freeze their date and preserve recurrence without trusting approval flags", async () => {
+  const text = "佐藤商店で THB 12.99 の支払い完了";
+  const raw = {
+    ...proposal,
+    date: undefined,
+    frequency: "monthly",
+    currencySource: "notification_explicit",
+    amountEvidenceRaw: "12.99",
+    currencyEvidenceRaw: "THB",
+    merchantEvidenceRaw: "佐藤商店",
+    directionEvidenceRaw: "支払い",
+    completionEvidenceRaw: "支払い完了",
+    transactionEvidenceRaw: text,
+  };
+  let checkpoint;
+  await assert.rejects(
+    classifier.classifyAndroidNotification({
+      ...classifierParams,
+      notification: { packageName: "bank", text },
+      fallbackDate: "2026-10-22",
+      onCheckpoint: async (state) => {
+        checkpoint = structuredClone(state);
+      },
+      genAI: {
+        getGenerativeModel: ({ systemInstruction }) => ({
+          generateContent: async () => {
+            if (systemInstruction.includes("independent"))
+              throw failingProvider(503);
+            return modelResponse(raw);
+          },
+        }),
+      },
+    }),
+  );
+  assert.equal(checkpoint.proposal.date, "2026-10-22");
+  const calls = [];
+  const result = await classifier.classifyAndroidNotification({
+    ...classifierParams,
+    notification: { packageName: "bank", text },
+    fallbackDate: "2026-10-23",
+    checkpoint,
+    genAI: {
+      getGenerativeModel: ({ model, systemInstruction }) => ({
+        generateContent: async () => {
+          calls.push(model);
+          assert.ok(systemInstruction.includes("independent"));
+          return modelResponse(approval);
+        },
+      }),
+    },
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(result.date, "2026-10-22");
+  assert.equal(result.isRecurring, true);
+  assert.equal(result.recurrenceRule.anchor_date, "2026-10-22");
+  assert.equal(result.amount, 12.99);
+});
+
+test("handler resumes only the exact source and pipeline and clears terminal checkpoints", async () => {
+  const state = {
+    version: 1,
+    model: lite31,
+    proposal: ignoredProposal,
+    verifierModel: lite35,
+  };
+  const first = await handlerFixture({
+    classify: async (params) => {
+      assert.equal(params.checkpoint, undefined);
+      await params.onCheckpoint(state);
+      throw new classifier.AndroidNotificationClassificationError(
+        "NOTIFICATION_CLASSIFICATION_TIMEOUT",
+        [],
+      );
+    },
+  });
+  const envelope = first.writes.find(
+    (write) => write.analysis_checkpoint,
+  )?.analysis_checkpoint;
+  assert.ok(envelope);
+  assert.equal(first.writes.at(-1).analysis_checkpoint, undefined); // Retry preserves progress.
+  const claim = {
+    status: "claimed",
+    eventId: "event",
+    processingToken: "new-token",
+    attemptNumber: 2,
+    checkpoint: envelope,
+  };
+  const resumed = await handlerFixture({
+    claim,
+    classify: async (params) => {
+      assert.equal(JSON.stringify(params.checkpoint), JSON.stringify(state));
+      return ignoredProposal;
+    },
+  });
+  assert.equal(resumed.status, 200);
+  assert.equal(resumed.writes.at(-1).analysis_checkpoint, null);
+  for (const changed of [
+    { ...envelope, inputHash: "different" },
+    { ...envelope, pipelineVersion: "old" },
+  ]) {
+    const response = await handlerFixture({
+      claim: { ...claim, checkpoint: changed },
+      classify: async (params) => {
+        assert.equal(params.checkpoint, undefined);
+        return ignoredProposal;
+      },
+    });
+    assert.equal(response.status, 200);
+  }
+  const saved = await handlerFixture();
+  assert.equal(saved.writes.at(-1).analysis_checkpoint, null);
+  assert.equal(JSON.stringify(first.metrics).includes("proposal"), false);
+});
+
+test("handler checkpoint DB errors and lost leases never dispatch a save", async () => {
+  for (const options of [
+    { checkpointError: new Error("storage unavailable") },
+    { staleCheckpoint: true },
+  ]) {
+    const response = await handlerFixture({
+      ...options,
+      classify: async (params) => {
+        await params.onCheckpoint({ version: 1, model: lite31 });
+        assert.fail(
+          "checkpoint must not acknowledge an unowned or failed write",
+        );
+      },
+    });
+    assert.equal(response.status, 503);
+    assert.equal(response.requests.length, 0);
+  }
+});
+
+for (const [classificationMs, verificationMs] of [
+  [1000, 18000],
+  [7000, 2000],
+  [14000, 11000],
+  [18000, 1000],
+  [18000, 18000],
+]) {
+  test(`deadline matrix: extraction ${classificationMs}ms and verification ${verificationMs}ms`, async (t) => {
+    const run = await replayNotificationProviderSchedule(
+      t,
+      {
+        [`classification:${lite31}`]: { delay: classificationMs },
+        [`verification:${lite35}`]: { delay: verificationMs },
+      },
+      2,
+    );
+    assert.equal(run.error, undefined);
+    assert.equal(run.result.action, "save_transaction");
+    assert.equal(
+      run.attempts.filter((key) => key.startsWith("classification:")).length,
+      1,
+    );
+    assert.equal(run.result.amount, 12.99);
+    assert.equal(run.result.currency, "THB");
+  });
+}
+
+test("slow context cannot keep a resumed verifier pinned forever", async (t) => {
+  fakeClassifierClock(t);
+  let checkpoint = {
+    version: 1,
+    model: lite31,
+    proposal: ignoredProposal,
+    verifierModel: lite35,
+  };
+  const attempts = [];
+  const params = {
+    ...classifierParams,
+    onCheckpoint: async (state) => {
+      checkpoint = structuredClone(state);
+    },
+    genAI: {
+      getGenerativeModel: ({ model }) => ({
+        generateContent: (_request, { signal }) => {
+          attempts.push(model);
+          if (model === flash38)
+            return Promise.resolve(modelResponse(approval));
+          return new Promise((_resolve, reject) =>
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            }),
+          );
+        },
+      }),
+    },
+  };
+  const pending = classifier
+    .classifyAndroidNotification({
+      ...params,
+      checkpoint,
+      deadlineAt: Date.now() + 14000,
+    })
+    .catch((error) => error);
+  await flushMicrotasks();
+  t.mock.timers.tick(14000);
+  assert.equal((await pending).message, "NOTIFICATION_CLASSIFICATION_TIMEOUT");
+  assert.equal(checkpoint.verifierModel, flash38);
+  const result = await classifier.classifyAndroidNotification({
+    ...params,
+    checkpoint,
+    deadlineAt: Date.now() + 14000,
+  });
+  assert.equal(result.verificationModel, flash38);
+  assert.deepEqual(attempts, [lite35, flash38]);
+});
+
+test("an extended provider outage remains retryable and rotates durable extraction progress", async (t) => {
+  const run = await replayNotificationProviderSchedule(
+    t,
+    {
+      [`classification:${lite31}`]: {},
+      [`classification:${lite35}`]: {},
+      [`classification:${flash38}`]: {},
+    },
+    4,
+  );
+  assert.equal(run.result, undefined);
+  assert.equal(
+    classifier.buildAndroidNotificationFailureResult(run.error).retryable,
+    true,
+  );
+  assert.deepEqual(run.attempts, [
+    `classification:${lite31}`,
+    `classification:${lite35}`,
+    `classification:${flash38}`,
+    `classification:${lite31}`,
+  ]);
+  assert.equal(run.checkpoint.model, lite35);
+  assert.equal(run.checkpoint.proposal, undefined);
+});
+
+test("changed notification, timestamp or source cannot reuse a checkpoint under the same event key", async () => {
+  const state = {
+    version: 1,
+    model: lite31,
+    proposal: ignoredProposal,
+    verifierModel: lite35,
+  };
+  const first = await handlerFixture({
+    classify: async (params) => {
+      await params.onCheckpoint(state);
+      throw new classifier.AndroidNotificationClassificationError(
+        "NOTIFICATION_CLASSIFICATION_TIMEOUT",
+        [],
+      );
+    },
+  });
+  const checkpoint = first.writes.find(
+    (write) => write.analysis_checkpoint,
+  ).analysis_checkpoint;
+  const claim = {
+    status: "claimed",
+    eventId: "event",
+    processingToken: "token",
+    attemptNumber: 2,
+    checkpoint,
+  };
+  for (const options of [
+    {
+      notification: {
+        packageName: "ios.shortcut.notification",
+        title: "別の支払い",
+      },
+    },
+    { captureSource: "android_notification" },
+    { clientCreatedAt: "2026-10-23T12:00:00Z" },
+  ]) {
+    const response = await handlerFixture({
+      ...options,
+      claim,
+      classify: async (params) => {
+        assert.equal(params.checkpoint, undefined);
+        return ignoredProposal;
+      },
+    });
+    assert.equal(response.status, 200);
+  }
+});
+
+test("a checkpoint never bypasses current Plus, Space or wallet authorization", async () => {
+  for (const [options, status] of [
+    [{ entitled: false }, 403],
+    [{ scopeAllowed: false }, 400],
+    [{ accountAllowed: false }, 400],
+  ]) {
+    const response = await handlerFixture({
+      ...options,
+      claim: {
+        status: "claimed",
+        eventId: "event",
+        processingToken: "token",
+        attemptNumber: 2,
+        checkpoint: {
+          state: { version: 1, model: lite31, proposal: ignoredProposal },
+        },
+      },
+      classify: async () => assert.fail("denied actor must not resume AI work"),
+    });
+    assert.equal(response.status, status);
+    assert.equal(response.requests.length, 0);
+    assert.equal(response.writes.length, 0);
+  }
+});
+
+test("timezone, wallet, scope, currency and category changes invalidate checkpoint context", async () => {
+  const base = {
+    householdId: null,
+    accountId: wallet,
+    accountCurrency: "THB",
+    preferredCurrency: "THB",
+    preferredLanguage: "ja",
+    preferredTimezone: "Asia/Bangkok",
+    expenseCategories: ["other"],
+    incomeCategories: ["salary"],
+  };
+  const hash =
+    await classifier.buildAndroidNotificationClassificationContextHash(base);
+  for (const change of [
+    { householdId: household },
+    { accountId: null },
+    { accountCurrency: "USD" },
+    { preferredCurrency: "USD" },
+    { preferredLanguage: "th" },
+    { preferredTimezone: "Asia/Tokyo" },
+    { expenseCategories: ["food"] },
+    { incomeCategories: ["other"] },
+  ]) {
+    assert.notEqual(
+      await classifier.buildAndroidNotificationClassificationContextHash({
+        ...base,
+        ...change,
+      }),
+      hash,
+    );
+  }
 });

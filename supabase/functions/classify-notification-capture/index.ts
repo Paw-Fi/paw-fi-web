@@ -9,6 +9,7 @@ import {
 import {
   ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
   type AndroidNotificationClassification,
+  type AndroidNotificationCheckpoint,
   type AndroidNotificationInput,
   type AndroidNotificationModelAttempt,
   buildAndroidNotificationClassificationContextHash,
@@ -142,6 +143,7 @@ async function claimClassificationEvent(params: {
       id: string;
       processingToken: string;
       attemptNumber: number;
+      checkpoint?: Record<string, unknown>;
     }
   | { status: "cached"; result: Record<string, unknown> }
   | { status: "processing" }
@@ -182,9 +184,53 @@ async function claimClassificationEvent(params: {
       id: result.eventId,
       processingToken: result.processingToken,
       attemptNumber: result.attemptNumber,
+      checkpoint: result.checkpoint as Record<string, unknown> | undefined,
     };
   }
   throw new Error("INVALID_CLASSIFICATION_CLAIM");
+}
+
+async function checkpointInputHash(
+  notification: AndroidNotificationInput,
+  body: NotificationCaptureRequest,
+): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(
+      JSON.stringify([
+        notification,
+        resolveNotificationCaptureSource(body.captureSource),
+        body.clientCreatedAt ?? null,
+      ]),
+    ),
+  );
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+async function persistClassificationCheckpoint(params: {
+  supabase: any;
+  eventId: string;
+  processingToken: string;
+  inputHash: string;
+  state: AndroidNotificationCheckpoint;
+}): Promise<void> {
+  const { data, error } = await params.supabase
+    .from("notification_capture_classifications")
+    .update({
+      analysis_checkpoint: {
+        pipelineVersion: ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION,
+        inputHash: params.inputHash,
+        state: params.state,
+      },
+    })
+    .eq("id", params.eventId)
+    .eq("processing_token", params.processingToken)
+    .eq("status", "processing")
+    .select("id")
+    .maybeSingle();
+  if (error || !data) throw new Error("NOTIFICATION_CHECKPOINT_FAILED");
 }
 
 async function finalizeClassificationEvent(params: {
@@ -211,6 +257,9 @@ async function finalizeClassificationEvent(params: {
         : null,
       expense_id: params.expenseId ?? null,
       result: params.result,
+      ...(params.status !== "failed" || params.result.retryable === false
+        ? { analysis_checkpoint: null }
+        : {}),
       processing_token: null,
       updated_at: new Date().toISOString(),
     })
@@ -655,6 +704,7 @@ Deno.serve(async (req: Request) => {
           typeof contact?.preferred_language === "string"
             ? contact.preferred_language
             : null,
+        preferredTimezone,
         expenseCategories: Array.from(categoryContext.allowedExpenseSet),
         incomeCategories: Array.from(categoryContext.allowedIncomeSet),
       },
@@ -715,11 +765,28 @@ Deno.serve(async (req: Request) => {
     processingToken = claim.processingToken;
     attemptNumber = claim.attemptNumber;
 
+    const inputHash = await checkpointInputHash(notification, body);
+    const checkpoint =
+      claim.checkpoint?.pipelineVersion ===
+        ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION &&
+      claim.checkpoint?.inputHash === inputHash
+        ? claim.checkpoint.state
+        : undefined;
+
     setStage("model_configuration");
     const genAI = createVertexGenerativeAI(getVertexAiConfigFromEnv());
     setStage("classification");
     const classification = await classifyAndroidNotification({
       genAI,
+      checkpoint,
+      onCheckpoint: (state) =>
+        persistClassificationCheckpoint({
+          supabase,
+          eventId: claim.id,
+          processingToken: claim.processingToken,
+          inputHash,
+          state,
+        }),
       deadlineAt: requestStartedAt + NOTIFICATION_CAPTURE_AI_BUDGET_MS,
       onModelAttempt: (metric) => modelAttempts.push(metric),
       notification,

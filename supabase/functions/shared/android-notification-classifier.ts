@@ -6,10 +6,6 @@ import { AI_CATEGORY_POLICY } from "./ai-category-policy.ts";
 const MIN_AUTOSAVE_CONFIDENCE = 0.9;
 // Fits the bounded native envelope even with multibyte text and JSON escaping.
 export const NOTIFICATION_CAPTURE_MAX_REQUEST_BYTES = 384_000;
-const CLASSIFICATION_TIMEOUT_MS = 15_000;
-// A proposal still needs an independent verifier. A slow classifier must not
-// consume the entire request budget before that verifier can even start.
-const CLASSIFICATION_ATTEMPT_MAX_MS = 6_000;
 // Measured from handler entry, leaving 10s of the native 30s response window
 // for wallet/recurring persistence and finalization. This bounds AI work only.
 export const NOTIFICATION_CAPTURE_AI_BUDGET_MS = 20_000;
@@ -17,7 +13,7 @@ export const ANDROID_NOTIFICATION_MODELS = GEMINI_MODEL_FALLBACKS;
 // Bump when model, prompt, or validation behavior changes so old terminal
 // failures can be evaluated by the new pipeline.
 export const ANDROID_NOTIFICATION_CLASSIFIER_PIPELINE_VERSION =
-  "android_notification_classifier_v19";
+  "android_notification_classifier_v20";
 const TERMINAL_CLASSIFICATION_ERRORS = new Set([
   "NOTIFICATION_VERIFICATION_BLOCKED",
   "CLASSIFICATION_RETRY_EXHAUSTED",
@@ -329,6 +325,7 @@ export async function buildAndroidNotificationClassificationContextHash(params: 
   accountCurrency: string | null;
   preferredCurrency: string | null;
   preferredLanguage: string | null;
+  preferredTimezone?: string | null;
   expenseCategories: string[];
   incomeCategories: string[];
 }): Promise<string> {
@@ -340,6 +337,7 @@ export async function buildAndroidNotificationClassificationContextHash(params: 
     params.accountCurrency,
     params.preferredCurrency,
     params.preferredLanguage,
+    params.preferredTimezone ?? null,
     [...params.expenseCategories].sort(),
     [...params.incomeCategories].sort(),
   ];
@@ -358,6 +356,66 @@ export function httpStatusForAndroidNotificationFailure(
   return result.retryable ? 503 : 422;
 }
 
+// Service-owned progress only. A proposal is never an authorization to save.
+export interface AndroidNotificationCheckpoint {
+  version: 1;
+  model: string;
+  proposal?: Record<string, unknown>;
+  verifierModel?: string;
+}
+
+export function readAndroidNotificationCheckpoint(
+  value: unknown,
+): AndroidNotificationCheckpoint | null {
+  if (!value || typeof value !== "object") return null;
+  const state = value as AndroidNotificationCheckpoint;
+  if (
+    state.version !== 1 ||
+    !ANDROID_NOTIFICATION_MODELS.some((model) => model === state.model)
+  )
+    return null;
+  if (
+    state.proposal !== undefined &&
+    (!state.proposal ||
+      typeof state.proposal !== "object" ||
+      Array.isArray(state.proposal) ||
+      !ACTIONS.has(state.proposal.action as string))
+  )
+    return null;
+  if (
+    state.verifierModel !== undefined &&
+    (!state.proposal ||
+      !ANDROID_NOTIFICATION_MODELS.some(
+        (model) => model === state.verifierModel,
+      ) ||
+      state.verifierModel === state.model)
+  )
+    return null;
+  return state;
+}
+
+function rotateModels(models: readonly string[], first?: string): string[] {
+  const index = first ? models.indexOf(first) : -1;
+  return index > 0
+    ? [...models.slice(index), ...models.slice(0, index)]
+    : [...models];
+}
+
+async function persistCheckpoint(
+  params: ClassifyAndroidNotificationParams,
+  state: AndroidNotificationCheckpoint,
+): Promise<void> {
+  try {
+    await params.onCheckpoint?.(state);
+  } catch {
+    // A lost lease or failed durable write must stop work, not try another model.
+    throw new AndroidNotificationClassificationError(
+      "NOTIFICATION_CHECKPOINT_FAILED",
+      [],
+    );
+  }
+}
+
 export interface ClassifyAndroidNotificationParams {
   genAI: NotificationClassifierClient;
   notification: AndroidNotificationInput;
@@ -368,6 +426,8 @@ export interface ClassifyAndroidNotificationParams {
   expenseCategories: string[];
   incomeCategories: string[];
   deadlineAt?: number;
+  checkpoint?: unknown;
+  onCheckpoint?: (state: AndroidNotificationCheckpoint) => Promise<void>;
   onModelAttempt?: (metric: AndroidNotificationModelAttempt) => void;
 }
 
@@ -1292,10 +1352,7 @@ async function withTimeout<T extends { response: { raw?: unknown } }>(
   allocatedMs: number,
 ): Promise<T> {
   const startedAt = Date.now();
-  const timeoutMs = Math.max(
-    0,
-    Math.min(CLASSIFICATION_TIMEOUT_MS, allocatedMs, deadlineAt - startedAt),
-  );
+  const timeoutMs = Math.max(0, Math.min(allocatedMs, deadlineAt - startedAt));
   let outcome: AndroidNotificationModelAttempt["outcome"] = "response";
   let usage: Record<string, unknown> = {};
   let failure: AndroidNotificationModelDiagnostic | undefined;
@@ -1358,6 +1415,8 @@ async function verifyAndroidNotificationClassification(
   classifierModel: string,
   deadlineAt: number,
   failedModels: Set<string>,
+  checkpoint: AndroidNotificationCheckpoint,
+  execution: { attempts: number },
 ): Promise<{
   approved: boolean;
   confidence: number;
@@ -1366,20 +1425,32 @@ async function verifyAndroidNotificationClassification(
   categoryVerdict?: string;
   category?: string;
 }> {
-  const verifierModels = ANDROID_NOTIFICATION_MODELS.filter(
-    (model) => model !== classifierModel && !failedModels.has(model),
+  const independentModels = ANDROID_NOTIFICATION_MODELS.filter(
+    (model) => model !== classifierModel,
   );
-  if (verifierModels.length === 0) {
-    throw new AndroidNotificationClassificationError(
-      "NOTIFICATION_VERIFICATION_UNAVAILABLE",
-      [],
-    );
-  }
+  const verifierModels = rotateModels(
+    [
+      ...independentModels.filter((model) => !failedModels.has(model)),
+      ...independentModels.filter((model) => failedModels.has(model)),
+    ],
+    checkpoint.verifierModel,
+  );
   const prompt = buildVerifierPrompt(params, classification);
   const diagnostics: AndroidNotificationModelDiagnostic[] = [];
   let lastError: unknown = null;
   for (const [index, verifierModel] of verifierModels.entries()) {
+    await persistCheckpoint(params, { ...checkpoint, verifierModel });
+    // Previously failed requests get another chance on a later native retry,
+    // not an immediate retry against the same throttled provider.
+    if (failedModels.has(verifierModel)) {
+      throw new AndroidNotificationClassificationError(
+        "NOTIFICATION_VERIFICATION_UNAVAILABLE",
+        diagnostics,
+      );
+    }
     const startedAt = Date.now();
+    const allocatedMs = deadlineAt - startedAt;
+    const firstAttempt = execution.attempts++ === 0;
     let receivedResponse = false;
     try {
       const model = params.genAI.getGenerativeModel({
@@ -1427,9 +1498,7 @@ async function verifyAndroidNotificationClassification(
         verifierModel,
         "verification",
         deadlineAt,
-        // Divide the remaining time before starting this attempt, so a slow
-        // verifier cannot starve its independent fallback. Calls stay serial.
-        Math.floor((deadlineAt - Date.now()) / (verifierModels.length - index)),
+        allocatedMs,
       );
       receivedResponse = true;
       const assessment = structuredResponseObject(result.response);
@@ -1516,8 +1585,22 @@ async function verifyAndroidNotificationClassification(
         );
       }
       lastError = error;
-      if (Date.now() >= deadlineAt) break;
+      if (
+        error instanceof Error &&
+        error.message === "NOTIFICATION_CLASSIFICATION_TIMEOUT" &&
+        (allocatedMs <= 0 ||
+          (!firstAttempt && allocatedMs < NOTIFICATION_CAPTURE_AI_BUDGET_MS))
+      ) {
+        // A later phase was cut short. Give it the first call on retry; that
+        // first call advances on timeout even when context loading was slow.
+        break;
+      }
     }
+    await persistCheckpoint(params, {
+      ...checkpoint,
+      verifierModel: verifierModels[(index + 1) % verifierModels.length],
+    });
+    if (Date.now() >= deadlineAt) break;
   }
   throw new AndroidNotificationClassificationError(
     lastError instanceof Error
@@ -1541,73 +1624,90 @@ export async function classifyAndroidNotification(
   let verificationUnavailable = false;
   let decisionConflict = false;
   const diagnostics: AndroidNotificationModelDiagnostic[] = [];
-  // Request-local only: native retries may try recovered models later. Never
-  // immediately reuse a timed-out/throttled classifier as this request's verifier.
+  // Failures suppress immediate reuse only; durable progress resumes on retry.
   const failedModels = new Set<string>();
+  const execution = { attempts: 0 };
   const responseSchema = buildClassifierSchema();
   const prompt = buildClassifierPrompt(params);
 
-  for (const modelName of ANDROID_NOTIFICATION_MODELS) {
+  const resume = readAndroidNotificationCheckpoint(params.checkpoint);
+  const classifierModels = rotateModels(
+    ANDROID_NOTIFICATION_MODELS,
+    resume?.model,
+  );
+  for (const [modelIndex, modelName] of classifierModels.entries()) {
     if (failedModels.has(modelName)) continue;
+    const nextModel =
+      classifierModels[(modelIndex + 1) % classifierModels.length];
     if (Date.now() >= deadlineAt) {
       throw new AndroidNotificationClassificationError(
         "NOTIFICATION_CLASSIFICATION_TIMEOUT",
         diagnostics,
       );
     }
+    const resumedProposal = modelIndex === 0 ? resume?.proposal : undefined;
+    await persistCheckpoint(
+      params,
+      resumedProposal ? resume! : { version: 1, model: modelName },
+    );
     const startedAt = Date.now();
+    const allocatedMs = deadlineAt - startedAt;
+    const firstAttempt = execution.attempts === 0;
     let receivedResponse = false;
     try {
-      const model = params.genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction:
-          "You are a precision-first financial notification classifier. False financial mutations are worse than missed captures.",
-      });
-      const result = await withTimeout(
-        (signal) =>
-          model.generateContent(
-            {
-              contents: [
-                {
-                  role: "user",
-                  parts: [{ text: prompt }],
-                },
-              ],
-              generationConfig: {
-                maxOutputTokens: 2048,
-                temperature: 0,
-                thinkingConfig: notificationThinkingConfig(modelName),
-                responseMimeType: "application/json",
-                responseSchema,
-              },
-            },
-            { signal },
-          ),
-        params,
-        modelName,
-        "classification",
-        deadlineAt,
-        Math.min(
-          CLASSIFICATION_ATTEMPT_MAX_MS,
-          Math.floor((deadlineAt - Date.now()) / 2),
-        ),
-      );
-      receivedResponse = true;
-      const classificationArgs = structuredResponseObject(result.response);
+      let classificationArgs = resumedProposal;
       if (!classificationArgs) {
-        const calls = responseFunctionCalls(result.response);
-        diagnostics.push(
-          buildModelDiagnostic({
-            response: result.response,
-            phase: "classification",
-            model: modelName,
-            expectedName: "structured_classification",
-            latencyMs: Date.now() - startedAt,
-            calls,
-          }),
+        execution.attempts++;
+        const model = params.genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction:
+            "You are a precision-first financial notification classifier. False financial mutations are worse than missed captures.",
+        });
+        const result = await withTimeout(
+          (signal) =>
+            model.generateContent(
+              {
+                contents: [
+                  {
+                    role: "user",
+                    parts: [{ text: prompt }],
+                  },
+                ],
+                generationConfig: {
+                  maxOutputTokens: 2048,
+                  temperature: 0,
+                  thinkingConfig: notificationThinkingConfig(modelName),
+                  responseMimeType: "application/json",
+                  responseSchema,
+                },
+              },
+              { signal },
+            ),
+          params,
+          modelName,
+          "classification",
+          deadlineAt,
+          allocatedMs,
         );
-        throw new Error("INVALID_CLASSIFICATION_RESPONSE");
+        receivedResponse = true;
+        classificationArgs =
+          structuredResponseObject(result.response) ?? undefined;
+        if (!classificationArgs) {
+          const calls = responseFunctionCalls(result.response);
+          diagnostics.push(
+            buildModelDiagnostic({
+              response: result.response,
+              phase: "classification",
+              model: modelName,
+              expectedName: "structured_classification",
+              latencyMs: Date.now() - startedAt,
+              calls,
+            }),
+          );
+          throw new Error("INVALID_CLASSIFICATION_RESPONSE");
+        }
       }
+      receivedResponse = true;
       // A missing payee must not erase an otherwise valid payment proposal.
       // Attribute only the known notification source; the independent verifier
       // still checks every financial fact against the original notification.
@@ -1642,6 +1742,14 @@ export async function classifyAndroidNotification(
       const classification = categoryIsAllowed
         ? normalizedClassification
         : { ...normalizedClassification, category: undefined };
+      const checkpoint: AndroidNotificationCheckpoint = {
+        version: 1,
+        model: modelName,
+        proposal: { ...classificationWithSource, date: classification.date },
+        ...(resumedProposal && resume?.verifierModel
+          ? { verifierModel: resume.verifierModel }
+          : {}),
+      };
       if (classification.action !== "save_transaction") {
         if (classificationArgs.action !== "save_transaction") {
           let verification: Awaited<
@@ -1654,6 +1762,8 @@ export async function classifyAndroidNotification(
               modelName,
               deadlineAt,
               failedModels,
+              checkpoint,
+              execution,
             );
           } catch (error) {
             verificationUnavailable = true;
@@ -1670,6 +1780,7 @@ export async function classifyAndroidNotification(
           decisionConflict = true;
         }
         lastIgnored = classification;
+        await persistCheckpoint(params, { version: 1, model: nextModel });
         continue;
       }
       if (
@@ -1688,6 +1799,7 @@ export async function classifyAndroidNotification(
           date: classification.date,
           model: classification.model,
         });
+        await persistCheckpoint(params, { version: 1, model: nextModel });
         continue;
       }
 
@@ -1701,6 +1813,8 @@ export async function classifyAndroidNotification(
           modelName,
           deadlineAt,
           failedModels,
+          checkpoint,
+          execution,
         );
       } catch (error) {
         verificationUnavailable = true;
@@ -1721,6 +1835,7 @@ export async function classifyAndroidNotification(
           date: classification.date,
           model: classification.model,
         });
+        await persistCheckpoint(params, { version: 1, model: nextModel });
         continue;
       }
       return {
@@ -1734,6 +1849,11 @@ export async function classifyAndroidNotification(
         verificationModel: verification.model,
       };
     } catch (error) {
+      if (
+        error instanceof AndroidNotificationClassificationError &&
+        error.message === "NOTIFICATION_CHECKPOINT_FAILED"
+      )
+        throw error;
       lastError = error;
       if (error instanceof AndroidNotificationClassificationError) {
         diagnostics.push(...error.diagnostics);
@@ -1749,6 +1869,17 @@ export async function classifyAndroidNotification(
         );
       }
       if (verificationUnavailable) break;
+      if (
+        !(
+          error instanceof Error &&
+          error.message === "NOTIFICATION_CLASSIFICATION_TIMEOUT" &&
+          (allocatedMs <= 0 ||
+            (!firstAttempt && allocatedMs < NOTIFICATION_CAPTURE_AI_BUDGET_MS))
+        )
+      ) {
+        await persistCheckpoint(params, { version: 1, model: nextModel });
+      }
+      if (Date.now() >= deadlineAt) break;
     }
   }
 
@@ -1763,6 +1894,15 @@ export async function classifyAndroidNotification(
   if (Date.now() >= deadlineAt) {
     throw new AndroidNotificationClassificationError(
       "NOTIFICATION_CLASSIFICATION_TIMEOUT",
+      diagnostics,
+    );
+  }
+  // An incomplete fallback sequence is not an independently confirmed ignore.
+  if (lastError) {
+    throw new AndroidNotificationClassificationError(
+      lastError instanceof Error
+        ? lastError.message
+        : "NOTIFICATION_CLASSIFICATION_FAILED",
       diagnostics,
     );
   }
