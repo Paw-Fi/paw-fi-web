@@ -5,10 +5,12 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { createVertexGenerativeAI } from "../shared/vertex-ai-chat.ts";
 
-function fixture({ preferenceError = false } = {}) {
+function fixture({ preferenceError = false, providerFailure } = {}) {
   let handler;
   const requests = [];
   const loaded = [];
+  const logs = [];
+  const errors = [];
   const reads = new Set();
   const modules = new Map();
   const context = {
@@ -100,7 +102,11 @@ function fixture({ preferenceError = false } = {}) {
         Date,
         Error,
         TypeError,
-        console: { log() {}, warn() {}, error() {} },
+        console: {
+          log: (...args) => logs.push(args),
+          warn() {},
+          error: (...args) => errors.push(args),
+        },
         Deno: {
           serve: (value) => {
             handler = value;
@@ -155,6 +161,15 @@ function fixture({ preferenceError = false } = {}) {
                   accessToken: "test",
                   fetchImpl: async (_url, init) => {
                     requests.push(JSON.parse(init.body));
+                    if (providerFailure === "timeout")
+                      throw new Error(
+                        "Analysis timed out: request deadline exceeded",
+                      );
+                    if (providerFailure === 429)
+                      return Response.json(
+                        { error: { message: "Resource exhausted" } },
+                        { status: 429 },
+                      );
                     const result =
                       requests.length === 1
                         ? {
@@ -206,7 +221,7 @@ function fixture({ preferenceError = false } = {}) {
     return module.exports;
   }
   load(new URL("../analyze-expense/index.ts", import.meta.url));
-  return { handler, requests, loaded };
+  return { handler, requests, loaded, logs, errors };
 }
 
 for (const stream of [false, true]) {
@@ -276,3 +291,52 @@ test("unavailable language preference fails retryably before any model request",
   assert.equal((await response.json()).code, "AI_TEMPORARILY_UNAVAILABLE");
   assert.equal(requests.length, 0);
 });
+
+for (const stream of [false, true]) {
+  for (const [providerFailure, status, code] of [
+    [429, 503, "AI_TEMPORARILY_UNAVAILABLE"],
+    ["timeout", 504, "AI_ANALYSIS_TIMEOUT"],
+  ]) {
+    test(`exhausted ${providerFailure} (${stream ? "SSE" : "JSON"}) returns no items and correlates the terminal failure`, async () => {
+      const { handler, requests, logs, errors } = fixture({ providerFailure });
+      const response = await handler(
+        new Request(
+          `https://example.invalid/analyze-expense${stream ? "?stream=true" : ""}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer test",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              text: "買い物５０円",
+              interactive: { version: 1, answers: [] },
+            }),
+          },
+        ),
+      );
+      assert.equal(response.status, stream ? 200 : status);
+      const text = await response.text();
+      const result = stream
+        ? JSON.parse(text.split("event: error\ndata: ")[1].split("\n\n")[0])
+        : JSON.parse(text);
+      assert.equal(result.success, false);
+      assert.equal(result.code, code);
+      assert.equal(result.items, undefined);
+      assert.equal(result.data, undefined);
+      assert.equal(text.includes("event: complete"), false);
+      assert.equal(requests.length, 2);
+      const attempts = logs
+        .map((entry) => entry[1])
+        .filter((entry) => entry?.outcome === "provider_error");
+      assert.equal(attempts.length, 2);
+      const terminal = errors.find((entry) =>
+        entry[0].includes("analysis failed"),
+      )[1];
+      assert.equal(terminal.requestId, attempts[0].requestId);
+      assert.equal(terminal.code, code);
+      assert.equal(terminal.status, status);
+      assert.equal(attempts[1].requestId, terminal.requestId);
+    });
+  }
+}

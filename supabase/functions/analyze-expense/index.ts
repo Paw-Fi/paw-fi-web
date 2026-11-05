@@ -198,8 +198,12 @@ async function interactiveAnalysisResponse(
         },
       );
     } catch (error) {
-      console.error("[analyze-expense] Interactive analysis failed:", error);
       const failure = interactiveAnalysisFailure(error);
+      console.error("[analyze-expense] Interactive analysis failed:", {
+        requestId,
+        code: failure.code,
+        status: failure.status,
+      }, error);
       return errorResponse(failure.error, failure.status, failure.code);
     }
   }
@@ -228,13 +232,15 @@ async function interactiveAnalysisResponse(
           );
         } catch (error) {
           if (closed) return;
+          const failure = interactiveAnalysisFailure(error);
           console.error(
             "[analyze-expense] Interactive streaming analysis failed:",
+            { requestId, code: failure.code, status: failure.status },
             error,
           );
           controller.enqueue(
             encoder.encode(
-              formatSSEEvent("error", interactiveAnalysisFailure(error)),
+              formatSSEEvent("error", failure),
             ),
           );
         } finally {

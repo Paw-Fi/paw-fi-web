@@ -83,7 +83,7 @@ Deno.test("notification capture saves emit one post-save wallet push", () => {
   );
   assertEquals(
     walletCaptureSource.match(
-      /if \(!isNotificationCapture\) \{[\s\S]{0,2500}"notify_household_members_expense"/g,
+      /if \(!isNotificationCapture\) \{[\s\S]{0,2500}await notifyHouseholdTransactionMembers\(/g,
     )?.length ?? 0,
     1,
   );

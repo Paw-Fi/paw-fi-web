@@ -1,3 +1,7 @@
+import {
+  notifyHouseholdTransactionMembers,
+  notifyHouseholdExpenseBatch,
+} from "../shared/household-expense-notifications.ts";
 // Supabase Edge Function: save-transactions-batch
 // Saves multiple transactions (expenses/income) in a single database transaction
 // Designed for AI-extracted bulk imports (PDFs, bank statements, etc.)
@@ -1130,8 +1134,8 @@ export async function saveTransactionsBatchInternal(
         .map((saved) => saved.row);
       if (savedRows.length === 1) {
         const row = savedRows[0];
-        const { error: notifyError } = await supabase.rpc(
-          "notify_household_members_expense",
+        const { error: notifyError } = await notifyHouseholdTransactionMembers(
+          supabase,
           {
             p_household_id: resolvedHouseholdId,
             p_expense_id: row.id,
@@ -1157,6 +1161,31 @@ export async function saveTransactionsBatchInternal(
           );
         }
       } else if (savedRows.length > 1) {
+        if (type === "expense") {
+          const { error: notifyError } = await notifyHouseholdExpenseBatch({
+            supabase,
+            householdId: resolvedHouseholdId,
+            actorUserId: resolvedUserId,
+            eventType: "expense_added",
+            expenses: savedRows.map((row) => ({
+              id: row.id,
+              data: {
+                actor_name: actorName,
+                amount_cents: row.amount_cents,
+                currency: row.currency,
+                category: row.category,
+                note: row.raw_text || "",
+                is_recurring: row.is_recurring === true,
+              },
+            })),
+          });
+          if (notifyError) {
+            console.error(
+              "[save-transactions-batch] Error creating expense notifications:", notifyError,
+            );
+          }
+          continue;
+        }
         const recipients = householdMembers
           .map((member) => member.user_id)
           .filter((memberId) => memberId !== resolvedUserId);

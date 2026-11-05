@@ -437,15 +437,32 @@ export function createInteractiveCompletion(
           (truncated || isRetryableInteractiveError(error))
         ) {
           if (truncated) maxOutputTokens *= 2;
+          const retryAfterMs = objectValue(error).retryAfterMs;
+          const retryDelayMs = Math.max(
+            options.retryDelayMs ??
+              (truncated ? 200 : 1000 + Math.floor(Math.random() * 1000)),
+            typeof retryAfterMs === "number" && Number.isFinite(retryAfterMs)
+              ? retryAfterMs
+              : 0,
+          );
+          // Do not retry before the provider permits it, or spend the remaining
+          // interactive budget waiting. Keep one second for dispatch at minimum.
           if (
-            options.deadlineAt != null &&
-            options.deadlineAt - Date.now() <= 1000
+            retryDelayMs > 10000 ||
+            (options.deadlineAt != null &&
+              options.deadlineAt - Date.now() <= retryDelayMs + 1000)
           )
             throw error;
-          await waitForInteractiveRetry(
-            options.retryDelayMs ?? 200,
-            options.signal,
-          );
+          emitAttempt(options, {
+            phase,
+            model,
+            attempt: attempt + 1,
+            elapsedMs: Date.now() - startedAt,
+            outcome: "retry_scheduled",
+            maxOutputTokens,
+            retryDelayMs,
+          });
+          await waitForInteractiveRetry(retryDelayMs, options.signal);
           continue;
         }
         throw error;
@@ -512,6 +529,11 @@ function modelDiagnostics(value: unknown): Record<string, string | number> {
     result.status = status;
   if (value instanceof Error && value.message === "MODEL_OUTPUT_TRUNCATED")
     result.finishReason = "MAX_TOKENS";
+  if (
+    value instanceof Error &&
+    (value.name === "TimeoutError" || value.message.includes("timed out"))
+  )
+    result.errorType = "timeout";
   return result;
 }
 

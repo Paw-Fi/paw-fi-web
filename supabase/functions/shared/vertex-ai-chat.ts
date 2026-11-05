@@ -345,7 +345,23 @@ async function resolveAccessToken(
   );
 }
 
-function buildError(status: number, payload: unknown): Error {
+function parseVertexRetryAfterMs(header: string | null): number | undefined {
+  const value = header?.trim();
+  if (!value) return undefined;
+  // Avoid Date.parse interpreting invalid numeric values (e.g. "-1") as dates.
+  const delayMs = /^\d+(?:\.\d+)?$/.test(value)
+    ? Number(value) * 1000
+    : /^[a-z]{3}, /i.test(value)
+    ? Math.max(0, Date.parse(value) - Date.now())
+    : NaN;
+  return Number.isFinite(delayMs) ? Math.ceil(delayMs) : undefined;
+}
+
+function buildError(
+  status: number,
+  payload: unknown,
+  retryAfterHeader: string | null = null,
+): Error {
   const message = (payload as any)?.error?.message ||
     (payload as any)?.message ||
     `Vertex AI request failed with status ${status}`;
@@ -353,6 +369,8 @@ function buildError(status: number, payload: unknown): Error {
   (error as any).status = status;
   (error as any).statusCode = status;
   (error as any).response = { status, data: payload };
+  const retryAfterMs = parseVertexRetryAfterMs(retryAfterHeader);
+  if (retryAfterMs !== undefined) (error as any).retryAfterMs = retryAfterMs;
   return error;
 }
 
@@ -499,7 +517,11 @@ export function createVertexGenerativeAI(options: VertexGenerativeAIOptions) {
             const payload = await response.json().catch(() => null);
             signal?.throwIfAborted();
             if (!response.ok) {
-              throw buildError(response.status, payload);
+              throw buildError(
+                response.status,
+                payload,
+                response.headers.get("retry-after"),
+              );
             }
             if (
               payload?.candidates?.some(

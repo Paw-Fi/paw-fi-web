@@ -1,3 +1,6 @@
+import {
+  notifyHouseholdTransactionMembers,
+} from "../shared/household-expense-notifications.ts";
 // Supabase Edge Function: save-expense
 // Saves confirmed expense to database
 // Optionally creates household split if householdId provided
@@ -850,8 +853,8 @@ Deno.serve(withCors(async (req: Request) => {
 
     if (preparedHouseholdSplit != null) {
       responseExpense = expense;
-      const { error: notifyError } = await supabase.rpc(
-        "notify_household_members_expense",
+      const { error: notifyError } = await notifyHouseholdTransactionMembers(
+        supabase,
         {
           p_household_id: resolvedSharedHouseholdId,
           p_expense_id: expense.id,
@@ -885,8 +888,8 @@ Deno.serve(withCors(async (req: Request) => {
       // transaction reaches this branch only when that decision intentionally
       // skipped splitting; never re-evaluate settings after the parent exists.
       if (resolvedSharedHouseholdId != null) {
-        const { error: notifyError } = await supabase.rpc(
-          "notify_household_members_expense",
+        const { error: notifyError } = await notifyHouseholdTransactionMembers(
+          supabase,
           {
             p_household_id: resolvedSharedHouseholdId,
             p_expense_id: expense.id,
@@ -992,8 +995,8 @@ Deno.serve(withCors(async (req: Request) => {
 
         // Still notify the household so members see the activity, even though
         // we're intentionally not creating split records.
-        const { error: notifyError } = await supabase.rpc(
-          "notify_household_members_expense",
+        const { error: notifyError } = await notifyHouseholdTransactionMembers(
+          supabase,
           {
             p_household_id: body.householdId,
             p_expense_id: expense.id,
@@ -1125,9 +1128,9 @@ Deno.serve(withCors(async (req: Request) => {
         responseExpense = refreshedExpense;
       }
 
-      // Create notifications for all household members EXCEPT the adder
-      const { error: notifyError } = await supabase.rpc(
-        "notify_household_members_expense",
+      // Notify the other members financially involved in this expense
+      const { error: notifyError } = await notifyHouseholdTransactionMembers(
+        supabase,
         {
           p_household_id: body.householdId,
           p_expense_id: expense.id,

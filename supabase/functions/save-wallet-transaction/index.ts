@@ -1,3 +1,6 @@
+import {
+  notifyHouseholdTransactionMembers,
+} from "../shared/household-expense-notifications.ts";
 /**
  * Supabase Edge Function: save-wallet-transaction
  *
@@ -3026,8 +3029,8 @@ Deno.serve(async (req: Request) => {
           /* non-critical */
         }
 
-        const { error: notifyError } = await supabase.rpc(
-          "notify_household_members_expense",
+        const { error: notifyError } = await notifyHouseholdTransactionMembers(
+          supabase,
           {
             p_household_id: householdId,
             p_expense_id: expense.id,

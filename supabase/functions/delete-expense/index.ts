@@ -1,3 +1,9 @@
+import {
+  notifyHouseholdTransactionMembers,
+  notifyHouseholdExpenseBatch,
+  loadHouseholdExpenseNotificationAudiences,
+  type ExpenseNotificationAudience,
+} from "../shared/household-expense-notifications.ts";
 // Supabase Edge Function: delete-expense
 // Deletes an expense for personal budgeting (GPT-supported)
 
@@ -408,6 +414,30 @@ Deno.serve(withCors(async (req: Request) => {
       );
     }
 
+    const previousNotificationAudiences = new Map<
+      string,
+      ExpenseNotificationAudience
+    >();
+    if (!detection.isGpt) {
+      for (const householdId of nonPortfolioHouseholdIds) {
+        const ids = allowedExpenseIds.filter((id) =>
+          expenseById.get(id)?.household_id === householdId
+        );
+        try {
+          const audiences = await loadHouseholdExpenseNotificationAudiences(
+            supabase, householdId, ids,
+          );
+          for (const [id, audience] of audiences) {
+            previousNotificationAudiences.set(id, audience);
+          }
+        } catch (error) {
+          console.error(
+            "[delete-expense] Unable to capture notification audience:", error,
+          );
+        }
+      }
+    }
+
     const { error: softDeleteError } = await supabase
       .from("expenses")
       .update({
@@ -469,8 +499,8 @@ Deno.serve(withCors(async (req: Request) => {
               "[delete-expense] Notifying household members about deletion for household:",
               householdId,
             );
-            const { error: notifyError } = await supabase.rpc(
-              "notify_household_members_expense",
+            const { error: notifyError } = await notifyHouseholdTransactionMembers(
+              supabase,
               {
                 p_household_id: householdId,
                 p_expense_id: expense.id,
@@ -486,6 +516,7 @@ Deno.serve(withCors(async (req: Request) => {
                   is_recurring: expense.is_recurring === true,
                 },
               },
+              previousNotificationAudiences.get(expense.id) ?? null,
             );
 
             if (notifyError) {
@@ -496,44 +527,30 @@ Deno.serve(withCors(async (req: Request) => {
             }
           }
         } else {
-          const now = new Date().toISOString();
-          for (const [householdId, count] of sharedCounts.entries()) {
-            const { data: members } = await supabase
-              .from("household_members")
-              .select("user_id")
-              .eq("household_id", householdId)
-              .neq("user_id", userId);
-
-            if (!members || members.length === 0) continue;
-
-            const notificationPayload = {
-              actor_name: actorName,
-              actor_user_id: userId,
-              batch_count: count,
-              recurring_count: deletedExpenses.filter(
-                (expense) =>
-                  expense.household_id === householdId &&
-                  expense.is_recurring === true,
-              ).length,
-              household_id: householdId,
-            };
-
-            const notifications = members.map((member) => ({
-              household_id: householdId,
-              user_id: member.user_id,
-              event_type: "expense_deleted",
-              payload: notificationPayload,
-              created_at: now,
-            }));
-
-            const { error: insertError } = await supabase
-              .from("notification_events")
-              .insert(notifications);
-
+          for (const householdId of sharedCounts.keys()) {
+            const { error: insertError } = await notifyHouseholdExpenseBatch({
+              supabase,
+              householdId,
+              actorUserId: userId,
+              eventType: "expense_deleted",
+              expenses: deletedExpenses.filter((expense) =>
+                expense.household_id === householdId
+              ).map((expense) => ({
+                id: expense.id,
+                previousAudience:
+                  previousNotificationAudiences.get(expense.id) ?? null,
+                data: {
+                  actor_name: actorName,
+                  amount_cents: expense.amount_cents,
+                  currency: expense.currency,
+                  category: expense.category,
+                  is_recurring: expense.is_recurring === true,
+                },
+              })),
+            });
             if (insertError) {
               console.error(
-                "[delete-expense] Error creating bulk delete notifications:",
-                insertError,
+                "[delete-expense] Error creating bulk delete notifications:", insertError,
               );
             }
           }

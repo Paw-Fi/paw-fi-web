@@ -1,3 +1,8 @@
+import {
+  notifyHouseholdTransactionMembers,
+  loadHouseholdExpenseNotificationAudiences,
+  type ExpenseNotificationAudience,
+} from "../shared/household-expense-notifications.ts";
 // Supabase Edge Function: update-expense
 // Updates individual fields of an expense transaction with validation
 
@@ -1321,6 +1326,24 @@ Deno.serve(withCors(async (req: Request) => {
       );
     }
 
+    let previousNotificationAudience: ExpenseNotificationAudience | null = null;
+    if (
+      !detection.isGpt && expense.household_id && !isPortfolioHousehold &&
+      String(expense.type ?? "expense").toLowerCase() === "expense"
+    ) {
+      try {
+        const audiences = await loadHouseholdExpenseNotificationAudiences(
+          supabase, expense.household_id, [normalizedExpenseId],
+        );
+        previousNotificationAudience =
+          audiences.get(normalizedExpenseId) ?? null;
+      } catch (error) {
+        console.error(
+          "[update-expense] Unable to capture notification audience:", error,
+        );
+      }
+    }
+
     // Capture old values for notification payload
     const oldAmountCents: number | null =
       (expense as any)?.amount_cents ?? null;
@@ -2489,8 +2512,8 @@ Deno.serve(withCors(async (req: Request) => {
       const eventType =
         transactionType == "income" ? "income_edited" : "expense_edited";
 
-      const { error: notifyError } = await supabase.rpc(
-        "notify_household_members_expense",
+      const { error: notifyError } = await notifyHouseholdTransactionMembers(
+        supabase,
         {
           p_household_id: expense.household_id,
           p_expense_id: normalizedExpenseId,
@@ -2517,6 +2540,7 @@ Deno.serve(withCors(async (req: Request) => {
               (updatedExpense as any)?.is_recurring === true,
           },
         },
+        previousNotificationAudience,
       );
 
       if (notifyError) {

@@ -1118,7 +1118,26 @@ serve(async (req: Request) => {
 
     // Build notification message based on event type (with per-recipient split context)
     let recipientSplit: RecipientSplitContext | undefined = undefined;
-    if (
+    const capturedSplit = payload.recipient_split;
+    const hasCapturedSplit = capturedSplit?.version === 1 &&
+      capturedSplit.recipient_user_id === user_id &&
+      typeof capturedSplit.has_split === "boolean" &&
+      Number.isSafeInteger(capturedSplit.share_cents) &&
+      capturedSplit.share_cents >= 0;
+    if (event_type === "expense_added" && hasCapturedSplit) {
+      if (capturedSplit.has_split) {
+        recipientSplit = {
+          isSplitForRecipient: capturedSplit.share_cents > 0,
+          // A zero-share payer is financially involved. The activity message
+          // describes the expense total rather than claiming they owe zero.
+          shareCents: capturedSplit.share_cents > 0
+            ? capturedSplit.share_cents
+            : null,
+          totalCents: capturedSplit.total_cents,
+          currency: capturedSplit.currency,
+        };
+      }
+    } else if (
       event_type === "expense_added" &&
       (payload.expense_id || payload?.expense_data?.expense_id)
     ) {

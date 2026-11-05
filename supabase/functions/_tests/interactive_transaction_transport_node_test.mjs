@@ -627,7 +627,7 @@ for (const status of [400, 401, 403, 408, 429, 500, 502, 503, 504]) {
         approved: true,
       });
       assert.equal(calls, 2);
-      assert.equal(diagnostics[1].promptTokenCount, 100);
+      assert.equal(diagnostics.at(-1).promptTokenCount, 100);
     }
     assert.equal(diagnostics[0].status, status);
     assert.equal(JSON.stringify(diagnostics).includes("private"), false);

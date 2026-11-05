@@ -438,6 +438,8 @@ test("household events leave an unknown actor empty for recipient-language fallb
     resolvedCategory: "groceries",
     description: "User description",
     isRecurring: false,
+    notifyHouseholdTransactionMembers: (client, params) =>
+      client.rpc("notify_household_members_expense", params),
     supabase: {
       from: () => query,
       rpc: (name, args) => {
