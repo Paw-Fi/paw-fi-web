@@ -37,13 +37,14 @@ test("receipt pixels, dropdown defaults and latest answers reach every model pha
     { decision: "correction", question: "合計は？", choices: ["１，２３４円", "１，２８４円"] },
     { approved: true },
     { question: "日付は？", choices: ["１０月５日", "５月１０日"] },
+    { decision: "retry" },
   ], source);
   const payload = {
     source: source.text,
     context: { ...context, defaultSpaceId: "family", defaultWalletId: "selected-wallet" },
     answers: [{ question: "合計は？", answer: "１，２３４円" }],
   };
-  for (const phase of ["extract", "verify", "clarify"]) {
+  for (const phase of ["extract", "verify", "clarify", "review"]) {
     await complete(phase, "test-model", payload);
   }
   for (const request of requests) {
@@ -69,6 +70,7 @@ test("receipt clarification withholds items, then verifies one paid total in the
   };
   const { requests, complete } = fixture([
     { decision: "correction", question: "レシートの合計は？", choices: ["１，２３４円", "１，２８４円"] },
+    { decision: "ask", field: "amount", reason: "ambiguous_explicit", evidence: { source: "image", quote: "１，２３４ / １，２８４" }, question: "レシートの合計は？", choices: ["１，２３４円", "１，２８４円"] },
     { decision: "ready", items: [{ ...item, amount: 1234, merchant: "小商店", breakdown: ["食料品 １，２３４円"], explicitFields: ["amount", "merchant"] }] },
     { approved: true },
   ], source);
@@ -88,7 +90,7 @@ test("receipt clarification withholds items, then verifies one paid total in the
   assert.equal(ready.items[0].currency, "JPY");
   assert.equal(ready.items[0].destination.householdId, "family");
   assert.equal(ready.items[0].destination.accountId, "selected-wallet");
-  assert.deepEqual(JSON.parse(requests[2].contents[0].parts[0].text).answers, answers);
+  assert.deepEqual(JSON.parse(requests[3].contents[0].parts[0].text).answers, answers);
   assert.ok(requests.every(request => request.contents[0].parts[1].inlineData.data === source.image.data));
 });
 
@@ -106,8 +108,9 @@ test("every AI phase permits expense and income logging without selecting or cre
     { decision: "ready", items: [item] },
     { approved: true },
     { question: "日付は？", choices: ["今日", "昨日"] },
+    { decision: "retry" },
   ]);
-  for (const phase of ["extract", "verify", "clarify"]) {
+  for (const phase of ["extract", "verify", "clarify", "review"]) {
     await complete(phase, "test-model", { context, answers: [] });
   }
   for (const request of requests) {
@@ -281,7 +284,7 @@ test("repeated truncation fails closed after the bounded retry", async () => {
 });
 
 test("uncertain extraction returns an MCQ and no saveable transactions", async () => {
-  const { complete } = fixture([{ decision: "correction", question: "金額は？", choices: ["５０円", "５００円"] }]);
+  const { complete } = fixture([{ decision: "correction", question: "金額は？", choices: ["５０円", "５００円"] }, { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] }]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
   });
@@ -294,6 +297,7 @@ test("JSON-mode invalid amounts are still withheld and clarified", async () => {
   const { requests, complete } = fixture([
     { decision: "ready", items: [{ ...item, amount: -50 }] },
     { question: "金額は？", choices: ["５０円", "５００円"] },
+    { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
   ]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
@@ -307,6 +311,7 @@ test("a verifier disagreement withholds every extracted item", async () => {
   const { complete } = fixture([
     { decision: "ready", items: [item] },
     { approved: false, question: "金額は？", choices: ["５０円", "５００円"] },
+    { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
   ]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
@@ -325,7 +330,7 @@ for (const [name, initial, request, details] of [
     const source = { text: "買い物５０円", image: { data: "cmVjZWlwdA==", contentType: "image/png" } };
     const answers = [{ question: "日付は？", answer: "１０月５日" }];
     const repaired = { question: "記録する金額は？", choices: ["５０円を記録", "５００円を記録"] };
-    const { requests, complete } = fixture([...initial, repaired], source);
+    const { requests, complete } = fixture([...initial, request.clientIssue ? repaired : { ...repaired, decision: "ask", field: "amount", reason: "ambiguous_explicit", evidence: { source: "image", quote: "５０ / ５００" } }], source);
     const result = await runInteractiveTransactionAnalysis({
       source, request: { ...request, answers }, context, complete,
     });
@@ -338,11 +343,11 @@ for (const [name, initial, request, details] of [
     assert.deepEqual(recoveryPayload.answers, answers);
     assert.deepEqual(recoveryPayload.context, context);
     assert.equal(recoveryPayload.source, source.text);
-    assert.deepEqual(recoveryPayload.invalidClarification, initial.at(-1));
+    assert.deepEqual(request.clientIssue ? recoveryPayload.invalidClarification : recoveryPayload.proposedClarification, initial.at(-1));
     if (details.items) assert.equal(recoveryPayload.items.length, 1);
     if (details.issues) assert.ok(recoveryPayload.issues.length > 0);
     assert.equal(recovery.contents[0].parts[1].inlineData.data, source.image.data);
-    assert.deepEqual(recovery.generationConfig.responseSchema.required, ["question", "choices"]);
+    assert.deepEqual(recovery.generationConfig.responseSchema.required, request.clientIssue ? ["question", "choices"] : ["decision"]);
   });
 }
 
@@ -354,7 +359,7 @@ for (const malformed of [
   { question: "金額は？", choices: ["５０円", 500] },
 ]) {
   test(`invalid regenerated clarification fails closed: ${JSON.stringify(malformed)}`, async () => {
-    const { requests, complete } = fixture([{ decision: "correction" }, malformed]);
+    const { requests, complete } = fixture([{ decision: "correction" }, { decision: "ask", field: "amount", reason: "missing_required", ...malformed }]);
     await assert.rejects(runInteractiveTransactionAnalysis({
       source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
     }), InteractiveClarificationError);
@@ -373,7 +378,7 @@ test("clarification recovery propagates provider failure without retrying indefi
       throw new Error("provider unavailable");
     },
   }), /provider unavailable/);
-  assert.deepEqual(phases, ["extract", "clarify"]);
+  assert.deepEqual(phases, ["extract", "review"]);
 });
 
 test("interactive errors expose safe actionable codes rather than internal exceptions", () => {
@@ -403,11 +408,11 @@ for (const [phase, initial, repaired] of [
 ]) {
   test(`truncated ${phase} JSON retries only the same phase once`, async () => {
     const source = { text: "買い物５０円", audio: { data: "YXVkaW8=", contentType: "audio/mpeg" } };
-    const { requests, complete } = fixture([...initial, '{"question":"unterminated', repaired], source);
+    const { requests, complete } = fixture([...initial, '{"question":"unterminated', repaired, ...(phase === "verify" ? [] : [{ decision: "ask", field: "amount", reason: "ambiguous_explicit", evidence: { source: "audio", quote: "５０ / ５００" }, question: "金額は？", choices: ["５０円", "５００円"] }])], source);
     const result = await runInteractiveTransactionAnalysis({ source, request: { version: 1, answers: [] }, context, complete });
     assert.equal(result.requireCorrection, phase !== "verify");
-    assert.equal(requests.length, initial.length + 2);
-    assert.deepEqual(requests.at(-1), requests.at(-2));
+    assert.equal(requests.length, initial.length + (phase === "verify" ? 2 : 3));
+    assert.deepEqual(requests[initial.length], requests[initial.length + 1]);
     assert.equal(requests.at(-1).contents[0].parts[1].inlineData.data, source.audio.data);
   });
 }
@@ -446,16 +451,17 @@ for (const language of ["ja", "ur", "zh-TW", "ko", "fr-CA"]) {
       { decision: "correction", question: "q", choices: ["a", "b"] },
       { approved: true },
       { question: "q", choices: ["a", "b"] },
+      { decision: "retry" },
     ]);
     const payload = {
       source: "20 dinner yesterday / 合計２０ / الإجمالي ٢٠",
       answers: [{ question: "Which wallet?", answer: "現金" }],
       context: { ...context, language },
     };
-    for (const phase of ["extract", "verify", "clarify"]) {
+    for (const phase of ["extract", "verify", "clarify", "review"]) {
       await complete(phase, "test-model", payload);
     }
-    assert.equal(requests.length, 3);
+    assert.equal(requests.length, 4);
     for (const request of requests) {
       const instruction = request.systemInstruction.parts[0].text;
       assert.ok(instruction.includes(`authoritative response locale is "${language}"`));
@@ -564,6 +570,7 @@ test("merchant approval cannot override a financial verifier rejection", async (
       choices: ["５０円", "５００円"],
       merchantVerdicts: [{ itemIndex: 0, approved: true, evidence: "小商店" }],
     },
+    { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
   ]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "小商店" },

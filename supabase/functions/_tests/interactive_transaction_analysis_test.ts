@@ -458,6 +458,8 @@ Deno.test("interactive: independent verification disagreement returns no saveabl
       Promise.resolve(
         phase === "extract" ? { decision: "ready", items: [transaction()] } : {
           approved: false,
+          decision: "ask", field: "customSplits", reason: "ambiguous_explicit",
+          evidence: { source: "text", quote: "أليس ٥٠ وأنا ٢٠" },
           question: "كيف نوزع المبلغ المتبقي؟",
           choices: ["٣٠ لي", "٣٠ لأليس"],
         },
@@ -524,6 +526,8 @@ Deno.test("interactive: invalid arithmetic asks a question, never self-repairs",
             })],
           }
           : {
+            decision: "ask", field: "customSplits", reason: "ambiguous_explicit",
+            evidence: { source: "text", quote: "Alice 50, me 20" },
             question: "Who gets the remaining 30?",
             choices: [
               "Give the remaining 30 to me",
@@ -535,7 +539,7 @@ Deno.test("interactive: invalid arithmetic asks a question, never self-repairs",
   });
   assertEquals(result.requireCorrection, true);
   assertEquals(result.items, []);
-  assertEquals(phases, ["extract", "clarify"]);
+  assertEquals(phases, ["extract", "clarify", "review"]);
 });
 
 Deno.test("interactive: legacy requests remain outside the opt-in contract", () => {
@@ -987,6 +991,11 @@ Deno.test("interactive: split verification requires both independent approvals",
           })],
         });
       }
+      if (phase === "review") return Promise.resolve({
+        decision: "ask", field: "customSplits", reason: "ambiguous_explicit",
+        evidence: { source: "text", quote: "アリス50、自分20" },
+        question: "どの配分にしますか？", choices: ["アリス50、自分20", "均等に配分"],
+      });
       models.push(model);
       return Promise.resolve(
         ++verifications === 1 ? { approved: true } : {
@@ -1246,6 +1255,8 @@ Deno.test(
             ? { approved: true }
             : {
                 approved: false,
+                decision: "ask", field: "category", reason: "ambiguous_explicit",
+                evidence: { source: "text", quote: "食料品と夕食" },
                 question: "どの分類にしますか？",
                 choices: ["食料品に分類する", "外食に分類する"],
               };

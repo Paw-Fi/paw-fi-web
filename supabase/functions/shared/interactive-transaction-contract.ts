@@ -150,6 +150,7 @@ export interface InteractiveIssue {
   itemIndex: number;
   field: string;
   reason: string;
+  code?: "unavailable_default";
 }
 
 export interface InteractiveItem extends Record<string, unknown> {
@@ -271,8 +272,8 @@ export function validateInteractiveItems(
   }
   const items = raw.map((value, itemIndex): InteractiveItem => {
     const item = { ...objectValue(value) };
-    const issue = (field: string, reason: string) =>
-      issues.push({ itemIndex, field, reason });
+    const issue = (field: string, reason: string, code?: InteractiveIssue["code"]) =>
+      issues.push({ itemIndex, field, reason, ...(code ? { code } : {}) });
     const explicitFields =
       Array.isArray(item.explicitFields) && item.explicitFields.every((field) =>
           typeof field === "string"
@@ -284,6 +285,8 @@ export function validateInteractiveItems(
       explicitFields.length !== item.explicitFields.length ||
       new Set(explicitFields).size !== explicitFields.length
     ) issue("explicitFields", "Missing or invalid field provenance");
+    const explicitlyUnassigned = item.walletId === null &&
+      explicitFields.includes("walletId");
     // An echoed drawer selection is still an omission default, not an explicit
     // instruction. Other IDs retain the strict source-evidence requirement.
     if (
@@ -303,7 +306,10 @@ export function validateInteractiveItems(
       }
     }
     for (const field of explicitFields) {
-      if (!INTERACTIVE_FIELDS.includes(field) || item[field] == null) {
+      if (
+        !INTERACTIVE_FIELDS.includes(field) ||
+        (item[field] == null && !(field === "walletId" && explicitlyUnassigned))
+      ) {
         issue(
           field,
           "Explicit instruction has no supported value",
@@ -338,17 +344,25 @@ export function validateInteractiveItems(
     const spaceId = item.spaceId ?? namedWallet?.spaceId ??
       context.defaultSpaceId;
     const space = context.spaces.find((space) => space.id === spaceId);
-    if (!space) issue("spaceId", "Space is unavailable or unauthorized");
+    if (!space) {
+      issue(
+        "spaceId",
+        "Space is unavailable or unauthorized",
+        spaceId === context.defaultSpaceId ? "unavailable_default" : undefined,
+      );
+    }
     const drawerWallet = context.wallets.find((wallet) =>
       wallet.id === context.defaultWalletId && wallet.spaceId === spaceId
     );
     if (
-      item.walletId == null && spaceId === context.defaultSpaceId &&
+      !explicitlyUnassigned && item.walletId == null &&
+      spaceId === context.defaultSpaceId &&
       context.defaultWalletId != null && !drawerWallet
     ) {
       issue(
         "walletId",
         "Selected drawer wallet is unavailable; ask for an authorized replacement rather than substituting another wallet",
+        "unavailable_default",
       );
     }
     const defaultCurrency = namedWallet?.currency ?? drawerWallet?.currency ??
@@ -379,7 +393,7 @@ export function validateInteractiveItems(
       spaceId === context.defaultSpaceId && drawerWallet?.currency === currency
         ? drawerWallet
         : null;
-    const wallet = namedWallet ?? defaultWallet;
+    const wallet = explicitlyUnassigned ? null : namedWallet ?? defaultWallet;
     const amount = item.amount;
     if (
       typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0 ||

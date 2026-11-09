@@ -49,6 +49,28 @@ type ChangelogEntry = ChangelogEntryBase &
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Smarter AI Capture & Smoother Entry",
+    date: "2026-11-09",
+    version: "5.0.4",
+    tags: ["AI", "Feature", "Voice", "Household", "Fix"],
+    description:
+      "Moneko 5.0.4 makes it easier to capture expenses from more places, even when you leave the app, while improving voice entry, shared invitations, and everyday reliability.",
+    sections: {
+      improvements: [
+        "Analyze shared photos and files in the background and return with clear progress, results, or cancellation status",
+        "Use native background analysis on iPhone and Android, with clearer status updates while Moneko processes an expense",
+        "Hold to record voice entries with a smoother recording experience and helpful haptic feedback on iPhone",
+        "Preview a household invitation before accepting it, with clearer details about the shared space and your access",
+      ],
+      fixes: [
+        "Receipt camera capture now keeps your transaction entry open so you can continue reviewing the details",
+        "Settlement suggestions now stay consistent with the amounts shown in the settle-up view",
+        "Wallet choices load more smoothly across transaction, recurring, import, and wallet screens",
+        "Onboarding progress is preserved when you open the plan selection screen",
+      ],
+    },
+  },
+  {
     title: "A Cleaner, More Modern Moneko",
     date: "2026-10-08",
     version: "5.0.0",
@@ -895,7 +917,9 @@ export function ChangelogRouteComponent() {
                   {changelog.items.map((item, i) => (
                     <li key={i} className="group/item flex items-start gap-3.5">
                       <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
-                      <span className="text-foreground/85 leading-6">{item}</span>
+                      <span className="text-foreground/85 leading-6">
+                        {item}
+                      </span>
                     </li>
                   ))}
                 </ul>
