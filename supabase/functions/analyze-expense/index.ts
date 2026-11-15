@@ -42,6 +42,7 @@ import {
   createInteractiveCompletion,
   enrichVerifiedInteractiveItems,
   interactiveAnalysisFailure,
+  INTERACTIVE_ANALYSIS_REVISION,
   runInteractiveTransactionAnalysis,
 } from "../shared/interactive-transaction-analysis.ts";
 import { enrichSourceVerifiedMerchantItems } from "../shared/merchant-source-verification.ts";
@@ -88,8 +89,21 @@ async function interactiveAnalysisResponse(
     : streamAbort.signal;
   let closed = false;
   const requestId = crypto.randomUUID();
+  const diagnosticContext = {
+    requestId,
+    analysisRevision: INTERACTIVE_ANALYSIS_REVISION,
+  };
   const run = async (signal: AbortSignal) => {
     const startedAt = Date.now();
+    console.log("[analyze-expense][interactive]", {
+      ...diagnosticContext,
+      stage: "request",
+      accountIdProvided: Object.prototype.hasOwnProperty.call(body, "accountId"),
+      walletSelected: typeof body.accountId === "string" && !!body.accountId.trim(),
+      householdIdProvided: Object.prototype.hasOwnProperty.call(body, "householdId"),
+      answerCount: request.answers.length,
+      hasClientClockIssue: request.clientIssue != null,
+    });
     const context = await loadInteractiveTransactionContext({
       supabase: supabaseAuthed,
       userId: merchantContext.userId,
@@ -105,9 +119,15 @@ async function interactiveAnalysisResponse(
       incomeCategories: body.allowedIncomeCategories!,
     });
     console.log("[analyze-expense][interactive]", {
-      requestId,
+      ...diagnosticContext,
       stage: "context",
       elapsedMs: Date.now() - startedAt,
+      walletSelected: context.defaultWalletId !== null,
+      selectedWalletAvailable: context.defaultWalletId === null || context.wallets.some(
+        wallet => wallet.id === context.defaultWalletId && wallet.spaceId === context.defaultSpaceId,
+      ),
+      personalSpace: context.defaultSpaceId === "personal",
+      selectedSpaceAvailable: context.spaces.some(space => space.id === context.defaultSpaceId),
     });
     signal.throwIfAborted();
     const source = parseInteractiveSource(body);
@@ -127,7 +147,7 @@ async function interactiveAnalysisResponse(
           deadlineAt: execution.deadlineAt,
           onAttempt: (diagnostic) =>
             console.log("[analyze-expense][interactive]", {
-              requestId,
+              ...diagnosticContext,
               source: source.audio ? "audio" : source.image ? "image" : "text",
               ...diagnostic,
             }),
@@ -170,7 +190,7 @@ async function interactiveAnalysisResponse(
         true,
       );
     console.log("[analyze-expense][interactive]", {
-      requestId,
+      ...diagnosticContext,
       stage: "complete",
       elapsedMs: Date.now() - startedAt,
       merchantElapsedMs: Date.now() - merchantStartedAt,
@@ -200,7 +220,7 @@ async function interactiveAnalysisResponse(
     } catch (error) {
       const failure = interactiveAnalysisFailure(error);
       console.error("[analyze-expense] Interactive analysis failed:", {
-        requestId,
+        ...diagnosticContext,
         code: failure.code,
         status: failure.status,
       }, error);
@@ -235,7 +255,7 @@ async function interactiveAnalysisResponse(
           const failure = interactiveAnalysisFailure(error);
           console.error(
             "[analyze-expense] Interactive streaming analysis failed:",
-            { requestId, code: failure.code, status: failure.status },
+            { ...diagnosticContext, code: failure.code, status: failure.status },
             error,
           );
           controller.enqueue(

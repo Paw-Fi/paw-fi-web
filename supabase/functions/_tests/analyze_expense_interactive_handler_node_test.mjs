@@ -5,7 +5,7 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { createVertexGenerativeAI } from "../shared/vertex-ai-chat.ts";
 
-function fixture({ preferenceError = false, providerFailure } = {}) {
+function fixture({ preferenceError = false, providerFailure, modelReplies } = {}) {
   let handler;
   const requests = [];
   const loaded = [];
@@ -170,8 +170,9 @@ function fixture({ preferenceError = false, providerFailure } = {}) {
                         { error: { message: "Resource exhausted" } },
                         { status: 429 },
                       );
-                    const result =
-                      requests.length === 1
+                    const result = modelReplies
+                      ? modelReplies.shift()
+                      : requests.length === 1
                         ? {
                             decision: "ready",
                             items: [
@@ -339,4 +340,53 @@ for (const stream of [false, true]) {
       assert.equal(attempts[1].requestId, terminal.requestId);
     });
   }
+}
+
+for (const stream of [false, true]) {
+  test(`clarification decisions (${stream ? "SSE" : "JSON"}) are correlated without source or question data`, async () => {
+    const secret = "private-source-wallet-name-and-answer";
+    const question = { question: `Which wallet: ${secret}?`, choices: [`First ${secret}`, `Second ${secret}`] };
+    // Exercise the observed failure mode: an incorrect semantic verdict can
+    // still approve a destination question. Diagnostics must expose the verdict
+    // and originating phase, without pretending it is proof of correctness.
+    const { handler, logs, requests } = fixture({ modelReplies: [
+      { decision: "correction", ...question },
+      { decision: "ask", field: "amount", reason: "missing_required", asksForDestination: false },
+    ] });
+    const response = await handler(new Request(
+      `https://example.invalid/analyze-expense${stream ? "?stream=true" : ""}`, {
+        method: "POST",
+        headers: { Authorization: "Bearer test", "Content-Type": "application/json" },
+        body: JSON.stringify({ text: secret, accountId: null, householdId: null,
+          interactive: { version: 1, answers: [{ question: secret, answer: secret }] } }),
+      },
+    ));
+    const text = await response.text();
+    const result = stream
+      ? JSON.parse(text.split("event: complete\ndata: ")[1].split("\n\n")[0])
+      : JSON.parse(text);
+    assert.equal(result.data.correction.question, question.question);
+    assert.equal(result.data.requireCorrection, true);
+    assert.equal(requests.length, 2, "diagnostics must not add model calls");
+    assert.equal(JSON.stringify(logs).includes(secret), false);
+    const events = logs.filter(entry => entry[0] === "[analyze-expense][interactive]").map(entry => entry[1]);
+    assert.equal(new Set(events.map(entry => entry.requestId)).size, 1);
+    assert.ok(events.every(entry => entry.analysisRevision === "clarification-review-3"));
+    const incoming = events.find(entry => entry.stage === "request");
+    assert.equal(incoming.accountIdProvided, true);
+    assert.equal(incoming.walletSelected, false);
+    assert.equal(incoming.answerCount, 1);
+    const context = events.find(entry => entry.stage === "context");
+    assert.equal(context.selectedWalletAvailable, true);
+    assert.equal(context.selectedSpaceAvailable, true);
+    assert.equal(context.personalSpace, true);
+    assert.equal(events.find(entry => entry.phase === "extract").extractionDecision, "correction");
+    const review = events.find(entry => entry.phase === "review");
+    assert.equal(review.reviewDecision, "ask");
+    assert.equal(review.reviewField, "amount");
+    assert.equal(review.reviewReason, "missing_required");
+    assert.equal(review.asksForDestination, "no");
+    assert.equal(review.analysisAttempt, 1);
+    assert.equal(events.at(-1).correction, true);
+  });
 }

@@ -12,7 +12,7 @@ import { normalizeAudioContentType } from "../shared/audio-source.ts";
 import { parseInteractiveSource } from "../shared/interactive-transaction-contract.ts";
 import { resolveAiResponseLanguage } from "../shared/ai-response-language.ts";
 
-function fixture(results, source = { text: "買い物" }) {
+function fixture(results, source = { text: "買い物" }, options = {}) {
   const requests = [];
   const client = createVertexGenerativeAI({
     project: "test", location: "global", accessToken: "test",
@@ -27,7 +27,7 @@ function fixture(results, source = { text: "買い物" }) {
       return Response.json({ candidates: [{ content: { parts: [{ text: typeof result === "string" ? result : JSON.stringify(result) }] } }] });
     },
   });
-  return { requests, complete: createInteractiveCompletion(source, client) };
+  return { requests, complete: createInteractiveCompletion(source, client, options) };
 }
 
 test("receipt pixels, dropdown defaults and latest answers reach every model phase", async () => {
@@ -70,7 +70,7 @@ test("receipt clarification withholds items, then verifies one paid total in the
   };
   const { requests, complete } = fixture([
     { decision: "correction", question: "レシートの合計は？", choices: ["１，２３４円", "１，２８４円"] },
-    { decision: "ask", field: "amount", reason: "ambiguous_explicit", evidence: { source: "image", quote: "１，２３４ / １，２８４" }, question: "レシートの合計は？", choices: ["１，２３４円", "１，２８４円"] },
+    { decision: "ask", asksForDestination: false, field: "amount", reason: "ambiguous_explicit", evidence: { source: "image", quote: "１，２３４ / １，２８４" }, question: "レシートの合計は？", choices: ["１，２３４円", "１，２８４円"] },
     { decision: "ready", items: [{ ...item, amount: 1234, merchant: "小商店", breakdown: ["食料品 １，２３４円"], explicitFields: ["amount", "merchant"] }] },
     { approved: true },
   ], source);
@@ -284,7 +284,7 @@ test("repeated truncation fails closed after the bounded retry", async () => {
 });
 
 test("uncertain extraction returns an MCQ and no saveable transactions", async () => {
-  const { complete } = fixture([{ decision: "correction", question: "金額は？", choices: ["５０円", "５００円"] }, { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] }]);
+  const { complete } = fixture([{ decision: "correction", question: "金額は？", choices: ["５０円", "５００円"] }, { decision: "ask", asksForDestination: false, field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] }]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
   });
@@ -297,7 +297,7 @@ test("JSON-mode invalid amounts are still withheld and clarified", async () => {
   const { requests, complete } = fixture([
     { decision: "ready", items: [{ ...item, amount: -50 }] },
     { question: "金額は？", choices: ["５０円", "５００円"] },
-    { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
+    { decision: "ask", asksForDestination: false, field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
   ]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
@@ -311,7 +311,7 @@ test("a verifier disagreement withholds every extracted item", async () => {
   const { complete } = fixture([
     { decision: "ready", items: [item] },
     { approved: false, question: "金額は？", choices: ["５０円", "５００円"] },
-    { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
+    { decision: "ask", asksForDestination: false, field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
   ]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
@@ -329,25 +329,35 @@ for (const [name, initial, request, details] of [
   test(`malformed ${name} is regenerated once without releasing transactions`, async () => {
     const source = { text: "買い物５０円", image: { data: "cmVjZWlwdA==", contentType: "image/png" } };
     const answers = [{ question: "日付は？", answer: "１０月５日" }];
-    const repaired = { question: "記録する金額は？", choices: ["５０円を記録", "５００円を記録"] };
-    const { requests, complete } = fixture([...initial, request.clientIssue ? repaired : { ...repaired, decision: "ask", field: "amount", reason: "ambiguous_explicit", evidence: { source: "image", quote: "５０ / ５００" } }], source);
+    const repaired = request.clientIssue
+      ? { question: "時刻はどう記録しますか？", choices: ["時刻なしで記録", "03:00に変更"] }
+      : { question: "記録する金額は？", choices: ["５０円を記録", "５００円を記録"] };
+    const review = { decision: "ask", asksForDestination: false, field: request.clientIssue ? "transactionTime" : "amount", reason: request.clientIssue ? "client_clock" : "ambiguous_explicit", evidence: { source: "image", quote: "５０ / ５００" } };
+    const { requests, complete } = fixture([...initial, repaired, review], source);
     const result = await runInteractiveTransactionAnalysis({
       source, request: { ...request, answers }, context, complete,
     });
     assert.equal(result.requireCorrection, true);
     assert.deepEqual(result.items, []);
     assert.deepEqual(result.correction, { ...repaired, allowCustomResponse: true });
-    assert.equal(requests.length, initial.length + 1);
-    const recovery = requests.at(-1);
+    assert.equal(requests.length, initial.length + 2);
+    const recovery = requests.at(-2);
     const recoveryPayload = JSON.parse(recovery.contents[0].parts[0].text);
     assert.deepEqual(recoveryPayload.answers, answers);
     assert.deepEqual(recoveryPayload.context, context);
     assert.equal(recoveryPayload.source, source.text);
-    assert.deepEqual(request.clientIssue ? recoveryPayload.invalidClarification : recoveryPayload.proposedClarification, initial.at(-1));
+    assert.deepEqual(recoveryPayload.invalidClarification, initial.at(-1));
     if (details.items) assert.equal(recoveryPayload.items.length, 1);
     if (details.issues) assert.ok(recoveryPayload.issues.length > 0);
     assert.equal(recovery.contents[0].parts[1].inlineData.data, source.image.data);
-    assert.deepEqual(recovery.generationConfig.responseSchema.required, request.clientIssue ? ["question", "choices"] : ["decision"]);
+    assert.deepEqual(recovery.generationConfig.responseSchema.required, ["question", "choices"]);
+    const assessment = requests.at(-1);
+    assert.deepEqual(JSON.parse(assessment.contents[0].parts[0].text).proposedClarification, { ...repaired, allowCustomResponse: true });
+    assert.deepEqual(assessment.generationConfig.responseSchema.required, ["decision", "asksForDestination"]);
+    assert.equal(assessment.generationConfig.responseSchema.properties.question, undefined);
+    assert.equal(assessment.generationConfig.responseSchema.properties.choices, undefined);
+    assert.ok(assessment.generationConfig.responseSchema.properties.field.enum.includes("walletId"));
+    assert.equal(assessment.generationConfig.responseSchema.properties.asksForDestination.type, "BOOLEAN");
   });
 }
 
@@ -359,7 +369,7 @@ for (const malformed of [
   { question: "金額は？", choices: ["５０円", 500] },
 ]) {
   test(`invalid regenerated clarification fails closed: ${JSON.stringify(malformed)}`, async () => {
-    const { requests, complete } = fixture([{ decision: "correction" }, { decision: "ask", field: "amount", reason: "missing_required", ...malformed }]);
+    const { requests, complete } = fixture([{ decision: "correction" }, { decision: "ask", asksForDestination: false, field: "amount", reason: "missing_required", ...malformed }]);
     await assert.rejects(runInteractiveTransactionAnalysis({
       source: { text: "買い物" }, request: { version: 1, answers: [] }, context, complete,
     }), InteractiveClarificationError);
@@ -378,7 +388,7 @@ test("clarification recovery propagates provider failure without retrying indefi
       throw new Error("provider unavailable");
     },
   }), /provider unavailable/);
-  assert.deepEqual(phases, ["extract", "review"]);
+  assert.deepEqual(phases, ["extract", "clarify"]);
 });
 
 test("interactive errors expose safe actionable codes rather than internal exceptions", () => {
@@ -408,7 +418,7 @@ for (const [phase, initial, repaired] of [
 ]) {
   test(`truncated ${phase} JSON retries only the same phase once`, async () => {
     const source = { text: "買い物５０円", audio: { data: "YXVkaW8=", contentType: "audio/mpeg" } };
-    const { requests, complete } = fixture([...initial, '{"question":"unterminated', repaired, ...(phase === "verify" ? [] : [{ decision: "ask", field: "amount", reason: "ambiguous_explicit", evidence: { source: "audio", quote: "５０ / ５００" }, question: "金額は？", choices: ["５０円", "５００円"] }])], source);
+    const { requests, complete } = fixture([...initial, '{"question":"unterminated', repaired, ...(phase === "verify" ? [] : [{ decision: "ask", asksForDestination: false, field: "amount", reason: "ambiguous_explicit", evidence: { source: "audio", quote: "５０ / ５００" }, question: "金額は？", choices: ["５０円", "５００円"] }])], source);
     const result = await runInteractiveTransactionAnalysis({ source, request: { version: 1, answers: [] }, context, complete });
     assert.equal(result.requireCorrection, phase !== "verify");
     assert.equal(requests.length, initial.length + (phase === "verify" ? 2 : 3));
@@ -570,7 +580,7 @@ test("merchant approval cannot override a financial verifier rejection", async (
       choices: ["５０円", "５００円"],
       merchantVerdicts: [{ itemIndex: 0, approved: true, evidence: "小商店" }],
     },
-    { decision: "ask", field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
+    { decision: "ask", asksForDestination: false, field: "amount", reason: "missing_required", question: "金額は？", choices: ["５０円", "５００円"] },
   ]);
   const result = await runInteractiveTransactionAnalysis({
     source: { text: "小商店" },
@@ -672,4 +682,20 @@ test("expired requests and cancelled retry backoff do not send another provider 
   });
   await assert.rejects(complete("extract", "test", { context }), /cancelled/);
   assert.equal(calls, 1);
+});
+
+test("review diagnostics whitelist model metadata and never emit malformed field contents", async () => {
+  const secret = "private input, wallet ID, name and evidence";
+  const diagnostics = [];
+  const result = { decision: secret, field: secret, reason: secret, asksForDestination: secret,
+    question: secret, choices: [secret], evidence: { quote: secret } };
+  const { complete } = fixture([result], { text: secret }, { onAttempt: value => diagnostics.push(value) });
+  assert.deepEqual(await complete("review", "test-model", { clarificationReview: {}, context }), result);
+  assert.equal(diagnostics.length, 1);
+  assert.equal(JSON.stringify(diagnostics).includes(secret), false);
+  assert.equal(diagnostics[0].reviewDecision, "invalid");
+  assert.equal(diagnostics[0].reviewField, "invalid");
+  assert.equal(diagnostics[0].reviewReason, "invalid");
+  assert.equal(diagnostics[0].asksForDestination, "invalid");
+  assert.equal(diagnostics[0].analysisAttempt, 2);
 });

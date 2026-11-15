@@ -165,13 +165,21 @@ Deno.test("interactive: unresolved DST clock requests produce only a localized q
     complete: async (phase, _model, payload) => {
       phases.push(phase);
       assertEquals(payload.issues, [request.clientIssue]);
+      if (phase === "review") {
+        assertEquals(payload.proposedClarification, {
+          question: "どの時刻を記録しますか？",
+          choices: ["別の時刻を指定", "日付のみを記録"],
+          allowCustomResponse: true,
+        });
+        return { decision: "ask", field: "transactionTime", reason: "client_clock", asksForDestination: false };
+      }
       return {
         question: "どの時刻を記録しますか？",
         choices: ["別の時刻を指定", "日付のみを記録"],
       };
     },
   });
-  assertEquals(phases, ["clarify"]);
+  assertEquals(phases, ["clarify", "review"]);
   assertEquals(result.requireCorrection, true);
   assertEquals(result.items, []);
   assertEquals(
@@ -458,7 +466,7 @@ Deno.test("interactive: independent verification disagreement returns no saveabl
       Promise.resolve(
         phase === "extract" ? { decision: "ready", items: [transaction()] } : {
           approved: false,
-          decision: "ask", field: "customSplits", reason: "ambiguous_explicit",
+          decision: "ask", asksForDestination: false, field: "customSplits", reason: "ambiguous_explicit",
           evidence: { source: "text", quote: "أليس ٥٠ وأنا ٢٠" },
           question: "كيف نوزع المبلغ المتبقي؟",
           choices: ["٣٠ لي", "٣٠ لأليس"],
@@ -526,7 +534,7 @@ Deno.test("interactive: invalid arithmetic asks a question, never self-repairs",
             })],
           }
           : {
-            decision: "ask", field: "customSplits", reason: "ambiguous_explicit",
+            decision: "ask", asksForDestination: false, field: "customSplits", reason: "ambiguous_explicit",
             evidence: { source: "text", quote: "Alice 50, me 20" },
             question: "Who gets the remaining 30?",
             choices: [
@@ -992,7 +1000,7 @@ Deno.test("interactive: split verification requires both independent approvals",
         });
       }
       if (phase === "review") return Promise.resolve({
-        decision: "ask", field: "customSplits", reason: "ambiguous_explicit",
+        decision: "ask", asksForDestination: false, field: "customSplits", reason: "ambiguous_explicit",
         evidence: { source: "text", quote: "アリス50、自分20" },
         question: "どの配分にしますか？", choices: ["アリス50、自分20", "均等に配分"],
       });
@@ -1000,8 +1008,8 @@ Deno.test("interactive: split verification requires both independent approvals",
       return Promise.resolve(
         ++verifications === 1 ? { approved: true } : {
           approved: false,
-          question: "どの共有スペースですか？",
-          choices: ["家族に保存", "別のスペースを指定"],
+          question: "どの配分にしますか？",
+          choices: ["アリス50、自分20", "均等に配分"],
         },
       );
     },
@@ -1255,7 +1263,7 @@ Deno.test(
             ? { approved: true }
             : {
                 approved: false,
-                decision: "ask", field: "category", reason: "ambiguous_explicit",
+                decision: "ask", asksForDestination: false, field: "category", reason: "ambiguous_explicit",
                 evidence: { source: "text", quote: "食料品と夕食" },
                 question: "どの分類にしますか？",
                 choices: ["食料品に分類する", "外食に分類する"],
