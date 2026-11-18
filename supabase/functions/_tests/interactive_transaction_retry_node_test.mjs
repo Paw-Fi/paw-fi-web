@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { setImmediate } from "node:timers/promises";
 import { createVertexGenerativeAI } from "../shared/vertex-ai-chat.ts";
-import { createInteractiveCompletion } from "../shared/interactive-transaction-analysis.ts";
+import {
+  alternateInteractiveModel,
+  createInteractiveCompletion,
+  InteractiveModelResponseError,
+  runInteractiveTransactionAnalysis,
+} from "../shared/interactive-transaction-analysis.ts";
+import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
 
 const now = Date.UTC(2026, 10, 5, 0, 0, 0);
 const payload = {
@@ -53,9 +59,17 @@ function fixture(t, respond, options = {}, random = 0.5) {
   return {
     requests,
     diagnostics,
-    run: () => complete("verify", "test-model", payload),
+    complete,
+    run: (options) => complete("verify", "test-model", payload, options),
   };
 }
+
+const candidate = (body, extra = {}) =>
+  Response.json({
+    candidates: [{ content: { parts: [{ text: body }] }, ...extra }],
+    usageMetadata: { promptTokenCount: 4310, candidatesTokenCount: 2072 },
+  });
+const modelOf = (url) => /models\/([^:]+):/.exec(url)[1];
 
 for (const [random, expectedDelay] of [
   [0, 1000],
@@ -223,3 +237,183 @@ for (const [header, expected] of [
     );
   });
 }
+
+test("malformed JSON is retried once on the fallback model with the identical request body", async (t) => {
+  const { requests, diagnostics, run } = fixture(t, (attempt) =>
+    attempt === 1 ? candidate('{"approved": private "garbage"') : success(),
+  );
+  assert.deepEqual(await run({ fallbackModel: "fallback-model" }), {
+    approved: true,
+  });
+  assert.equal(requests.length, 2);
+  assert.deepEqual(requests.map(({ url }) => modelOf(url)), [
+    "test-model",
+    "fallback-model",
+  ]);
+  assert.deepEqual(requests[1].body, requests[0].body);
+  assert.deepEqual(
+    diagnostics.map(({ model, attempt, outcome }) => ({ model, attempt, outcome })),
+    [
+      { model: "test-model", attempt: 1, outcome: "invalid_json" },
+      { model: "fallback-model", attempt: 2, outcome: "success" },
+    ],
+  );
+  assert.equal(JSON.stringify(diagnostics).includes("private"), false);
+  assert.equal(JSON.stringify(diagnostics).includes("garbage"), false);
+});
+
+test("without a fallback model the malformed JSON retry reuses the same model", async (t) => {
+  const { requests, run } = fixture(t, (attempt) =>
+    attempt === 1 ? candidate("{") : success(),
+  );
+  assert.deepEqual(await run(), { approved: true });
+  assert.deepEqual(requests.map(({ url }) => modelOf(url)), [
+    "test-model",
+    "test-model",
+  ]);
+});
+
+test("malformed JSON on both models remains a structured failure, never approval", async (t) => {
+  const { requests, diagnostics, run } = fixture(t, () =>
+    candidate('{"approved": true, "question": "private', { finishReason: "STOP" }),
+  );
+  await assert.rejects(
+    run({ fallbackModel: "fallback-model" }),
+    InteractiveModelResponseError,
+  );
+  assert.deepEqual(requests.map(({ url }) => modelOf(url)), [
+    "test-model",
+    "fallback-model",
+  ]);
+  assert.deepEqual(
+    diagnostics.map(({ outcome }) => outcome),
+    ["invalid_json", "invalid_json"],
+  );
+  assert.equal(JSON.stringify(diagnostics).includes("private"), false);
+});
+
+for (const { name, response, expected } of [
+    {
+      name: "unterminated object",
+      response: () => candidate('{"approved": true, "question": "private answer', { finishReason: "STOP" }),
+      expected: {
+        responseTextShape: "object_unterminated",
+        jsonErrorKind: "unexpected_end",
+        finishReason: "STOP",
+        candidateCount: 1,
+        partCount: 1,
+        thoughtPartCount: 0,
+        responseTextLength: 46,
+      },
+    },
+    {
+      name: "trailing content after a complete object",
+      response: () => candidate('{"approved":true}{"private":1}', { finishReason: "STOP" }),
+      expected: {
+        responseTextShape: "object",
+        jsonErrorKind: "trailing_content",
+        jsonErrorPosition: 17,
+        responseTextLength: 30,
+      },
+    },
+    {
+      name: "markdown fence",
+      response: () => candidate('```json\n{"approved":true}\n```'),
+      expected: { responseTextShape: "fenced", jsonErrorKind: "unexpected_token" },
+    },
+    {
+      name: "blocked candidate without visible text",
+      response: () =>
+        Response.json({
+          candidates: [{ finishReason: "SAFETY", content: { role: "model" } }],
+          usageMetadata: { promptTokenCount: 4310, candidatesTokenCount: 2072 },
+        }),
+      expected: {
+        responseTextShape: "empty",
+        responseTextLength: 0,
+        jsonErrorKind: "unexpected_end",
+        finishReason: "SAFETY",
+        candidateCount: 1,
+        promptTokenCount: 4310,
+        candidatesTokenCount: 2072,
+      },
+    },
+    {
+      name: "blocked prompt without candidates",
+      response: () =>
+        Response.json({ promptFeedback: { blockReason: "PROHIBITED_CONTENT" } }),
+      expected: {
+        responseTextShape: "empty",
+        promptBlockReason: "PROHIBITED_CONTENT",
+      },
+    },
+    {
+      name: "thought-only parts and an unlisted finish reason",
+      response: () =>
+        Response.json({
+          candidates: [{
+            finishReason: "private reason",
+            content: { parts: [{ thought: true, text: "private thinking" }] },
+          }],
+          promptFeedback: { blockReason: "private reason" },
+        }),
+      expected: {
+        responseTextShape: "empty",
+        finishReason: "unknown",
+        promptBlockReason: "unknown",
+        partCount: 1,
+        thoughtPartCount: 1,
+      },
+    },
+]) {
+  test(`invalid_json diagnostics distinguish ${name} without exposing content`, async (t) => {
+    const { diagnostics, run } = fixture(t, (attempt) =>
+      attempt === 1 ? response() : success(),
+    );
+    await run();
+    const [entry] = diagnostics;
+    assert.equal(entry.outcome, "invalid_json");
+    for (const [key, value] of Object.entries(expected)) {
+      assert.equal(entry[key], value, key);
+    }
+    assert.equal(JSON.stringify(diagnostics).includes("private"), false);
+  });
+}
+
+test("the alternate model is never the extraction model and never the failing model", () => {
+  for (const model of GEMINI_MODEL_FALLBACKS) {
+    const alternate = alternateInteractiveModel(model);
+    assert.notEqual(alternate, model);
+    assert.notEqual(alternate, GEMINI_MODEL_FALLBACKS[0]);
+    assert.ok(GEMINI_MODEL_FALLBACKS.includes(alternate));
+  }
+});
+
+test("the analysis flow routes a malformed verifier response to the alternate model", async (t) => {
+  const context = {
+    userId: "me", defaultSpaceId: "personal", defaultWalletId: null, currency: "JPY",
+    date: "2026-11-17", language: "ja", expenseCategories: ["groceries"],
+    incomeCategories: ["salary"],
+    spaces: [{ id: "personal", name: "Personal", isPortfolio: false, members: [] }],
+    wallets: [],
+  };
+  const item = { type: "expense", amount: 500, category: "groceries", explicitFields: ["amount"] };
+  const { requests, complete } = fixture(t, (attempt) =>
+    attempt === 1
+      ? candidate(JSON.stringify({ decision: "ready", items: [item] }))
+      : attempt === 2
+      ? candidate('{"approved": private')
+      : success(),
+  );
+  const result = await runInteractiveTransactionAnalysis({
+    source: { text: "買い物５００円" }, request: { version: 1, answers: [] }, context, complete,
+  });
+  assert.equal(result.requireCorrection, false);
+  assert.equal(result.items.length, 1);
+  assert.deepEqual(requests.map(({ url }) => modelOf(url)), [
+    GEMINI_MODEL_FALLBACKS[0],
+    GEMINI_MODEL_FALLBACKS[1],
+    GEMINI_MODEL_FALLBACKS[2],
+  ]);
+  assert.deepEqual(requests[2].body, requests[1].body);
+});

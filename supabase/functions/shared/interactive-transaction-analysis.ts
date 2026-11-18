@@ -102,7 +102,17 @@ export interface InteractiveCompletion {
     phase: "extract" | "verify" | "clarify" | "review",
     model: string,
     payload: Record<string, unknown>,
+    options?: { fallbackModel?: string },
   ): Promise<unknown>;
+}
+
+// A malformed response is retried on a different model: the same model at
+// temperature 0 tends to repeat its failure. The alternate is never the
+// extraction model, so verification stays independent of extraction.
+export function alternateInteractiveModel(model: string): string {
+  return model === GEMINI_MODEL_FALLBACKS[2]
+    ? GEMINI_MODEL_FALLBACKS[1]
+    : GEMINI_MODEL_FALLBACKS[2];
 }
 
 export class InteractiveClarificationError extends Error {
@@ -192,7 +202,7 @@ export async function runInteractiveTransactionAnalysis(
 
 async function analyzeInteractiveProposal(
   params: InteractiveAnalysisParams,
-  complete: InteractiveCompletion,
+  rawComplete: InteractiveCompletion,
   clarificationReview?: Record<string, unknown>,
 ) {
   const payload = {
@@ -201,6 +211,10 @@ async function analyzeInteractiveProposal(
     context: params.context,
     ...(clarificationReview ? { clarificationReview } : {}),
   };
+  const complete: InteractiveCompletion = (phase, model, data) =>
+    rawComplete(phase, model, data, {
+      fallbackModel: alternateInteractiveModel(model),
+    });
   const correction = async (
     question: unknown,
     details: Record<string, unknown> = {},
@@ -374,7 +388,7 @@ export function createInteractiveCompletion(
     onAttempt?: (diagnostic: Record<string, string | number>) => void;
   } = {},
 ): InteractiveCompletion {
-  return async (phase, model, payload) => {
+  return async (phase, model, payload, completionOptions = {}) => {
     const languageInstruction = buildAiResponseLanguageInstruction(
       String(objectValue(payload.context).language ?? "en"),
     );
@@ -395,17 +409,14 @@ export function createInteractiveCompletion(
     const merchantInstruction = checksMerchants
       ? `\nIn this same independent source review, also check merchantProposals using the rules below. Return those optional verdicts in merchantVerdicts. Financial approved and merchant approval are separate: an uncertain merchant identity must never reject otherwise correct financial fields or invent a correction.\n${MERCHANT_SOURCE_RULES}\nFor this combined response use {approved, question?, choices?, merchantVerdicts}; put the merchant verdict array in merchantVerdicts, not verdicts.`
       : "";
-    const modelClient = client.getGenerativeModel({
-      model,
-      // Vertex can reject the deeply optional extraction schema with HTTP 400.
-      // Server validation and independent verification still gate every save.
-      systemInstruction:
-        phase === "extract"
-          ? `${instruction}\nReturn only a JSON object matching this output schema. Omit absent optional fields:\n${JSON.stringify(
-              extractionSchema,
-            )}\n${languageInstruction}`
-          : `${instruction}\n${languageInstruction}${merchantInstruction}`,
-    });
+    // Vertex can reject the deeply optional extraction schema with HTTP 400.
+    // Server validation and independent verification still gate every save.
+    const systemInstruction =
+      phase === "extract"
+        ? `${instruction}\nReturn only a JSON object matching this output schema. Omit absent optional fields:\n${JSON.stringify(
+            extractionSchema,
+          )}\n${languageInstruction}`
+        : `${instruction}\n${languageInstruction}${merchantInstruction}`;
     const generationRequest = {
       contents: [
         {
@@ -467,6 +478,7 @@ export function createInteractiveCompletion(
       },
     };
     let maxOutputTokens = generationRequest.generationConfig.maxOutputTokens;
+    let attemptModel = model;
     for (let attempt = 0; attempt < 2; attempt++) {
       options.signal?.throwIfAborted();
       if (options.deadlineAt != null && Date.now() >= options.deadlineAt) {
@@ -475,7 +487,10 @@ export function createInteractiveCompletion(
       const startedAt = Date.now();
       let response;
       try {
-        response = await modelClient.generateContent(
+        response = await client.getGenerativeModel({
+          model: attemptModel,
+          systemInstruction,
+        }).generateContent(
           {
             ...generationRequest,
             generationConfig: {
@@ -490,7 +505,7 @@ export function createInteractiveCompletion(
       } catch (error) {
         emitAttempt(options, {
           phase,
-          model,
+          model: attemptModel,
           attempt: attempt + 1,
           elapsedMs: Date.now() - startedAt,
           outcome: "provider_error",
@@ -523,7 +538,7 @@ export function createInteractiveCompletion(
             throw error;
           emitAttempt(options, {
             phase,
-            model,
+            model: attemptModel,
             attempt: attempt + 1,
             elapsedMs: Date.now() - startedAt,
             outcome: "retry_scheduled",
@@ -535,11 +550,12 @@ export function createInteractiveCompletion(
         }
         throw error;
       }
+      const text = response.response.text();
       try {
-        const parsed = JSON.parse(response.response.text());
+        const parsed = JSON.parse(text);
         emitAttempt(options, {
           phase,
-          model,
+          model: attemptModel,
           attempt: attempt + 1,
           elapsedMs: Date.now() - startedAt,
           outcome: "success",
@@ -553,14 +569,18 @@ export function createInteractiveCompletion(
         if (!(error instanceof SyntaxError)) throw error;
         emitAttempt(options, {
           phase,
-          model,
+          model: attemptModel,
           attempt: attempt + 1,
           elapsedMs: Date.now() - startedAt,
           outcome: "invalid_json",
           maxOutputTokens,
           ...modelDiagnostics(response.response.raw),
+          ...responseTextDiagnostics(text, error),
         });
         if (attempt === 1) throw new InteractiveModelResponseError();
+        if (completionOptions.fallbackModel) {
+          attemptModel = completionOptions.fallbackModel;
+        }
       }
     }
     throw new InteractiveModelResponseError();
@@ -613,10 +633,91 @@ function completionDiagnostics(
   };
 }
 
+const CANDIDATE_FINISH_REASONS = [
+  "FINISH_REASON_UNSPECIFIED",
+  "STOP",
+  "MAX_TOKENS",
+  "SAFETY",
+  "RECITATION",
+  "LANGUAGE",
+  "OTHER",
+  "BLOCKLIST",
+  "PROHIBITED_CONTENT",
+  "SPII",
+  "MALFORMED_FUNCTION_CALL",
+  "IMAGE_SAFETY",
+  "UNEXPECTED_TOOL_CALL",
+];
+const PROMPT_BLOCK_REASONS = [
+  "BLOCKED_REASON_UNSPECIFIED",
+  "SAFETY",
+  "OTHER",
+  "BLOCKLIST",
+  "PROHIBITED_CONTENT",
+  "IMAGE_SAFETY",
+];
+
+// Distinguishes malformed JSON from missing visible text, provider blocking and
+// truncation using lengths, counts and fixed enums only; never the text itself.
+function responseTextDiagnostics(
+  text: string,
+  error: SyntaxError,
+): Record<string, string | number> {
+  const shape = !text
+    ? "empty"
+    : text.startsWith("```")
+    ? "fenced"
+    : text.startsWith("{")
+    ? text.endsWith("}") ? "object" : "object_unterminated"
+    : text.startsWith("[")
+    ? text.endsWith("]") ? "array" : "array_unterminated"
+    : "other";
+  // V8 parse messages can quote response text; only a position and a fixed
+  // error kind are extracted from them.
+  const message = error.message;
+  const position = /\bposition (\d+)/.exec(message)?.[1];
+  const kind = /Unexpected end of JSON|Unterminated/i.test(message)
+    ? "unexpected_end"
+    : /after JSON/i.test(message)
+    ? "trailing_content"
+    : /Unexpected|Expected|Bad/i.test(message)
+    ? "unexpected_token"
+    : "other";
+  return {
+    responseTextLength: text.length,
+    responseTextShape: shape,
+    jsonErrorKind: kind,
+    ...(position ? { jsonErrorPosition: Number(position) } : {}),
+  };
+}
+
 function modelDiagnostics(value: unknown): Record<string, string | number> {
   const data = objectValue(value);
   const usage = objectValue(data.usageMetadata);
   const result: Record<string, string | number> = {};
+  const candidates = Array.isArray(data.candidates) ? data.candidates : null;
+  if (candidates) {
+    result.candidateCount = candidates.length;
+    const first = objectValue(candidates[0]);
+    if (typeof first.finishReason === "string") {
+      result.finishReason = CANDIDATE_FINISH_REASONS.includes(first.finishReason)
+        ? first.finishReason
+        : "unknown";
+    }
+    const parts = objectValue(first.content).parts;
+    if (Array.isArray(parts)) {
+      result.partCount = parts.length;
+      result.thoughtPartCount = parts.filter(
+        (part: unknown) => objectValue(part).thought === true,
+      ).length;
+    }
+  }
+  const blockReason = objectValue(data.promptFeedback).blockReason;
+  if (typeof blockReason === "string") {
+    result.promptBlockReason = PROMPT_BLOCK_REASONS.includes(blockReason)
+      ? blockReason
+      : "unknown";
+  }
   for (const key of [
     "promptTokenCount",
     "candidatesTokenCount",
