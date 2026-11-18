@@ -215,7 +215,7 @@ export const HomeHeader = () => {
     solutions.some((item) => isPathActive(item.href)) ||
     isPathActive("/solutions");
   const isResourcesActive =
-    resources.some((item) => isPathActive(item.href)) || isPathActive("/blogs");
+    resources.some((item) => isPathActive(item.href));
 
   return (
     <header className="bg-background/95 md:bg-background/80 md:supports-[backdrop-filter]:bg-background/60 fixed top-0 right-0 left-0 z-50 border-b border-white/10 md:backdrop-blur-md">
@@ -339,14 +339,6 @@ export const HomeHeader = () => {
                         {resource.description}
                       </ListItem>
                     ))}
-                    <ListItem
-                      title="Blog"
-                      href={buildPreservedPath("/blogs")}
-                      icon={BookOpen}
-                      isActive={isPathActive("/blogs")}
-                    >
-                      Latest updates and financial tips.
-                    </ListItem>
                     <li className="row-span-3 list-none">
                       <NavigationMenuLink asChild>
                         <a
@@ -371,17 +363,17 @@ export const HomeHeader = () => {
 
               <NavigationMenuItem>
                 <Link
-                  to="/about"
-                  href={buildPreservedPath("/about")}
+                  to="/blogs"
+                  href={buildPreservedPath("/blogs")}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
-                    isPathActive("/about")
+                    isPathActive("/blogs")
                       ? "text-foreground"
                       : "text-muted-foreground",
                   )}
                 >
-                  About
+                  Blogs
                 </Link>
               </NavigationMenuItem>
 
@@ -559,14 +551,14 @@ export const HomeHeader = () => {
               </Accordion>
 
               <MobileLink
-                href={buildPreservedPath("/about")}
+                href={buildPreservedPath("/blogs")}
                 setIsOpen={setIsOpen}
                 className={cn(
                   "px-2 py-3 text-base",
-                  isPathActive("/about") && "bg-accent text-primary",
+                  isPathActive("/blogs") && "bg-accent text-primary",
                 )}
               >
-                About
+                Blogs
               </MobileLink>
 
               <Link

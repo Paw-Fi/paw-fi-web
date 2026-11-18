@@ -118,6 +118,14 @@ export const Footer = () => {
               <li>
                 <Link
                   to="/about"
+                  className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
+                >
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/about"
                   hash="team"
                   className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                 >
