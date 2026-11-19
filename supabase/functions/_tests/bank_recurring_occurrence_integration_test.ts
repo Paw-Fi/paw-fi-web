@@ -246,6 +246,7 @@ async function fixture(realWriter = false) {
     "20261002113000_review_incompatible_recurring_bank_rows.sql",
     "20261003050000_preserve_confirmed_bank_series_links.sql",
     "20261016090000_defer_manual_recurring_wallet_conflicts.sql",
+    "20261119090000_preserve_distinct_plaid_payments_after_removal.sql",
   ]) {
     await db.exec(
       await Deno.readTextFile(
@@ -1942,6 +1943,97 @@ Deno.test("bank recurring: deferred wallet mismatch survives real pending-posted
       (await db.query("select cursor,cursor_generation from bank_connections"))
         .rows,
       [{ cursor: "after", cursor_generation: 3 }],
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+Deno.test("bank recurring: removing a confirmed Plaid payment does not block a distinct payment in its cycle", async () => {
+  const db = await fixture(true);
+  try {
+    await importPayment(db);
+    await reconcile(db);
+    const occurrence =
+      (await db.query("select * from recurring_occurrences")).rows;
+    await db.exec(`
+      update expenses set provider_fields = jsonb_set(provider_fields, '{transaction_ids}',
+        '["bank-payment","other-payment"]') where id='${series}';
+      insert into expenses(id,user_id,account_id,bank_account_id,provider,provider_transaction_id,
+        date,amount_cents,currency,type)
+      values ('${actual}','${user}','${wallet}','${bank}','plaid','other-payment',
+        '2024-09-25',9800,'CAD','expense');
+    `);
+    const apply = (generation: number) =>
+      db.query(
+        `select apply_plaid_sync_batch_v2($1,$2,$3,'after','[]','[]',$4,$5,$5,
+        '[]','{}','[]','{}',true,true,$6,null)`,
+        [user, connection, generation, ["bank-payment"], [bank], actual],
+      );
+    // The real writer removes the first payment inside the same cursor transaction.
+    await apply(0);
+    const rows = () =>
+      db.query(`select id, provider_transaction_id, deleted_reason,
+      parent_recurring_id, amount_cents::int as cents from expenses where not is_recurring order by id`);
+    const expected = [
+      {
+        id: imported,
+        provider_transaction_id: "bank-payment",
+        deleted_reason: "provider_removed",
+        parent_recurring_id: series,
+        cents: 11760,
+      },
+      {
+        id: actual,
+        provider_transaction_id: "other-payment",
+        deleted_reason: null,
+        parent_recurring_id: null,
+        cents: 9800,
+      },
+    ];
+    assertEquals((await rows()).rows, expected);
+    await apply(1);
+    assertEquals((await rows()).rows, expected);
+    assertEquals(
+      (await db.query("select * from recurring_occurrences")).rows,
+      occurrence,
+    );
+    assertEquals(
+      (await db.query("select cursor, cursor_generation from bank_connections"))
+        .rows,
+      [{ cursor: "after", cursor_generation: 2 }],
+    );
+    await assertRejects(
+      () => reconcile(db),
+      Error,
+      "OCCURRENCE_RECONCILIATION_CONFLICT",
+    );
+
+    for (
+      const change of [
+        `update expenses set deleted_reason='user_deleted' where id='${imported}'`,
+        `update expenses set provider_pending_transaction_id='bank-payment' where id='${actual}'`,
+        `update expenses set split_group_id=gen_random_uuid() where id='${actual}'`,
+        `update expenses set user_overrides='{"category":true}' where id='${imported}'`,
+        `update recurring_occurrences set confirmation_source='user'`,
+        `update expenses set account_id=null where id='${actual}'`,
+      ]
+    ) {
+      await db.exec("begin");
+      try {
+        await db.exec(change);
+        await assertRejects(
+          () => apply(2),
+          Error,
+          "OCCURRENCE_RECONCILIATION_CONFLICT",
+        );
+      } finally {
+        await db.exec("rollback");
+      }
+    }
+    assertEquals(
+      (await db.query("select cursor_generation from bank_connections")).rows,
+      [{ cursor_generation: 2 }],
     );
   } finally {
     await db.close();

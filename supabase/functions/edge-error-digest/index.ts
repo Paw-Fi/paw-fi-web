@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { isRecoveredCapture } from "./recovered-capture.ts";
 
 /**
  * Messages that are safe to ignore and should not appear in the digest.
@@ -203,9 +204,8 @@ ${htmlSections.join("\n")}
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
-  
-  try {
 
+  try {
     if (req.method === "OPTIONS") {
       return new Response("ok", { headers: corsHeaders });
     }
@@ -243,7 +243,9 @@ Deno.serve(async (req) => {
     }
 
     if (!alertsTo) {
-      console.error("[edge-error-digest] EDGE_ERROR_ALERT_TO is not configured");
+      console.error(
+        "[edge-error-digest] EDGE_ERROR_ALERT_TO is not configured",
+      );
       return new Response(
         JSON.stringify({ error: "EDGE_ERROR_ALERT_TO is not configured" }),
         {
@@ -261,353 +263,384 @@ Deno.serve(async (req) => {
       },
     });
 
-  const currentWindow = floorToFiveMinuteWindow(new Date());
+    const currentWindow = floorToFiveMinuteWindow(new Date());
 
-  const { data: pendingWindows, error: pendingWindowsError } = await supabase
-    .from("edge_error_aggregates")
-    .select("window_start")
-    .lt("window_start", currentWindow.toISOString())
-    .order("window_start", { ascending: false })
-    .limit(200);
+    const { data: pendingWindows, error: pendingWindowsError } = await supabase
+      .from("edge_error_aggregates")
+      .select("window_start")
+      .lt("window_start", currentWindow.toISOString())
+      .order("window_start", { ascending: false })
+      .limit(200);
 
-  if (pendingWindowsError) {
-    console.error("[edge-error-digest] Failed to fetch pending windows:", pendingWindowsError);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch pending windows" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  const uniqueWindows = Array.from(
-    new Set(
-      (pendingWindows || []).map(
-        (row: { window_start: string }) => row.window_start,
-      ),
-    ),
-  );
-
-  let candidateWindows = uniqueWindows;
-  if (uniqueWindows.length > 0) {
-    const { data: digestStatuses, error: digestStatusesError } = await supabase
-      .from("edge_error_digest_windows")
-      .select("window_start,status")
-      .in("window_start", uniqueWindows);
-
-    if (digestStatusesError) {
+    if (pendingWindowsError) {
       console.error(
-        "[edge-error-digest] Failed to load digest window statuses:",
-        digestStatusesError,
+        "[edge-error-digest] Failed to fetch pending windows:",
+        pendingWindowsError,
       );
-    } else {
-      const sentWindowSet = new Set(
-        (digestStatuses || [])
-          .filter(
-            (row: { window_start: string; status: string }) =>
-              row?.status === "sent",
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch pending windows" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const uniqueWindows = Array.from(
+      new Set(
+        (pendingWindows || []).map(
+          (row: { window_start: string }) => row.window_start,
+        ),
+      ),
+    );
+
+    let candidateWindows = uniqueWindows;
+    if (uniqueWindows.length > 0) {
+      const { data: digestStatuses, error: digestStatusesError } =
+        await supabase
+          .from("edge_error_digest_windows")
+          .select("window_start,status")
+          .in("window_start", uniqueWindows);
+
+      if (digestStatusesError) {
+        console.error(
+          "[edge-error-digest] Failed to load digest window statuses:",
+          digestStatusesError,
+        );
+      } else {
+        const sentWindowSet = new Set(
+          (digestStatuses || [])
+            .filter(
+              (row: { window_start: string; status: string }) =>
+                row?.status === "sent",
+            )
+            .map(
+              (row: { window_start: string; status: string }) =>
+                row.window_start,
+            ),
+        );
+        candidateWindows = uniqueWindows.filter(
+          (windowStart) => !sentWindowSet.has(windowStart),
+        );
+        console.log("[edge-error-digest] Window selection summary", {
+          fetched: uniqueWindows.length,
+          sentFilteredOut: sentWindowSet.size,
+          candidates: candidateWindows.length,
+        });
+      }
+    }
+
+    if (!candidateWindows.length) {
+      console.log("[edge-error-digest] No candidate windows after filtering");
+      return new Response(
+        JSON.stringify({ ok: true, processed_windows: 0, sent_windows: 0 }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let sentWindows = 0;
+    const results: Array<Record<string, unknown>> = [];
+    const rowsForDigest: ErrorAggregateRow[] = [];
+    const windowsForDigest: string[] = [];
+
+    for (const windowStart of candidateWindows) {
+      try {
+        const { data: claimData, error: claimError } = await supabase.rpc(
+          "claim_edge_error_digest_window",
+          { p_window_start: windowStart },
+        );
+
+        if (claimError) {
+          console.error(
+            `[edge-error-digest] Claim failed for ${windowStart}:`,
+            claimError,
+          );
+          results.push({ window_start: windowStart, error: "claim_failed" });
+          continue;
+        }
+
+        if (!claimData) {
+          results.push({ window_start: windowStart, skipped: "not_claimed" });
+          continue;
+        }
+
+        const { data: rows, error: rowsError } = await supabase
+          .from("edge_error_aggregates")
+          .select(
+            "window_start, function_name, fingerprint, count, first_seen_at, last_seen_at, sample_message, sample_stack, sample_context",
           )
-          .map(
-            (row: { window_start: string; status: string }) =>
-              row.window_start,
-          ),
+          .eq("window_start", windowStart)
+          .order("count", { ascending: false });
+
+        if (rowsError) {
+          console.error(
+            `[edge-error-digest] Failed to load rows for ${windowStart}:`,
+            rowsError,
+          );
+          const { error: markFailedError } = await supabase
+            .from("edge_error_digest_windows")
+            .upsert({
+              window_start: windowStart,
+              status: "failed",
+              last_error: "failed_to_load_rows",
+              updated_at: new Date().toISOString(),
+            });
+          if (markFailedError) throw markFailedError;
+
+          results.push({
+            window_start: windowStart,
+            error: "failed_to_load_rows",
+          });
+          continue;
+        }
+
+        if (!rows || rows.length === 0) {
+          const { error: markEmptyError } = await supabase
+            .from("edge_error_digest_windows")
+            .upsert({
+              window_start: windowStart,
+              status: "sent",
+              sent_at: new Date().toISOString(),
+              last_error: null,
+              updated_at: new Date().toISOString(),
+            });
+          if (markEmptyError) throw markEmptyError;
+
+          results.push({ window_start: windowStart, skipped: "empty" });
+          continue;
+        }
+
+        // Filter out messages that are safe to ignore before adding to digest
+        const filteredRows: ErrorAggregateRow[] = [];
+        for (const row of rows as ErrorAggregateRow[]) {
+          if (
+            !isExcludedMessage(row.sample_message) &&
+            !(await isRecoveredCapture(supabase, row))
+          ) {
+            filteredRows.push(row);
+          }
+        }
+        const excludedCount = rows.length - filteredRows.length;
+
+        if (filteredRows.length === 0) {
+          // All rows were excluded - mark as sent without sending email
+          const { error: markEmptyAfterFilterError } = await supabase
+            .from("edge_error_digest_windows")
+            .upsert({
+              window_start: windowStart,
+              status: "sent",
+              sent_at: new Date().toISOString(),
+              last_error: null,
+              updated_at: new Date().toISOString(),
+            });
+          if (markEmptyAfterFilterError) throw markEmptyAfterFilterError;
+
+          // Discovery scans only the newest 200 aggregates. Retiring this window
+          // from that queue lets older, actionable alerts reach the sender.
+          const { error: cleanupError } = await supabase
+            .from("edge_error_aggregates")
+            .delete()
+            .eq("window_start", windowStart);
+          if (cleanupError) throw cleanupError;
+
+          results.push({
+            window_start: windowStart,
+            skipped: "all_excluded",
+            excluded_count: excludedCount,
+          });
+          continue;
+        }
+
+        rowsForDigest.push(...filteredRows);
+        windowsForDigest.push(windowStart);
+        results.push({
+          window_start: windowStart,
+          queued_for_batch: true,
+          unique_fingerprints: filteredRows.length,
+          excluded_fingerprints: excludedCount,
+        });
+      } catch (windowError) {
+        const lastError = trimText(
+          windowError instanceof Error
+            ? windowError.message
+            : String(windowError),
+          1000,
+        );
+        const { error: markFailedError } = await supabase
+          .from("edge_error_digest_windows")
+          .upsert({
+            window_start: windowStart,
+            status: "failed",
+            last_error: lastError,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (markFailedError) {
+          results.push({
+            window_start: windowStart,
+            error: "window_failed_and_failed_to_mark",
+          });
+          continue;
+        }
+
+        results.push({
+          window_start: windowStart,
+          error: "window_processing_failed",
+        });
+      }
+    }
+
+    if (rowsForDigest.length > 0 && windowsForDigest.length > 0) {
+      const firstWindow = windowsForDigest[0];
+      const lastWindow = windowsForDigest[windowsForDigest.length - 1];
+      const digestWindowLabel =
+        firstWindow === lastWindow
+          ? firstWindow
+          : `${firstWindow} .. ${lastWindow}`;
+
+      const digest = buildDigestEmail(rowsForDigest, digestWindowLabel);
+      const resendAbortController = new AbortController();
+      const resendTimeout = setTimeout(
+        () => resendAbortController.abort(),
+        20000,
       );
-      candidateWindows = uniqueWindows.filter(
-        (windowStart) => !sentWindowSet.has(windowStart),
-      );
-      console.log("[edge-error-digest] Window selection summary", {
-        fetched: uniqueWindows.length,
-        sentFilteredOut: sentWindowSet.size,
-        candidates: candidateWindows.length,
+
+      const resendResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: [alertsTo],
+          subject: digest.subject,
+          html: digest.html,
+          text: digest.text,
+        }),
+        signal: resendAbortController.signal,
+      }).finally(() => clearTimeout(resendTimeout));
+
+      console.log("[edge-error-digest] Batched resend response", {
+        status: resendResponse.status,
+        windowsInBatch: windowsForDigest.length,
+        rowsInBatch: rowsForDigest.length,
+      });
+
+      if (!resendResponse.ok) {
+        const resendError = trimText(await resendResponse.text(), 2000);
+        console.error(
+          "[edge-error-digest] Resend API error for batched digest:",
+          {
+            status: resendResponse.status,
+            error: resendError,
+          },
+        );
+
+        for (const windowStart of windowsForDigest) {
+          const { error: markFailedError } = await supabase
+            .from("edge_error_digest_windows")
+            .upsert({
+              window_start: windowStart,
+              status: "failed",
+              last_error: `resend_error:${resendResponse.status}:${resendError}`,
+              updated_at: new Date().toISOString(),
+            });
+          if (markFailedError) {
+            console.error(
+              "[edge-error-digest] Failed to mark window as failed:",
+              {
+                windowStart,
+                markFailedError,
+              },
+            );
+          }
+        }
+
+        results.push({
+          error: "batched_resend_send_failed",
+          status: resendResponse.status,
+          windows_in_batch: windowsForDigest.length,
+        });
+      } else {
+        for (const windowStart of windowsForDigest) {
+          const { error: markSentError } = await supabase
+            .from("edge_error_digest_windows")
+            .upsert({
+              window_start: windowStart,
+              status: "sent",
+              sent_at: new Date().toISOString(),
+              last_error: null,
+              updated_at: new Date().toISOString(),
+            });
+          if (markSentError) throw markSentError;
+          sentWindows++;
+        }
+
+        results.push({
+          sent: true,
+          windows_in_batch: windowsForDigest.length,
+          total_errors: digest.totalCount,
+          unique_fingerprints: rowsForDigest.length,
+        });
+
+        // Immediate cleanup after successful digest delivery.
+        const { error: deleteAggregatesError } = await supabase
+          .from("edge_error_aggregates")
+          .delete()
+          .in("window_start", windowsForDigest);
+
+        if (deleteAggregatesError) {
+          console.error(
+            "[edge-error-digest] Failed to cleanup edge_error_aggregates:",
+            deleteAggregatesError,
+          );
+        }
+
+        const { error: deleteDigestWindowsError } = await supabase
+          .from("edge_error_digest_windows")
+          .delete()
+          .in("window_start", windowsForDigest);
+
+        if (deleteDigestWindowsError) {
+          console.error(
+            "[edge-error-digest] Failed to cleanup edge_error_digest_windows:",
+            deleteDigestWindowsError,
+          );
+        }
+      }
+    } else {
+      console.log("[edge-error-digest] No rows collected for digest send", {
+        candidateWindows: candidateWindows.length,
+        sentWindows,
       });
     }
-  }
 
-  if (!candidateWindows.length) {
-    console.log("[edge-error-digest] No candidate windows after filtering");
     return new Response(
-      JSON.stringify({ ok: true, processed_windows: 0, sent_windows: 0 }),
+      JSON.stringify({
+        ok: true,
+        processed_windows: candidateWindows.length,
+        sent_windows: sentWindows,
+        results,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
-  }
-
-  let sentWindows = 0;
-  const results: Array<Record<string, unknown>> = [];
-  const rowsForDigest: ErrorAggregateRow[] = [];
-  const windowsForDigest: string[] = [];
-
-  for (const windowStart of candidateWindows) {
-    try {
-      const { data: claimData, error: claimError } = await supabase.rpc(
-        "claim_edge_error_digest_window",
-        { p_window_start: windowStart },
-      );
-
-      if (claimError) {
-        console.error(`[edge-error-digest] Claim failed for ${windowStart}:`, claimError);
-        results.push({ window_start: windowStart, error: "claim_failed" });
-        continue;
-      }
-
-      if (!claimData) {
-        results.push({ window_start: windowStart, skipped: "not_claimed" });
-        continue;
-      }
-
-      const { data: rows, error: rowsError } = await supabase
-        .from("edge_error_aggregates")
-        .select(
-          "window_start, function_name, fingerprint, count, first_seen_at, last_seen_at, sample_message, sample_stack, sample_context",
-        )
-        .eq("window_start", windowStart)
-        .order("count", { ascending: false });
-
-      if (rowsError) {
-        console.error(`[edge-error-digest] Failed to load rows for ${windowStart}:`, rowsError);
-        const { error: markFailedError } = await supabase
-          .from("edge_error_digest_windows")
-          .upsert({
-            window_start: windowStart,
-            status: "failed",
-            last_error: "failed_to_load_rows",
-            updated_at: new Date().toISOString(),
-          });
-        if (markFailedError) throw markFailedError;
-
-        results.push({
-          window_start: windowStart,
-          error: "failed_to_load_rows",
-        });
-        continue;
-      }
-
-      if (!rows || rows.length === 0) {
-        const { error: markEmptyError } = await supabase
-          .from("edge_error_digest_windows")
-          .upsert({
-            window_start: windowStart,
-            status: "sent",
-            sent_at: new Date().toISOString(),
-            last_error: null,
-            updated_at: new Date().toISOString(),
-          });
-        if (markEmptyError) throw markEmptyError;
-
-        results.push({ window_start: windowStart, skipped: "empty" });
-        continue;
-      }
-
-      // Filter out messages that are safe to ignore before adding to digest
-      const filteredRows = (rows as ErrorAggregateRow[]).filter(
-        (row) => !isExcludedMessage(row.sample_message),
-      );
-      const excludedCount = rows.length - filteredRows.length;
-
-      if (filteredRows.length === 0) {
-        // All rows were excluded - mark as sent without sending email
-        const { error: markEmptyAfterFilterError } = await supabase
-          .from("edge_error_digest_windows")
-          .upsert({
-            window_start: windowStart,
-            status: "sent",
-            sent_at: new Date().toISOString(),
-            last_error: null,
-            updated_at: new Date().toISOString(),
-          });
-        if (markEmptyAfterFilterError) throw markEmptyAfterFilterError;
-
-        results.push({
-          window_start: windowStart,
-          skipped: "all_excluded",
-          excluded_count: excludedCount,
-        });
-        continue;
-      }
-
-      rowsForDigest.push(...filteredRows);
-      windowsForDigest.push(windowStart);
-      results.push({
-        window_start: windowStart,
-        queued_for_batch: true,
-        unique_fingerprints: filteredRows.length,
-        excluded_fingerprints: excludedCount,
-      });
-    } catch (windowError) {
-      const lastError = trimText(
-        windowError instanceof Error
-          ? windowError.message
-          : String(windowError),
-        1000,
-      );
-      const { error: markFailedError } = await supabase
-        .from("edge_error_digest_windows")
-        .upsert({
-          window_start: windowStart,
-          status: "failed",
-          last_error: lastError,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (markFailedError) {
-        results.push({
-          window_start: windowStart,
-          error: "window_failed_and_failed_to_mark",
-        });
-        continue;
-      }
-
-      results.push({
-        window_start: windowStart,
-        error: "window_processing_failed",
-      });
-    }
-  }
-
-  if (rowsForDigest.length > 0 && windowsForDigest.length > 0) {
-    const firstWindow = windowsForDigest[0];
-    const lastWindow = windowsForDigest[windowsForDigest.length - 1];
-    const digestWindowLabel = firstWindow === lastWindow
-      ? firstWindow
-      : `${firstWindow} .. ${lastWindow}`;
-
-    const digest = buildDigestEmail(rowsForDigest, digestWindowLabel);
-    const resendAbortController = new AbortController();
-    const resendTimeout = setTimeout(
-      () => resendAbortController.abort(),
-      20000,
-    );
-
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: resendFrom,
-        to: [alertsTo],
-        subject: digest.subject,
-        html: digest.html,
-        text: digest.text,
-      }),
-      signal: resendAbortController.signal,
-    }).finally(() => clearTimeout(resendTimeout));
-
-    console.log("[edge-error-digest] Batched resend response", {
-      status: resendResponse.status,
-      windowsInBatch: windowsForDigest.length,
-      rowsInBatch: rowsForDigest.length,
-    });
-
-    if (!resendResponse.ok) {
-      const resendError = trimText(await resendResponse.text(), 2000);
-      console.error("[edge-error-digest] Resend API error for batched digest:", {
-        status: resendResponse.status,
-        error: resendError,
-      });
-
-      for (const windowStart of windowsForDigest) {
-        const { error: markFailedError } = await supabase
-          .from("edge_error_digest_windows")
-          .upsert({
-            window_start: windowStart,
-            status: "failed",
-            last_error: `resend_error:${resendResponse.status}:${resendError}`,
-            updated_at: new Date().toISOString(),
-          });
-        if (markFailedError) {
-          console.error("[edge-error-digest] Failed to mark window as failed:", {
-            windowStart,
-            markFailedError,
-          });
-        }
-      }
-
-      results.push({
-        error: "batched_resend_send_failed",
-        status: resendResponse.status,
-        windows_in_batch: windowsForDigest.length,
-      });
-    } else {
-      for (const windowStart of windowsForDigest) {
-        const { error: markSentError } = await supabase
-          .from("edge_error_digest_windows")
-          .upsert({
-            window_start: windowStart,
-            status: "sent",
-            sent_at: new Date().toISOString(),
-            last_error: null,
-            updated_at: new Date().toISOString(),
-          });
-        if (markSentError) throw markSentError;
-        sentWindows++;
-      }
-
-      results.push({
-        sent: true,
-        windows_in_batch: windowsForDigest.length,
-        total_errors: digest.totalCount,
-        unique_fingerprints: rowsForDigest.length,
-      });
-
-      // Immediate cleanup after successful digest delivery.
-      const { error: deleteAggregatesError } = await supabase
-        .from("edge_error_aggregates")
-        .delete()
-        .in("window_start", windowsForDigest);
-
-      if (deleteAggregatesError) {
-        console.error(
-          "[edge-error-digest] Failed to cleanup edge_error_aggregates:",
-          deleteAggregatesError,
-        );
-      }
-
-      const { error: deleteDigestWindowsError } = await supabase
-        .from("edge_error_digest_windows")
-        .delete()
-        .in("window_start", windowsForDigest);
-
-      if (deleteDigestWindowsError) {
-        console.error(
-          "[edge-error-digest] Failed to cleanup edge_error_digest_windows:",
-          deleteDigestWindowsError,
-        );
-      }
-    }
-  } else {
-    console.log("[edge-error-digest] No rows collected for digest send", {
-      candidateWindows: candidateWindows.length,
-      sentWindows,
-    });
-  }
-  
-  return new Response(
-    JSON.stringify({
-      ok: true,
-      processed_windows: candidateWindows.length,
-      sent_windows: sentWindows,
-      results,
-    }),
-    {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    },
-  );
   } catch (error) {
     console.error("[edge-error-digest] Unhandled error:", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: "Internal server error",
-        message: error instanceof Error ? error.message : String(error)
+        message: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,
