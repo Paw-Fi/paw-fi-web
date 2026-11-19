@@ -74,6 +74,33 @@ export function isWriteMutationToolName(
   );
 }
 
+// Tools whose successful result means the model actually consulted stored
+// records this turn. analyze_expense is deliberately excluded: it extracts a
+// draft from text/media and never reads or writes the ledger.
+const RECORD_LOOKUP_TOOL_NAMES = new Set([
+  "list_expenses",
+  "financial_insight",
+  "get_budget",
+  "list_wallets",
+  "get_space_info",
+  "generate_chart_url",
+]);
+
+export function isRecordLookupToolName(
+  toolName: string | null,
+  toolResult?: unknown,
+): boolean {
+  if (toolName === "manage_recurring") {
+    const action = typeof (toolResult as Record<string, unknown> | null)
+        ?.action === "string"
+      ? (toolResult as Record<string, string>).action
+      : "";
+    return action === "list_series" || action === "list_history" ||
+      action === "analyze_history";
+  }
+  return typeof toolName === "string" && RECORD_LOOKUP_TOOL_NAMES.has(toolName);
+}
+
 export type MutationClaimDiagnosis =
   | "ok"
   | "write_mutation_succeeded"
@@ -84,6 +111,10 @@ export type MutationClaimDiagnosis =
 export function diagnoseUnsafeTransactionMutationClaim(params: {
   responseText: string;
   writeMutationSucceeded: boolean;
+  // When true, only assertive first-person claims are blocked. Used after
+  // read-only/analysis tool turns, where past-tense verbs such as "recorded
+  // expenses" legitimately describe existing data.
+  assertiveOnly?: boolean;
 }): { blocked: boolean; reason: MutationClaimDiagnosis } {
   if (params.writeMutationSucceeded) {
     return { blocked: false, reason: "write_mutation_succeeded" };
@@ -103,6 +134,10 @@ export function diagnoseUnsafeTransactionMutationClaim(params: {
     STRICT_TRANSACTION_CONTEXT_PATTERN.test(text)
   ) {
     return { blocked: true, reason: "assertive_claim" };
+  }
+
+  if (params.assertiveOnly) {
+    return { blocked: false, reason: "ok" };
   }
 
   // Weaker generic claim — bypass only if the message reads as a pure proposal.
@@ -144,6 +179,66 @@ export function shouldBlockUnsafeGenericMutationClaim(params: {
 
 export function buildUnsafeGenericMutationClaimFallback(): string {
   return "I couldn't complete that just yet. Please try again in a moment.";
+}
+
+// Claims that the model consulted stored records ("I checked", "I verified",
+// "I can confirm", "it has been verified"). These are only grounded when a
+// record lookup tool or a write mutation actually succeeded on this turn;
+// otherwise the model is answering from conversation history alone.
+const VERIFICATION_CLAIM_PATTERN =
+  /(?:\bi\s*(?:['\u2019]\s*ve|have|had)?\s*(?:just\s+|also\s+|double[-\s]?)?(?:checked|verified|confirmed|reviewed|found|looked(?:\s+\w+){0,2}\s+up)\b|\bi\s+can\s+confirm\b|\b(?:has|have|was|were)\s+(?:been\s+)?(?:checked|verified|double[-\s]?checked)\b)/i;
+
+const VERIFICATION_CONTEXT_PATTERN =
+  /\b(?:transaction|expense|income|payment|purchase|record|records|entry|entries|ledger|system|database|saved|logged|recorded|stored|missing)\b/i;
+
+export type VerificationClaimDiagnosis =
+  | "ok"
+  | "write_mutation_succeeded"
+  | "lookup_succeeded"
+  | "empty"
+  | "verification_claim";
+
+export function diagnoseUngroundedVerificationClaim(params: {
+  responseText: string;
+  writeMutationSucceeded: boolean;
+  lookupSucceeded: boolean;
+}): { blocked: boolean; reason: VerificationClaimDiagnosis } {
+  if (params.writeMutationSucceeded) {
+    return { blocked: false, reason: "write_mutation_succeeded" };
+  }
+  if (params.lookupSucceeded) {
+    return { blocked: false, reason: "lookup_succeeded" };
+  }
+  const text = String(params.responseText || "").trim();
+  if (!text) return { blocked: false, reason: "empty" };
+  if (
+    VERIFICATION_CLAIM_PATTERN.test(text) &&
+    VERIFICATION_CONTEXT_PATTERN.test(text)
+  ) {
+    return { blocked: true, reason: "verification_claim" };
+  }
+  return { blocked: false, reason: "ok" };
+}
+
+export function buildUngroundedVerificationClaimFallback(): string {
+  return "I wasn't able to verify that against your records just now. Please check the Moneko app, or ask me to list your recent transactions.";
+}
+
+// analyze_expense only extracts a draft; it never persists anything. Mark the
+// tool result so the model cannot mistake a successful extraction for a save.
+export function annotateUnsavedAnalysisResult<T>(result: T): T {
+  if (
+    !result || typeof result !== "object" || Array.isArray(result) ||
+    (result as Record<string, unknown>).success !== true
+  ) {
+    return result;
+  }
+  return {
+    ...(result as Record<string, unknown>),
+    saved: false,
+    next_step:
+      "Nothing has been saved yet. To record these transactions, call add_transaction (or add_transactions_batch) with the extracted details. Do not tell the user anything was saved until that call succeeds.",
+  } as T;
 }
 
 // Exported for callers that want to force a tool call on the next model turn.

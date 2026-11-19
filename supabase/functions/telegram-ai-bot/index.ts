@@ -150,8 +150,12 @@ import {
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
 import {
+  annotateUnsavedAnalysisResult,
+  buildUngroundedVerificationClaimFallback,
   buildUnsafeMutationClaimFallback,
+  diagnoseUngroundedVerificationClaim,
   diagnoseUnsafeTransactionMutationClaim,
+  isRecordLookupToolName,
   isWriteMutationToolName,
   WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
 } from "../shared/bot/mutation-claim-guard.ts";
@@ -1411,21 +1415,32 @@ Deno.serve(async (req: Request) => {
         // Defense against AI hallucinating a save without a tool call.
         // Intent stays model-driven; only an unsafe model claim can trigger repair.
         if (!functionCalls || functionCalls.length === 0) {
+          const verificationDiag = diagnoseUngroundedVerificationClaim({
+            responseText: finalResponseText,
+            writeMutationSucceeded: false,
+            lookupSucceeded: false,
+          });
           const claimDiag = diagnoseUnsafeTransactionMutationClaim({
             responseText: finalResponseText,
             writeMutationSucceeded: false,
           });
-          const shouldForceWriteToolCall = claimDiag.blocked;
+          // A "I checked and it's saved/missing" answer with no tool call is a
+          // verification claim, not a save request: never force a write for it.
+          const shouldForceWriteToolCall =
+            claimDiag.blocked && !verificationDiag.blocked;
 
           console.log("[telegram-ai-bot] initial-response tool-call guard", {
             traceId,
             userMessage: incomingText,
             claimBlocked: claimDiag.blocked,
             claimReason: claimDiag.reason,
+            verificationClaimBlocked: verificationDiag.blocked,
             willForceToolCall: shouldForceWriteToolCall,
           });
 
-          if (shouldForceWriteToolCall) {
+          if (verificationDiag.blocked) {
+            finalResponseText = buildUngroundedVerificationClaimFallback();
+          } else if (shouldForceWriteToolCall) {
             try {
               const repairPrompt =
                 `Your previous response did not call a save tool. ` +
@@ -1481,6 +1496,7 @@ Deno.serve(async (req: Request) => {
 
         let toolSucceededAny = false;
         let writeMutationSucceededAny = false;
+        let lookupSucceededAny = false;
         let lastToolResult: any = null;
         let lastToolCallName: string | null = null;
         const toolErrorTexts: string[] = [];
@@ -1748,6 +1764,7 @@ Deno.serve(async (req: Request) => {
                     }
                   }
                 }
+                toolResult = annotateUnsavedAnalysisResult(toolResult);
               } else if (executionToolName === "list_expenses") {
                 const { householdId, spaceMeta } = resolveBotSpaceScope(
                   call.args,
@@ -3436,6 +3453,9 @@ Deno.serve(async (req: Request) => {
               if (isWriteMutationToolName(call.name, toolResult)) {
                 writeMutationSucceededAny = true;
               }
+              if (isRecordLookupToolName(call.name, toolResult)) {
+                lookupSucceededAny = true;
+              }
               if (
                 call.name === "confirm_budget" ||
                 call.name === "set_budget"
@@ -3542,6 +3562,7 @@ Deno.serve(async (req: Request) => {
           lastToolResult,
           toolErrorTexts,
           writeMutationSucceededAny,
+          lookupSucceededAny,
           emptyFallbackText:
             "I couldn't generate a response right now. Please try again in a few seconds.",
           onMutationClaimBlocked: (kind, context) => {
@@ -3550,7 +3571,9 @@ Deno.serve(async (req: Request) => {
                 ? "[telegram-ai-bot] final-response mutation-claim blocked"
                 : kind === "wallet"
                   ? "[telegram-ai-bot] final-response wallet mutation-claim blocked"
-                  : "[telegram-ai-bot] final-response generic mutation-claim blocked";
+                  : kind === "verification"
+                    ? "[telegram-ai-bot] final-response verification-claim blocked"
+                    : "[telegram-ai-bot] final-response generic mutation-claim blocked";
             console.log(label, { traceId, ...context });
           },
         });

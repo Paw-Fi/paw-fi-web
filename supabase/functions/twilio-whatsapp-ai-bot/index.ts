@@ -145,8 +145,10 @@ import {
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
 import {
+  annotateUnsavedAnalysisResult,
   buildUnsafeMutationClaimFallback,
   diagnoseUnsafeTransactionMutationClaim,
+  isRecordLookupToolName,
   isWriteMutationToolName,
   WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
 } from "../shared/bot/mutation-claim-guard.ts";
@@ -1170,6 +1172,7 @@ Deno.serve(async (req: Request) => {
     const toolErrorTexts: string[] = [];
     let toolSucceededAny = false;
     let writeMutationSucceededAny = false;
+    let lookupSucceededAny = false;
     let lastBudgetPockets: Array<{ name: string; percentage: number }> | null =
       null;
     let toolIterations = 0;
@@ -1271,6 +1274,7 @@ Deno.serve(async (req: Request) => {
                 },
               );
             }
+            toolResult = annotateUnsavedAnalysisResult(toolResult);
           } else if (executionToolName === "list_expenses") {
             const { householdId, spaceMeta } = resolveBotSpaceScope(
               call.args,
@@ -2255,6 +2259,9 @@ Deno.serve(async (req: Request) => {
           if (isWriteMutationToolName(call.name, toolResult)) {
             writeMutationSucceededAny = true;
           }
+          if (isRecordLookupToolName(call.name, toolResult)) {
+            lookupSucceededAny = true;
+          }
           if (call.name === "confirm_budget" || call.name === "set_budget") {
             const pocketsRaw = Array.isArray((toolResult as any)?.pockets)
               ? ((toolResult as any).pockets as any[])
@@ -2339,6 +2346,7 @@ Deno.serve(async (req: Request) => {
       lastToolResult,
       toolErrorTexts,
       writeMutationSucceededAny,
+      lookupSucceededAny,
       emptyFallbackText: buildProcessingFailureMessage(userLang),
       onMutationClaimBlocked: (kind, context) => {
         console.log(
@@ -3367,6 +3375,7 @@ Deno.serve(async (req: Request) => {
     // Tool-call loop (bounded) to support multi-round function calling.
     let toolSucceededAny = false;
     let writeMutationSucceededAny = false;
+    let lookupSucceededAny = false;
     let lastToolResult: any = null;
     let lastToolCallName: string | null = null;
     const toolErrorTexts: string[] = [];
@@ -3660,6 +3669,7 @@ Deno.serve(async (req: Request) => {
                 }
               }
             }
+            toolResult = annotateUnsavedAnalysisResult(toolResult);
           } else if (call.name === "create_custom_category") {
             const transactionType =
               String(call.args?.transaction_type || "expense").toLowerCase() ===
@@ -5183,6 +5193,9 @@ Deno.serve(async (req: Request) => {
           if (isWriteMutationToolName(call.name, toolResult)) {
             writeMutationSucceededAny = true;
           }
+          if (isRecordLookupToolName(call.name, toolResult)) {
+            lookupSucceededAny = true;
+          }
           if (call.name === "confirm_budget" || call.name === "set_budget") {
             const pocketsRaw = Array.isArray((toolResult as any)?.pockets)
               ? ((toolResult as any).pockets as any[])
@@ -5267,6 +5280,7 @@ Deno.serve(async (req: Request) => {
       lastToolResult,
       toolErrorTexts,
       writeMutationSucceededAny,
+      lookupSucceededAny,
       emptyFallbackText: buildProcessingFailureMessage(userLang),
       onMutationClaimBlocked: (kind, context) => {
         const label =

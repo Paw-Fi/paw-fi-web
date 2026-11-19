@@ -1,7 +1,9 @@
 import { buildBudgetDoneText } from "./budget-utils.ts";
 import {
+  buildUngroundedVerificationClaimFallback,
   buildUnsafeGenericMutationClaimFallback,
   buildUnsafeMutationClaimFallback,
+  diagnoseUngroundedVerificationClaim,
   diagnoseUnsafeTransactionMutationClaim,
   isWriteMutationToolName,
   shouldBlockUnsafeGenericMutationClaim,
@@ -11,11 +13,16 @@ import {
   shouldBlockUnsafeWalletMutationClaim,
 } from "./wallet-intent.ts";
 
-type MutationClaimGuardKind = "transaction" | "wallet" | "generic";
+type MutationClaimGuardKind =
+  | "transaction"
+  | "wallet"
+  | "generic"
+  | "verification";
 
 type MutationClaimGuardLogContext = {
   lastToolCallName: string | null;
   writeMutationSucceededAny: boolean;
+  lookupSucceededAny?: boolean;
   responseTextPreview: string;
   reason?: string;
 };
@@ -42,20 +49,28 @@ export function applyBotMutationClaimGuards(params: {
   lastToolCallName: string | null;
   lastToolResult: unknown;
   writeMutationSucceededAny: boolean;
+  // True when a record lookup tool succeeded on this turn. When omitted the
+  // verification-claim guard is skipped (caller has not wired lookup tracking).
+  lookupSucceededAny?: boolean;
   onBlocked?: (
     kind: MutationClaimGuardKind,
     context: MutationClaimGuardLogContext,
   ) => void;
 }): string {
   let finalResponseText = params.finalResponseText;
-  const shouldCheckTransactionClaim = isWriteMutationToolName(
+  const lastToolWasWrite = isWriteMutationToolName(
     params.lastToolCallName,
     params.lastToolResult,
   );
-  const finalDiag = shouldCheckTransactionClaim
+  // After a write tool the full diagnosis applies. After a read-only or
+  // analysis tool (analyze_expense, list_expenses, ...) nothing was persisted,
+  // so an assertive first-person save claim is still ungrounded; only the
+  // weaker generic verbs are tolerated there because they can describe data.
+  const finalDiag = params.lastToolCallName
     ? diagnoseUnsafeTransactionMutationClaim({
       responseText: finalResponseText,
       writeMutationSucceeded: params.writeMutationSucceededAny,
+      assertiveOnly: !lastToolWasWrite,
     })
     : { blocked: false, reason: "ok" as const };
   if (finalDiag.blocked) {
@@ -95,6 +110,23 @@ export function applyBotMutationClaimGuards(params: {
     });
     finalResponseText = buildUnsafeGenericMutationClaimFallback();
   }
+  if (params.lookupSucceededAny !== undefined) {
+    const verificationDiag = diagnoseUngroundedVerificationClaim({
+      responseText: finalResponseText,
+      writeMutationSucceeded: params.writeMutationSucceededAny,
+      lookupSucceeded: params.lookupSucceededAny,
+    });
+    if (verificationDiag.blocked) {
+      params.onBlocked?.("verification", {
+        lastToolCallName: params.lastToolCallName,
+        writeMutationSucceededAny: params.writeMutationSucceededAny,
+        lookupSucceededAny: params.lookupSucceededAny,
+        reason: verificationDiag.reason,
+        responseTextPreview: finalResponseText.slice(0, 200),
+      });
+      finalResponseText = buildUngroundedVerificationClaimFallback();
+    }
+  }
   return finalResponseText;
 }
 
@@ -106,6 +138,7 @@ export function finalizeBotResponseText(params: {
   lastToolResult: any;
   toolErrorTexts?: readonly string[];
   writeMutationSucceededAny: boolean;
+  lookupSucceededAny?: boolean;
   emptyFallbackText: string;
   onMutationClaimBlocked?: (
     kind: MutationClaimGuardKind,
@@ -146,6 +179,7 @@ export function finalizeBotResponseText(params: {
     lastToolCallName: params.lastToolCallName,
     lastToolResult: params.lastToolResult,
     writeMutationSucceededAny: params.writeMutationSucceededAny,
+    lookupSucceededAny: params.lookupSucceededAny,
     onBlocked: params.onMutationClaimBlocked,
   });
 
