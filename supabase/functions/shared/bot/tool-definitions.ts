@@ -674,10 +674,17 @@ export function buildListExpensesTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "list_expenses",
-    description: "List recent transactions (expenses or income).",
+    description:
+      "List individual transactions (expenses or income). Also use it to check whether a specific transaction is stored: pass start_date and end_date covering that transaction's date, then compare the returned rows. Never state that a record exists or is missing without calling this first.",
     parameters: {
       type: "OBJECT",
       properties: {
+        result_kind: {
+          type: "STRING",
+          enum: ["rows", "totals"],
+          description:
+            "rows: the user wants individual transactions. totals: the user wants a sum, average, breakdown or period summary; the backend then returns authoritative aggregates instead of rows.",
+        },
         type: transactionTypeSchema,
         currency: mode === "rich"
           ? { type: "STRING", description: "Optional: filter by currency" }
@@ -807,6 +814,11 @@ export function buildFinancialInsightTool(
               "Optional wallet name. Use 'primary wallet' for the default wallet.",
           }
           : stringSchema,
+        include_chart: {
+          type: "BOOLEAN",
+          description:
+            "True when the user asks for a chart, graph or other visual of this summary.",
+        },
       },
     },
   };

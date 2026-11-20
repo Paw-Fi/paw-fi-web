@@ -3,9 +3,11 @@
 import { GEMINI_MODEL_FALLBACKS } from "../gemini-models.ts";
 import { createVertexGenerativeAI } from "../vertex-ai-chat.ts";
 import { type BotMessageKey, botMessage } from "./bot-messages.ts";
+import { stripModelAuthoredReceiptLines } from "./save-receipt.ts";
 import {
   type BotTurnFacts,
   type BotTurnLedger,
+  buildTurnAudit,
   buildTurnEvidence,
   summarizeBotTurn,
 } from "./turn-ledger.ts";
@@ -88,7 +90,7 @@ asserts_completed_action: true when the draft states or implies that, in respons
 
 asserts_stored_record_state: true when the draft states or implies anything about what is or is not stored in the user's Moneko data, or that the assistant looked it up or verified it. This includes listing or totalling transactions, balances or budgets, saying something was saved or added earlier, saying a record is there, and saying a record is missing or cannot be found. False when the draft only repeats details the user just supplied, describes an extracted draft that it is offering to save, or gives general advice.
 
-consistent_with_evidence: false when any statement covered by the two questions above is contradicted by TURN_EVIDENCE or goes beyond it. Examples: a different amount, currency, date, merchant, count, wallet or space than the evidence shows; saying a specific record exists when the evidence rows do not contain a record with that date and amount; saying a record does not exist when the evidence did not search for it; saying more items were saved than succeeded; deriving a total from a list marked truncated. True when every such statement is directly supported by TURN_EVIDENCE, and true when both answers above are false. Translation of labels, locale-specific number or date formatting, rounding to the currency's minor unit and paraphrase are not contradictions. When a result is marked result_truncated, do not treat a statement that the missing part could support as a contradiction.
+consistent_with_evidence: false when any statement covered by the two questions above is contradicted by TURN_EVIDENCE or goes beyond it. Examples: a different amount, currency, date, merchant, count, wallet or space than the evidence shows; saying a specific record exists when the evidence rows do not contain a record with that date and amount; saying a record does not exist when the evidence did not search for it; saying more items were saved than succeeded; deriving a total from a list marked truncated. True when every such statement is directly supported by TURN_EVIDENCE, and true when both answers above are false. Translation of labels, locale-specific number or date formatting, rounding to the currency's minor unit and paraphrase are not contradictions. When a result is marked result_truncated, do not treat a statement that the missing part could support as a contradiction. A draft, preview, proposal or pending item in TURN_EVIDENCE is not saved: a draft that presents it as saved or applied is inconsistent.
 
 exposes_internal_details: true when the draft reveals implementation details such as tool or function names, field names, raw error text, status codes, database identifiers, or refers to tools, APIs, servers or back-end systems as such.
 
@@ -300,9 +302,13 @@ export async function groundBotReply(params: {
   languageLabel: string;
   canCorrect: boolean;
   mode?: ReplyGroundingMode;
+  // True when replyText is a backend failure notice because the model call
+  // itself failed. There is no draft to verify, only tool outcomes to report.
+  modelReplyUnavailable?: boolean;
 }): Promise<GroundBotReplyResult> {
   const mode = params.mode ?? REPLY_GROUNDING_MODES.enforce;
-  const text = String(params.replyText || "").trim();
+  // Receipt lines are reserved for the backend; a draft cannot carry its own.
+  const text = stripModelAuthoredReceiptLines(params.replyText);
   const facts = summarizeBotTurn(params.ledger);
   const audit = (
     patch: Partial<ReplyGroundingAudit>,
@@ -314,6 +320,24 @@ export async function groundBotReply(params: {
     mode,
     ...patch,
   });
+  if (params.modelReplyUnavailable) {
+    // Never tell the user to retry something that was already stored, and
+    // never call an attempted write "failed" when its outcome is unknown.
+    return facts.writeSucceeded || facts.writeFailed
+      ? {
+        status: "replaced",
+        text: botMessage(
+          facts.writeSucceeded ? "actionCompleted" : "outcomeUnconfirmed",
+          params.language,
+        ),
+        audit: audit({ replaced: true }),
+      }
+      : {
+        status: "accepted",
+        text: String(params.replyText || "").trim(),
+        audit: audit({}),
+      };
+  }
   if (!text) return { status: "accepted", text: "", audit: audit({}) };
 
   const evidence = buildTurnEvidence(params.ledger);
@@ -369,7 +393,7 @@ export async function groundBotReply(params: {
           audit: audit({ verdict, assessor: "ok", corrected: true }),
         };
       }
-      const rewritten = String(response.text() || "").trim();
+      const rewritten = stripModelAuthoredReceiptLines(response.text());
       if (rewritten) {
         const second = decideReplyGrounding(
           await params.assess({ replyText: rewritten, evidence }),
@@ -388,4 +412,33 @@ export async function groundBotReply(params: {
     }
   }
   return replace(verdict, "ok");
+}
+
+// Text-free record of one turn: what the verifier decided and what the tools
+// did. `metadata` is stored with the assistant message; `log` omits record IDs.
+export function buildGroundingRecord(params: {
+  audit: ReplyGroundingAudit | null;
+  ledger: BotTurnLedger;
+  mode: ReplyGroundingMode;
+  traceId?: string;
+}): { metadata: Record<string, unknown>; log: Record<string, unknown> } {
+  const audit: ReplyGroundingAudit = params.audit ?? {
+    verdict: "not_assessed",
+    assessor: "skipped",
+    corrected: false,
+    replaced: false,
+    mode: params.mode,
+  };
+  const turn = buildTurnAudit(params.ledger);
+  const trace = params.traceId ? { trace_id: params.traceId } : {};
+  return {
+    metadata: { version: 1, ...trace, ...audit, ...turn },
+    log: {
+      ...trace,
+      ...audit,
+      operations: turn.operations,
+      saved_transaction_count: turn.saved_transaction_ids.length,
+      batch_rows_not_saved: turn.batch_rows_not_saved,
+    },
+  };
 }

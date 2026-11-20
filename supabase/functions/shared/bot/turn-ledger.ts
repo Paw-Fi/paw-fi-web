@@ -122,6 +122,14 @@ function toSavedTransactionFact(
   };
 }
 
+// Accepts either the stored row or the persistence function's response
+// envelope ({ success, data: row }); a rejected envelope is never a saved row.
+function unwrapSavedRow(data: unknown): Record<string, unknown> | null {
+  const outer = asRecord(data);
+  if (!outer || typeof outer.id === "string") return outer;
+  return outer.success === false ? null : asRecord(outer.data);
+}
+
 // Returns whether the tool call is confirmed to have done what it is for.
 // A save counts only when the persistence layer returned the stored row.
 export function recordBotToolExecution(
@@ -143,7 +151,7 @@ export function recordBotToolExecution(
   let succeeded: boolean;
   if (tool === "add_transaction") {
     const fact = result?.success === true
-      ? toSavedTransactionFact(result.data, args?.type)
+      ? toSavedTransactionFact(unwrapSavedRow(result.data), args?.type)
       : null;
     if (fact) ledger.savedTransactions.push(fact);
     succeeded = fact !== null;
@@ -224,13 +232,24 @@ export function buildTurnEvidence(ledger: BotTurnLedger): string {
   });
 }
 
+export interface BotTurnAudit {
+  operations: Array<{
+    tool: string;
+    kind: BotToolKind;
+    outcome: "succeeded" | "failed";
+    action?: string;
+  }>;
+  saved_transaction_ids: string[];
+  batch_rows_not_saved: number;
+}
+
 // Bounded, text-free record for logs and chat_messages.metadata.
-export function buildTurnAudit(ledger: BotTurnLedger): Record<string, unknown> {
+export function buildTurnAudit(ledger: BotTurnLedger): BotTurnAudit {
   return {
     operations: ledger.executions.map((item) => ({
       tool: item.tool,
       kind: item.kind,
-      outcome: item.succeeded ? "succeeded" : "failed",
+      outcome: item.succeeded ? "succeeded" as const : "failed" as const,
       ...(item.action ? { action: item.action } : {}),
     })),
     saved_transaction_ids: ledger.savedTransactions.map((item) => item.id)

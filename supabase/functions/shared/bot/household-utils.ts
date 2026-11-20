@@ -194,11 +194,15 @@ export function applyPreferredSpaceDefaultToToolCall(
   };
 }
 
+// Script-agnostic: keeps letters and digits of every writing system and folds
+// case and diacritics, so "María", "maria", "Мария" and "山田" all stay matchable.
 export function normalizeNameForMatch(value: string): string {
   return (value || "")
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
     .toLowerCase()
     .replace(/@.*/, "")
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
     .replace(/\s+/g, " ");
 }

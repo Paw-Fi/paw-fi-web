@@ -3,6 +3,7 @@ import {
   upsertEnvelopeCategoryLink,
 } from "../budgets-helpers.ts";
 import { formatInvokeError } from "../formatting-helpers.ts";
+import { botMessage } from "./bot-messages.ts";
 
 type SupabaseLike = {
   from: (table: string) => any;
@@ -37,6 +38,7 @@ function formatPct(value: number): string {
 
 export function buildBudgetDoneText(
   pockets: Array<{ name: string; percentage: number }>,
+  language?: string | null,
 ): string {
   const cleaned = pockets
     .map((p) => ({
@@ -44,11 +46,11 @@ export function buildBudgetDoneText(
       percentage: Number(p.percentage) || 0,
     }))
     .filter((p) => p.name.length > 0);
-  if (!cleaned.length) return "Done — budget updated.";
+  if (!cleaned.length) return botMessage("budgetUpdated", language);
   const list = cleaned
     .map((p) => `${p.name} ${formatPct(p.percentage)}`)
     .join(", ");
-  return `Done — updated pockets: ${list}.`;
+  return botMessage("pocketsUpdated", language, list);
 }
 
 function isNewerIso(

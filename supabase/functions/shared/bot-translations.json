@@ -389,5 +389,39 @@
     "vi": "Hiện tôi chưa thể gửi đầy đủ câu trả lời. Bạn vui lòng thử lại với yêu cầu ngắn hơn nhé?",
     "zh": "我刚才无法送达完整的回复。请缩小请求范围后再试一次。",
     "zh_TW": "我剛才無法送達完整的回覆。請縮小請求範圍後再試一次。"
+  },
+  "pickNumber": {
+    "en": "Reply with a number from 1 to {0}.",
+    "de": "Antworte mit einer Zahl von 1 bis {0}.",
+    "es": "Responde con un número del 1 al {0}.",
+    "fr": "Répondez avec un numéro de 1 à {0}.",
+    "it": "Rispondi con un numero da 1 a {0}.",
+    "ja": "1〜{0} の番号で返信してください。",
+    "ko": "1부터 {0}까지의 번호로 답장해 주세요.",
+    "nl": "Antwoord met een nummer van 1 tot {0}.",
+    "ru": "Ответьте числом от 1 до {0}.",
+    "th": "ตอบกลับด้วยหมายเลข 1 ถึง {0}",
+    "uk": "Відповідайте числом від 1 до {0}.",
+    "ur": "1 سے {0} تک کوئی نمبر بھیجیں۔",
+    "vi": "Hãy trả lời bằng một số từ 1 đến {0}.",
+    "zh": "请回复 1 到 {0} 之间的数字。",
+    "zh_TW": "請回覆 1 到 {0} 之間的數字。"
+  },
+  "whichOne": {
+    "en": "Which one do you mean? Tap a button:",
+    "de": "Welche meinst du? Tippe auf eine Schaltfläche:",
+    "es": "¿Cuál quieres decir? Toca un botón:",
+    "fr": "Laquelle voulez-vous dire ? Appuyez sur un bouton :",
+    "it": "Quale intendi? Tocca un pulsante:",
+    "ja": "どれのことですか？ボタンをタップしてください:",
+    "ko": "어떤 항목을 말씀하시나요? 버튼을 눌러 주세요:",
+    "nl": "Welke bedoel je? Tik op een knop:",
+    "ru": "Какую именно вы имеете в виду? Нажмите кнопку:",
+    "th": "คุณหมายถึงรายการไหน แตะปุ่มเพื่อเลือก:",
+    "uk": "Яку саме ви маєте на увазі? Натисніть кнопку:",
+    "ur": "آپ کی مراد کون سا ہے؟ ایک بٹن پر ٹیپ کریں:",
+    "vi": "Bạn muốn nói đến mục nào? Hãy nhấn một nút:",
+    "zh": "你指的是哪一个？请点击按钮：",
+    "zh_TW": "你指的是哪一個？請點選按鈕："
   }
 }
