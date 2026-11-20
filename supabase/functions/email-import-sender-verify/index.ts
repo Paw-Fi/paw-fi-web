@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import {
   hashSenderVerificationToken,
   isValidSenderVerificationToken,
@@ -134,4 +134,4 @@ export async function handleSenderVerification(
   }
 }
 
-if (import.meta.main) Deno.serve(handleSenderVerification);
+if (import.meta.main) Deno.serve(withCors(handleSenderVerification));

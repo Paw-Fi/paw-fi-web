@@ -4,7 +4,7 @@
 // - For GPT callers: returns ONLY a Markdown image so the chat renders the chart.
 // - For non-GPT callers: returns JSON payload with `data.chartImageUrl`.
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
@@ -335,7 +335,7 @@ async function respondWithChart({
 }
 
 // ---------- Server ----------
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -653,4 +653,4 @@ Deno.serve(async (req) => {
       },
     );
   }
-});
+}));

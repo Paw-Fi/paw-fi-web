@@ -2,7 +2,7 @@
 // Allows household members to acknowledge/confirm income entries
 // Supports one-tap acknowledgement for transparency and trust
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -18,7 +18,7 @@ interface RequestBody {
   incomeId: string; // Income transaction ID to acknowledge
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -173,4 +173,4 @@ Deno.serve(async (req: Request) => {
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
-});
+}));

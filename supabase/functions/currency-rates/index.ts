@@ -1,12 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders, withCors } from "../shared/cors.ts";
+import { withCors } from "../shared/cors.ts";
 import {
   normalizeExchangeRatePayload,
   shouldRefreshCurrencyRates,
 } from "../shared/currency-rates.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
-const RATE_BASE_CURRENCY = "USD"; 
+const RATE_BASE_CURRENCY = "USD";
 const RATE_TTL_HOURS = 12;
 const PROVIDER_URL = "https://open.er-api.com/v6/latest/USD";
 const SOURCE = "open.er-api.com";
@@ -198,7 +198,7 @@ Sample API Response:
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -219,112 +219,114 @@ function toClientPayload(row: Record<string, unknown>, isStale = false) {
   };
 }
 
-Deno.serve(withCors(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-  if (req.method !== "GET" && req.method !== "POST") {
-    return errorResponse("Method not allowed", 405);
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey) {
-    return errorResponse("Server not configured", 500);
-  }
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: { "X-Client-Info": "moneko-currency-rates" },
-    },
-  });
-
-  const now = new Date();
-  const { data: existing, error: selectError } = await supabase
-    .from("currency_rate_snapshots")
-    .select(
-      "base_currency,rates,source,source_updated_at,fetched_at,expires_at",
-    )
-    .eq("base_currency", RATE_BASE_CURRENCY)
-    .maybeSingle();
-
-  if (selectError) {
-    await reportEdgeFunctionError({
-      functionName: "currency-rates",
-      error: selectError,
-      context: { operation: "currency_rate_snapshots.select" },
-    });
-    return errorResponse("Failed to load currency rates", 500);
-  }
-
-  const fetchedAt = existing?.fetched_at
-    ? new Date(existing.fetched_at as string)
-    : null;
-  const shouldRefresh = shouldRefreshCurrencyRates({
-    fetchedAt,
-    now,
-    ttlHours: RATE_TTL_HOURS,
-  });
-
-  if (existing && !shouldRefresh) {
-    return jsonResponse(toClientPayload(existing));
-  }
-
-  try {
-    const providerResponse = await fetch(PROVIDER_URL, {
-      headers: { Accept: "application/json" },
-    });
-    if (!providerResponse.ok) {
-      throw new Error(`Provider request failed (${providerResponse.status})`);
+Deno.serve(
+  withCors(async (req: Request) => {
+    if (req.method === "OPTIONS") {
+      return new Response("ok");
+    }
+    if (req.method !== "GET" && req.method !== "POST") {
+      return errorResponse("Method not allowed", 405);
     }
 
-    const snapshot = normalizeExchangeRatePayload(
-      await providerResponse.json(),
-    );
-    const fetchedAtIso = now.toISOString();
-    const expiresAtIso = new Date(
-      now.getTime() + RATE_TTL_HOURS * 60 * 60 * 1000,
-    ).toISOString();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) {
+      return errorResponse("Server not configured", 500);
+    }
 
-    const row = {
-      base_currency: snapshot.baseCurrency,
-      rates: snapshot.rates,
-      source: SOURCE,
-      source_updated_at: snapshot.sourceUpdatedAt,
-      fetched_at: fetchedAtIso,
-      expires_at: expiresAtIso,
-      updated_at: fetchedAtIso,
-    };
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { "X-Client-Info": "moneko-currency-rates" },
+      },
+    });
 
-    const { data: saved, error: upsertError } = await supabase
+    const now = new Date();
+    const { data: existing, error: selectError } = await supabase
       .from("currency_rate_snapshots")
-      .upsert(row, { onConflict: "base_currency" })
       .select(
         "base_currency,rates,source,source_updated_at,fetched_at,expires_at",
       )
-      .single();
+      .eq("base_currency", RATE_BASE_CURRENCY)
+      .maybeSingle();
 
-    if (upsertError) {
-      throw upsertError;
+    if (selectError) {
+      await reportEdgeFunctionError({
+        functionName: "currency-rates",
+        error: selectError,
+        context: { operation: "currency_rate_snapshots.select" },
+      });
+      return errorResponse("Failed to load currency rates", 500);
     }
 
-    return jsonResponse(toClientPayload(saved));
-  } catch (error) {
-    await reportEdgeFunctionError({
-      functionName: "currency-rates",
-      error,
-      context: { operation: "currency_rates.refresh" },
+    const fetchedAt = existing?.fetched_at
+      ? new Date(existing.fetched_at as string)
+      : null;
+    const shouldRefresh = shouldRefreshCurrencyRates({
+      fetchedAt,
+      now,
+      ttlHours: RATE_TTL_HOURS,
     });
 
-    if (existing) {
-      return jsonResponse(toClientPayload(existing, true));
+    if (existing && !shouldRefresh) {
+      return jsonResponse(toClientPayload(existing));
     }
 
-    return errorResponse("Failed to refresh currency rates", 502);
-  }
-}));
+    try {
+      const providerResponse = await fetch(PROVIDER_URL, {
+        headers: { Accept: "application/json" },
+      });
+      if (!providerResponse.ok) {
+        throw new Error(`Provider request failed (${providerResponse.status})`);
+      }
+
+      const snapshot = normalizeExchangeRatePayload(
+        await providerResponse.json(),
+      );
+      const fetchedAtIso = now.toISOString();
+      const expiresAtIso = new Date(
+        now.getTime() + RATE_TTL_HOURS * 60 * 60 * 1000,
+      ).toISOString();
+
+      const row = {
+        base_currency: snapshot.baseCurrency,
+        rates: snapshot.rates,
+        source: SOURCE,
+        source_updated_at: snapshot.sourceUpdatedAt,
+        fetched_at: fetchedAtIso,
+        expires_at: expiresAtIso,
+        updated_at: fetchedAtIso,
+      };
+
+      const { data: saved, error: upsertError } = await supabase
+        .from("currency_rate_snapshots")
+        .upsert(row, { onConflict: "base_currency" })
+        .select(
+          "base_currency,rates,source,source_updated_at,fetched_at,expires_at",
+        )
+        .single();
+
+      if (upsertError) {
+        throw upsertError;
+      }
+
+      return jsonResponse(toClientPayload(saved));
+    } catch (error) {
+      await reportEdgeFunctionError({
+        functionName: "currency-rates",
+        error,
+        context: { operation: "currency_rates.refresh" },
+      });
+
+      if (existing) {
+        return jsonResponse(toClientPayload(existing, true));
+      }
+
+      return errorResponse("Failed to refresh currency rates", 502);
+    }
+  }),
+);

@@ -1,7 +1,7 @@
 // Supabase Edge Function: list-expenses
 // Returns recent expenses for a user (optionally filtered by date range)
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import {
@@ -67,7 +67,7 @@ interface ExpenseRecord {
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -455,4 +455,4 @@ Deno.serve(async (req: Request) => {
       },
     );
   }
-});
+}));

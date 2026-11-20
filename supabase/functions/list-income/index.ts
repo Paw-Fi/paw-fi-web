@@ -2,7 +2,7 @@
 // Returns income transactions for a user with privacy-aware filtering
 // Supports personal and household income with date/currency filters
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import {
@@ -41,7 +41,7 @@ interface RequestBody {
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -556,4 +556,4 @@ Deno.serve(async (req: Request) => {
       },
     );
   }
-});
+}));

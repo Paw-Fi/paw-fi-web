@@ -4,7 +4,7 @@
 // Mirrors the pattern used by update-preferred-currency.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   hasPlusEntitlement,
@@ -27,7 +27,7 @@ function errorResponse(message: string, status = 400, details?: unknown) {
   return jsonResponse({ error: message, details }, status);
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -184,4 +184,4 @@ Deno.serve(async (req: Request) => {
   }
 
   return jsonResponse({ ok: true, contactId, enabled: payload.enabled });
-});
+}));
