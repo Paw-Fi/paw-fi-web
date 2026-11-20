@@ -12,30 +12,25 @@ const uuid = (id: unknown): id is string =>
   typeof id === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-export async function isRecoveredCapture(
+export async function shouldExcludeCaptureAlert(
   db: SupabaseClient,
   row: CaptureErrorSample,
 ): Promise<boolean> {
-  // An aggregate only retains one sample. Its recovery cannot vouch for other occurrences.
   const ctx = row.sample_context;
-  if (row.count !== 1 || !ctx) return false;
+  if (!ctx) return false;
+  // A first-attempt deadline is retry telemetry, regardless of its stack line.
+  if (
+    row.function_name === "classify-notification-capture" &&
+    row.sample_message === "NOTIFICATION_CLASSIFICATION_TIMEOUT" &&
+    ctx.stage === "classification" &&
+    ctx.attemptNumber === 1 &&
+    uuid(ctx.eventId)
+  )
+    return true;
+
+  // One wallet receipt cannot confirm recovery for a whole group.
+  if (row.count !== 1) return false;
   try {
-    if (
-      row.function_name === "classify-notification-capture" &&
-      row.fingerprint === "29b5540e" &&
-      row.sample_message === "NOTIFICATION_CLASSIFICATION_TIMEOUT" &&
-      ctx.stage === "classification" &&
-      ctx.attemptNumber === 1 &&
-      uuid(ctx.eventId)
-    ) {
-      const { data, error } = await db
-        .from("notification_capture_classifications")
-        .select("status")
-        .eq("id", ctx.eventId)
-        .abortSignal(AbortSignal.timeout(1500))
-        .maybeSingle();
-      return !error && (data?.status === "saved" || data?.status === "ignored");
-    }
     if (
       row.function_name === "save-wallet-transaction" &&
       row.fingerprint === "5c5cec67" &&

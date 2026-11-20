@@ -13,6 +13,8 @@ const productOrigins = new Set([
   "https://www.moneko.io",
   "https://dashboard.moneko.io",
   "https://moneko-desktop--paw-fi-3c4f7.us-east4.hosted.app",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:4173",
 ]);
 
 // Base CORS headers (without Origin since it's dynamic)

@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { authenticateUser } from "../shared/auth.ts";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -39,13 +39,19 @@ async function enrichMerchantDomains(
     string,
     { domain: string | null; logo_identifier: string | null }
   >(
-    (data ?? []).map((merchant) => [
-      merchant.id,
-      {
-        domain: merchant.domain ?? null,
-        logo_identifier: merchant.logo_identifier ?? null,
-      },
-    ]),
+    (data ?? []).map(
+      (merchant: {
+        id: string;
+        domain?: string | null;
+        logo_identifier?: string | null;
+      }) => [
+        merchant.id,
+        {
+          domain: merchant.domain ?? null,
+          logo_identifier: merchant.logo_identifier ?? null,
+        },
+      ],
+    ),
   );
 
   return transactions.map((row) => {
@@ -62,87 +68,97 @@ async function enrichMerchantDomains(
   });
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  const url = Deno.env.get("SUPABASE_URL");
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) return json({ error: "Server configuration error" }, 500);
-  const supabase = createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const auth = await authenticateUser(req, supabase);
-  if (!auth.success || !auth.userId) {
-    return json({ error: "Unauthorized" }, 401);
-  }
-  const body = (await req.json().catch(() => null)) as Record<
-    string,
-    unknown
-  > | null;
-  const rawIds = Array.isArray(body?.transactionIds) ? body.transactionIds : [];
-  if (
-    rawIds.length === 0 ||
-    rawIds.length > 500 ||
-    rawIds.some((id) => typeof id !== "string" || !UUID.test(id))
-  ) {
-    return json({ error: "transactionIds must contain 1 to 500 UUIDs" }, 400);
-  }
-  const ids = [...new Set(rawIds as string[])];
-  if (ids.length !== rawIds.length) {
-    return json({ error: "transactionIds must not contain duplicates" }, 400);
-  }
-  const householdId =
-    typeof body?.householdId === "string" && UUID.test(body.householdId)
-      ? body.householdId
-      : null;
-  const currencies = Array.isArray(body?.currencies)
-    ? body!.currencies
-        .filter((currency): currency is string => typeof currency === "string")
-        .map((currency) => currency.trim().toUpperCase())
-        .filter(Boolean)
-    : [];
-  if (
-    !body?.updates ||
-    typeof body.updates !== "object" ||
-    Array.isArray(body.updates) ||
-    Object.keys(body.updates).length === 0
-  ) {
-    return json({ error: "updates must contain at least one field" }, 400);
-  }
-  const updates = { ...body.updates } as Record<string, unknown>;
-  if (updates.householdId !== undefined && updates.household_id === undefined) {
-    updates.household_id = updates.householdId;
-  }
-  if (updates.accountId !== undefined && updates.account_id === undefined) {
-    updates.account_id = updates.accountId;
-  }
-  delete updates.householdId;
-  delete updates.accountId;
-  const descriptors =
-    body?.descriptorsById && typeof body.descriptorsById === "object"
-      ? body.descriptorsById
-      : {};
-  const { data, error } = await supabase.rpc("bulk_update_transactions", {
-    p_actor_user_id: auth.userId,
-    p_transaction_ids: ids,
-    p_household_id: householdId,
-    p_currencies: currencies,
-    p_updates: updates,
-    p_descriptors_by_id: descriptors,
-  });
-  if (error) return json({ error: error.message }, 400);
-  try {
-    return json({
-      success: true,
-      data: await enrichMerchantDomains(supabase, data),
+Deno.serve(
+  withCors(async (req) => {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
+    if (req.method !== "POST")
+      return json({ error: "Method not allowed" }, 405);
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !key) return json({ error: "Server configuration error" }, 500);
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
-  } catch (enrichmentError) {
-    console.error(
-      "[update-transactions-batch] Merchant enrichment failed",
-      enrichmentError,
-    );
-    return json({ success: true, data: data ?? [] });
-  }
-});
+    const auth = await authenticateUser(req, supabase);
+    if (!auth.success || !auth.userId) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    const body = (await req.json().catch(() => null)) as Record<
+      string,
+      unknown
+    > | null;
+    const rawIds = Array.isArray(body?.transactionIds)
+      ? body.transactionIds
+      : [];
+    if (
+      rawIds.length === 0 ||
+      rawIds.length > 500 ||
+      rawIds.some((id) => typeof id !== "string" || !UUID.test(id))
+    ) {
+      return json({ error: "transactionIds must contain 1 to 500 UUIDs" }, 400);
+    }
+    const ids = [...new Set(rawIds as string[])];
+    if (ids.length !== rawIds.length) {
+      return json({ error: "transactionIds must not contain duplicates" }, 400);
+    }
+    const householdId =
+      typeof body?.householdId === "string" && UUID.test(body.householdId)
+        ? body.householdId
+        : null;
+    const currencies = Array.isArray(body?.currencies)
+      ? body!.currencies
+          .filter(
+            (currency): currency is string => typeof currency === "string",
+          )
+          .map((currency) => currency.trim().toUpperCase())
+          .filter(Boolean)
+      : [];
+    if (
+      !body?.updates ||
+      typeof body.updates !== "object" ||
+      Array.isArray(body.updates) ||
+      Object.keys(body.updates).length === 0
+    ) {
+      return json({ error: "updates must contain at least one field" }, 400);
+    }
+    const updates = { ...body.updates } as Record<string, unknown>;
+    if (
+      updates.householdId !== undefined &&
+      updates.household_id === undefined
+    ) {
+      updates.household_id = updates.householdId;
+    }
+    if (updates.accountId !== undefined && updates.account_id === undefined) {
+      updates.account_id = updates.accountId;
+    }
+    delete updates.householdId;
+    delete updates.accountId;
+    const descriptors =
+      body?.descriptorsById && typeof body.descriptorsById === "object"
+        ? body.descriptorsById
+        : {};
+    const { data, error } = await supabase.rpc("bulk_update_transactions", {
+      p_actor_user_id: auth.userId,
+      p_transaction_ids: ids,
+      p_household_id: householdId,
+      p_currencies: currencies,
+      p_updates: updates,
+      p_descriptors_by_id: descriptors,
+    });
+    if (error) return json({ error: error.message }, 400);
+    try {
+      return json({
+        success: true,
+        data: await enrichMerchantDomains(supabase, data),
+      });
+    } catch (enrichmentError) {
+      console.error(
+        "[update-transactions-batch] Merchant enrichment failed",
+        enrichmentError,
+      );
+      return json({ success: true, data: data ?? [] });
+    }
+  }),
+);

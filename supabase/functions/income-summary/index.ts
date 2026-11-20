@@ -2,7 +2,7 @@
 // Returns aggregated income statistics with privacy-aware filtering
 // Supports MTD, YTD totals, by-member breakdown, by-category breakdown, and forecast
 
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { authenticateUser } from "../shared/auth.ts";
 
@@ -24,7 +24,7 @@ interface RequestBody {
   includeForecast?: boolean; // Include 3-month forecast from recurring income (v1.5)
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -325,4 +325,4 @@ Deno.serve(async (req: Request) => {
       },
     );
   }
-});
+}));

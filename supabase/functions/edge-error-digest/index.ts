@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
-import { isRecoveredCapture } from "./recovered-capture.ts";
+import { shouldExcludeCaptureAlert } from "./recovered-capture.ts";
 
 /**
  * Messages that are safe to ignore and should not appear in the digest.
@@ -418,7 +418,7 @@ Deno.serve(async (req) => {
         for (const row of rows as ErrorAggregateRow[]) {
           if (
             !isExcludedMessage(row.sample_message) &&
-            !(await isRecoveredCapture(supabase, row))
+            !(await shouldExcludeCaptureAlert(supabase, row))
           ) {
             filteredRows.push(row);
           }

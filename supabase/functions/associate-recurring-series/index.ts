@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { corsHeaders, withCors } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 
 interface PaymentAssociation {
@@ -65,7 +65,7 @@ function isAssociationRequest(value: unknown): value is AssociationRequest {
   return [...imported].every((id) => !canonical.has(id));
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS")
     return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST")
@@ -130,4 +130,4 @@ Deno.serve(async (req) => {
   } catch {
     return unavailable();
   }
-});
+}));
