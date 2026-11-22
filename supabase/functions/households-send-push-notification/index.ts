@@ -1,3 +1,5 @@
+import { deliverFileImportPush } from "../shared/file-import-push.ts";
+import { fileImportMessage } from "../shared/file-import-message.ts";
 import {
   createNotificationTranslator,
   localizeNotificationCategory,
@@ -524,6 +526,7 @@ async function sendFCMv1Notification(
           notification: {
             sound: "default",
             // Brand accent color (affects small icon/accents on many Android versions)
+            ...(data.event_type === "file_import_status" ? { tag: data.notification_id } : {}),
             color: "#7458FF",
             // Android: click_action triggers intent filter in AndroidManifest
             click_action: "FLUTTER_NOTIFICATION_CLICK",
@@ -533,6 +536,7 @@ async function sendFCMv1Notification(
         },
         apns: {
           headers: {
+            ...(data.event_type === "file_import_status" ? { "apns-collapse-id": data.notification_id } : {}),
             "apns-topic": iosBundleId,
             "apns-push-type": "alert",
             "apns-priority": "10",
@@ -927,7 +931,10 @@ serve(async (req: Request) => {
     prefsQuery = household_id
       ? prefsQuery.eq("household_id", household_id)
       : prefsQuery.is("household_id", null);
-    const { data: prefs } = await prefsQuery.maybeSingle();
+    const { data: prefs, error: prefsError } = await prefsQuery.maybeSingle();
+    if (prefsError && event_type === "file_import_status") {
+      throw new Error("Import notification preferences unavailable");
+    }
     const { data: contact, error: contactError } = await supabase
       .from("user_contacts")
       .select("preferred_timezone, preferred_language")
@@ -1044,10 +1051,11 @@ serve(async (req: Request) => {
     // Get active devices for this user (treat NULL as active to avoid legacy rows being skipped)
     const { data: devices, error: devicesError } = await supabase
       .from("devices")
-      .select("push_token, platform, is_active")
+      .select("id, push_token, platform, is_active")
       .eq("user_id", user_id)
       .or("is_active.is.true,is_active.is.null");
 
+    if (devicesError && event_type === "file_import_status") throw devicesError;
     if (devicesError || !devices || devices.length === 0) {
       // Debug: check if user has devices but all inactive
       const { data: existingDevices } = await supabase
@@ -1161,7 +1169,7 @@ serve(async (req: Request) => {
     let failedCount = 0;
 
     for (const device of devices) {
-      const success = await sendFCMv1Notification(
+      const send = () => sendFCMv1Notification(
         device.push_token,
         notificationMessage.title,
         notificationMessage.body,
@@ -1177,6 +1185,10 @@ serve(async (req: Request) => {
         user_id,
       );
 
+      const success = event_type === "file_import_status"
+        ? await deliverFileImportPush(supabase, notification_event_id, device.id, send)
+        : await send();
+
       if (success) {
         sentCount++;
       } else {
@@ -1184,12 +1196,13 @@ serve(async (req: Request) => {
       }
     }
 
+    const delivered = sentCount > 0 && (event_type !== "file_import_status" || failedCount === 0);
     // Update notification event status
     await supabase
       .from("notification_events")
       .update({
-        is_sent: sentCount > 0,
-        sent_at: sentCount > 0 ? new Date().toISOString() : null,
+        is_sent: delivered,
+        sent_at: delivered ? new Date().toISOString() : null,
         processing_started_at: null,
         delivery_error:
           failedCount > 0
@@ -1283,6 +1296,8 @@ function buildNotificationMessage(
   const recurringLabel = isRecurring ? t("recurring ") : "";
 
   switch (eventType) {
+    case "file_import_status":
+      return { ...fileImportMessage(payload, language), data: { deep_link: "moneko://import" } };
     case "expense_added": {
       const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
       const recurringCount = Number(payload.recurring_count ?? 0);

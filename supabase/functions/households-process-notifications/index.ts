@@ -1,3 +1,5 @@
+import { deliverFileImportPush } from "../shared/file-import-push.ts";
+import { fileImportMessage } from "../shared/file-import-message.ts";
 import {
   createNotificationTranslator,
   localizeNotificationCategory,
@@ -200,6 +202,7 @@ async function sendFCMv1Notification(
         android: {
           priority: "high",
           notification: {
+            ...(data.event_type === "file_import_status" ? { tag: data.event_id } : {}),
             channel_id: androidNotificationChannelId,
             click_action: androidNotificationClickAction,
             notification_priority: "PRIORITY_HIGH",
@@ -209,6 +212,7 @@ async function sendFCMv1Notification(
         },
         apns: {
           headers: {
+            ...(data.event_type === "file_import_status" ? { "apns-collapse-id": data.event_id } : {}),
             "apns-topic": iosBundleId,
             "apns-push-type": "alert",
             "apns-priority": "10",
@@ -630,6 +634,7 @@ serve(async (req) => {
           case "split_created":
           case "split_settled":
           case "settlement_completed":
+          case "file_import_status":
           case "capture_plus_required":
           case "expense_added":
           case "expense_edited":
@@ -736,7 +741,13 @@ serve(async (req) => {
             event.household_id,
           );
         }
-        const { data: preferences } = await preferencesQuery;
+        if (event.event_type === "file_import_status") {
+          preferencesQuery = preferencesQuery.is("household_id", null);
+        }
+        const { data: preferences, error: preferenceError } = await preferencesQuery;
+        if (preferenceError && event.event_type === "file_import_status") {
+          throw new Error("Import notification preferences unavailable");
+        }
         const { data: contacts, error: contactsError } = await supabase
           .from("user_contacts")
           .select("user_id, preferred_timezone, preferred_language")
@@ -836,13 +847,14 @@ serve(async (req) => {
         }
 
         // Get active devices for eligible users
-        const { data: devices } = await supabase
+        const { data: devices, error: devicesError } = await supabase
           .from("devices")
-          .select("user_id, push_token, platform")
+          .select("id, user_id, push_token, platform")
           .in("user_id", eligibleUserIds)
           // Treat NULL as active for legacy rows to avoid dropping deliveries.
           .or("is_active.is.true,is_active.is.null");
 
+        if (devicesError && event.event_type === "file_import_status") throw devicesError;
         if (!devices || devices.length === 0) {
           // Mark as sent (but no devices)
           await supabase
@@ -911,7 +923,7 @@ serve(async (req) => {
               ?.preferred_language,
             messageNow,
           );
-          const success = await sendFCMv1Notification(
+          const send = () => sendFCMv1Notification(
             device.push_token,
             title,
             body,
@@ -927,6 +939,10 @@ serve(async (req) => {
             device.user_id,
           );
 
+          const success = event.event_type === "file_import_status"
+            ? await deliverFileImportPush(supabase, event.id, device.id, send)
+            : await send();
+
           return { device, success };
         });
 
@@ -940,12 +956,13 @@ serve(async (req) => {
           }
         }
 
+        const delivered = eventSentCount > 0 && (event.event_type !== "file_import_status" || eventFailedCount === 0);
         // Update event as sent
         await supabase
           .from("notification_events")
           .update({
-            is_sent: eventSentCount > 0,
-            sent_at: eventSentCount > 0 ? new Date().toISOString() : null,
+            is_sent: delivered,
+            sent_at: delivered ? new Date().toISOString() : null,
             processing_started_at: null,
             error_message: eventFailedCount > 0
               ? `Failed to send to ${eventFailedCount} devices`
@@ -1054,6 +1071,10 @@ function buildQueuedNotificationMessage(
   const isRecurringEvent = event.payload?.is_recurring === true ||
     payloadExpenseData.is_recurring === true;
   switch (event.event_type) {
+    case "file_import_status": {
+      const message = fileImportMessage(event.payload, language);
+      return { ...message, data: { deep_link: "moneko://import" } };
+    }
     case "invite_accepted":
     case "member_joined": {
       const memberName = (event.payload?.member_name ||

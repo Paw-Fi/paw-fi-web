@@ -2104,6 +2104,7 @@ export interface AnalyzeAttachment {
 }
 
 export interface AnalyzeRequestBody {
+  fileImportJobId?: string;
   userId?: string | null;
   text?: string;
   typeHint?: "expense" | "income" | "mixed";
@@ -4449,7 +4450,8 @@ async function analyzeFromPdf(
   categoryRemaps: UserCategoryRemapRow[] = [],
   onProgress?: ProgressCallback,
   execution: AnalysisExecutionOptions = {},
-): Promise<{ items: ExpenseItem[]; rawText?: string; error?: string }> {
+  unattended = false,
+): Promise<{ items: ExpenseItem[]; rawText?: string; error?: string; requiresReview?: boolean }> {
   console.log("[analyze-expense] PDF: Starting universal PDF pipeline");
   const pdfExpenseCategories =
     _expenseCategories.length > 0 ? _expenseCategories : getExpenseCategories();
@@ -4508,6 +4510,11 @@ async function analyzeFromPdf(
     requiresReview: pipelineResult.analysis.requires_review === true,
     error: pipelineResult.analysis.error ?? null,
   });
+  if (unattended && (pipelineResult.analysis.requires_review ||
+    pipelineResult.analysis.metadata.completeness_suspect || pipelineResult.error || pipelineResult.analysis.error)) {
+    const error = pipelineResult.error || pipelineResult.analysis.error || "Review the statement before importing.";
+    return { items: [], error, requiresReview: !isPdfPageLimitNew(error) };
+  }
   const inferredFallbackCurrency = inferAttachmentFallbackCurrency({
     callerCurrency,
     rawText: pipelineResult.rawText,
@@ -5858,7 +5865,12 @@ export async function runAnalyzeExpense(
             categoryRemapsForPrompt,
             onProgress,
             execution,
+            Boolean(body.fileImportJobId),
           );
+          if (pdfResult.requiresReview) {
+            return { success: false, code: "PDF_REVIEW_REQUIRED", status: 422, language,
+              error: "The extracted transactions need review. Choose Review before importing." };
+          }
           items = pdfResult.items;
           if (pdfResult.rawText) {
             syntheticText = pdfResult.rawText;
