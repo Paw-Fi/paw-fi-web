@@ -46,14 +46,21 @@ export interface BotTurnFacts {
   lookupSucceeded: boolean;
   hasUnsavedDraft: boolean;
   toolFailed: boolean;
+  // A transaction save tool ran on this turn, whatever its outcome.
+  saveAttempted: boolean;
 }
 
 const EVIDENCE_CHARS_PER_TOOL = 6000;
 const EVIDENCE_CHARS_TOTAL = 20000;
 const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const TRANSACTION_SAVE_TOOLS = new Set([
+  "add_transaction",
+  "add_transactions_batch",
+]);
 // Keys that carry no user-visible fact: internal identifiers, links and
 // transport flags. Dropping them keeps evidence small and free of raw IDs.
-const NON_EVIDENCE_KEY = /(?:^|_)(?:id|ids|url|key|token)$|^_|^has_selection_memory$/i;
+const NON_EVIDENCE_KEY =
+  /(?:^|_)(?:id|ids|url|key|token)$|^_|^has_selection_memory$/i;
 
 export function createBotTurnLedger(): BotTurnLedger {
   return { executions: [], savedTransactions: [], batchRowsNotSaved: 0 };
@@ -107,7 +114,12 @@ function toSavedTransactionFact(
   const dateText = typeof record.date === "string"
     ? record.date.slice(0, 10)
     : "";
-  const label = [record.merchant, record.raw_text, record.description, record.source]
+  const label = [
+    record.merchant,
+    record.raw_text,
+    record.description,
+    record.source,
+  ]
     .find((item): item is string => typeof item === "string" && !!item.trim());
   return {
     id,
@@ -140,8 +152,14 @@ export function recordBotToolExecution(
 ): boolean {
   const tool = typeof toolName === "string" ? toolName : "";
   const result = asRecord(toolResult);
+  // A tool that stopped to ask which record is meant, or to refresh its
+  // context, changed nothing and attempted nothing.
+  const stoppedBeforeActing = result?.needs_disambiguation === true ||
+    result?.status === "context_refresh_required";
   const kind: BotToolKind = tool === "analyze_expense"
     ? BOT_TOOL_KINDS.analysis
+    : stoppedBeforeActing
+    ? BOT_TOOL_KINDS.other
     : isWriteMutationToolName(tool, toolResult)
     ? BOT_TOOL_KINDS.write
     : isRecordLookupToolName(tool, toolResult)
@@ -170,11 +188,13 @@ export function recordBotToolExecution(
       else ledger.batchRowsNotSaved += 1;
     }
     succeeded = ledger.savedTransactions.length > before;
-  } else if (kind === BOT_TOOL_KINDS.write || kind === BOT_TOOL_KINDS.analysis) {
+  } else if (
+    kind === BOT_TOOL_KINDS.write || kind === BOT_TOOL_KINDS.analysis
+  ) {
     succeeded = result?.success === true && !hasToolError(result);
   } else {
     succeeded = result !== null && result.success !== false &&
-      !hasToolError(result);
+      !hasToolError(result) && !stoppedBeforeActing;
   }
 
   const evidence = compactEvidence(toolResult, EVIDENCE_CHARS_PER_TOOL);
@@ -201,6 +221,9 @@ export function summarizeBotTurn(ledger: BotTurnLedger): BotTurnFacts {
     lookupSucceeded: of(BOT_TOOL_KINDS.lookup, true),
     hasUnsavedDraft: of(BOT_TOOL_KINDS.analysis, true) && !writeSucceeded,
     toolFailed: ledger.executions.some((item) => !item.succeeded),
+    saveAttempted: ledger.executions.some((item) =>
+      TRANSACTION_SAVE_TOOLS.has(item.tool)
+    ),
   };
 }
 

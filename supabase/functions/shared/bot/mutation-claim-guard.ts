@@ -52,7 +52,9 @@ export function isWriteMutationToolName(
   toolName: string | null,
   toolResult?: unknown,
 ): boolean {
-  if (toolName === "manage_recurring" && isReadOnlyRecurringAction(toolResult)) {
+  if (
+    toolName === "manage_recurring" && isReadOnlyRecurringAction(toolResult)
+  ) {
     return false;
   }
   return (

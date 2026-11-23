@@ -154,7 +154,7 @@ import {
   recordBotToolExecution,
   summarizeBotTurn,
 } from "../shared/bot/turn-ledger.ts";
-import { appendSavedTransactionReceipt } from "../shared/bot/save-receipt.ts";
+import { appendTurnStatus } from "../shared/bot/save-receipt.ts";
 import { botMessage } from "../shared/bot/bot-messages.ts";
 import {
   consolidateDuplicateEnvelopesForBudget,
@@ -1250,12 +1250,17 @@ Deno.serve(async (req: Request) => {
         // verifier has compared it with what the tools actually did.
         const grounding = await groundBotReply({
           replyText: finalResponseText,
+          userMessage: messageText,
           ledger: turnLedger,
           assess: assessReply,
           chat: activeChat as any,
           language: userLang,
           languageLabel: userLangLabel,
-          canCorrect: groundingCorrections < 1,
+          // A correction is a new user turn, which the model protocol does
+          // not allow while tool calls are still unanswered.
+          canCorrect:
+            groundingCorrections < 1 &&
+            !(functionCalls && functionCalls.length > 0),
           mode: groundingMode,
           modelReplyUnavailable,
         });
@@ -2391,17 +2396,19 @@ Deno.serve(async (req: Request) => {
       language: userLang,
     });
     finalResponseText = sanitizeBotUserFacingText(finalResponseText);
-    // Saved transactions are confirmed by code from the stored rows, in the
-    // user's own number and date format.
-    finalResponseText = appendSavedTransactionReceipt(
-      finalResponseText,
-      turnLedger.savedTransactions,
-      userLang,
-    );
+    // What was and was not stored is stated by code from the tool outcomes,
+    // in the user's own language, number and date format.
+    finalResponseText = appendTurnStatus({
+      text: finalResponseText,
+      ledger: turnLedger,
+      language: userLang,
+      replyWasReplaced: groundingAudit?.replaced === true,
+    });
     const appGroundingRecord = buildGroundingRecord({
       audit: groundingAudit,
       ledger: turnLedger,
       mode: groundingMode,
+      corrections: groundingCorrections,
     });
     console.log(
       "[twilio-whatsapp-ai-bot] app grounding",
@@ -2418,7 +2425,11 @@ Deno.serve(async (req: Request) => {
       { grounding: appGroundingRecord.metadata },
     );
 
-    return jsonResponse({ text: finalResponseText, mediaUrl });
+    return jsonResponse({
+      text: finalResponseText,
+      // A replaced reply carries no chart from the turn it replaced.
+      mediaUrl: groundingAudit?.replaced ? undefined : mediaUrl,
+    });
   }
 
   // App-mode requests returned above. Every remaining production request must
@@ -3437,12 +3448,17 @@ Deno.serve(async (req: Request) => {
         // verifier has compared it with what the tools actually did.
         const grounding = await groundBotReply({
           replyText: finalResponseText,
+          userMessage: body,
           ledger: turnLedger,
           assess: assessReply,
           chat: activeChat as any,
           language: userLang,
           languageLabel: userLangLabel,
-          canCorrect: groundingCorrections < 1,
+          // A correction is a new user turn, which the model protocol does
+          // not allow while tool calls are still unanswered.
+          canCorrect:
+            groundingCorrections < 1 &&
+            !(functionCalls && functionCalls.length > 0),
           mode: groundingMode,
           modelReplyUnavailable,
         });
@@ -5280,7 +5296,11 @@ Deno.serve(async (req: Request) => {
     });
     finalResponseText = sanitizeBotUserFacingText(finalResponseText);
     const chartFromText = extractQuickChartUrl(finalResponseText);
-    let mediaUrl: string | null = chartFromText.url || lastGeneratedChartUrl;
+    // A chart belongs to the reply that explained it. When that reply was
+    // replaced by a notice, the chart is not sent either.
+    let mediaUrl: string | null = groundingAudit?.replaced
+      ? null
+      : chartFromText.url || lastGeneratedChartUrl;
     let cleanedText = chartFromText.cleanedText || finalResponseText;
 
     if (mediaUrl) {
@@ -5291,17 +5311,19 @@ Deno.serve(async (req: Request) => {
       cleanedText = botMessage("chartAttached", userLang);
     }
 
-    // Saved transactions are confirmed by code from the stored rows, in the
-    // user's own number and date format.
-    cleanedText = appendSavedTransactionReceipt(
-      cleanedText,
-      turnLedger.savedTransactions,
-      userLang,
-    );
+    // What was and was not stored is stated by code from the tool outcomes,
+    // in the user's own language, number and date format.
+    cleanedText = appendTurnStatus({
+      text: cleanedText,
+      ledger: turnLedger,
+      language: userLang,
+      replyWasReplaced: groundingAudit?.replaced === true,
+    });
     const groundingRecord = buildGroundingRecord({
       audit: groundingAudit,
       ledger: turnLedger,
       mode: groundingMode,
+      corrections: groundingCorrections,
     });
     console.log("[twilio-whatsapp-ai-bot] grounding", groundingRecord.log);
 

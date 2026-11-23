@@ -157,7 +157,7 @@ import {
   recordBotToolExecution,
   summarizeBotTurn,
 } from "../shared/bot/turn-ledger.ts";
-import { appendSavedTransactionReceipt } from "../shared/bot/save-receipt.ts";
+import { appendTurnStatus } from "../shared/bot/save-receipt.ts";
 import { botMessage } from "../shared/bot/bot-messages.ts";
 import {
   consolidateDuplicateEnvelopesForBudget,
@@ -1421,12 +1421,17 @@ Deno.serve(async (req: Request) => {
             // verifier has compared it with what the tools actually did.
             const grounding = await groundBotReply({
               replyText: finalResponseText,
+              userMessage: incomingText,
               ledger: turnLedger,
               assess: assessReply,
               chat: activeChat as any,
               language: replyLanguage,
               languageLabel: userLangLabel,
-              canCorrect: groundingCorrections < 1,
+              // A correction is a new user turn, which the model protocol
+              // does not allow while tool calls are still unanswered.
+              canCorrect:
+                groundingCorrections < 1 &&
+                !(functionCalls && functionCalls.length > 0),
               mode: groundingMode,
               modelReplyUnavailable,
             });
@@ -3515,25 +3520,30 @@ Deno.serve(async (req: Request) => {
 
         // Persist the incoming user message AFTER Gemini/tool flow so history doesn't echo it.
         const chartFromText = extractQuickChartUrl(finalResponseText);
-        let mediaUrl: string | null =
-          chartFromText.url || lastGeneratedChartUrl;
+        // A chart belongs to the reply that explained it. When that reply was
+        // replaced by a notice, the chart is not sent either.
+        let mediaUrl: string | null = groundingAudit?.replaced
+          ? null
+          : chartFromText.url || lastGeneratedChartUrl;
         let cleanedText = chartFromText.cleanedText || finalResponseText;
 
         if (mediaUrl) {
           mediaUrl = await normalizeQuickChartMediaUrl(mediaUrl);
         }
 
-        // Saved transactions are confirmed by code from the stored rows, in
-        // the user's own number and date format.
-        cleanedText = appendSavedTransactionReceipt(
-          cleanedText,
-          turnLedger.savedTransactions,
-          replyLanguage,
-        );
+        // What was and was not stored is stated by code from the tool
+        // outcomes, in the user's own language, number and date format.
+        cleanedText = appendTurnStatus({
+          text: cleanedText,
+          ledger: turnLedger,
+          language: replyLanguage,
+          replyWasReplaced: groundingAudit?.replaced === true,
+        });
         const groundingRecord = buildGroundingRecord({
           audit: groundingAudit,
           ledger: turnLedger,
           mode: groundingMode,
+          corrections: groundingCorrections,
           traceId,
         });
         console.log("[telegram-ai-bot] grounding", groundingRecord.log);

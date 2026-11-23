@@ -1,5 +1,9 @@
-import { resolveBotIntlLocale } from "./bot-messages.ts";
-import type { SavedTransactionFact } from "./turn-ledger.ts";
+import { botMessage, resolveBotIntlLocale } from "./bot-messages.ts";
+import {
+  type BotTurnLedger,
+  type SavedTransactionFact,
+  summarizeBotTurn,
+} from "./turn-ledger.ts";
 
 // Receipt lines are written by code from rows the persistence layer returned.
 // They contain only stored values, symbols and locale-formatted numbers and
@@ -44,11 +48,15 @@ export function buildSavedTransactionReceipt(
     [
       `${SAVE_RECEIPT_MARKER} ${formatAmount(fact, locale)}`,
       fact.label,
-      `${formatDate(fact.date as string, locale)}${fact.recurring ? " 🔁" : ""}`,
+      `${formatDate(fact.date as string, locale)}${
+        fact.recurring ? " 🔁" : ""
+      }`,
     ].filter(Boolean).join(" · ")
   );
   if (complete.length > MAX_RECEIPT_LINES) {
-    lines.push(`${SAVE_RECEIPT_MARKER} +${complete.length - MAX_RECEIPT_LINES}`);
+    lines.push(
+      `${SAVE_RECEIPT_MARKER} +${complete.length - MAX_RECEIPT_LINES}`,
+    );
   }
   return lines.join("\n");
 }
@@ -63,12 +71,42 @@ export function stripModelAuthoredReceiptLines(text: string): string {
     .trim();
 }
 
-export function appendSavedTransactionReceipt(
-  text: string,
-  saved: readonly SavedTransactionFact[],
+// One code-authored line that states where a transaction stands when the
+// turn touched the save path and did not store everything. It is derived from
+// tool outcomes only, so it is true even if the reply above it is not.
+export function buildSaveStatusLine(
+  ledger: BotTurnLedger,
   language: unknown,
 ): string {
-  const body = stripModelAuthoredReceiptLines(text);
-  const receipt = buildSavedTransactionReceipt(saved, language);
-  return [body, receipt].filter(Boolean).join("\n\n");
+  const facts = summarizeBotTurn(ledger);
+  const savedCount = ledger.savedTransactions.length;
+  if (savedCount > 0) {
+    return ledger.batchRowsNotSaved > 0
+      ? botMessage("someNotSaved", language, ledger.batchRowsNotSaved)
+      : "";
+  }
+  if (facts.saveAttempted) return botMessage("saveNotConfirmed", language);
+  return facts.hasUnsavedDraft ? botMessage("notSavedYet", language) : "";
+}
+
+// Closes every reply with the facts code can vouch for: a receipt per stored
+// transaction, and a status line when something was extracted or attempted
+// but not stored. A reply that was already replaced by a backend notice says
+// this itself, so it gets receipts only.
+export function appendTurnStatus(params: {
+  text: string;
+  ledger: BotTurnLedger;
+  language: unknown;
+  replyWasReplaced: boolean;
+}): string {
+  return [
+    stripModelAuthoredReceiptLines(params.text),
+    buildSavedTransactionReceipt(
+      params.ledger.savedTransactions,
+      params.language,
+    ),
+    params.replyWasReplaced
+      ? ""
+      : buildSaveStatusLine(params.ledger, params.language),
+  ].filter(Boolean).join("\n\n");
 }
