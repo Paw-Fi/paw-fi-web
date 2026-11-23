@@ -65,6 +65,7 @@ export function resolveBotSpaceScope(
     ""
   )
     .toString()
+    .trim()
     .toLowerCase();
   let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
   if (!spaceMeta && householdName && spaceMap.has(householdName)) {
@@ -72,6 +73,21 @@ export function resolveBotSpaceScope(
     householdId = spaceMeta?.id ?? null;
   }
   return { householdId, spaceMeta };
+}
+
+export function hasUnknownReadSpace(
+  args: Record<string, unknown> | undefined | null,
+  spaces: Map<string, BotSpaceMeta>,
+): boolean {
+  const id = String(
+    args?.space_id || args?.spaceId || args?.household_id || "",
+  );
+  const name = String(
+    args?.space_name || args?.spaceName || args?.household_name ||
+      args?.householdName || "",
+  ).trim().toLowerCase();
+  return (!!id && !spaces.has(id)) ||
+    (!!name && (!spaces.has(name) || (!!id && spaces.get(name)?.id !== id)));
 }
 
 function normalizeToolSpaceScope(value: unknown): string {

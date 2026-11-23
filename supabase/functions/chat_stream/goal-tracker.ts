@@ -85,11 +85,11 @@ export async function executeGoalFunction(
     const { data, error } = await supabase.functions.invoke(functionName, {
       body: parameters
     });
-    
-    if (error) {
+
+    if (error || data?.success === false) {
       return {
         success: false,
-        error: error.message || 'Function execution failed'
+        error: error?.message || "Function execution failed",
       };
     }
     
@@ -100,7 +100,9 @@ export async function executeGoalFunction(
   } catch (error) {
     return {
       success: false,
-      error: error.message || 'Unexpected error during execution'
+      error: error instanceof Error
+        ? error.message
+        : "Unexpected error during execution",
     };
   }
 }
@@ -254,8 +256,13 @@ export async function processGoalTrackingRequest(
     const candidate = response.candidates?.[0];
     const part = candidate?.content?.parts?.[0];
     const functionCall = part?.function_call || part?.functionCall;
-    
-    if (functionCall) {
+
+    if (
+      functionCall && userId &&
+      Object.values(GOAL_FUNCTIONS_REGISTRY).some((f) =>
+        f.function_name === functionCall.name
+      )
+    ) {
       // Ensure userId is always included in function parameters
       const enhancedArgs = {
         ...functionCall.args,
@@ -399,9 +406,9 @@ export async function processGoalTrackingRequest(
     return {
       response: "I encountered an error while processing your request. Please try again.",
       debug: {
-        error: error.message,
-        timestamp: new Date().toISOString()
-      }
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      },
     };
   }
 }

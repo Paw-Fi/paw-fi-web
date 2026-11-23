@@ -1,6 +1,7 @@
 import {
   type BotSpaceMeta,
   ensureHouseholdMember,
+  hasExplicitBotSpaceScope,
   resolveBotSpaceScope,
 } from "./household-utils.ts";
 import { createHouseholdInvite } from "../household-invites.ts";
@@ -78,12 +79,52 @@ export async function createBotSpace(params: {
   return { success: true, data };
 }
 
+async function listBotSpaces(supabase: SupabaseLike, userId: string) {
+  // Match the membership boundary used by the chat context RPC.
+  const spaces: Array<{ name: string; type: "private" | "shared" }> = [];
+  let lastId: string | undefined;
+  while (true) {
+    let query = supabase
+      .from("household_members")
+      .select("household_id, space:households!inner(name, is_portfolio)", {
+        count: "exact",
+      })
+      .eq("user_id", userId)
+      .order("household_id");
+    if (lastId) query = query.gt("household_id", lastId);
+    const { data, count, error } = await query;
+    if (error) return { error };
+    if (!Array.isArray(data) || typeof count !== "number") {
+      return { error: "Space list unavailable." };
+    }
+    for (const { space } of data) {
+      spaces.push({
+        name: space.name,
+        type: space.is_portfolio ? "private" : "shared",
+      });
+    }
+    if (data.length === count) {
+      return { success: true, spaces, total_count: spaces.length };
+    }
+    // PostgREST can cap a page below the exact count of remaining memberships.
+    const nextId = data.at(-1)?.household_id;
+    if (typeof nextId !== "string" || (lastId && nextId <= lastId)) {
+      return { error: "Space list incomplete." };
+    }
+    lastId = nextId;
+  }
+}
+
 export async function getBotSpaceInfo(params: {
   supabase: SupabaseLike;
   userId: string;
   args: Record<string, unknown>;
   spaceMap: Map<string, BotSpaceMeta>;
 }) {
+  if (!hasExplicitBotSpaceScope(params.args)) {
+    return await listBotSpaces(params.supabase, params.userId);
+  }
+
   const { householdId } = resolveBotSpaceScope(params.args, params.spaceMap);
   if (!householdId) return { error: "Select a space first." };
 
@@ -118,7 +159,7 @@ export async function getBotSpaceInfo(params: {
   const { data: profiles, error: profilesError } = memberUserIds.length
     ? await params.supabase
       .from("users")
-      .select("id, full_name, email, avatar_url")
+      .select("id, full_name")
       .in("id", memberUserIds)
     : { data: [], error: null };
   if (profilesError) return { error: profilesError };
@@ -132,12 +173,9 @@ export async function getBotSpaceInfo(params: {
   const normalizedMembers = (members || []).map((member: any) => {
     const user = readRelatedUser(profilesById.get(readString(member?.user_id)));
     const name = readString(user.full_name);
-    const email = readString(user.email);
     return {
-      name: name || email || "Unknown member",
-      email,
+      name: name || "Space member",
       role: readString(member?.role) || "member",
-      avatar_url: readString(user.avatar_url),
     };
   });
 

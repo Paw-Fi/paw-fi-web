@@ -302,7 +302,7 @@ export function buildCorrectivePrompt(
     CORRECTION_REASONS[verdict],
     `TURN_EVIDENCE (the only source of truth for this turn):\n${evidence}`,
     "Do exactly one of the following:",
-    "1. If the user's request needs an action or a record lookup that has not succeeded yet and you have the details it requires, call the appropriate tool now. Examples: add_transaction to save a transaction; list_expenses with a date range that covers the transaction to check whether a record exists; financial_insight for totals or summaries. Never call a write tool for something the user did not ask you to change.",
+    "1. If the user's request needs an action or a record lookup that has not succeeded yet and you have the details it requires, call the appropriate tool now. Examples: add_transaction to save a transaction; list_expenses with a date range covering a transaction to check its existence or saved destination; get_space_info with no arguments for a list of spaces or with a space name for its details; financial_insight for totals or summaries. Never call a write tool for something the user did not ask you to change.",
     `2. Otherwise reply to the user in ${languageLabel} with a corrected message that is strictly true. Do not say or imply that anything was saved, changed, deleted, found, missing or checked unless TURN_EVIDENCE shows it. If a detail is missing, ask one short question. Never mention this check, tools or internal details.`,
   ].join("\n\n");
 }

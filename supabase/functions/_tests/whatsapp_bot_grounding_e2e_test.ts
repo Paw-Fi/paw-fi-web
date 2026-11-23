@@ -16,9 +16,11 @@ import {
   loadWebhookHandler,
   operationsOf,
   type Outcome,
+  postedTotalReply,
   SAVE_ARGS,
   SAVED_ID,
   type Scenario,
+  totalReadScenario,
   USER_ID,
   type WebhookHandler,
   withBotBackend,
@@ -265,11 +267,127 @@ e2e(
       expenses: [],
     });
     assertEquals(outcome.unusedModelTurns, 0);
-    assertEquals(outcome.expenseQueries.length, 1);
-    assert(outcome.expenseQueries[0].includes("date=gte.2026-11-17"));
+    assertEquals(
+      outcome.financeCalls.filter((c) => c.p_read === "transactions").length,
+      1,
+    );
+    assertEquals(
+      (outcome.financeCalls.find((c) => c.p_read === "transactions")!
+        .p_args as any).start_date,
+      "2026-11-17",
+    );
     assertEquals(outcome.whatsappMessages, [truthful]);
     assertEquals(operationsOf(outcome.assistantRows[0]), [
       "list_expenses:succeeded",
     ]);
+  },
+);
+
+e2e(
+  "runAppTurn: Pocket lookup passes the verified actor and grounds the delivered reply",
+  async () => {
+    const text = "Quedan 37 € en Food.";
+    const outcome = await runAppTurn({
+      userText: "¿Cuánto me queda en Food?",
+      model: [
+        {
+          calls: [{
+            name: "read_finances",
+            args: { view: "pockets", p_actor: "ignored" },
+          }],
+        },
+        { text },
+      ],
+      verifier: [{ record: true }],
+    });
+    assertEquals(outcome.financeCalls.map((c) => [c.p_actor, c.p_read]), [[
+      USER_ID,
+      "spaces",
+    ], [USER_ID, "pockets"]]);
+    assertEquals(outcome.reply.text, text);
+    assert(outcome.verifierPrompts.some((p) => p.includes("3700")));
+  },
+);
+e2e(
+  "runAppTurn: a failed financial lookup cannot support an invented balance",
+  async () => {
+    const text = "Quedan 900 € en Food.";
+    const outcome = await runAppTurn({
+      userText: "¿Cuánto me queda en Food?",
+      financeFails: true,
+      model: [
+        { calls: [{ name: "read_finances", args: { view: "pockets" } }] },
+        { text },
+        { text },
+      ],
+      verifier: [{ record: true, consistent: false }],
+    });
+    assertEquals(outcome.reply.text, botMessage("recordsNotChecked", "es"));
+  },
+);
+
+e2e(
+  "runWebhookTurn: Pocket lookup passes the verified actor and grounds the delivered reply",
+  async () => {
+    const text = "Quedan 37 € en Food.";
+    const outcome = await runWebhookTurn({
+      userText: "¿Cuánto me queda en Food?",
+      model: [
+        {
+          calls: [{
+            name: "read_finances",
+            args: { view: "pockets", p_actor: "ignored" },
+          }],
+        },
+        { text },
+      ],
+      verifier: [{ record: true }],
+    });
+    assertEquals(outcome.financeCalls.map((c) => [c.p_actor, c.p_read]), [[
+      USER_ID,
+      "spaces",
+    ], [USER_ID, "pockets"]]);
+    assertEquals(outcome.whatsappMessages[0], text);
+    assert(outcome.verifierPrompts.some((p) => p.includes("3700")));
+  },
+);
+e2e(
+  "runWebhookTurn: a failed financial lookup cannot support an invented balance",
+  async () => {
+    const text = "Quedan 900 € en Food.";
+    const outcome = await runWebhookTurn({
+      userText: "¿Cuánto me queda en Food?",
+      financeFails: true,
+      model: [
+        { calls: [{ name: "read_finances", args: { view: "pockets" } }] },
+        { text },
+        { text },
+      ],
+      verifier: [{ record: true, consistent: false }],
+    });
+    assertEquals(
+      outcome.whatsappMessages[0],
+      botMessage("recordsNotChecked", "es"),
+    );
+  },
+);
+
+e2e(
+  "runWebhookTurn: posted total and scheduled payment reach the verifier separately",
+  async () => {
+    const outcome = await runWebhookTurn(totalReadScenario(false));
+    assert(outcome.advertisedTools[0].includes("read_finances"));
+    assertEquals(outcome.whatsappMessages[0], postedTotalReply);
+    assertEquals(
+      outcome.financeCalls.filter((c) => c.p_read === "summary").map(
+        (c) => [c.p_actor, c.p_space],
+      ),
+      [[USER_ID, null]],
+    );
+    assert(
+      outcome.verifierPrompts.some((p) =>
+        p.includes("100100") && p.includes("50000") && !p.includes("150100")
+      ),
+    );
   },
 );

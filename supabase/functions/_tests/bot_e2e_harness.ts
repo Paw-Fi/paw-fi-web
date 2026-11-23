@@ -26,6 +26,11 @@ export interface Scenario {
   verifier: VerifierTurn[];
   saveExpense?: { status: number; body: Json };
   expenses?: Json[];
+  spaces?: Array<{ household_id: string; name: string; is_portfolio: boolean }>;
+  spaceLookupFails?: boolean;
+  financeFails?: boolean;
+  denySession?: boolean;
+  spacePageSize?: number;
 }
 
 export interface Outcome {
@@ -33,9 +38,11 @@ export interface Outcome {
   telegramPhotos: string[];
   whatsappMessages: string[];
   saveCalls: Json[];
-  expenseQueries: string[];
+  financeCalls: Json[];
+  spaceQueries: string[];
   assistantRows: Json[];
   modelPrompts: string[];
+  advertisedTools: string[][];
   verifierPrompts: string[];
   unusedModelTurns: number;
 }
@@ -159,9 +166,11 @@ export async function withBotBackend(
     telegramPhotos: [],
     whatsappMessages: [],
     saveCalls: [],
-    expenseQueries: [],
+    financeCalls: [],
+    spaceQueries: [],
     assistantRows: [],
     modelPrompts: [],
+    advertisedTools: [],
     verifierPrompts: [],
     unusedModelTurns: 0,
   };
@@ -202,7 +211,10 @@ export async function withBotBackend(
       preferred_timezone: "Europe/Madrid",
       preferred_space_id: null,
     }],
-    chat_sessions: () => [{ id: SESSION_ID, system_prompt: null }],
+    chat_sessions: () =>
+      scenario.denySession
+        ? []
+        : [{ id: SESSION_ID, user_id: USER_ID, system_prompt: null }],
     expenses: () => scenario.expenses ?? [],
   };
 
@@ -286,6 +298,12 @@ export async function withBotBackend(
       }
       if (system.includes("You are Moneko")) {
         outcome.modelPrompts.push(lastText);
+        const tools = Array.isArray(body.tools) ? body.tools : [];
+        outcome.advertisedTools.push(
+          tools.flatMap((t) =>
+            (t.functionDeclarations || []).map((d: Json) => String(d.name))
+          ),
+        );
         const turn = modelQueue.shift();
         if (!turn) return json({ error: { message: "script exhausted" } }, 500);
         if (turn.status) {
@@ -320,11 +338,95 @@ export async function withBotBackend(
           email: "user@example.com",
         });
       }
-      if (url.pathname.startsWith("/rest/v1/rpc/")) return json(CONTEXT_ROW);
+      if (url.pathname === "/rest/v1/rpc/read_chat_finance_v1") {
+        outcome.financeCalls.push(body);
+        if (body.p_actor !== USER_ID || scenario.financeFails) {
+          return json({ message: "unavailable" }, 403);
+        }
+        if (body.p_read === "spaces") {
+          return json({
+            spaces: (scenario.spaces ?? []).map((s) => ({
+              ...s,
+              id: s.household_id,
+            })),
+          });
+        }
+        if (body.p_read === "summary") {
+          return json({
+            expense_total_cents: 100100,
+            income_total_cents: 0,
+            categories: [{ category: "food", amount_cents: 100100 }],
+          });
+        }
+        if (body.p_read === "projections") {
+          return json({
+            count: 1,
+            items: [{
+              id: "upcoming",
+              recurring_id: "rent",
+              date: "2026-11-30",
+              type: "expense",
+              category: "housing",
+              amount_cents: 50000,
+              currency: "EUR",
+            }],
+          });
+        }
+        if (body.p_read === "pockets") {
+          return json({
+            total_budget_cents: 15000,
+            pockets: [{ name: "Food", remaining_cents: 3700 }],
+          });
+        }
+        if (body.p_read === "transactions") {
+          return json({
+            items: (scenario.expenses ?? [])
+              .filter((row) => row.household_id === body.p_space).map(
+                (row) => ({ created_at: "2026-06-16T00:00:00Z", ...row }),
+              ),
+            has_more: false,
+            next_cursor: null,
+          });
+        }
+        return json({ message: "unexpected financial read" }, 400);
+      }
+      if (url.pathname.startsWith("/rest/v1/rpc/")) {
+        return json({
+          ...CONTEXT_ROW,
+          households: scenario.spaces ?? [],
+          spaces: scenario.spaces ?? [],
+        });
+      }
       if (url.pathname.startsWith("/rest/v1/")) {
         const table = url.pathname.slice("/rest/v1/".length);
         if (method === "GET") {
-          if (table === "expenses") outcome.expenseQueries.push(url.search);
+          if (
+            table === "household_members" &&
+            url.searchParams.get("select")?.includes("households!inner")
+          ) {
+            outcome.spaceQueries.push(url.search);
+            if (scenario.spaceLookupFails) {
+              return json({ code: "XX000", message: "lookup failed" }, 500);
+            }
+            const after = url.searchParams.get("household_id")?.slice(3);
+            const remaining = (scenario.spaces ?? []).filter((row) =>
+              !after || row.household_id > after
+            );
+            const page = remaining.slice(
+              0,
+              scenario.spacePageSize ?? remaining.length,
+            );
+            const rows = page.map(({ household_id, name, is_portfolio }) => ({
+              household_id,
+              space: { name, is_portfolio },
+            }));
+            const response = json(rows);
+            response.headers.set("Content-Range", `*/${remaining.length}`);
+            return response;
+          }
+          if (table === "expenses") {
+            throw new Error("Financial lookup bypassed the scoped reader");
+          }
           const rows = restRows[table]?.() ?? [];
           const wantsObject = (headers.get("Accept") ?? "").includes(
             "vnd.pgrst.object",
@@ -333,6 +435,13 @@ export async function withBotBackend(
           return rows.length
             ? json(rows[0])
             : json({ code: "PGRST116", message: "0 rows" }, 406);
+        }
+        if (
+          method === "POST" && table === "chat_messages" && Array.isArray(body)
+        ) {
+          outcome.assistantRows.push(
+            ...body.filter((row) => row.role === "assistant"),
+          );
         }
         if (
           method === "POST" && table === "chat_messages" &&
@@ -391,3 +500,29 @@ export function operationsOf(row: Json | undefined): string[] {
 // Handlers start timers and background work that outlive the request.
 export const e2e = (name: string, fn: () => Promise<void>) =>
   Deno.test({ name, fn, sanitizeOps: false, sanitizeResources: false });
+
+export const postedTotalReply =
+  "El gasto registrado es de 1.001 €. El pago previsto de 500 € se muestra aparte.";
+export function totalReadScenario(
+  web = false,
+): Scenario & { userText: string } {
+  const args = {
+    start_date: "2026-11-01",
+    end_date: "2026-11-30",
+    space_scope: "personal",
+    currency: "EUR",
+  };
+  return {
+    userText: "¿Cuánto gasté en noviembre en mi cuenta personal?",
+    model: [
+      {
+        calls: [{
+          name: web ? "read_finances" : "financial_insight",
+          args: web ? { ...args, view: "summary" } : args,
+        }],
+      },
+      { text: postedTotalReply },
+    ],
+    verifier: [{ record: true }],
+  };
+}

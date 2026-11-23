@@ -1,6 +1,6 @@
 -- User requests are short. pg_cron runs the existing atomic reset separately
 -- from the PostgREST statement/gateway deadline (including if the app exits).
-create table public.financial_reset_jobs (
+create table if not exists public.financial_reset_jobs (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
   status text not null default 'pending' check (status in ('pending', 'completed', 'failed')),
@@ -8,25 +8,25 @@ create table public.financial_reset_jobs (
   finished_at timestamptz,
   failure_detail text
 );
-create unique index financial_reset_jobs_one_pending
+create unique index if not exists financial_reset_jobs_one_pending
   on public.financial_reset_jobs(user_id) where status = 'pending';
-create index financial_reset_jobs_queue on public.financial_reset_jobs(created_at, id)
+create index if not exists financial_reset_jobs_queue on public.financial_reset_jobs(created_at, id)
   where status = 'pending';
-create index financial_reset_jobs_owner on public.financial_reset_jobs(user_id);
+create index if not exists financial_reset_jobs_owner on public.financial_reset_jobs(user_id);
 
 -- Two devices can confirm the same pending reset. Remember BOTH request IDs
 -- so even a lost enqueue response followed by a late retry cannot delete again.
-create table public.financial_reset_requests (
+create table if not exists public.financial_reset_requests (
   request_id uuid primary key,
   job_id uuid not null references public.financial_reset_jobs(id) on delete cascade
 );
-create index financial_reset_requests_job on public.financial_reset_requests(job_id);
+create index if not exists financial_reset_requests_job on public.financial_reset_requests(job_id);
 alter table public.financial_reset_jobs enable row level security;
 alter table public.financial_reset_requests enable row level security;
 revoke all on public.financial_reset_jobs, public.financial_reset_requests
   from public, anon, authenticated, service_role;
 
-create function public.get_financial_data_reset(p_request_id uuid, p_expected_user_id uuid)
+create or replace function public.get_financial_data_reset(p_request_id uuid, p_expected_user_id uuid)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare
   actor uuid := auth.uid();
@@ -40,7 +40,7 @@ begin
 end;
 $$;
 
-create function public.request_financial_data_reset(p_request_id uuid, p_expected_user_id uuid)
+create or replace function public.request_financial_data_reset(p_request_id uuid, p_expected_user_id uuid)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   actor uuid := auth.uid();
@@ -65,10 +65,41 @@ begin
 end;
 $$;
 
-create function public.process_financial_data_reset_job() returns void
+-- Move the installed reset bodies (including the dependency-order fix) behind
+-- owner-only, explicit-actor entry points. Keep one cleanup implementation.
+-- Existing no-arg RPCs retain their OIDs, grants and function settings and
+-- still derive their actor solely from auth.uid(). No JWT exists in pg_cron.
+do $migration$
+declare
+  name text;
+  src text;
+  ddl text;
+  helper text;
+  delegate text;
+begin
+  foreach name in array array['perform_user_financial_data_reset', 'reset_user_financial_data'] loop
+    helper := name || '_for_actor';
+    delegate := format('begin return public.%I(auth.uid()); end;', helper);
+    select p.prosrc, pg_get_functiondef(p.oid) into strict src, ddl
+      from pg_proc p where p.oid = format('public.%I()', name)::regprocedure;
+    if src = delegate and to_regprocedure(format('public.%I(uuid)', helper)) is not null then
+      continue;
+    end if;
+    if position('current_user_id := auth.uid();' in src) = 0 or
+       (name = 'reset_user_financial_data' and position('public.perform_user_financial_data_reset()' in src) = 0) then
+      raise exception 'Unexpected reset function definition: %', name;
+    end if;
+    execute format('create function public.%I(p_actor uuid) returns jsonb language plpgsql security invoker set search_path = %L as %L',
+      helper, '', replace(replace(src, 'current_user_id := auth.uid();', 'current_user_id := p_actor;'),
+        'public.perform_user_financial_data_reset()', 'public.perform_user_financial_data_reset_for_actor(p_actor)'));
+    execute format('revoke all on function public.%I(uuid) from public, anon, authenticated, service_role', helper);
+    execute replace(ddl, src, delegate);
+  end loop;
+end;
+$migration$;
+
+create or replace function public.process_financial_data_reset_job() returns void
 language plpgsql security definer set search_path = ''
--- Function-scoped settings are restored even when the caller keeps its transaction open.
-set request.jwt.claim.sub = '' set request.jwt.claim.role = 'authenticated' set request.jwt.claims = '{}'
 set lock_timeout = '5s' as $$
 declare
   job public.financial_reset_jobs;
@@ -79,9 +110,7 @@ begin
   if not found then return; end if;
 
   begin
-    perform set_config('request.jwt.claim.sub', job.user_id::text, true);
-    perform set_config('request.jwt.claims', jsonb_build_object('sub', job.user_id, 'role', 'authenticated')::text, true);
-    result := public.reset_user_financial_data();
+    result := public.reset_user_financial_data_for_actor(job.user_id);
     if (result -> 'success') is distinct from 'true'::jsonb then
       raise exception 'Financial reset rejected: %', result ->> 'message';
     end if;

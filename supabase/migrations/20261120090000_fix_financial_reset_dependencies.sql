@@ -4,8 +4,8 @@
 -- expense/recurring cleanup, offboarding escrow and every scope predicate intact.
 do $migration$
 declare
-  v_definition text := pg_get_functiondef(
-    'public.perform_user_financial_data_reset()'::regprocedure);
+  v_target regprocedure := 'public.perform_user_financial_data_reset()'::regprocedure;
+  v_definition text;
   v_bank_delete text := $old$  if array_length(v_plaid_bank_account_ids, 1) is not null then
     delete from public.bank_accounts ba
     where ba.id = any(v_plaid_bank_account_ids);
@@ -16,12 +16,20 @@ $old$;
     'success', true,
     'message', 'Financial data reset successfully',$old$;
 begin
+  -- After the jobs migration, the no-arg function only supplies auth.uid().
+  -- Follow that specific delegator, not just a similarly named function.
+  if (select btrim(prosrc) from pg_proc where oid = v_target) =
+     'begin return public.perform_user_financial_data_reset_for_actor(auth.uid()); end;' then
+    v_target := 'public.perform_user_financial_data_reset_for_actor(uuid)'::regprocedure;
+  end if;
+  v_definition := pg_get_functiondef(v_target);
   if position('-- financial_reset_bank_accounts_after_wallets' in v_definition) > 0 then
     return;
   end if;
   if position(v_bank_delete in v_definition) = 0
     or position(v_return in v_definition) = 0 then
-    raise exception 'Unexpected financial reset dependency boundaries';
+    raise exception 'Unexpected financial reset dependency boundaries in %', v_target
+      using hint = format('Inspect the installed definition: SELECT pg_get_functiondef(%L::regprocedure);', v_target::text);
   end if;
   v_definition := replace(v_definition, v_bank_delete, '');
   v_definition := replace(v_definition, v_return,

@@ -17,7 +17,7 @@ const missing = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const scalar = async (db, sql, params = []) =>
   (await db.query(sql, params)).rows[0].value;
 
-async function fixture(t) {
+async function fixture(t, { installer = "postgres" } = {}) {
   const db = new PGlite();
   t.after(() => db.close());
   await db.exec(`
@@ -25,6 +25,7 @@ async function fixture(t) {
     create role authenticated nologin;
     create role service_role nologin bypassrls;
     create role reset_unprivileged nologin;
+    create role reset_owner nologin nosuperuser nocreatedb nocreaterole nobypassrls;
     create schema auth;
     create table auth.users (id uuid primary key);
     insert into auth.users values ('${alice}'), ('${bob}');
@@ -75,44 +76,100 @@ async function fixture(t) {
     insert into reset_fixture.control values ('success');
     create table reset_fixture.calls (
       ordinal bigint generated always as identity,
-      actor uuid not null
+      actor uuid not null,
+      observed_auth jsonb not null
     );
     create sequence reset_fixture.attempts;
+    create table reset_fixture.expected_auth (value jsonb not null);
+    create function reset_fixture.auth_context() returns jsonb
+    language sql as $$
+      select jsonb_build_object('actor', auth.uid(),
+        'sub', coalesce(current_setting('request.jwt.claim.sub', true), ''),
+        'claims', coalesce(current_setting('request.jwt.claims', true), ''),
+        'role', coalesce(current_setting('request.jwt.claim.role', true), ''),
+        'sentinel', coalesce(current_setting('request.jwt.claim.sentinel', true), ''))
+    $$;
+    create function reset_fixture.assert_auth_unchanged() returns void
+    language plpgsql as $$ begin
+      if exists (select 1 from reset_fixture.expected_auth
+          where value is distinct from reset_fixture.auth_context()) then
+        raise exception 'fixture: auth context changed INSIDE reset helper';
+      end if;
+    end $$;
 
-    -- Model the existing JSON-returning reset dependency, not its entire
-    -- financial schema. Sequence increments survive rollback and prove that
-    -- idempotent retries really avoid invoking the destructive dependency.
-    create function public.reset_user_financial_data() returns jsonb
+    -- Representative originals for the migration's pg_get_functiondef rewrite:
+    -- BOTH assign auth.uid() in the body, and the wrapper calls the public core.
+    -- Model only financial deletes; nextval survives failed subtransactions.
+    create function public.perform_user_financial_data_reset() returns jsonb
     language plpgsql security definer set search_path = '' as $$
     declare
-      v_actor uuid := auth.uid();
+      current_user_id uuid;
       v_mode text;
     begin
-      if v_actor is null then raise exception 'fixture: missing actor'; end if;
+      current_user_id := auth.uid();
+      if current_user_id is null then raise exception 'fixture: missing actor'; end if;
       perform nextval('reset_fixture.attempts');
-      insert into reset_fixture.calls(actor) values (v_actor);
+      perform reset_fixture.assert_auth_unchanged();
+      insert into reset_fixture.calls(actor, observed_auth)
+        values (current_user_id, reset_fixture.auth_context());
       delete from reset_fixture.records
-        where user_id = v_actor and ordinal <= 3000;
+        where user_id = current_user_id and ordinal <= 3000;
       select mode into v_mode from reset_fixture.control;
       if v_mode = 'throw' then
         raise exception 'fixture: failure after partial deletion';
-      elsif v_mode = 'return_failure' then
-        return jsonb_build_object('success', false,
-          'message', 'fixture: returned failure after partial deletion');
       end if;
-      delete from reset_fixture.records where user_id = v_actor;
+      delete from reset_fixture.records where user_id = current_user_id;
+      perform reset_fixture.assert_auth_unchanged();
       return jsonb_build_object('success', true);
     end
     $$;
-    revoke all on function public.reset_user_financial_data() from public;
+    create function public.reset_user_financial_data() returns jsonb
+    language plpgsql security definer set search_path = '' as $$
+    declare
+      current_user_id uuid;
+    begin
+      current_user_id := auth.uid();
+      if current_user_id is null then raise exception 'fixture: missing actor'; end if;
+      perform public.perform_user_financial_data_reset();
+      if (select mode from reset_fixture.control) = 'return_failure' then
+        return jsonb_build_object('success', false,
+          'message', 'fixture: returned failure after deletion');
+      end if;
+      return jsonb_build_object('success', true);
+    end
+    $$;
+    revoke all on function public.perform_user_financial_data_reset(),
+      public.reset_user_financial_data() from public;
     grant execute on function public.reset_user_financial_data()
       to authenticated;
   `);
-  // Only omit the unavailable extension installation; cron's SQL API is above.
-  await db.exec(migration.replace(
-    /\bcreate\s+extension\s+(?:if\s+not\s+exists\s+)?["']?pg_cron["']?(?:\s+with\s+schema\s+\w+)?\s*;/gi,
-    "",
-  ));
+  if (installer === "reset_owner") {
+    // Bootstrap privileges only. Installation itself must not inherit postgres
+    // or the ability to change a superuser-only setting such as session auth.
+    await db.exec(`
+      alter schema public owner to reset_owner;
+      alter function public.perform_user_financial_data_reset() owner to reset_owner;
+      alter function public.reset_user_financial_data() owner to reset_owner;
+      grant references on auth.users to reset_owner;
+      grant usage on schema cron, reset_fixture to reset_owner;
+      grant all on all tables in schema cron, reset_fixture to reset_owner;
+      grant all on all sequences in schema cron, reset_fixture to reset_owner;
+    `);
+  }
+  await db.transaction(async (tx) => {
+    assert.ok(["postgres", "reset_owner"].includes(installer));
+    await tx.exec(`set local role ${installer}`);
+    assert.equal(await scalar(tx, "select current_user as value"), installer);
+    if (installer === "reset_owner") {
+      assert.equal(await scalar(tx,
+        "select rolsuper as value from pg_roles where rolname = current_user"), false);
+    }
+    // Only omit the unavailable extension installation; cron's SQL API is above.
+    await tx.exec(migration.replace(
+      /\bcreate\s+extension\s+(?:if\s+not\s+exists\s+)?["']?pg_cron["']?(?:\s+with\s+schema\s+\w+)?\s*;/gi,
+      "",
+    ));
+  });
   assert.equal(await scalar(db, "select current_user as value"), "postgres");
   return db;
 }
@@ -138,7 +195,13 @@ const request = (db, id = first, actor = alice) => asRole(db, "authenticated", a
   (tx) => rpc(tx, "request_financial_data_reset", id, actor));
 const read = (db, id = first, actor = alice) => asRole(db, "authenticated", actor,
   (tx) => rpc(tx, "get_financial_data_reset", id, actor));
-const worker = (db) => db.query("select public.process_financial_data_reset_job()");
+const worker = async (db) => {
+  // This table is outside the rewritten functions: a SECURITY DEFINER SET or
+  // set_config/restore trick cannot hide impersonation from the in-body probe.
+  await db.exec(`delete from reset_fixture.expected_auth;
+    insert into reset_fixture.expected_auth select reset_fixture.auth_context()`);
+  return db.query("select public.process_financial_data_reset_job()");
+};
 const count = (db, actor) => scalar(db,
   "select count(*)::int as value from reset_fixture.records where user_id = $1", [actor]);
 const attempts = (db) => scalar(db,
@@ -175,12 +238,107 @@ async function workerWithContextCheck(db, actor = bob) {
         : { role: "service_role", sentinel: "keep" }),
     ]);
     await tx.exec("set local request.jwt.claim.role = 'service_role'");
+    await tx.exec("set local request.jwt.claim.sentinel = 'untouched'");
     const before = await context(tx);
     await worker(tx);
     // Check BEFORE COMMIT: SET LOCAL alone must not hide leaked impersonation.
     assert.deepEqual(await context(tx), before);
   });
 }
+
+test("migration and installed reset functions never configure request JWT claims, including DEFINER proconfig", async (t) => {
+  const setsJwt = /\bset_config\s*\(\s*['"]request\.jwt\.claim|\bset\s+(?:(?:local|session)\s+)?["']?request\.jwt\.claim/i;
+  assert.doesNotMatch(migration, setsJwt);
+  const db = await fixture(t);
+  const { rows } = await db.query(`select p.oid::regprocedure::text as name,
+      p.prosrc, coalesce(p.proconfig, array[]::text[]) as settings
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname in (
+      'perform_user_financial_data_reset', 'reset_user_financial_data',
+      'perform_user_financial_data_reset_for_actor', 'reset_user_financial_data_for_actor',
+      'request_financial_data_reset', 'get_financial_data_reset',
+      'process_financial_data_reset_job')`);
+  assert.equal(rows.length, 7, "both explicit-actor helpers must be installed");
+  for (const row of rows) {
+    assert.doesNotMatch(row.prosrc, setsJwt, row.name);
+    for (const setting of row.settings) {
+      assert.doesNotMatch(setting, /^request\.jwt\.claim/i, row.name);
+    }
+  }
+});
+
+test("worker without a JWT resets the queued actor without changing auth inside the helper", async (t) => {
+  const db = await fixture(t);
+  await request(db);
+  assert.equal((await context(db)).actor, null);
+  const expected = await scalar(db, "select reset_fixture.auth_context() as value");
+  await worker(db);
+  status(await read(db), first, "completed");
+  assert.deepEqual((await db.query("select actor, observed_auth from reset_fixture.calls")).rows,
+    [{ actor: alice, observed_auth: expected }]);
+  assert.equal(await count(db, alice), 0);
+  assert.equal(await count(db, bob), 6000);
+});
+
+test("explicit actor helpers are owner-only, not PUBLIC, client, or service-role APIs", async (t) => {
+  const db = await fixture(t);
+  for (const name of ["perform_user_financial_data_reset_for_actor", "reset_user_financial_data_for_actor"]) {
+    const signature = `public.${name}(uuid)`;
+    assert.ok(await scalar(db, "select to_regprocedure($1)::text as value", [signature]), signature);
+    assert.equal(await scalar(db, `select count(*)::int as value
+      from pg_proc p, lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+      where p.oid = $1::regprocedure and a.privilege_type = 'EXECUTE'
+        and a.grantee <> p.proowner`, [signature]), 0, `${signature}: only its owner may execute`);
+    for (const role of ["anon", "authenticated", "service_role", "reset_unprivileged"]) {
+      assert.equal(await scalar(db,
+        "select has_function_privilege($1, $2, 'EXECUTE') as value", [role, signature]), false);
+      await assert.rejects(asRole(db, role, bob,
+        (tx) => tx.query(`select public.${name}($1::uuid)`, [alice])),
+      (error) => error.code === "42501", `${role} must not reset an explicit actor`);
+    }
+  }
+  assert.equal(await attempts(db), 0);
+  assert.equal(await count(db, alice), 6000);
+  assert.equal(await count(db, bob), 6000);
+});
+
+  test('legacy public reset remains actor-scoped and the internal core remains private', async (t) => {
+    const db = await fixture(t);
+    await assert.rejects(asRole(db, "authenticated", alice,
+      (tx) => tx.query('select public.perform_user_financial_data_reset()')), { code: '42501' });
+    await assert.rejects(asRole(db, "authenticated", null,
+      (tx) => tx.query('select public.reset_user_financial_data()')));
+    assert.equal(await attempts(db), 0);
+    await asRole(db, "authenticated", alice, (tx) => tx.query('select public.reset_user_financial_data()'));
+    assert.equal(await count(db, alice), 0);
+    assert.equal(await count(db, bob), 6000);
+    assert.equal(await attempts(db), 1);
+  });
+
+test("non-superuser owner installs and replays reset function DDL and processes a retry without JWT impersonation", async (t) => {
+  const db = await fixture(t, { installer: "reset_owner" });
+  await request(db);
+  await db.transaction(async (tx) => {
+    await tx.exec("set local role reset_owner");
+    await tx.exec(migration);
+  });
+  status(await read(db), first, 'pending');
+  await db.transaction(async (tx) => {
+    await tx.exec("set local role reset_owner");
+    assert.equal((await context(tx)).actor, null);
+    await worker(tx);
+  });
+  status(await read(db), first, "completed");
+  await db.query("insert into reset_fixture.records values ($1, 7000, 'after owner reset')", [alice]);
+  status(await request(db), first, "completed");
+  await db.transaction(async (tx) => {
+    await tx.exec("set local role reset_owner");
+    await worker(tx);
+  });
+  assert.equal(await attempts(db), 1);
+  assert.equal(await count(db, alice), 1);
+  assert.equal(await count(db, bob), 6000);
+});
 
 test("enqueue is non-destructive, same-ID retries return one pending job, and reads expose status", async (t) => {
   const db = await fixture(t);
@@ -346,6 +504,11 @@ for (const mode of ["throw", "return_failure"]) {
     await db.query("update reset_fixture.control set mode = $1", [mode]);
     await workerWithContextCheck(db);
     status(await read(db), first, "failed");
+    assert.match(await scalar(db,
+      "select failure_detail as value from public.financial_reset_jobs where id = $1", [first]),
+    mode === "throw" ? /fixture: failure after partial deletion/
+      : /fixture: returned failure after deletion/,
+    "exercise the intended rollback path, not an earlier auth-probe failure");
     assert.equal(await snapshot(db), before, "all deleted records must be restored exactly");
     assert.equal(await scalar(db, "select count(*)::int as value from reset_fixture.calls"), 0);
     assert.equal(await attempts(db), 1, "the failure must occur inside the reset dependency");
@@ -400,7 +563,13 @@ test("forced completion-update failure cannot commit a successful reset's partia
   assert.equal(await attempts(db), 1);
   assert.equal(await snapshot(db), before);
   assert.equal(await scalar(db, "select count(*)::int as value from reset_fixture.calls"), 0);
-  assert.ok(["pending", "failed"].includes((await read(db)).status));
+  const failedStatus = (await read(db)).status;
+  assert.ok(["pending", "failed"].includes(failedStatus));
+  if (failedStatus === "failed") {
+    assert.match(await scalar(db,
+      "select failure_detail as value from public.financial_reset_jobs where id = $1", [first]),
+    /fixture: forced completion write failure/);
+  }
   await db.exec("drop trigger fixture_reject_completion on public.financial_reset_jobs");
   await request(db, second, bob);
   // If the first job was rolled back to pending, consume it before Bob's job.

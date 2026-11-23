@@ -1,5 +1,9 @@
 // supabase/functions/gemini-structured-stream/index.ts
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { authenticateUser } from "../shared/auth.ts";
+import {
+  type GroundWebReply,
+  runWebFinancialTurn,
+} from "./financial-read-turn.ts";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders, withCors } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
@@ -8,10 +12,7 @@ import { AI_PROMPT } from "./prompt.ts";
 import { prompt as FA_PROMPT } from "./fa-prompt.ts";
 import { AI_ROLES } from "../shared/ai-roles/ai-roles.ts";
 import { GEMINI_MODEL_FALLBACKS } from "../shared/gemini-models.ts";
-import {
-  processGoalTrackingRequest,
-  getGeminiFunctionDeclarations,
-} from "./goal-tracker.ts";
+import { processGoalTrackingRequest } from "./goal-tracker.ts";
 
 // Configuration constants
 const AI_MODEL = "gemini-3.1-flash-lite";
@@ -266,7 +267,7 @@ function createErrorResponse(
   });
 }
 
-serve(withCors(async (req: Request): Promise<Response> => {
+Deno.serve(withCors(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return handleOptionsRequest();
   if (req.method !== "POST") return handleMethodNotAllowed();
 
@@ -293,7 +294,7 @@ serve(withCors(async (req: Request): Promise<Response> => {
     const {
       message,
       userProfile,
-      userId,
+      userId: requestedUserId,
       conversationId,
       model: chatModel,
       goalContext,
@@ -316,6 +317,35 @@ serve(withCors(async (req: Request): Promise<Response> => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const bearer = req.headers.get("Authorization")?.replace(/^Bearer /i, "");
+    let userId: string | null = null;
+    if (
+      requestedUserId ||
+      (bearer && bearer !== Deno.env.get("SUPABASE_ANON_KEY") &&
+        !bearer.startsWith("sb_publishable_"))
+    ) {
+      const actor = await authenticateUser(req, supabase);
+      if (!actor.success || !actor.userId) {
+        return createErrorResponse("Sign in to read financial records.", 401);
+      }
+      if (requestedUserId && requestedUserId !== actor.userId) {
+        return createErrorResponse("Account mismatch.", 403);
+      }
+      userId = actor.userId;
+    }
+    requestData.userId = userId;
+    if (conversationId) {
+      let owner = supabase.from("chat_sessions").select("id").eq(
+        "id",
+        conversationId,
+      );
+      owner = userId ? owner.eq("user_id", userId) : owner.is("user_id", null);
+      const { data, error } = await owner.maybeSingle();
+      if (error || !data) {
+        return createErrorResponse("Conversation unavailable.", 404);
+      }
+    }
 
     // Log user profile availability
     if (userProfile) {
@@ -358,8 +388,8 @@ serve(withCors(async (req: Request): Promise<Response> => {
       .from("chat_messages")
       .select("*")
       .eq("chat_session_id", currentConversationId)
-      .order("timestamp", { ascending: true })
-      .order("id", { ascending: true })
+      .order("timestamp", { ascending: false })
+      .order("id", { ascending: false })
       .limit(MAX_HISTORY_MESSAGES);
 
     if (fetchError) {
@@ -368,7 +398,48 @@ serve(withCors(async (req: Request): Promise<Response> => {
     }
 
     // Use the fetched messages as history
-    history = recentMessages || [];
+    history = (recentMessages || []).reverse();
+
+    let groundCoaching: GroundWebReply | undefined;
+    if (userId) {
+      const turn = await runWebFinancialTurn(
+        supabase,
+        userId,
+        message,
+        history,
+      );
+      if ("text" in turn) {
+        const { text } = turn;
+        const times = createTimestampPair();
+        const { error } = await supabase.from("chat_messages").insert([
+          {
+            chat_session_id: currentConversationId,
+            role: "user",
+            content: message,
+            timestamp: times.userTimestamp,
+          },
+          {
+            chat_session_id: currentConversationId,
+            role: "assistant",
+            content: text,
+            timestamp: times.aiTimestamp,
+          },
+        ]);
+        if (error) {
+          return createErrorResponse("Unable to save this conversation.", 500);
+        }
+        return new Response(
+          JSON.stringify({
+            response: text,
+            conversationId: currentConversationId,
+            generatedLessons: null,
+            course_id: null,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      groundCoaching = turn.groundCoaching;
+    }
 
     // Note: User message will be saved to database after AI response is generated
 
@@ -491,9 +562,7 @@ serve(withCors(async (req: Request): Promise<Response> => {
 
       // Check if this is a Financial Advisor request that might need goal tracking
       // Goal tracking should be attempted for ANY financial advisor message, not just when goalContext exists
-      let goalTrackingAttempted = false;
       if (chatModel === AI_ROLES.FINANCIAL_ADVISOR) {
-        goalTrackingAttempted = true;
         try {
           const goalTrackingResult = await processGoalTrackingRequest(
             {
@@ -508,6 +577,15 @@ serve(withCors(async (req: Request): Promise<Response> => {
 
           // Handle successful goal tracking function execution
           if (goalTrackingResult.function_executed) {
+            if (groundCoaching) {
+              goalTrackingResult.response = await groundCoaching(
+                goalTrackingResult.response,
+                {
+                  tool: goalTrackingResult.function_executed,
+                  result: goalTrackingResult.function_result,
+                },
+              );
+            }
             // Save goal tracking messages to database
             if (currentConversationId) {
               const timestamps = createTimestampPair();
@@ -628,28 +706,7 @@ serve(withCors(async (req: Request): Promise<Response> => {
         },
       ];
 
-      // Initialize model with function calling for Financial Advisor if goals are available
-      // BUT avoid function calling if goal tracking was already attempted to prevent duplicate calls
-      let model;
-
-      if (
-        chatModel === AI_ROLES.FINANCIAL_ADVISOR &&
-        goalContext &&
-        !goalTrackingAttempted
-      ) {
-        // Add function calling capabilities for Financial Advisor with goals
-        const functionDeclarations = getGeminiFunctionDeclarations();
-        model = genAI.getGenerativeModel({
-          model: AI_MODEL,
-          tools: [
-            {
-              function_declarations: functionDeclarations,
-            },
-          ],
-        });
-      } else {
-        model = genAI.getGenerativeModel({ model: AI_MODEL });
-      }
+      const model = genAI.getGenerativeModel({ model: AI_MODEL });
       const generationConfig = {
         responseMimeType: "text/plain",
         maxOutputTokens: MAX_OUTPUT_TOKENS,
@@ -692,8 +749,8 @@ serve(withCors(async (req: Request): Promise<Response> => {
         {
           contents,
           systemInstruction: systemInstruction,
+          generationConfig,
         },
-        generationConfig,
       );
 
       let responseText = result.response.text();
@@ -728,8 +785,8 @@ serve(withCors(async (req: Request): Promise<Response> => {
           {
             contents: continuationContents,
             systemInstruction: systemInstruction,
+            generationConfig,
           },
-          generationConfig,
         );
 
         // Append continuation to response
@@ -794,6 +851,7 @@ serve(withCors(async (req: Request): Promise<Response> => {
     let finalResponse = cleanedResponse;
     let extractedCourse = null;
     let course_id = null;
+    let courseCardGrounded = false;
 
     if (!hasJsonMarkdown && !looksLikeRawJson && !hasEmbeddedJson) {
       // Simple text response (like profile prompts)
@@ -854,9 +912,16 @@ serve(withCors(async (req: Request): Promise<Response> => {
           "JSON string to parse is empty after stripping fences and trimming. Original cleanedResponse:",
           cleanedResponse,
         );
-        return new Response(JSON.stringify({ response: cleanedResponse }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            response: groundCoaching
+              ? await groundCoaching(cleanedResponse)
+              : cleanedResponse,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       try {
@@ -949,10 +1014,20 @@ serve(withCors(async (req: Request): Promise<Response> => {
         const courseCardHtml = `<course-card data-course='${JSON.stringify(simpleJsonObject)}'></course-card>`;
 
         // Reconstruct the response with preamble, course card HTML, and epilogue
-        const fullMessageParts = [preamble, courseCardHtml, epilogue].filter(
-          Boolean,
-        );
-        finalResponse = fullMessageParts.join("\n\n");
+        if (groundCoaching && (preamble || epilogue)) {
+          const draft = [preamble, epilogue].filter(Boolean).join("\n\n");
+          const grounded = await groundCoaching(draft, {
+            tool: "store-course-from-ai",
+            result: { success: !!course_id, title: parsedJson.title },
+          });
+          if (grounded !== draft) {
+            preamble = grounded;
+            epilogue = "";
+          }
+        }
+        finalResponse = [preamble, courseCardHtml, epilogue].filter(Boolean)
+          .join("\n\n");
+        courseCardGrounded = true;
       } catch (parseError) {
         const errorMessage =
           parseError instanceof Error
@@ -976,6 +1051,10 @@ serve(withCors(async (req: Request): Promise<Response> => {
         // For parse errors, use the original response
         finalResponse = cleanedResponse;
       }
+    }
+
+    if (groundCoaching && !courseCardGrounded) {
+      finalResponse = await groundCoaching(finalResponse);
     }
 
     // Save final messages to database

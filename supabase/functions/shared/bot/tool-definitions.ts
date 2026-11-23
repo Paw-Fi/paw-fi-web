@@ -522,7 +522,7 @@ export function buildGetSpaceInfoTool(): BotToolDeclaration {
   return {
     name: "get_space_info",
     description:
-      "Get a space's settings and member list. Use this when the user asks who is in a space, list members, list admins/owners, or show space details. Use space_name unless the ID is already known internally.",
+      "List all the user's private and shared spaces by calling with no arguments. For settings or members of one space, pass its space_name or known space_id.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -675,7 +675,7 @@ export function buildListExpensesTool(
   return {
     name: "list_expenses",
     description:
-      "List individual transactions (expenses or income). Also use it to check whether a specific transaction is stored: pass start_date and end_date covering that transaction's date, then compare the returned rows. Never state that a record exists or is missing without calling this first.",
+      "List individual transactions (expenses or income). Use this also to check whether or where a specific transaction was saved. Pass start_date and end_date covering its date, then match the amount and description and read the matching row's space_scope and space. Never state that a record exists or is missing without calling this first.",
     parameters: {
       type: "OBJECT",
       properties: {

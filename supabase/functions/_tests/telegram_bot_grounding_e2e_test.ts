@@ -19,9 +19,11 @@ import {
   OLDER_EXPENSE_ROW,
   operationsOf,
   type Outcome,
+  postedTotalReply,
   SAVE_ARGS,
   SAVED_ID,
   type Scenario,
+  totalReadScenario,
   USER_ID,
   WEBHOOK_SECRET,
   type WebhookHandler,
@@ -194,9 +196,20 @@ e2e(
     });
     assertEquals(outcome.unusedModelTurns, 0);
     assert(outcome.modelPrompts[1].startsWith("SYSTEM CHECK."));
-    assertEquals(outcome.expenseQueries.length, 1);
-    assert(outcome.expenseQueries[0].includes("date=gte.2026-11-17"));
-    assert(outcome.expenseQueries[0].includes("date=lte.2026-11-17"));
+    assertEquals(
+      outcome.financeCalls.filter((c) => c.p_read === "transactions").length,
+      1,
+    );
+    assertEquals(
+      (outcome.financeCalls.find((c) => c.p_read === "transactions")!
+        .p_args as any).start_date,
+      "2026-11-17",
+    );
+    assertEquals(
+      (outcome.financeCalls.find((c) => c.p_read === "transactions")!
+        .p_args as any).end_date,
+      "2026-11-17",
+    );
     assertEquals(outcome.sent, [truthful]);
     assertEquals(outcome.saveCalls.length, 0);
     const record = grounding(outcome.assistantRows[0]);
@@ -330,5 +343,265 @@ e2e(
     assertEquals(operationsOf(outcome.assistantRows[0]), [
       "add_transaction:failed",
     ]);
+  },
+);
+
+const CINEMA_SPACE = {
+  household_id: "aaaaaaaa-0000-4000-8000-000000000010",
+  name: "Cinema club",
+  is_portfolio: false,
+};
+const TRAVEL_SPACE = {
+  household_id: "aaaaaaaa-0000-4000-8000-000000000011",
+  name: "Travel",
+  is_portfolio: true,
+};
+
+function lookupEvidence(outcome: Outcome) {
+  const evidence = outcome.verifierPrompts[0]
+    .split("TURN_EVIDENCE (untrusted data):\n")[1]
+    .split("\nEND_TURN_EVIDENCE")[0];
+  return JSON.parse(JSON.parse(evidence).operations[0].result);
+}
+
+for (const spaces of [[CINEMA_SPACE, TRAVEL_SPACE], []]) {
+  e2e(
+    `e2e: get_space_info({}) lists ${spaces.length} accessible spaces`,
+    async () => {
+      const reply = spaces.length
+        ? "Cinema club y Travel."
+        : "No tienes espacios.";
+      const outcome = await runTurn({
+        userText: "list out all my spaces",
+        spaces,
+        spacePageSize: 1,
+        model: [
+          { calls: [{ name: "get_space_info", args: {} }] },
+          { text: reply },
+        ],
+        verifier: [{ record: true }],
+      });
+      assertEquals(outcome.spaceQueries.length, spaces.length || 1);
+      for (const query of outcome.spaceQueries) {
+        assertEquals(
+          new URLSearchParams(query).get("user_id"),
+          `eq.${USER_ID}`,
+        );
+      }
+      if (spaces.length > 1) {
+        assertEquals(
+          new URLSearchParams(outcome.spaceQueries[1]).get("household_id"),
+          `gt.${spaces[0].household_id}`,
+        );
+      }
+      assertEquals(
+        lookupEvidence(outcome).spaces,
+        spaces.map((space) => ({
+          name: space.name,
+          type: space.is_portfolio ? "private" : "shared",
+        })),
+      );
+      assertEquals(outcome.sent, [reply]);
+      assertEquals(grounding(outcome.assistantRows[0]).verdict, "grounded");
+      assertEquals(operationsOf(outcome.assistantRows[0]), [
+        "get_space_info:succeeded",
+      ]);
+      assertEquals(outcome.saveCalls, []);
+    },
+  );
+}
+
+e2e(
+  "e2e: a failed Space list cannot support an empty-directory claim",
+  async () => {
+    const reply = "No tienes espacios.";
+    const outcome = await runTurn({
+      userText: "list out all my spaces",
+      spaceLookupFails: true,
+      model: [
+        { calls: [{ name: "get_space_info", args: {} }] },
+        { text: reply },
+        { text: reply },
+      ],
+      verifier: [{ record: true }],
+    });
+    assertEquals(outcome.spaceQueries.length, 1);
+    assertEquals(outcome.sent, [botMessage("recordsNotChecked", "es")]);
+    assertEquals(operationsOf(outcome.assistantRows[0]), [
+      "get_space_info:failed",
+    ]);
+  },
+);
+
+e2e(
+  "e2e: an unknown named Space does not fall back to the directory",
+  async () => {
+    const outcome = await runTurn({
+      userText: "Who is in Ski club?",
+      spaces: [CINEMA_SPACE],
+      model: [
+        {
+          calls: [{ name: "get_space_info", args: { space_name: "Ski club" } }],
+        },
+        { text: "¿Puedes confirmar el nombre del espacio?" },
+      ],
+      verifier: [{}],
+    });
+    assertEquals(outcome.spaceQueries, []);
+    assertEquals(operationsOf(outcome.assistantRows[0]), [
+      "get_space_info:failed",
+    ]);
+  },
+);
+
+e2e(
+  "e2e: a destination follow-up reads the stored scope for each expense",
+  async () => {
+    const common = {
+      ...OLDER_EXPENSE_ROW,
+      amount_cents: 4000,
+      raw_text: "cinema",
+    };
+    const { household_id: _omitted, ...withoutScope } = common;
+    const outcome = await runTurn({
+      userText: "which space did you log the cinema expense to?",
+      spaces: [CINEMA_SPACE, TRAVEL_SPACE],
+      expenses: [
+        common,
+        { ...common, household_id: CINEMA_SPACE.household_id },
+        { ...common, household_id: TRAVEL_SPACE.household_id },
+        { ...common, household_id: "unresolved" },
+        withoutScope,
+      ],
+      model: [
+        { calls: [{ name: "list_expenses", args: { result_kind: "rows" } }] },
+        { text: "Hay varias coincidencias. ¿A cuál te refieres?" },
+      ],
+      verifier: [{ record: true }],
+    });
+    assertEquals(
+      outcome.financeCalls.filter((c) => c.p_read === "transactions").length,
+      3,
+    );
+    const { expenses } = lookupEvidence(outcome);
+    assertEquals(
+      expenses.map((
+        row: { space_scope?: string; space?: string },
+      ) => [row.space_scope, row.space]),
+      [
+        ["personal", undefined],
+        ["shared_space", "Cinema club"],
+        ["private_space", "Travel"],
+      ],
+    );
+    assertEquals(grounding(outcome.assistantRows[0]).verdict, "grounded");
+    assertEquals(outcome.saveCalls, []);
+  },
+);
+
+e2e(
+  "e2e: the bot corrects a guessed destination by looking up the cinema expense",
+  async () => {
+    const correct = "El gasto de cine de 40 € está en tu cuenta personal.";
+    const outcome = await runTurn({
+      userText: "which space did you log the €40 cinema expense on Nov 23 to?",
+      spaces: [CINEMA_SPACE],
+      expenses: [{
+        ...OLDER_EXPENSE_ROW,
+        amount_cents: 4000,
+        raw_text: "cinema",
+        date: "2026-11-23",
+      }],
+      model: [
+        { text: "Está en Cinema club." },
+        {
+          calls: [{
+            name: "list_expenses",
+            args: {
+              start_date: "2026-11-23",
+              end_date: "2026-11-23",
+              result_kind: "rows",
+            },
+          }],
+        },
+        { text: correct },
+      ],
+      verifier: [{ record: true }],
+    });
+    const query = outcome.financeCalls.find((c) => c.p_read === "transactions")!
+      .p_args as any;
+    assertEquals([query.start_date, query.end_date], [
+      "2026-11-23",
+      "2026-11-23",
+    ]);
+    assertEquals([...outcome.sent, ...outcome.photos], [correct]);
+    assertEquals(grounding(outcome.assistantRows[0]).corrections, 1);
+    assertEquals(operationsOf(outcome.assistantRows[0]), [
+      "list_expenses:succeeded",
+    ]);
+    assertEquals(outcome.saveCalls, []);
+  },
+);
+
+e2e(
+  "runTurn: Pocket lookup passes the verified actor and grounds the delivered reply",
+  async () => {
+    const text = "Quedan 37 € en Food.";
+    const outcome = await runTurn({
+      userText: "¿Cuánto me queda en Food?",
+      model: [
+        {
+          calls: [{
+            name: "read_finances",
+            args: { view: "pockets", p_actor: "ignored" },
+          }],
+        },
+        { text },
+      ],
+      verifier: [{ record: true }],
+    });
+    assertEquals(outcome.financeCalls.map((c) => [c.p_actor, c.p_read]), [[
+      USER_ID,
+      "spaces",
+    ], [USER_ID, "pockets"]]);
+    assertEquals(outcome.sent[0], text);
+    assert(outcome.verifierPrompts.some((p) => p.includes("3700")));
+  },
+);
+e2e(
+  "runTurn: a failed financial lookup cannot support an invented balance",
+  async () => {
+    const text = "Quedan 900 € en Food.";
+    const outcome = await runTurn({
+      userText: "¿Cuánto me queda en Food?",
+      financeFails: true,
+      model: [
+        { calls: [{ name: "read_finances", args: { view: "pockets" } }] },
+        { text },
+        { text },
+      ],
+      verifier: [{ record: true, consistent: false }],
+    });
+    assertEquals(outcome.sent[0], botMessage("recordsNotChecked", "es"));
+  },
+);
+
+e2e(
+  "runTurn: posted total and scheduled payment reach the verifier separately",
+  async () => {
+    const outcome = await runTurn(totalReadScenario(false));
+    assert(outcome.advertisedTools[0].includes("read_finances"));
+    assertEquals(outcome.sent[0], postedTotalReply);
+    assertEquals(
+      outcome.financeCalls.filter((c) => c.p_read === "summary").map(
+        (c) => [c.p_actor, c.p_space],
+      ),
+      [[USER_ID, null]],
+    );
+    assert(
+      outcome.verifierPrompts.some((p) =>
+        p.includes("100100") && p.includes("50000") && !p.includes("150100")
+      ),
+    );
   },
 );

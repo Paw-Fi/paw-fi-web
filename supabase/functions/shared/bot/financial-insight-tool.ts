@@ -1,14 +1,11 @@
 import { resolveFinancialPeriodRangeForUser } from "../budgets-helpers.ts";
 import { formatAmount } from "../formatting-helpers.ts";
 import { formatDateInTimeZone } from "./date-utils.ts";
-import {
-  buildFinancialSnapshotTotals,
-  type FinancialSnapshotRow,
-  projectRecurringSnapshotRows,
-} from "./financial-snapshot.ts";
+import { readChatFinance } from "./finance-rpc.ts";
 import {
   type BotSpaceMeta,
   ensureHouseholdMember,
+  hasUnknownReadSpace,
   listBotSpaceIds,
   resolveBotSpaceScope,
 } from "./household-utils.ts";
@@ -16,6 +13,7 @@ import { resolveWalletIdInScope } from "./wallet-scope.ts";
 
 interface SupabaseLike {
   from(table: string): any;
+  rpc: Parameters<typeof readChatFinance>[0]["rpc"];
 }
 
 export interface FinancialInsightDateRange {
@@ -36,7 +34,7 @@ export interface FinancialInsightSnapshot {
   categories: { category: string; amount_cents: number }[];
   budget_cents: number | null;
   includes_projected_recurring: boolean;
-  projected_recurring_count: number;
+  projected_recurring_count: number | null;
   projected_recurring: Array<{
     date: string;
     amount_cents: number;
@@ -46,9 +44,6 @@ export interface FinancialInsightSnapshot {
   }>;
   chart_url?: string;
 }
-
-const SNAPSHOT_COLUMNS =
-  "id, amount_cents, type, category, raw_text, date, currency, account_id, household_id, split_group_id, parent_recurring_id, scheduled_occurrence_date, recurrence_rule, analytics_is_final, analytics_spending_multiplier, analytics_counts_toward_income";
 
 export async function resolveFinancialInsightDateRange(params: {
   args?: Record<string, unknown> | null;
@@ -147,7 +142,6 @@ export async function resolveFinancialInsightDateRange(params: {
 export async function executeBotFinancialInsight(params: {
   supabase: SupabaseLike;
   userId: string;
-  contactId: string;
   currency: string;
   timezone?: string | null;
   args?: Record<string, unknown> | null;
@@ -203,88 +197,100 @@ export async function executeBotFinancialInsight(params: {
       .trim()
       .toUpperCase();
 
-    let actualQuery = params.supabase
-      .from("expenses")
-      .select(SNAPSHOT_COLUMNS)
-      .gte("date", range.startDate)
-      .lte("date", range.endDate)
-      .eq("currency", currency)
-      .or("is_recurring.eq.false,is_recurring.is.null")
-      .is("deleted_at", null);
-    let recurringQuery = params.supabase
-      .from("expenses")
-      .select(SNAPSHOT_COLUMNS)
-      .eq("currency", currency)
-      .eq("is_recurring", true)
-      .is("deleted_at", null);
-
-    if (scope.includePersonal && scope.householdIds.length > 0) {
-      const accessibleIds = scope.householdIds.join(",");
-      actualQuery = actualQuery.or(
-        `and(contact_id.eq.${params.contactId},household_id.is.null),household_id.in.(${accessibleIds})`,
-      );
-      recurringQuery = recurringQuery.or(
-        `and(contact_id.eq.${params.contactId},household_id.is.null),household_id.in.(${accessibleIds})`,
-      );
-    } else if (scope.householdIds.length === 1) {
-      actualQuery = actualQuery.eq("household_id", scope.householdIds[0]);
-      recurringQuery = recurringQuery.eq("household_id", scope.householdIds[0]);
-    } else if (scope.householdIds.length > 1) {
-      actualQuery = actualQuery.in("household_id", scope.householdIds);
-      recurringQuery = recurringQuery.in("household_id", scope.householdIds);
-    } else {
-      actualQuery = actualQuery
-        .eq("contact_id", params.contactId)
-        .is("household_id", null);
-      recurringQuery = recurringQuery
-        .eq("contact_id", params.contactId)
-        .is("household_id", null);
-    }
-    if (wallet.accountId) {
-      actualQuery = actualQuery.eq("account_id", wallet.accountId);
-      recurringQuery = recurringQuery.eq("account_id", wallet.accountId);
-    }
-
-    const [
-      { data: actualRows, error },
-      { data: recurringRows, error: recurringError },
-    ] = await Promise.all([actualQuery, recurringQuery]);
-    if (error || recurringError) {
-      console.error(`[${params.logPrefix}] financial insight query failed`, {
-        error: error || recurringError,
-      });
-      return { error: "Unable to load financial insight right now." };
-    }
-
-    const actual = (actualRows || []) as FinancialSnapshotRow[];
-    const projected = projectRecurringSnapshotRows(
-      (recurringRows || []) as FinancialSnapshotRow[],
-      actual,
-      range.startDate,
-      range.endDate,
-    );
-    const rawTotals = buildFinancialSnapshotTotals([...actual, ...projected]);
-    const totals = {
-      ...rawTotals,
-      categories: rawTotals.categories.map((entry) => ({
-        ...entry,
-        category: sanitizeToolLabel(entry.category),
-      })),
+    const spaces = [
+      ...(scope.includePersonal ? [null] : []),
+      ...scope.householdIds,
+    ];
+    const options = {
+      start_date: range.startDate,
+      end_date: range.endDate,
+      currency,
+      account_id: wallet.accountId,
+      category: args.category,
+      search: args.search,
     };
-    const budgetCents =
-      wallet.accountId || scope.isAggregate
-        ? null
-        : await loadBudgetCents({
-            supabase: params.supabase,
-            userId: params.userId,
-            householdId,
-            currency,
-            range,
-          });
-    const chartUrl =
-      params.chartRequested === true
-        ? buildFinancialInsightChart(totals.categories)
-        : undefined;
+    const includeSchedule =
+      Date.parse(range.endDate) - Date.parse(range.startDate) <= 730 * 86400000;
+    const pages = await Promise.all(spaces.map(async (space) => {
+      const [posted, schedule] = await Promise.all([
+        readChatFinance(
+          params.supabase,
+          params.userId,
+          "summary",
+          space,
+          options,
+        ),
+        includeSchedule
+          ? readChatFinance(
+            params.supabase,
+            params.userId,
+            "projections",
+            space,
+            options,
+          )
+          : null,
+      ]);
+      if (
+        !Number.isSafeInteger(posted.expense_total_cents) ||
+        !Number.isSafeInteger(posted.income_total_cents) ||
+        !Array.isArray(posted.categories) ||
+        (includeSchedule && (!Number.isSafeInteger(schedule?.count) ||
+          !Array.isArray(schedule?.items)))
+      ) throw new Error("Incomplete financial snapshot");
+      return { posted, schedule };
+    }));
+    const categories = new Map<string, number>();
+    let totalIncome = 0, totalExpense = 0, projectedCount = 0;
+    const projected: Record<string, any>[] = [];
+    for (const { posted, schedule } of pages) {
+      totalIncome += posted.income_total_cents;
+      totalExpense += posted.expense_total_cents;
+      for (const row of posted.categories) {
+        if (!Number.isSafeInteger(row.amount_cents)) {
+          throw new Error("Invalid category amount");
+        }
+        const category = sanitizeToolLabel(String(row.category || "other"));
+        categories.set(
+          category,
+          (categories.get(category) ?? 0) + row.amount_cents,
+        );
+      }
+      projectedCount += schedule?.count ?? 0;
+      projected.push(...(schedule?.items ?? []));
+    }
+    projected.sort((a, b) =>
+      a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
+    );
+    if (
+      ![
+        totalIncome,
+        totalExpense,
+        totalIncome - totalExpense,
+        ...categories.values(),
+      ].every(Number.isSafeInteger)
+    ) throw new Error("Total outside the supported precision");
+    const totals = {
+      totalIncome,
+      totalExpense,
+      net: totalIncome - totalExpense,
+      categories: [...categories].map(([category, amount_cents]) => ({
+        category,
+        amount_cents,
+      }))
+        .sort((a, b) => b.amount_cents - a.amount_cents).slice(0, 5),
+    };
+    const budgetCents = wallet.accountId || scope.isAggregate
+      ? null
+      : await loadBudgetCents({
+        supabase: params.supabase,
+        userId: params.userId,
+        householdId,
+        currency,
+        range,
+      });
+    const chartUrl = params.chartRequested === true
+      ? buildFinancialInsightChart(totals.categories)
+      : undefined;
     const snapshot: FinancialInsightSnapshot = {
       ...totals,
       startDate: range.startDate,
@@ -292,8 +298,8 @@ export async function executeBotFinancialInsight(params: {
       period: range.period,
       currency,
       budget_cents: budgetCents,
-      includes_projected_recurring: projected.length > 0,
-      projected_recurring_count: projected.length,
+      includes_projected_recurring: false,
+      projected_recurring_count: includeSchedule ? projectedCount : null,
       projected_recurring: projected.slice(0, 25).map((row) => ({
         date: row.date,
         amount_cents: row.amount_cents,
@@ -304,20 +310,15 @@ export async function executeBotFinancialInsight(params: {
       ...(chartUrl ? { chart_url: chartUrl } : {}),
     };
 
-    const projectedSourceIds = new Set(
-      projected
-        .map((row) => row.parent_recurring_id)
-        .filter((id): id is string => typeof id === "string" && id.length > 0),
-    );
-    const recurringSelectionItems = (
-      (recurringRows || []) as FinancialSnapshotRow[]
-    )
-      .filter((row) => !!row.id && projectedSourceIds.has(row.id))
+    const recurringSelectionItems = [
+      ...new Map(projected.slice(0, 25).map((row) => [row.recurring_id, row]))
+        .values(),
+    ]
       .map((row) => ({
-        id: row.id as string,
+        id: row.recurring_id as string,
         amountMajor: (Number(row.amount_cents) || 0) / 100,
         currency: String(row.currency || currency).toUpperCase(),
-        date: String(row.date || "").slice(0, 10),
+        date: String(row.template_date || row.date).slice(0, 10),
         category: sanitizeToolLabel(String(row.category || "other")),
         description: sanitizeToolLabel(String(row.raw_text || "")),
         type:
@@ -413,6 +414,15 @@ async function resolveInsightScope(params: {
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+  if (hasUnknownReadSpace(params.args, params.spaceMap)) {
+    return {
+      householdIds: [],
+      spaceName: null,
+      includePersonal: false,
+      isAggregate: false,
+      error: "Unknown space",
+    };
+  }
   if (["personal", "personal_account"].includes(normalizedScope)) {
     return {
       householdIds: [],
@@ -461,6 +471,16 @@ async function resolveInsightScope(params: {
     }
   }
 
+  if (!includePersonal && !householdIds.length) {
+    return {
+      householdIds: [],
+      spaceName: null,
+      includePersonal: false,
+      isAggregate: false,
+      error: "Unknown space scope",
+    };
+  }
+
   for (const householdId of householdIds) {
     if (
       !(await ensureHouseholdMember(
@@ -492,7 +512,7 @@ async function resolveInsightScope(params: {
   return { householdIds, spaceName, includePersonal, isAggregate };
 }
 
-async function resolveInsightWallet(params: {
+export async function resolveInsightWallet(params: {
   supabase: SupabaseLike;
   userId: string;
   householdId: string | null;
@@ -560,17 +580,17 @@ async function loadBudgetCents(params: {
   ) {
     return null;
   }
-  let query = params.supabase
-    .from("budgets")
-    .select("total_budget_cents")
-    .eq("currency", params.currency)
-    .eq("period_month", `${params.range.startDate.slice(0, 7)}-01`)
-    .limit(1);
-  query = params.householdId
-    ? query.eq("household_id", params.householdId)
-    : query.eq("user_id", params.userId).is("household_id", null);
-  const { data } = await query;
-  return data?.[0]?.total_budget_cents ?? null;
+  const data = await readChatFinance(
+    params.supabase,
+    params.userId,
+    "pockets",
+    params.householdId,
+    {
+      start_date: params.range.startDate,
+      currency: params.currency,
+    },
+  );
+  return data.total_budget_cents ?? null;
 }
 
 function buildFinancialInsightChart(
@@ -635,12 +655,17 @@ function buildFinancialInsightSummary(
       )}`,
     );
   }
-  if (snapshot.projected_recurring_count > 0) {
+  if (snapshot.projected_recurring_count === null) {
+    lines.push("Scheduled occurrences were not loaded for this date range.");
+  }
+  if (
+    snapshot.projected_recurring_count && snapshot.projected_recurring_count > 0
+  ) {
     lines.push(
       "",
       includesFutureRecurring
-        ? `Includes ${snapshot.projected_recurring_count} scheduled recurring occurrence(s), including future projections through ${snapshot.endDate}.`
-        : `Includes ${snapshot.projected_recurring_count} recurring occurrence(s) scheduled in this period.`,
+        ? `Separate from the posted totals: ${snapshot.projected_recurring_count} scheduled recurring occurrence(s), including future projections through ${snapshot.endDate}.`
+        : `Separate from the posted totals: ${snapshot.projected_recurring_count} recurring occurrence(s) scheduled in this period.`,
     );
   }
   return lines.join("\n");

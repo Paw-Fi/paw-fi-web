@@ -1,3 +1,4 @@
+import { loadFinanceSpaces, readChatFinance } from "./bot/finance-rpc.ts";
 import {
   createClient,
   type SupabaseClient as SupabaseJsClient,
@@ -20,26 +21,10 @@ export type SupabaseClient = SupabaseJsClient;
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const NEVER_UUID = "00000000-0000-0000-0000-000000000000";
 
 function sanitizeUuid(value: string): string | null {
   const trimmed = value.trim();
   return UUID_REGEX.test(trimmed) ? trimmed : null;
-}
-
-function sanitizeUuidList(values: string[] | undefined): string[] {
-  if (!Array.isArray(values)) return [];
-  const out: string[] = [];
-  const seen: Record<string, true> = {};
-  for (const v of values) {
-    if (typeof v !== "string") continue;
-    const s = sanitizeUuid(v);
-    if (!s) continue;
-    if (seen[s]) continue;
-    seen[s] = true;
-    out.push(s);
-  }
-  return out;
 }
 
 export interface FetchExpensesOptions {
@@ -48,73 +33,60 @@ export interface FetchExpensesOptions {
   endDate?: string;
   householdId?: string | null;
   isPortfolio?: boolean;
-  portfolioHouseholdIds?: string[];
-  // The complete set of spaces the authenticated bot user may read. This is
-  // used only for an unscoped read; a named space still takes precedence.
-  accessibleHouseholdIds?: string[];
   personalOnly?: boolean;
   sharedOnly?: boolean;
-  sharedHouseholdIds?: string[];
   type?: "expense" | "income";
   currency?: string;
 }
 
 export async function fetchExpensesDirect(
   supabase: SupabaseClient,
-  contactId: string,
+  userId: string,
   opts: FetchExpensesOptions,
 ) {
-  let query = supabase
-    .from("expenses")
-    .select(
-      "id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, is_recurring, recurrence_rule, attachments, created_at",
-      { count: "exact" },
-    )
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .is("deleted_at", null)
-    .limit(opts.limit ?? 5);
-
-  if (opts.type) query = query.eq("type", opts.type);
-
-  const safePortfolioIds = sanitizeUuidList(opts.portfolioHouseholdIds);
-  const safeSharedIds = sanitizeUuidList(opts.sharedHouseholdIds);
-  const safeAccessibleIds = sanitizeUuidList(opts.accessibleHouseholdIds);
-  const safeContactId = sanitizeUuid(contactId);
-
-  if (opts.householdId) {
-    query = query.eq("household_id", opts.householdId);
-  } else if (opts.personalOnly === true) {
-    query = query.eq("contact_id", contactId).is("household_id", null);
-  } else if (opts.sharedOnly === true) {
-    query = safeSharedIds.length
-      ? query.in("household_id", safeSharedIds)
-      : query.eq("id", NEVER_UUID);
-  } else if (opts.isPortfolio === true) {
-    query = query.eq("contact_id", contactId);
-    if (safePortfolioIds.length) {
-      query = query.in("household_id", safePortfolioIds);
-    } else {
-      query = query.eq("id", NEVER_UUID);
+  const limit = Math.max(1, Math.min(100, opts.limit ?? 5));
+  try {
+    let scopes: Array<string | null> = [opts.householdId ?? null];
+    if (!opts.householdId && !opts.personalOnly) {
+      const spaces = [
+        ...new Set((await loadFinanceSpaces(supabase, userId)).values()),
+      ];
+      scopes = spaces.filter((s) =>
+        opts.sharedOnly ? !s.isPortfolio : !opts.isPortfolio || s.isPortfolio
+      ).map((s) => s.id);
+      if (!opts.sharedOnly && !opts.isPortfolio) scopes.unshift(null);
     }
-  } else {
-    const spaceIds = safeAccessibleIds.length
-      ? safeAccessibleIds
-      : Array.from(new Set([...safePortfolioIds, ...safeSharedIds]));
-    if (spaceIds.length && safeContactId) {
-      query = query.or(
-        `and(contact_id.eq.${safeContactId},household_id.is.null),household_id.in.(${spaceIds.join(",")})`,
-      );
-    } else {
-      query = query.eq("contact_id", contactId).is("household_id", null);
+    const pages = await Promise.all(
+      [...new Set(scopes)].map((scope) =>
+        readChatFinance(supabase, userId, "transactions", scope, {
+          start_date: opts.startDate,
+          end_date: opts.endDate,
+          currency: opts.currency,
+          type: opts.type,
+          limit,
+        })
+      ),
+    );
+    if (pages.some((page) => !Array.isArray(page.items))) {
+      throw new Error("Invalid transaction page");
     }
+    const rows: any[] = pages.flatMap((page) => page.items);
+    rows.sort((a, b) =>
+      b.date.localeCompare(a.date) ||
+      b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id)
+    );
+    return {
+      data: rows.slice(0, limit),
+      hasMore: rows.length > limit || pages.some((page) => page.has_more),
+      error: null,
+    };
+  } catch {
+    return {
+      data: null,
+      hasMore: false,
+      error: "Unable to read transactions in the requested scope.",
+    };
   }
-
-  if (opts.startDate) query = query.gte("date", opts.startDate);
-  if (opts.endDate) query = query.lte("date", opts.endDate);
-  if (opts.currency) query = query.eq("currency", opts.currency);
-
-  return query;
 }
 
 export interface SaveExpenseParams {

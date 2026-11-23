@@ -122,8 +122,8 @@ async function bankWallet(db) {
     insert into accounts(id,user_id,is_system,linked_bank_account_id) values('${id(3)}','${A}',true,'${id(2)}');`);
 }
 
-test('job executes the production wrapper and core over seven years of imported history', async t => {
-  const db = await fixture(t);
+for (const jobsFirst of [false, true]) test(`job executes the production wrapper and core over seven years of imported history (jobs first: ${jobsFirst})`, async t => {
+  const db = await fixture(t, !jobsFirst);
   await bankWallet(db);
   await db.exec(`
     create schema cron; create function cron.schedule(text,text,text) returns bigint language sql as $$select 1::bigint$$;
@@ -146,6 +146,8 @@ test('job executes the production wrapper and core over seven years of imported 
   await db.exec(await read('20260801180000_finalize_financial_data_reset.sql'));
   await db.exec(await read('20261001130000_extend_financial_data_reset_timeout.sql'));
   await db.exec(await read('20261120100000_financial_reset_jobs.sql'));
+  await db.exec(fix);
+  await db.exec(fix);
   await db.query('select request_financial_data_reset($1,$2)', [id(77), A]);
   await db.exec('select process_financial_data_reset_job()');
   const job = (await db.query('select status, failure_detail from financial_reset_jobs')).rows[0];

@@ -1,3 +1,8 @@
+import { loadFinanceSpaces } from "../shared/bot/finance-rpc.ts";
+import {
+  executeFinancialRead,
+  financialReadTool,
+} from "../shared/bot/financial-reads.ts";
 /// <reference lib="deno.ns" />
 
 // Supabase Edge Function: twilio-whatsapp-ai-bot
@@ -19,7 +24,6 @@ import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
-  getBudgetStatusDirect,
   resolveFinancialPeriodStartForUser,
   upsertEnvelope,
   upsertEnvelopeAllocation,
@@ -164,7 +168,7 @@ import {
   applyPreferredSpaceDefaultToToolCall,
   ensureHouseholdMember,
   hasExplicitBotSpaceScope,
-  listBotSpaceIds,
+  hasUnknownReadSpace,
   resolveBotSpaceScope,
   resolveHouseholdSplitConfig,
   sanitizeBotToolResultForModel,
@@ -185,6 +189,7 @@ import {
 } from "../shared/bot/financial-insight-intent.ts";
 import { executeBotFinancialInsight } from "../shared/bot/financial-insight-tool.ts";
 import {
+  buildListedTransactionRows,
   clearActiveRecurringContext,
   clearActiveTransactionContext,
   clearLastListedTransactions,
@@ -914,8 +919,6 @@ Deno.serve(async (req: Request) => {
       string,
       { id: string; name: string; isPortfolio: boolean }
     >();
-    const seenPortfolioIds: Record<string, true> = {};
-    const portfolioSpaceIds: string[] = [];
     try {
       const { data: ownedSpaces, error: ownedSpacesError } = await supabase
         .from("households")
@@ -934,14 +937,6 @@ Deno.serve(async (req: Request) => {
           };
           spaceMap.set(id, record);
           spaceMap.set(name.toLowerCase(), record);
-        }
-        if (
-          (s as any)?.is_portfolio === true &&
-          typeof id === "string" &&
-          !seenPortfolioIds[id]
-        ) {
-          seenPortfolioIds[id] = true;
-          portfolioSpaceIds.push(id);
         }
       }
 
@@ -971,14 +966,6 @@ Deno.serve(async (req: Request) => {
             };
             spaceMap.set(id, record);
             spaceMap.set(name.toLowerCase(), record);
-          }
-          if (
-            (s as any)?.is_portfolio === true &&
-            typeof id === "string" &&
-            !seenPortfolioIds[id]
-          ) {
-            seenPortfolioIds[id] = true;
-            portfolioSpaceIds.push(id);
           }
         }
       }
@@ -1152,6 +1139,7 @@ Deno.serve(async (req: Request) => {
       buildListExpensesTool(),
       buildGenerateChartUrlTool(),
       buildSetDefaultSpaceTool(),
+      financialReadTool,
       buildFinancialInsightTool(),
     ];
 
@@ -1286,11 +1274,34 @@ Deno.serve(async (req: Request) => {
             ? "financial_insight"
             : call.name;
         try {
-          if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
-            const hasMedia =
-              !!call.args?.media && typeof call.args.media === "object";
+          if (
+            [
+              "list_expenses",
+              "financial_insight",
+              "get_budget",
+              "list_wallets",
+              "get_space_info",
+            ].includes(call.name) && hasUnknownReadSpace(call.args, spaceMap)
+          ) {
+            toolResult = { error: "Unknown space." };
+          } else if (
+            call.name === "read_finances" || call.name === "get_budget"
+          ) {
+            toolResult = await executeFinancialRead({
+              supabase,
+              userId,
+              currency: userCurrency,
+              timezone: userTimezone,
+              args: call.name === "get_budget"
+                ? { ...call.args, view: "pockets", include_chart: true }
+                : call.args || {},
+            });
+          } else if (call.name === "analyze_expense") {
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
+            const hasMedia = !!call.args?.media &&
+              typeof call.args.media === "object";
 
             if (hasMedia) {
               toolResult = {
@@ -1331,9 +1342,9 @@ Deno.serve(async (req: Request) => {
               .trim()
               .toLowerCase()
               .replace(/[\s-]+/g, "_");
-            const { data, error } = await fetchExpensesDirect(
+            const { data, error, hasMore } = await fetchExpensesDirect(
               supabase,
-              contactId,
+              userId,
               {
                 limit: call.args.limit || 50,
                 startDate: call.args.start_date,
@@ -1342,15 +1353,7 @@ Deno.serve(async (req: Request) => {
                 isPortfolio:
                   spaceMeta?.isPortfolio === true ||
                   normalizedScope === "private_space",
-                portfolioHouseholdIds: householdId
-                  ? undefined
-                  : portfolioSpaceIds,
-                sharedHouseholdIds: householdId
-                  ? undefined
-                  : listBotSpaceIds(spaceMap, "shared"),
-                accessibleHouseholdIds: householdId
-                  ? undefined
-                  : listBotSpaceIds(spaceMap),
+
                 personalOnly: ["personal", "personal_account"].includes(
                   normalizedScope,
                 ),
@@ -1413,18 +1416,12 @@ Deno.serve(async (req: Request) => {
               );
               const chartUrl = buildCategoryChart(normalized);
               if (chartUrl) mediaUrl = chartUrl;
-              const safeExpenses = memoryItems.slice(0, 25).map((item, i) => ({
-                index: i + 1,
-                amountMajor: item.amountMajor,
-                currency: item.currency,
-                date: item.date,
-                category: item.category,
-                description: item.description,
-                type: item.type || "expense",
-              }));
-              const isTruncated =
-                memoryItems.length > safeExpenses.length ||
-                memoryItems.length >= (Number(call.args.limit) || 50);
+              const safeExpenses = buildListedTransactionRows(
+                memoryItems,
+                spaceMap,
+              );
+              const isTruncated = memoryItems.length > safeExpenses.length ||
+                hasMore;
               toolResult = {
                 expenses: safeExpenses,
                 returned_count: safeExpenses.length,
@@ -2264,14 +2261,12 @@ Deno.serve(async (req: Request) => {
             toolResult = await executeBotFinancialInsight({
               supabase,
               userId,
-              contactId,
               currency: userCurrency,
               timezone: userTimezone,
-              args:
-                call.name === "list_expenses"
-                  ? buildFinancialInsightArgs(call.args)
-                  : call.args || {},
-              spaceMap,
+              args: call.name === "list_expenses"
+                ? buildFinancialInsightArgs(call.args)
+                : call.args || {},
+              spaceMap: await loadFinanceSpaces(supabase, userId),
               logPrefix: "twilio-whatsapp-ai-bot",
               chartRequested: isFinancialInsightChartRequested(call.args),
             });
@@ -2987,20 +2982,14 @@ Deno.serve(async (req: Request) => {
     const spaces = contextData?.spaces || contextData?.households || [];
     debugLog(WHATSAPP_DEBUG, "spaces", { spaces });
 
-    const portfolioSpaceIds = (spaces || [])
-      .filter((h: any) => !!h?.is_portfolio)
-      .map((h: any) => h?.household_id)
-      .filter((value: any) => typeof value === "string" && value.length > 0);
-
-    const householdContext =
-      spaces
-        ?.map(
-          (h: any) =>
-            `${h.name || "Space"}${
-              h.is_portfolio ? " (private space)" : " (shared space)"
-            }`,
-        )
-        .join("; ") || "None";
+    const householdContext = spaces
+      ?.map(
+        (h: any) =>
+          `${h.name || "Space"}${
+            h.is_portfolio ? " (private space)" : " (shared space)"
+          }`,
+      )
+      .join("; ") || "None";
 
     const spaceMap = new Map<
       string,
@@ -3276,6 +3265,7 @@ Deno.serve(async (req: Request) => {
       buildSetLanguageTool(),
       buildSetDefaultSpaceTool(),
       buildGenerateChartUrlTool(),
+      financialReadTool,
       buildFinancialInsightTool(),
       buildManageRecurringTool({
         includeDateField: true,
@@ -3488,9 +3478,32 @@ Deno.serve(async (req: Request) => {
           args: call.args,
         });
         try {
-          if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
+          if (
+            [
+              "list_expenses",
+              "financial_insight",
+              "get_budget",
+              "list_wallets",
+              "get_space_info",
+            ].includes(call.name) && hasUnknownReadSpace(call.args, spaceMap)
+          ) {
+            toolResult = { error: "Unknown space." };
+          } else if (
+            call.name === "read_finances" || call.name === "get_budget"
+          ) {
+            toolResult = await executeFinancialRead({
+              supabase,
+              userId,
+              currency: userCurrency,
+              timezone: userTimezone,
+              args: call.name === "get_budget"
+                ? { ...call.args, view: "pockets", include_chart: true }
+                : call.args || {},
+            });
+          } else if (call.name === "analyze_expense") {
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
             const media =
               call.args?.media && typeof call.args.media === "object"
                 ? call.args.media
@@ -4661,7 +4674,7 @@ Deno.serve(async (req: Request) => {
               });
               continue;
             }
-            const type = call.args.type || "expense";
+            const type = call.args.type || undefined;
             const normalizedScope = String(
               call.args.space_scope || call.args.scope || "",
             )
@@ -4676,15 +4689,7 @@ Deno.serve(async (req: Request) => {
               isPortfolio:
                 spaceMeta?.isPortfolio === true ||
                 normalizedScope === "private_space",
-              portfolioHouseholdIds: householdId
-                ? undefined
-                : portfolioSpaceIds,
-              sharedHouseholdIds: householdId
-                ? undefined
-                : listBotSpaceIds(spaceMap, "shared"),
-              accessibleHouseholdIds: householdId
-                ? undefined
-                : listBotSpaceIds(spaceMap),
+
               personalOnly: ["personal", "personal_account"].includes(
                 normalizedScope,
               ),
@@ -4695,9 +4700,9 @@ Deno.serve(async (req: Request) => {
             debugLog(WHATSAPP_DEBUG, "list-expenses payload", listPayload);
             // fetchExpensesDirect returns snake_case fields from DB (amount_cents, raw_text, etc.)
             // normalizeExpensesForTool handles both snake_case and camelCase field names
-            const { data, error } = await fetchExpensesDirect(
+            const { data, error, hasMore } = await fetchExpensesDirect(
               supabase,
-              contactId,
+              userId,
               listPayload,
             );
             if (error) {
@@ -4732,24 +4737,12 @@ Deno.serve(async (req: Request) => {
                 userCurrency,
               );
               const chartUrl = buildCategoryChart(normalized);
-              const safeExpenses = memoryItems.slice(0, 25).map((item, i) => {
-                const spaceName = item.household_id
-                  ? spaceMap.get(item.household_id)?.name || null
-                  : null;
-                return {
-                  index: i + 1,
-                  amountMajor: item.amountMajor,
-                  currency: item.currency,
-                  date: item.date,
-                  category: item.category,
-                  description: item.description,
-                  type: item.type || "expense",
-                  ...(spaceName ? { space: spaceName } : {}),
-                };
-              });
-              const isTruncated =
-                memoryItems.length > safeExpenses.length ||
-                memoryItems.length >= (Number(call.args.limit) || 10);
+              const safeExpenses = buildListedTransactionRows(
+                memoryItems,
+                spaceMap,
+              );
+              const isTruncated = memoryItems.length > safeExpenses.length ||
+                hasMore;
               toolResult = {
                 expenses: safeExpenses,
                 returned_count: safeExpenses.length,
@@ -4758,53 +4751,6 @@ Deno.serve(async (req: Request) => {
                 chart_url: chartUrl,
                 has_selection_memory: true,
               };
-            }
-          } else if (call.name === "get_budget") {
-            const dateStr = (
-              call.args.date || formatDateInTimeZone(userTimezone)
-            ).slice(0, 10);
-            const period_month = await resolveFinancialPeriodStartForUser(
-              supabase,
-              userId,
-              dateStr,
-            );
-            const { householdId, spaceMeta } = resolveBotSpaceScope(
-              call.args,
-              spaceMap,
-            );
-            if (
-              householdId &&
-              !(await ensureHouseholdMember(supabase, householdId, userId))
-            ) {
-              toolResult = { error: "You do not have access to that space" };
-            } else {
-              const res = await getBudgetStatusDirect(
-                supabase,
-                userId,
-                householdId,
-                period_month,
-                userCurrency,
-                spaceMeta?.isPortfolio ?? false,
-                contactId,
-              );
-              if (res.error) {
-                const formatted = formatInvokeError(res.error);
-                if (WHATSAPP_DEBUG) {
-                  debugNotes.push(`get-budget direct error: ${formatted}`);
-                }
-                console.error(
-                  "[twilio-whatsapp-ai-bot] get-budget direct error",
-                  { error: res.error, formatted },
-                );
-                toolResult = { error: res.error };
-              } else {
-                toolResult = {
-                  budget: res.budget,
-                  pockets: res.envelopes,
-                  totals: res.totals,
-                  chart: res.chart,
-                };
-              }
             }
           } else if (call.name === "set_currency") {
             const currency = (call.args.currency || "")
@@ -5120,14 +5066,12 @@ Deno.serve(async (req: Request) => {
             toolResult = await executeBotFinancialInsight({
               supabase,
               userId,
-              contactId,
               currency: userCurrency,
               timezone: userTimezone,
-              args:
-                call.name === "list_expenses"
-                  ? buildFinancialInsightArgs(call.args)
-                  : call.args || {},
-              spaceMap,
+              args: call.name === "list_expenses"
+                ? buildFinancialInsightArgs(call.args)
+                : call.args || {},
+              spaceMap: await loadFinanceSpaces(supabase, userId),
               logPrefix: "twilio-whatsapp-ai-bot",
               chartRequested: isFinancialInsightChartRequested(call.args),
               includeRecurringSelectionItems: true,

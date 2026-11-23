@@ -73,7 +73,8 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function hasToolError(result: Record<string, unknown> | null): boolean {
-  return typeof result?.error === "string" && result.error.trim().length > 0;
+  const error = result?.error;
+  return typeof error === "string" ? error.trim().length > 0 : !!error;
 }
 
 function compactEvidence(
