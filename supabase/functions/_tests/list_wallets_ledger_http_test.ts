@@ -32,6 +32,8 @@ Deno.test("list-wallets HTTP returns complete native balances, keeps provider ze
     currency: "USD",
     amount_cents: 99999,
   });
+  let shared = false;
+  let queriedSharedLedger = false;
   let linked = false;
   let failLaterPage = false;
   const json = (data: unknown, status = 200) =>
@@ -48,6 +50,14 @@ Deno.test("list-wallets HTTP returns complete native balances, keeps provider ze
         : input.url,
     );
     const table = url.pathname.split("/").pop();
+    if (table === "household_members") {
+      return Promise.resolve(
+        json({
+          id: "membership",
+          user_id: "00000000-0000-4000-8000-000000000001",
+        }),
+      );
+    }
     if (table === "accounts") {
       return Promise.resolve(json([{
         id: "wallet",
@@ -71,7 +81,20 @@ Deno.test("list-wallets HTTP returns complete native balances, keeps provider ze
       );
     }
     let page: Array<{ id: string } & Record<string, unknown>> = [];
-    if (table === "expenses") page = rows;
+    if (table === "expenses") {
+      if (shared) {
+        assertEquals(
+          url.searchParams.get("or"),
+          "(user_id.eq.00000000-0000-4000-8000-000000000001,privacy_scope.in.(full,balances_only))",
+        );
+        assertEquals(
+          url.searchParams.get("household_id"),
+          "eq.00000000-0000-4000-8000-000000000002",
+        );
+        queriedSharedLedger = true;
+      }
+      page = rows;
+    }
     if (
       table === "account_transfers" && url.searchParams.has("to_account_id")
     ) {
@@ -93,6 +116,9 @@ Deno.test("list-wallets HTTP returns complete native balances, keeps provider ze
       body: JSON.stringify({
         userId: "00000000-0000-4000-8000-000000000001",
         currency: "CAD",
+        ...(shared
+          ? { householdId: "00000000-0000-4000-8000-000000000002" }
+          : {}),
       }),
     });
   try {
@@ -110,6 +136,10 @@ Deno.test("list-wallets HTTP returns complete native balances, keeps provider ze
     const providerWallet = (await (await handler(request())).json()).data[0];
     assertEquals(providerWallet.current_balance_cents, 0);
     assertEquals(providerWallet.has_provider_balance, true);
+    shared = true;
+    assertEquals((await handler(request())).status, 200);
+    assertEquals(queriedSharedLedger, true);
+    shared = false;
     failLaterPage = true;
     const failed = await handler(request());
     assertEquals(failed.status, 500);

@@ -207,8 +207,9 @@ export function normalizeLastListedTransactionFromRow(
   const typeRaw = String((row as any).type || "expense").toLowerCase();
   const type = typeRaw === "income" ? "income" : "expense";
   const householdIdRaw = (row as any).household_id;
-  const household_id =
-    householdIdRaw == null ? null : String(householdIdRaw || "") || null;
+  const household_id = typeof householdIdRaw === "string" && householdIdRaw
+    ? householdIdRaw
+    : householdIdRaw === null ? null : undefined;
 
   return {
     id,
@@ -220,6 +221,30 @@ export function normalizeLastListedTransactionFromRow(
     type,
     household_id,
   };
+}
+
+export function buildListedTransactionRows(
+  transactions: LastListedTransaction[],
+  spaceMap: ReadonlyMap<string, { name: string; isPortfolio: boolean }>,
+) {
+  return transactions.slice(0, 25).map((item, i) => {
+    const space = item.household_id
+      ? spaceMap.get(item.household_id)
+      : undefined;
+    const scope = space ? (space.isPortfolio ? "private_space" : "shared_space")
+      : item.household_id === null ? "personal" : undefined;
+    return {
+      index: i + 1,
+      amountMajor: item.amountMajor,
+      currency: item.currency,
+      date: item.date,
+      category: item.category,
+      description: item.description,
+      type: item.type || "expense",
+      space_scope: scope,
+      space: space?.name,
+    };
+  });
 }
 
 export function readLastListedTransactions(state: SessionState | null): {

@@ -522,7 +522,7 @@ export function buildGetSpaceInfoTool(): BotToolDeclaration {
   return {
     name: "get_space_info",
     description:
-      "Get a space's settings and member list. Use this when the user asks who is in a space, list members, list admins/owners, or show space details. Use space_name unless the ID is already known internally.",
+      "List all the user's private and shared spaces by calling with no arguments. For settings or members of one space, pass its space_name or known space_id.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -674,10 +674,17 @@ export function buildListExpensesTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "list_expenses",
-    description: "List recent transactions (expenses or income).",
+    description:
+      "List individual transactions (expenses or income). Use this also to check whether or where a specific transaction was saved. Pass start_date and end_date covering its date, then match the amount and description and read the matching row's space_scope and space. Never state that a record exists or is missing without calling this first.",
     parameters: {
       type: "OBJECT",
       properties: {
+        result_kind: {
+          type: "STRING",
+          enum: ["rows", "totals"],
+          description:
+            "rows: the user wants individual transactions. totals: the user wants a sum, average, breakdown or period summary; the backend then returns authoritative aggregates instead of rows.",
+        },
         type: transactionTypeSchema,
         currency: mode === "rich"
           ? { type: "STRING", description: "Optional: filter by currency" }
@@ -807,6 +814,11 @@ export function buildFinancialInsightTool(
               "Optional wallet name. Use 'primary wallet' for the default wallet.",
           }
           : stringSchema,
+        include_chart: {
+          type: "BOOLEAN",
+          description:
+            "True when the user asks for a chart, graph or other visual of this summary.",
+        },
       },
     },
   };

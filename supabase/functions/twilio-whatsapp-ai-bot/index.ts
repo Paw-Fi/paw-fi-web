@@ -1,3 +1,8 @@
+import { loadFinanceSpaces } from "../shared/bot/finance-rpc.ts";
+import {
+  executeFinancialRead,
+  financialReadTool,
+} from "../shared/bot/financial-reads.ts";
 /// <reference lib="deno.ns" />
 
 // Supabase Edge Function: twilio-whatsapp-ai-bot
@@ -13,16 +18,12 @@ import {
   sendWhatsAppMessage,
   sendWhatsAppTemplate,
 } from "../shared/whatsapp-helpers.ts";
-import {
-  buildSubscriptionRequiredMessage,
-  hasPlusEntitlement,
-} from "../shared/plus-entitlement.ts";
+import { hasPlusEntitlement, PRICING_URL } from "../shared/plus-entitlement.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
-  getBudgetStatusDirect,
   resolveFinancialPeriodStartForUser,
   upsertEnvelope,
   upsertEnvelopeAllocation,
@@ -144,12 +145,21 @@ import {
   getBotSpaceInfo,
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
+import { annotateUnsavedAnalysisResult } from "../shared/bot/mutation-claim-guard.ts";
 import {
-  buildUnsafeMutationClaimFallback,
-  diagnoseUnsafeTransactionMutationClaim,
-  isWriteMutationToolName,
-  WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
-} from "../shared/bot/mutation-claim-guard.ts";
+  buildGroundingRecord,
+  createVertexReplyAssessor,
+  groundBotReply,
+  type ReplyGroundingAudit,
+  resolveReplyGroundingMode,
+} from "../shared/bot/reply-grounding.ts";
+import {
+  createBotTurnLedger,
+  recordBotToolExecution,
+  summarizeBotTurn,
+} from "../shared/bot/turn-ledger.ts";
+import { appendTurnStatus } from "../shared/bot/save-receipt.ts";
+import { botMessage } from "../shared/bot/bot-messages.ts";
 import {
   consolidateDuplicateEnvelopesForBudget,
   normalizeEnvelopeName,
@@ -158,7 +168,7 @@ import {
   applyPreferredSpaceDefaultToToolCall,
   ensureHouseholdMember,
   hasExplicitBotSpaceScope,
-  listBotSpaceIds,
+  hasUnknownReadSpace,
   resolveBotSpaceScope,
   resolveHouseholdSplitConfig,
   sanitizeBotToolResultForModel,
@@ -175,11 +185,11 @@ import {
   buildFinancialInsightArgs,
   isFinancialInsightChartRequested,
   orderFinancialInsightAfterWrites,
-  routeFinancialInsightToolCall,
-  shouldUseFinancialInsight,
+  shouldRouteListExpensesToFinancialInsight,
 } from "../shared/bot/financial-insight-intent.ts";
 import { executeBotFinancialInsight } from "../shared/bot/financial-insight-tool.ts";
 import {
+  buildListedTransactionRows,
   clearActiveRecurringContext,
   clearActiveTransactionContext,
   clearLastListedTransactions,
@@ -215,8 +225,6 @@ const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
 const GEMINI_MAX_RETRIES = 1;
 const GEMINI_REQUEST_TIMEOUT_MS = 30000;
 const WHATSAPP_CHUNK_TARGET_CHARS = 1450;
-const DELIVERY_FAILURE_MESSAGE =
-  "I wasn’t able to deliver the full response just now. Could you please try again with a smaller request?";
 
 type IdempotencyRecord = {
   status: "processing" | "done" | "failed";
@@ -911,8 +919,6 @@ Deno.serve(async (req: Request) => {
       string,
       { id: string; name: string; isPortfolio: boolean }
     >();
-    const seenPortfolioIds: Record<string, true> = {};
-    const portfolioSpaceIds: string[] = [];
     try {
       const { data: ownedSpaces, error: ownedSpacesError } = await supabase
         .from("households")
@@ -931,14 +937,6 @@ Deno.serve(async (req: Request) => {
           };
           spaceMap.set(id, record);
           spaceMap.set(name.toLowerCase(), record);
-        }
-        if (
-          (s as any)?.is_portfolio === true &&
-          typeof id === "string" &&
-          !seenPortfolioIds[id]
-        ) {
-          seenPortfolioIds[id] = true;
-          portfolioSpaceIds.push(id);
         }
       }
 
@@ -968,14 +966,6 @@ Deno.serve(async (req: Request) => {
             };
             spaceMap.set(id, record);
             spaceMap.set(name.toLowerCase(), record);
-          }
-          if (
-            (s as any)?.is_portfolio === true &&
-            typeof id === "string" &&
-            !seenPortfolioIds[id]
-          ) {
-            seenPortfolioIds[id] = true;
-            portfolioSpaceIds.push(id);
           }
         }
       }
@@ -1149,6 +1139,7 @@ Deno.serve(async (req: Request) => {
       buildListExpensesTool(),
       buildGenerateChartUrlTool(),
       buildSetDefaultSpaceTool(),
+      financialReadTool,
       buildFinancialInsightTool(),
     ];
 
@@ -1169,7 +1160,16 @@ Deno.serve(async (req: Request) => {
     let lastToolCallName: string | null = null;
     const toolErrorTexts: string[] = [];
     let toolSucceededAny = false;
-    let writeMutationSucceededAny = false;
+    let modelReplyUnavailable = false;
+    // Ground truth for this turn, built only from tool results.
+    const turnLedger = createBotTurnLedger();
+    const assessReply = createVertexReplyAssessor({ vertexConfig });
+    const groundingMode = resolveReplyGroundingMode(
+      Deno.env.get("BOT_REPLY_GROUNDING_MODE"),
+    );
+    let groundingAudit: ReplyGroundingAudit | null = null;
+    let groundingCorrections = 0;
+    let toolIterationBudget = 3;
     let lastBudgetPockets: Array<{ name: string; percentage: number }> | null =
       null;
     let toolIterations = 0;
@@ -1225,24 +1225,83 @@ Deno.serve(async (req: Request) => {
       finalResponseText = isRetryableGeminiError(error)
         ? buildGeminiHighDemandMessage(userLang)
         : buildProcessingFailureMessage(userLang);
+      modelReplyUnavailable = true;
     }
 
-    while (functionCalls && functionCalls.length > 0 && toolIterations < 3) {
+    while (true) {
+      if (
+        !functionCalls ||
+        functionCalls.length === 0 ||
+        toolIterations >= toolIterationBudget
+      ) {
+        // No reply reaches the user until an independent multilingual
+        // verifier has compared it with what the tools actually did.
+        const grounding = await groundBotReply({
+          replyText: finalResponseText,
+          userMessage: messageText,
+          ledger: turnLedger,
+          assess: assessReply,
+          chat: activeChat as any,
+          language: userLang,
+          languageLabel: userLangLabel,
+          // A correction is a new user turn, which the model protocol does
+          // not allow while tool calls are still unanswered.
+          canCorrect:
+            groundingCorrections < 1 &&
+            !(functionCalls && functionCalls.length > 0),
+          mode: groundingMode,
+          modelReplyUnavailable,
+        });
+        groundingAudit = grounding.audit;
+        if (grounding.status === "tool_calls") {
+          groundingCorrections++;
+          response = grounding.response;
+          functionCalls = grounding.functionCalls;
+          finalResponseText = "";
+          toolIterationBudget = Math.max(toolIterationBudget, toolIterations + 1);
+          continue;
+        }
+        finalResponseText = grounding.text;
+        break;
+      }
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
         let toolResult = {};
         applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
         const executionToolName =
           call.name === "list_expenses" &&
-          shouldUseFinancialInsight(userMessageContent)
+          shouldRouteListExpensesToFinancialInsight(call.args)
             ? "financial_insight"
             : call.name;
         try {
-          if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
-            const hasMedia =
-              !!call.args?.media && typeof call.args.media === "object";
+          if (
+            [
+              "list_expenses",
+              "financial_insight",
+              "get_budget",
+              "list_wallets",
+              "get_space_info",
+            ].includes(call.name) && hasUnknownReadSpace(call.args, spaceMap)
+          ) {
+            toolResult = { error: "Unknown space." };
+          } else if (
+            call.name === "read_finances" || call.name === "get_budget"
+          ) {
+            toolResult = await executeFinancialRead({
+              supabase,
+              userId,
+              currency: userCurrency,
+              timezone: userTimezone,
+              args: call.name === "get_budget"
+                ? { ...call.args, view: "pockets", include_chart: true }
+                : call.args || {},
+            });
+          } else if (call.name === "analyze_expense") {
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
+            const hasMedia = !!call.args?.media &&
+              typeof call.args.media === "object";
 
             if (hasMedia) {
               toolResult = {
@@ -1271,6 +1330,7 @@ Deno.serve(async (req: Request) => {
                 },
               );
             }
+            toolResult = annotateUnsavedAnalysisResult(toolResult);
           } else if (executionToolName === "list_expenses") {
             const { householdId, spaceMeta } = resolveBotSpaceScope(
               call.args,
@@ -1282,9 +1342,9 @@ Deno.serve(async (req: Request) => {
               .trim()
               .toLowerCase()
               .replace(/[\s-]+/g, "_");
-            const { data, error } = await fetchExpensesDirect(
+            const { data, error, hasMore } = await fetchExpensesDirect(
               supabase,
-              contactId,
+              userId,
               {
                 limit: call.args.limit || 50,
                 startDate: call.args.start_date,
@@ -1293,15 +1353,7 @@ Deno.serve(async (req: Request) => {
                 isPortfolio:
                   spaceMeta?.isPortfolio === true ||
                   normalizedScope === "private_space",
-                portfolioHouseholdIds: householdId
-                  ? undefined
-                  : portfolioSpaceIds,
-                sharedHouseholdIds: householdId
-                  ? undefined
-                  : listBotSpaceIds(spaceMap, "shared"),
-                accessibleHouseholdIds: householdId
-                  ? undefined
-                  : listBotSpaceIds(spaceMap),
+
                 personalOnly: ["personal", "personal_account"].includes(
                   normalizedScope,
                 ),
@@ -1364,17 +1416,17 @@ Deno.serve(async (req: Request) => {
               );
               const chartUrl = buildCategoryChart(normalized);
               if (chartUrl) mediaUrl = chartUrl;
-              const safeExpenses = memoryItems.slice(0, 25).map((item, i) => ({
-                index: i + 1,
-                amountMajor: item.amountMajor,
-                currency: item.currency,
-                date: item.date,
-                category: item.category,
-                description: item.description,
-                type: item.type || "expense",
-              }));
+              const safeExpenses = buildListedTransactionRows(
+                memoryItems,
+                spaceMap,
+              );
+              const isTruncated = memoryItems.length > safeExpenses.length ||
+                hasMore;
               toolResult = {
                 expenses: safeExpenses,
+                returned_count: safeExpenses.length,
+                truncated: isTruncated,
+                ...(isTruncated ? { note: "This list is incomplete. Narrow start_date and end_date before concluding that a transaction is missing, and never compute totals from it." } : {}),
                 chart_url: chartUrl,
                 has_selection_memory: true,
               };
@@ -1933,7 +1985,10 @@ Deno.serve(async (req: Request) => {
                 error: error ? String(error) : null,
               },
             );
-            toolResult = error ? { error } : { success: true, data };
+            toolResult =
+              !error && data?.success === true
+                ? { success: true, data: data?.data ?? data }
+                : { error: error ?? data?.error ?? "Failed to save transaction" };
           } else if (call.name === "add_transactions_batch") {
             // Batch save for multiple transactions
             const rawTransactions = Array.isArray(call.args.transactions)
@@ -2094,22 +2149,19 @@ Deno.serve(async (req: Request) => {
 
               const success = !error && data?.success === true;
               if (success) {
-                const summary = data?.summary || {};
                 toolResult = {
                   success: true,
-                  message: `Saved ${
-                    summary.succeeded || batchTransactions.length
-                  } of ${
-                    summary.total || batchTransactions.length
-                  } transactions`,
-                  succeeded: summary.succeeded,
-                  failed: summary.failed,
+                  summary: data?.summary,
+                  results: data?.results,
                 };
               } else {
                 toolResult = {
                   error:
                     formatInvokeError(error ?? data?.error) ||
                     "Failed to save transactions",
+                  ...(data?.summary
+                    ? { summary: data.summary, results: data.results }
+                    : {}),
                 };
               }
             }
@@ -2209,20 +2261,14 @@ Deno.serve(async (req: Request) => {
             toolResult = await executeBotFinancialInsight({
               supabase,
               userId,
-              contactId,
               currency: userCurrency,
               timezone: userTimezone,
-              args:
-                call.name === "list_expenses"
-                  ? buildFinancialInsightArgs(
-                      userMessageContent,
-                      call.args || {},
-                    )
-                  : call.args || {},
-              spaceMap,
+              args: call.name === "list_expenses"
+                ? buildFinancialInsightArgs(call.args)
+                : call.args || {},
+              spaceMap: await loadFinanceSpaces(supabase, userId),
               logPrefix: "twilio-whatsapp-ai-bot",
-              chartRequested:
-                isFinancialInsightChartRequested(userMessageContent),
+              chartRequested: isFinancialInsightChartRequested(call.args),
             });
             const chartUrl = extractChartMediaUrlFromToolResult(toolResult);
             if (chartUrl) mediaUrl = chartUrl;
@@ -2247,14 +2293,14 @@ Deno.serve(async (req: Request) => {
         if (typeof (toolResult as any)?.error === "string") {
           toolErrorTexts.push((toolResult as any).error);
         }
-        const succeeded =
-          (toolResult as any)?.success === true ||
-          (!!(toolResult as any)?.data && !(toolResult as any)?.error);
+        const succeeded = recordBotToolExecution(
+          turnLedger,
+          call.name,
+          toolResult,
+          call.args,
+        );
         if (succeeded) {
           toolSucceededAny = true;
-          if (isWriteMutationToolName(call.name, toolResult)) {
-            writeMutationSucceededAny = true;
-          }
           if (call.name === "confirm_budget" || call.name === "set_budget") {
             const pocketsRaw = Array.isArray((toolResult as any)?.pockets)
               ? ((toolResult as any).pockets as any[])
@@ -2326,11 +2372,13 @@ Deno.serve(async (req: Request) => {
         finalResponseText = isRetryableGeminiError(error)
           ? buildGeminiHighDemandMessage(userLang)
           : buildProcessingFailureMessage(userLang);
+        modelReplyUnavailable = true;
         functionCalls = [];
       }
       toolIterations++;
     }
 
+    const appTurnFacts = summarizeBotTurn(turnLedger);
     finalResponseText = finalizeBotResponseText({
       finalResponseText,
       toolSucceededAny,
@@ -2338,19 +2386,29 @@ Deno.serve(async (req: Request) => {
       lastToolCallName,
       lastToolResult,
       toolErrorTexts,
-      writeMutationSucceededAny,
-      emptyFallbackText: buildProcessingFailureMessage(userLang),
-      onMutationClaimBlocked: (kind, context) => {
-        console.log(
-          "[twilio-whatsapp-ai-bot] app final-response mutation-claim blocked",
-          {
-            kind,
-            ...context,
-          },
-        );
-      },
+      writeSucceeded: appTurnFacts.writeSucceeded,
+      writeFailed: appTurnFacts.writeFailed,
+      language: userLang,
     });
     finalResponseText = sanitizeBotUserFacingText(finalResponseText);
+    // What was and was not stored is stated by code from the tool outcomes,
+    // in the user's own language, number and date format.
+    finalResponseText = appendTurnStatus({
+      text: finalResponseText,
+      ledger: turnLedger,
+      language: userLang,
+      replyWasReplaced: groundingAudit?.replaced === true,
+    });
+    const appGroundingRecord = buildGroundingRecord({
+      audit: groundingAudit,
+      ledger: turnLedger,
+      mode: groundingMode,
+      corrections: groundingCorrections,
+    });
+    console.log(
+      "[twilio-whatsapp-ai-bot] app grounding",
+      appGroundingRecord.log,
+    );
 
     await insertChatMessage(
       supabase,
@@ -2359,9 +2417,14 @@ Deno.serve(async (req: Request) => {
       finalResponseText,
       debugNotes,
       WHATSAPP_DEBUG,
+      { grounding: appGroundingRecord.metadata },
     );
 
-    return jsonResponse({ text: finalResponseText, mediaUrl });
+    return jsonResponse({
+      text: finalResponseText,
+      // A replaced reply carries no chart from the turn it replaced.
+      mediaUrl: groundingAudit?.replaced ? undefined : mediaUrl,
+    });
   }
 
   // App-mode requests returned above. Every remaining production request must
@@ -2788,8 +2851,15 @@ Deno.serve(async (req: Request) => {
   debugLog(WHATSAPP_DEBUG, "subscription", { subscription });
 
   if (!hasPlusEntitlement(subscription)) {
-    const subscriptionRequiredMessage =
-      buildSubscriptionRequiredMessage("WhatsApp capture");
+    const subscriptionRequiredMessage = botMessage(
+      "subscriptionRequired",
+      resolvePreferredReplyLanguage(
+        contact?.preferred_language,
+        contact?.preferred_currency,
+      ),
+      "WhatsApp",
+      PRICING_URL,
+    );
     await sendWhatsAppMessage(
       twilioAccountSid,
       twilioAuthToken,
@@ -2912,20 +2982,14 @@ Deno.serve(async (req: Request) => {
     const spaces = contextData?.spaces || contextData?.households || [];
     debugLog(WHATSAPP_DEBUG, "spaces", { spaces });
 
-    const portfolioSpaceIds = (spaces || [])
-      .filter((h: any) => !!h?.is_portfolio)
-      .map((h: any) => h?.household_id)
-      .filter((value: any) => typeof value === "string" && value.length > 0);
-
-    const householdContext =
-      spaces
-        ?.map(
-          (h: any) =>
-            `${h.name || "Space"}${
-              h.is_portfolio ? " (private space)" : " (shared space)"
-            }`,
-        )
-        .join("; ") || "None";
+    const householdContext = spaces
+      ?.map(
+        (h: any) =>
+          `${h.name || "Space"}${
+            h.is_portfolio ? " (private space)" : " (shared space)"
+          }`,
+      )
+      .join("; ") || "None";
 
     const spaceMap = new Map<
       string,
@@ -3201,6 +3265,7 @@ Deno.serve(async (req: Request) => {
       buildSetLanguageTool(),
       buildSetDefaultSpaceTool(),
       buildGenerateChartUrlTool(),
+      financialReadTool,
       buildFinancialInsightTool(),
       buildManageRecurringTool({
         includeDateField: true,
@@ -3231,6 +3296,7 @@ Deno.serve(async (req: Request) => {
     // Send message with timeout and error handling
     let response: any | null = null;
     let finalResponseText = "";
+    let modelReplyUnavailable = false;
     try {
       const messagePromise = sendGeminiMessageWithRetry(
         activeChat as any,
@@ -3291,6 +3357,7 @@ Deno.serve(async (req: Request) => {
       finalResponseText = isRetryableGeminiError(e)
         ? buildGeminiHighDemandMessage(userLang)
         : buildProcessingFailureMessage(userLang);
+      modelReplyUnavailable = true;
       if (WHATSAPP_DEBUG) {
         debugNotes.push(`initial-ai-error: ${String(e)}`);
       }
@@ -3330,43 +3397,20 @@ Deno.serve(async (req: Request) => {
         debugNotes.push(`wallet-routing-error: ${String(error)}`);
       }
     }
-    try {
-      const financialInsightRouting = await routeFinancialInsightToolCall({
-        userMessage: body,
-        functionCalls,
-        chat: activeChat as any,
-      });
-      response = financialInsightRouting.response || response;
-      functionCalls = financialInsightRouting.functionCalls;
-      if (financialInsightRouting.routed) {
-        finalResponseText = "";
-        debugLog(WHATSAPP_DEBUG, "financial insight tool routed", {
-          functionCalls: functionCalls.map((call: any) => call?.name),
-        });
-      }
-    } catch (error) {
-      console.error(
-        "[twilio-whatsapp-ai-bot] financial insight routing failed:",
-        error,
-      );
-      await reportBotBackendError({
-        functionName: "twilio-whatsapp-ai-bot",
-        phase: "financial_insight_routing",
-        error,
-      });
-      if (WHATSAPP_DEBUG) {
-        debugNotes.push(`financial-insight-routing-error: ${String(error)}`);
-      }
-    }
-    functionCalls = orderFinancialInsightAfterWrites({
-      userMessage: body,
-      functionCalls,
-    });
+    functionCalls = orderFinancialInsightAfterWrites(functionCalls);
     let persistedContent: string | undefined;
 
     // Tool-call loop (bounded) to support multi-round function calling.
     let toolSucceededAny = false;
-    let writeMutationSucceededAny = false;
+    // Ground truth for this turn, built only from tool results.
+    const turnLedger = createBotTurnLedger();
+    const assessReply = createVertexReplyAssessor({ vertexConfig });
+    const groundingMode = resolveReplyGroundingMode(
+      Deno.env.get("BOT_REPLY_GROUNDING_MODE"),
+    );
+    let groundingAudit: ReplyGroundingAudit | null = null;
+    let groundingCorrections = 0;
+    let toolIterationBudget = 3;
     let lastToolResult: any = null;
     let lastToolCallName: string | null = null;
     const toolErrorTexts: string[] = [];
@@ -3375,98 +3419,58 @@ Deno.serve(async (req: Request) => {
       null;
     let toolIterations = 0;
 
-    if (!finalResponseText) {
-      finalResponseText = response
-        ? response.text()
-        : buildProcessingFailureMessage(userLang);
+    if (!finalResponseText && response) {
+      finalResponseText = response.text();
     }
     if (functionCalls && functionCalls.length > 0) {
       // Ignore optimistic model text while tools are still pending. The durable
       // source of truth for write actions is the tool result, not the first
       // model draft.
       finalResponseText = "";
-    } else {
-      // Defense against AI hallucinating a save without calling a tool.
-      // Intent stays model-driven; only an unsafe model claim can trigger repair.
-      const claimDiag = diagnoseUnsafeTransactionMutationClaim({
-        responseText: finalResponseText,
-        writeMutationSucceeded: writeMutationSucceededAny,
-      });
-      const shouldForceToolCall = claimDiag.blocked;
-
-      console.log("[twilio-whatsapp-ai-bot] initial-response tool-call guard", {
-        userMessage: body,
-        claimBlocked: claimDiag.blocked,
-        claimReason: claimDiag.reason,
-        hasFunctionCalls: false,
-        willForceToolCall: shouldForceToolCall,
-      });
-
-      if (shouldForceToolCall) {
-        try {
-          const repairPrompt =
-            `Your previous response did not call a save tool. ` +
-            `The user's message ("${body}") requires a write action. ` +
-            `Call add_transaction now with the details you can extract. ` +
-            `Do not reply with text claiming a save happened.`;
-          const repairResult = await (activeChat as any).sendMessage(
-            repairPrompt,
-            {
-              toolConfig: {
-                functionCallingConfig:
-                  WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
-              },
-            },
-          );
-          response = await repairResult.response;
-          functionCalls = (response.functionCalls() as any[]) || [];
-          const repairText = response.text();
-          console.log(
-            "[twilio-whatsapp-ai-bot] forced-tool-call retry result",
-            {
-              forcedCallCount: functionCalls.length,
-              forcedCallNames: functionCalls.map((c: any) => c?.name),
-              hadTextFallback: !!repairText,
-            },
-          );
-          if (functionCalls.length > 0) {
-            finalResponseText = "";
-          } else {
-            // Model still refused to emit a tool call. Never echo its text if
-            // it looks like a save claim.
-            const repairDiag = diagnoseUnsafeTransactionMutationClaim({
-              responseText: repairText,
-              writeMutationSucceeded: false,
-            });
-            finalResponseText = repairDiag.blocked
-              ? buildUnsafeMutationClaimFallback()
-              : repairText || buildUnsafeMutationClaimFallback();
-          }
-        } catch (error) {
-          console.error(
-            "[twilio-whatsapp-ai-bot] forced-tool-call retry failed:",
-            error,
-          );
-          await reportBotBackendError({
-            functionName: "twilio-whatsapp-ai-bot",
-            phase: "forced_tool_call_retry",
-            error,
-          });
-          if (WHATSAPP_DEBUG) {
-            debugNotes.push(`forced-tool-call-retry-error: ${String(error)}`);
-          }
-          finalResponseText = buildUnsafeMutationClaimFallback();
-          functionCalls = null;
-        }
-      }
     }
-    while (functionCalls && functionCalls.length > 0 && toolIterations < 3) {
+    while (true) {
+      if (
+        !functionCalls ||
+        functionCalls.length === 0 ||
+        toolIterations >= toolIterationBudget
+      ) {
+        // No reply reaches the user until an independent multilingual
+        // verifier has compared it with what the tools actually did.
+        const grounding = await groundBotReply({
+          replyText: finalResponseText,
+          userMessage: body,
+          ledger: turnLedger,
+          assess: assessReply,
+          chat: activeChat as any,
+          language: userLang,
+          languageLabel: userLangLabel,
+          // A correction is a new user turn, which the model protocol does
+          // not allow while tool calls are still unanswered.
+          canCorrect:
+            groundingCorrections < 1 &&
+            !(functionCalls && functionCalls.length > 0),
+          mode: groundingMode,
+          modelReplyUnavailable,
+        });
+        groundingAudit = grounding.audit;
+        if (grounding.status === "tool_calls") {
+          groundingCorrections++;
+          response = grounding.response;
+          functionCalls = grounding.functionCalls;
+          finalResponseText = "";
+          toolIterationBudget = Math.max(toolIterationBudget, toolIterations + 1);
+          continue;
+        }
+        finalResponseText = grounding.text;
+        break;
+      }
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
         let toolResult = {};
         applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
         const executionToolName =
-          call.name === "list_expenses" && shouldUseFinancialInsight(body)
+          call.name === "list_expenses" &&
+          shouldRouteListExpensesToFinancialInsight(call.args)
             ? "financial_insight"
             : call.name;
         debugLog(WHATSAPP_DEBUG, "tool call", {
@@ -3474,9 +3478,32 @@ Deno.serve(async (req: Request) => {
           args: call.args,
         });
         try {
-          if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
+          if (
+            [
+              "list_expenses",
+              "financial_insight",
+              "get_budget",
+              "list_wallets",
+              "get_space_info",
+            ].includes(call.name) && hasUnknownReadSpace(call.args, spaceMap)
+          ) {
+            toolResult = { error: "Unknown space." };
+          } else if (
+            call.name === "read_finances" || call.name === "get_budget"
+          ) {
+            toolResult = await executeFinancialRead({
+              supabase,
+              userId,
+              currency: userCurrency,
+              timezone: userTimezone,
+              args: call.name === "get_budget"
+                ? { ...call.args, view: "pockets", include_chart: true }
+                : call.args || {},
+            });
+          } else if (call.name === "analyze_expense") {
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
             const media =
               call.args?.media && typeof call.args.media === "object"
                 ? call.args.media
@@ -3660,6 +3687,7 @@ Deno.serve(async (req: Request) => {
                 }
               }
             }
+            toolResult = annotateUnsavedAnalysisResult(toolResult);
           } else if (call.name === "create_custom_category") {
             const transactionType =
               String(call.args?.transaction_type || "expense").toLowerCase() ===
@@ -4077,14 +4105,10 @@ Deno.serve(async (req: Request) => {
               },
             );
             if (success) {
-              const summary = data?.summary || {};
               toolResult = {
                 success: true,
-                message: `Saved ${
-                  summary.succeeded || batchTransactions.length
-                } of ${summary.total || batchTransactions.length} transactions`,
-                succeeded: summary.succeeded,
-                failed: summary.failed,
+                summary: data?.summary,
+                results: data?.results,
               };
             } else {
               const formatted = formatInvokeError(error ?? data?.error);
@@ -4108,6 +4132,9 @@ Deno.serve(async (req: Request) => {
               });
               toolResult = {
                 error: formatted || "Failed to save transactions",
+                ...(data?.summary
+                  ? { summary: data.summary, results: data.results }
+                  : {}),
               };
             }
           } else if (call.name === "list_wallets") {
@@ -4647,7 +4674,7 @@ Deno.serve(async (req: Request) => {
               });
               continue;
             }
-            const type = call.args.type || "expense";
+            const type = call.args.type || undefined;
             const normalizedScope = String(
               call.args.space_scope || call.args.scope || "",
             )
@@ -4662,15 +4689,7 @@ Deno.serve(async (req: Request) => {
               isPortfolio:
                 spaceMeta?.isPortfolio === true ||
                 normalizedScope === "private_space",
-              portfolioHouseholdIds: householdId
-                ? undefined
-                : portfolioSpaceIds,
-              sharedHouseholdIds: householdId
-                ? undefined
-                : listBotSpaceIds(spaceMap, "shared"),
-              accessibleHouseholdIds: householdId
-                ? undefined
-                : listBotSpaceIds(spaceMap),
+
               personalOnly: ["personal", "personal_account"].includes(
                 normalizedScope,
               ),
@@ -4681,9 +4700,9 @@ Deno.serve(async (req: Request) => {
             debugLog(WHATSAPP_DEBUG, "list-expenses payload", listPayload);
             // fetchExpensesDirect returns snake_case fields from DB (amount_cents, raw_text, etc.)
             // normalizeExpensesForTool handles both snake_case and camelCase field names
-            const { data, error } = await fetchExpensesDirect(
+            const { data, error, hasMore } = await fetchExpensesDirect(
               supabase,
-              contactId,
+              userId,
               listPayload,
             );
             if (error) {
@@ -4718,73 +4737,20 @@ Deno.serve(async (req: Request) => {
                 userCurrency,
               );
               const chartUrl = buildCategoryChart(normalized);
-              const safeExpenses = memoryItems.slice(0, 25).map((item, i) => {
-                const spaceName = item.household_id
-                  ? spaceMap.get(item.household_id)?.name || null
-                  : null;
-                return {
-                  index: i + 1,
-                  amountMajor: item.amountMajor,
-                  currency: item.currency,
-                  date: item.date,
-                  category: item.category,
-                  description: item.description,
-                  type: item.type || "expense",
-                  ...(spaceName ? { space: spaceName } : {}),
-                };
-              });
+              const safeExpenses = buildListedTransactionRows(
+                memoryItems,
+                spaceMap,
+              );
+              const isTruncated = memoryItems.length > safeExpenses.length ||
+                hasMore;
               toolResult = {
                 expenses: safeExpenses,
+                returned_count: safeExpenses.length,
+                truncated: isTruncated,
+                ...(isTruncated ? { note: "This list is incomplete. Narrow start_date and end_date before concluding that a transaction is missing, and never compute totals from it." } : {}),
                 chart_url: chartUrl,
                 has_selection_memory: true,
               };
-            }
-          } else if (call.name === "get_budget") {
-            const dateStr = (
-              call.args.date || formatDateInTimeZone(userTimezone)
-            ).slice(0, 10);
-            const period_month = await resolveFinancialPeriodStartForUser(
-              supabase,
-              userId,
-              dateStr,
-            );
-            const { householdId, spaceMeta } = resolveBotSpaceScope(
-              call.args,
-              spaceMap,
-            );
-            if (
-              householdId &&
-              !(await ensureHouseholdMember(supabase, householdId, userId))
-            ) {
-              toolResult = { error: "You do not have access to that space" };
-            } else {
-              const res = await getBudgetStatusDirect(
-                supabase,
-                userId,
-                householdId,
-                period_month,
-                userCurrency,
-                spaceMeta?.isPortfolio ?? false,
-                contactId,
-              );
-              if (res.error) {
-                const formatted = formatInvokeError(res.error);
-                if (WHATSAPP_DEBUG) {
-                  debugNotes.push(`get-budget direct error: ${formatted}`);
-                }
-                console.error(
-                  "[twilio-whatsapp-ai-bot] get-budget direct error",
-                  { error: res.error, formatted },
-                );
-                toolResult = { error: res.error };
-              } else {
-                toolResult = {
-                  budget: res.budget,
-                  pockets: res.envelopes,
-                  totals: res.totals,
-                  chart: res.chart,
-                };
-              }
             }
           } else if (call.name === "set_currency") {
             const currency = (call.args.currency || "")
@@ -5100,16 +5066,14 @@ Deno.serve(async (req: Request) => {
             toolResult = await executeBotFinancialInsight({
               supabase,
               userId,
-              contactId,
               currency: userCurrency,
               timezone: userTimezone,
-              args:
-                call.name === "list_expenses"
-                  ? buildFinancialInsightArgs(body, call.args || {})
-                  : call.args || {},
-              spaceMap,
+              args: call.name === "list_expenses"
+                ? buildFinancialInsightArgs(call.args)
+                : call.args || {},
+              spaceMap: await loadFinanceSpaces(supabase, userId),
               logPrefix: "twilio-whatsapp-ai-bot",
-              chartRequested: isFinancialInsightChartRequested(body),
+              chartRequested: isFinancialInsightChartRequested(call.args),
               includeRecurringSelectionItems: true,
             });
 
@@ -5177,12 +5141,14 @@ Deno.serve(async (req: Request) => {
           lastGeneratedChartUrl = chartFromTool;
         }
 
-        const succeeded = (toolResult as any)?.success === true;
+        const succeeded = recordBotToolExecution(
+          turnLedger,
+          call.name,
+          toolResult,
+          call.args,
+        );
         if (succeeded) {
           toolSucceededAny = true;
-          if (isWriteMutationToolName(call.name, toolResult)) {
-            writeMutationSucceededAny = true;
-          }
           if (call.name === "confirm_budget" || call.name === "set_budget") {
             const pocketsRaw = Array.isArray((toolResult as any)?.pockets)
               ? ((toolResult as any).pockets as any[])
@@ -5251,6 +5217,7 @@ Deno.serve(async (req: Request) => {
         finalResponseText = isRetryableGeminiError(e)
           ? buildGeminiHighDemandMessage(userLang)
           : buildProcessingFailureMessage(userLang);
+        modelReplyUnavailable = true;
         if (WHATSAPP_DEBUG) debugNotes.push(`AI response error: ${String(e)}`);
         functionCalls = null;
       }
@@ -5259,6 +5226,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 7. Finalize Response
+    const turnFacts = summarizeBotTurn(turnLedger);
     finalResponseText = finalizeBotResponseText({
       finalResponseText,
       toolSucceededAny,
@@ -5266,21 +5234,17 @@ Deno.serve(async (req: Request) => {
       lastToolCallName,
       lastToolResult,
       toolErrorTexts,
-      writeMutationSucceededAny,
-      emptyFallbackText: buildProcessingFailureMessage(userLang),
-      onMutationClaimBlocked: (kind, context) => {
-        const label =
-          kind === "transaction"
-            ? "[twilio-whatsapp-ai-bot] final-response mutation-claim blocked"
-            : kind === "wallet"
-              ? "[twilio-whatsapp-ai-bot] final-response wallet mutation-claim blocked"
-              : "[twilio-whatsapp-ai-bot] final-response generic mutation-claim blocked";
-        console.log(label, context);
-      },
+      writeSucceeded: turnFacts.writeSucceeded,
+      writeFailed: turnFacts.writeFailed,
+      language: userLang,
     });
     finalResponseText = sanitizeBotUserFacingText(finalResponseText);
     const chartFromText = extractQuickChartUrl(finalResponseText);
-    let mediaUrl: string | null = chartFromText.url || lastGeneratedChartUrl;
+    // A chart belongs to the reply that explained it. When that reply was
+    // replaced by a notice, the chart is not sent either.
+    let mediaUrl: string | null = groundingAudit?.replaced
+      ? null
+      : chartFromText.url || lastGeneratedChartUrl;
     let cleanedText = chartFromText.cleanedText || finalResponseText;
 
     if (mediaUrl) {
@@ -5288,8 +5252,24 @@ Deno.serve(async (req: Request) => {
     }
 
     if (mediaUrl && !cleanedText) {
-      cleanedText = "Chart attached. 📊";
+      cleanedText = botMessage("chartAttached", userLang);
     }
+
+    // What was and was not stored is stated by code from the tool outcomes,
+    // in the user's own language, number and date format.
+    cleanedText = appendTurnStatus({
+      text: cleanedText,
+      ledger: turnLedger,
+      language: userLang,
+      replyWasReplaced: groundingAudit?.replaced === true,
+    });
+    const groundingRecord = buildGroundingRecord({
+      audit: groundingAudit,
+      ledger: turnLedger,
+      mode: groundingMode,
+      corrections: groundingCorrections,
+    });
+    console.log("[twilio-whatsapp-ai-bot] grounding", groundingRecord.log);
 
     persistedContent = cleanedText;
     const bodyToSend = truncateTextByCodePoints(
@@ -5307,7 +5287,8 @@ Deno.serve(async (req: Request) => {
       WHATSAPP_DEBUG,
     );
 
-    // Save assistant message with final content (for context)
+    // Save assistant message with final content (for context), together with
+    // a text-free record of what the tools did on this turn.
     await insertChatMessage(
       supabase,
       sessionId,
@@ -5315,6 +5296,7 @@ Deno.serve(async (req: Request) => {
       persistedContent,
       debugNotes,
       WHATSAPP_DEBUG,
+      { grounding: groundingRecord.metadata },
     );
 
     // If we're sending a chart, respond quickly then send media via Twilio API asynchronously
@@ -5375,7 +5357,7 @@ Deno.serve(async (req: Request) => {
           twilioAuthToken,
           to,
           from,
-          DELIVERY_FAILURE_MESSAGE,
+          botMessage("deliveryFailed", userLang),
         );
         if (!fallbackResult.success) {
           console.error(
@@ -5429,7 +5411,7 @@ Deno.serve(async (req: Request) => {
           twilioAuthToken,
           to,
           from,
-          DELIVERY_FAILURE_MESSAGE,
+          botMessage("deliveryFailed", userLang),
         );
         if (!fallbackResult.success) {
           console.error(
@@ -5481,7 +5463,7 @@ Deno.serve(async (req: Request) => {
           twilioAuthToken,
           to,
           from,
-          DELIVERY_FAILURE_MESSAGE,
+          botMessage("deliveryFailed", userLang),
         );
         if (!fallbackResult.success) {
           console.error(

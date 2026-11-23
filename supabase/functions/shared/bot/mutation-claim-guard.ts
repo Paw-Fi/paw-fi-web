@@ -1,9 +1,18 @@
+// Structural classification of bot tools. Nothing in this module inspects
+// natural language: whether a reply is truthful is decided in
+// reply-grounding.ts from tool outcomes, in any language.
+
 const WRITE_MUTATION_TOOL_NAMES = new Set([
   "add_transaction",
   "add_transactions_batch",
   "update_transaction",
   "delete_transaction",
   "manage_recurring",
+  "goal-progress-tracker",
+  "goal-milestone-manager",
+  "goal-timeline-manager",
+  "ai-goal-generator",
+  "store-course-from-ai",
   "create_wallet",
   "update_wallet",
   "create_wallet_transfer",
@@ -16,57 +25,43 @@ const WRITE_MUTATION_TOOL_NAMES = new Set([
   "confirm_budget",
   "set_pocket",
   "delete_pocket",
+  "create_custom_category",
+  "set_currency",
+  "set_language",
 ]);
 
-// Generic past-tense mutation verbs (used only when no assertive first-person
-// claim is present — otherwise we rely on the stronger ASSERTIVE pattern).
-const SAVE_CLAIM_PATTERN =
-  /\b(?:added|saved|logged|recorded|noted|stored|booked|captured|tracked)\b/i;
+// Tools whose successful result means stored records were actually read on
+// this turn. analyze_expense is deliberately excluded: it extracts a draft
+// from text or media and never reads or writes the ledger. generate_chart_url
+// is excluded because it only renders numbers the model supplies.
+const RECORD_LOOKUP_TOOL_NAMES = new Set([
+  "list_expenses",
+  "financial_insight",
+  "read_finances",
+  "goal-insights-generator",
+  "get_budget",
+  "list_wallets",
+  "get_space_info",
+]);
 
-const TRANSACTION_UPDATE_DELETE_CLAIM_PATTERN = /\b(?:updated|deleted)\b/i;
-
-// Assertive first-person past-tense claims that the model uses when it
-// hallucinates that a save happened. These must NOT be bypassed by the
-// proposal/follow-up exemption because the model often chains a save claim
-// with a "Would you like ..." offer per system prompt style guidelines.
-// Examples it catches:
-//   "I've added the €20 for KFC"
-//   "I have logged your expense"
-//   "I added ..." / "I saved ..." / "I've recorded ..."
-//   Also handles smart-quote apostrophes (\u2019) used by some models.
-const ASSERTIVE_SAVE_CLAIM_PATTERN =
-  /\bi\s*(?:['\u2019]\s*(?:ve|ll|d)|have|had|'?m)?\s*(?:just\s+|successfully\s+|now\s+)?(?:added|saved|logged|recorded|noted|stored|booked|captured|tracked)\b/i;
-
-const ASSERTIVE_TRANSACTION_UPDATE_DELETE_CLAIM_PATTERN =
-  /\bi\s*(?:['\u2019]\s*(?:ve|ll|d)|have|had|'?m)?\s*(?:just\s+|successfully\s+|now\s+)?(?:updated|deleted)\b/i;
-
-const TRANSACTION_CONTEXT_PATTERN =
-  /(?:transaction|expense|income|payment|purchase|spend|spending|category|merchant|recurring|subscription|€|\$|£|₦|¥|₹|\b\d+(?:[.,]\d{1,2})?\b)/i;
-
-const STRICT_TRANSACTION_CONTEXT_PATTERN =
-  /\b(?:transaction|expense|income|payment|purchase|recurring|subscription)\b/i;
-
-// A strictly proposal-shaped phrasing. Used only to short-circuit the weaker
-// SAVE_CLAIM_PATTERN path; it does NOT exempt assertive claims.
-const PROPOSAL_PATTERN =
-  /\b(?:i can|i could|would you like me to|should i|shall i|do you want me to|please confirm|let me know if)\b/i;
-
-const GENERIC_SUCCESS_CLAIM_PATTERN =
-  /\b(?:successfully\s+)?(?:created|updated|renamed|deleted|drafted|confirmed|set|saved)\b/i;
+const READ_ONLY_RECURRING_ACTIONS = new Set([
+  "list_series",
+  "list_history",
+  "analyze_history",
+]);
 
 function isReadOnlyRecurringAction(toolResult: unknown): boolean {
-  const action = typeof (toolResult as Record<string, unknown> | null)?.action ===
-      "string"
-    ? (toolResult as Record<string, string>).action
-    : "";
-  return action === "list_series" || action === "list_history";
+  const action = (toolResult as Record<string, unknown> | null)?.action;
+  return typeof action === "string" && READ_ONLY_RECURRING_ACTIONS.has(action);
 }
 
 export function isWriteMutationToolName(
   toolName: string | null,
   toolResult?: unknown,
 ): boolean {
-  if (toolName === "manage_recurring" && isReadOnlyRecurringAction(toolResult)) {
+  if (
+    toolName === "manage_recurring" && isReadOnlyRecurringAction(toolResult)
+  ) {
     return false;
   }
   return (
@@ -74,80 +69,29 @@ export function isWriteMutationToolName(
   );
 }
 
-export type MutationClaimDiagnosis =
-  | "ok"
-  | "write_mutation_succeeded"
-  | "empty"
-  | "assertive_claim"
-  | "generic_claim";
-
-export function diagnoseUnsafeTransactionMutationClaim(params: {
-  responseText: string;
-  writeMutationSucceeded: boolean;
-}): { blocked: boolean; reason: MutationClaimDiagnosis } {
-  if (params.writeMutationSucceeded) {
-    return { blocked: false, reason: "write_mutation_succeeded" };
+export function isRecordLookupToolName(
+  toolName: string | null,
+  toolResult?: unknown,
+): boolean {
+  if (toolName === "manage_recurring") {
+    return isReadOnlyRecurringAction(toolResult);
   }
-  const text = String(params.responseText || "").trim();
-  if (!text) return { blocked: false, reason: "empty" };
+  return typeof toolName === "string" && RECORD_LOOKUP_TOOL_NAMES.has(toolName);
+}
 
-  // Assertive first-person past-tense claim — never bypass.
+// analyze_expense only extracts a draft; it never persists anything. Mark the
+// tool result so the model cannot mistake a successful extraction for a save.
+export function annotateUnsavedAnalysisResult<T>(result: T): T {
   if (
-    ASSERTIVE_SAVE_CLAIM_PATTERN.test(text) &&
-    TRANSACTION_CONTEXT_PATTERN.test(text)
+    !result || typeof result !== "object" || Array.isArray(result) ||
+    (result as Record<string, unknown>).success !== true
   ) {
-    return { blocked: true, reason: "assertive_claim" };
+    return result;
   }
-  if (
-    ASSERTIVE_TRANSACTION_UPDATE_DELETE_CLAIM_PATTERN.test(text) &&
-    STRICT_TRANSACTION_CONTEXT_PATTERN.test(text)
-  ) {
-    return { blocked: true, reason: "assertive_claim" };
-  }
-
-  // Weaker generic claim — bypass only if the message reads as a pure proposal.
-  if (PROPOSAL_PATTERN.test(text)) {
-    return { blocked: false, reason: "ok" };
-  }
-  if (SAVE_CLAIM_PATTERN.test(text) && TRANSACTION_CONTEXT_PATTERN.test(text)) {
-    return { blocked: true, reason: "generic_claim" };
-  }
-  if (
-    TRANSACTION_UPDATE_DELETE_CLAIM_PATTERN.test(text) &&
-    STRICT_TRANSACTION_CONTEXT_PATTERN.test(text)
-  ) {
-    return { blocked: true, reason: "generic_claim" };
-  }
-  return { blocked: false, reason: "ok" };
+  return {
+    ...(result as Record<string, unknown>),
+    saved: false,
+    next_step:
+      "Nothing has been saved yet. To record these transactions, call add_transaction (or add_transactions_batch) with the extracted details. Do not tell the user anything was saved until that call succeeds.",
+  } as T;
 }
-
-export function shouldBlockUnsafeTransactionMutationClaim(params: {
-  responseText: string;
-  writeMutationSucceeded: boolean;
-}): boolean {
-  return diagnoseUnsafeTransactionMutationClaim(params).blocked;
-}
-
-export function buildUnsafeMutationClaimFallback(): string {
-  return "I couldn't save that transaction just yet. Please try again in a moment.";
-}
-
-export function shouldBlockUnsafeGenericMutationClaim(params: {
-  responseText: string;
-  writeMutationSucceeded: boolean;
-}): boolean {
-  if (params.writeMutationSucceeded) return false;
-  const responseText = String(params.responseText || "").trim();
-  if (!responseText) return false;
-  return GENERIC_SUCCESS_CLAIM_PATTERN.test(responseText);
-}
-
-export function buildUnsafeGenericMutationClaimFallback(): string {
-  return "I couldn't complete that just yet. Please try again in a moment.";
-}
-
-// Exported for callers that want to force a tool call on the next model turn.
-export const WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG = {
-  mode: "ANY" as const,
-  allowedFunctionNames: Array.from(WRITE_MUTATION_TOOL_NAMES),
-};

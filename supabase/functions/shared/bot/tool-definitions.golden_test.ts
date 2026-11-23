@@ -1,3 +1,4 @@
+import { financialReadTool } from "./financial-reads.ts";
 import {
   type BotToolDeclaration,
   buildAddTransactionsBatchTool,
@@ -89,6 +90,7 @@ function twilioAppTools(): BotToolDeclaration[] {
     buildDeleteTransactionTool(),
     buildListExpensesTool(),
     buildGenerateChartUrlTool(),
+    financialReadTool,
     buildFinancialInsightTool(),
   ];
 }
@@ -112,6 +114,7 @@ function twilioWhatsAppTools(): BotToolDeclaration[] {
     buildSetCurrencyTool(),
     buildSetLanguageTool(),
     buildGenerateChartUrlTool(),
+    financialReadTool,
     buildFinancialInsightTool(),
     buildManageRecurringTool({ includeScheduleFields: true }),
   ];
@@ -143,6 +146,7 @@ function telegramTools(): BotToolDeclaration[] {
       includeSpaceScope: true,
     }),
     buildGenerateChartUrlTool({ descriptionMode: "minimal" }),
+    financialReadTool,
     buildFinancialInsightTool({ descriptionMode: "minimal" }),
     buildGetBudgetTool({ descriptionMode: "minimal" }),
     buildDraftBudgetTool({ descriptionMode: "minimal" }),
@@ -174,6 +178,7 @@ Deno.test("golden bot tool order and counts are stable", () => {
     "delete_transaction",
     "list_expenses",
     "generate_chart_url",
+    "read_finances",
     "financial_insight",
   ]);
 
@@ -195,6 +200,7 @@ Deno.test("golden bot tool order and counts are stable", () => {
     "set_currency",
     "set_language",
     "generate_chart_url",
+    "read_finances",
     "financial_insight",
     "manage_recurring",
   ]);
@@ -212,6 +218,7 @@ Deno.test("golden bot tool order and counts are stable", () => {
     "delete_transaction",
     "list_expenses",
     "generate_chart_url",
+    "read_finances",
     "financial_insight",
     "get_budget",
     "draft_budget",
@@ -256,8 +263,12 @@ Deno.test("golden platform-specific schema differences are explicit", () => {
     "WhatsApp list_expenses has no space_scope",
   );
 
-  const telegramInsight = telegramTools()[12];
-  const whatsappInsight = twilioWhatsAppTools()[17];
+  const telegramInsight = telegramTools().find((t) =>
+    t.name === "financial_insight"
+  )!;
+  const whatsappInsight = twilioWhatsAppTools().find((t) =>
+    t.name === "financial_insight"
+  )!;
   for (const insight of [telegramInsight, whatsappInsight]) {
     assert("period" in properties(insight), "Insight exposes period");
     assert("start_date" in properties(insight), "Insight exposes start_date");
@@ -267,8 +278,12 @@ Deno.test("golden platform-specific schema differences are explicit", () => {
     assert("wallet_name" in properties(insight), "Insight exposes wallet_name");
   }
 
-  const telegramRecurring = telegramTools()[21];
-  const twilioRecurring = twilioWhatsAppTools()[18];
+  const telegramRecurring = telegramTools().find((t) =>
+    t.name === "manage_recurring"
+  )!;
+  const twilioRecurring = twilioWhatsAppTools().find((t) =>
+    t.name === "manage_recurring"
+  )!;
   assert(
     "date" in properties(telegramRecurring),
     "Telegram recurring exposes date",

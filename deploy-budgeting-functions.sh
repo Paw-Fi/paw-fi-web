@@ -139,6 +139,11 @@ supabase functions deploy siri-assistant --project-ref "$PROJECT_REF"
 echo "✅ update-preferred-platform deployed"
 echo ""
 
+echo "📦 [25/24] Deploying file-import-maintenance function..."
+supabase functions deploy file-import-maintenance --project-ref "$PROJECT_REF"
+echo "✅ file-import-maintenance deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All budgeting functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"

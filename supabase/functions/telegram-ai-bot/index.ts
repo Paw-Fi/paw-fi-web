@@ -1,3 +1,8 @@
+import { loadFinanceSpaces } from "../shared/bot/finance-rpc.ts";
+import {
+  executeFinancialRead,
+  financialReadTool,
+} from "../shared/bot/financial-reads.ts";
 /// <reference lib="deno.ns" />
 
 // Supabase Edge Function: telegram-ai-bot
@@ -8,11 +13,7 @@ import {
   type SupabaseClient as SupabaseJsClient,
 } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
-import {
-  buildSubscriptionRequiredMessage,
-  hasPlusEntitlement,
-  PRICING_URL,
-} from "../shared/plus-entitlement.ts";
+import { hasPlusEntitlement, PRICING_URL } from "../shared/plus-entitlement.ts";
 import {
   buildCategoryChart,
   formatInvokeError,
@@ -38,7 +39,6 @@ import {
   updateIdempotency,
 } from "../shared/bot/idempotency.ts";
 import {
-  buildTelegramVerificationMessage,
   buildTelegramVerificationUrl,
   REQUIRED_TELEGRAM_TOOL_NAMES,
 } from "../shared/telegram-parity.ts";
@@ -149,12 +149,21 @@ import {
   getBotSpaceInfo,
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
+import { annotateUnsavedAnalysisResult } from "../shared/bot/mutation-claim-guard.ts";
 import {
-  buildUnsafeMutationClaimFallback,
-  diagnoseUnsafeTransactionMutationClaim,
-  isWriteMutationToolName,
-  WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
-} from "../shared/bot/mutation-claim-guard.ts";
+  buildGroundingRecord,
+  createVertexReplyAssessor,
+  groundBotReply,
+  type ReplyGroundingAudit,
+  resolveReplyGroundingMode,
+} from "../shared/bot/reply-grounding.ts";
+import {
+  createBotTurnLedger,
+  recordBotToolExecution,
+  summarizeBotTurn,
+} from "../shared/bot/turn-ledger.ts";
+import { appendTurnStatus } from "../shared/bot/save-receipt.ts";
+import { botMessage } from "../shared/bot/bot-messages.ts";
 import {
   consolidateDuplicateEnvelopesForBudget,
   normalizeEnvelopeName,
@@ -163,7 +172,7 @@ import {
   applyPreferredSpaceDefaultToToolCall,
   ensureHouseholdMember,
   hasExplicitBotSpaceScope,
-  listBotSpaceIds,
+  hasUnknownReadSpace,
   resolveBotSpaceScope,
   resolveHouseholdSplitConfig,
   sanitizeBotToolResultForModel,
@@ -180,12 +189,12 @@ import {
   buildFinancialInsightArgs,
   isFinancialInsightChartRequested,
   orderFinancialInsightAfterWrites,
-  routeFinancialInsightToolCall,
-  shouldUseFinancialInsight,
+  shouldRouteListExpensesToFinancialInsight,
 } from "../shared/bot/financial-insight-intent.ts";
 import { executeBotFinancialInsight } from "../shared/bot/financial-insight-tool.ts";
 import {
   buildChoiceSummary,
+  buildListedTransactionRows,
   clearLastListedTransactions,
   type LastListedTransaction,
   loadSessionState,
@@ -273,7 +282,7 @@ type TelegramCallbackQuery = {
   id: string;
   data?: string;
   message?: TelegramMessage;
-  from?: { id?: number };
+  from?: { id?: number; language_code?: string };
 };
 
 type TelegramMessage = {
@@ -281,7 +290,7 @@ type TelegramMessage = {
   text?: string;
   caption?: string;
   chat?: { id?: number; type?: string };
-  from?: { id?: number };
+  from?: { id?: number; language_code?: string };
   photo?: Array<{ file_id: string; file_size?: number }>;
   document?: {
     file_id: string;
@@ -816,6 +825,13 @@ Deno.serve(async (req: Request) => {
           contact?.preferred_language,
           contact?.preferred_currency,
         );
+        // Before an account is linked there is no stored preference, so
+        // notices follow the language of the sender's Telegram client.
+        const noticeLanguage = contact
+          ? replyLanguage
+          : callbackQuery?.from?.language_code ||
+            message?.from?.language_code ||
+            replyLanguage;
 
         if (contextError) {
           debugNotes.push(`context error: ${formatInvokeError(contextError)}`);
@@ -876,7 +892,7 @@ Deno.serve(async (req: Request) => {
 
           const baseUrl = resolvePublicBaseUrl();
           const verificationUrl = buildTelegramVerificationUrl(baseUrl, code);
-          const msg = buildTelegramVerificationMessage(code, verificationUrl);
+          const msg = botMessage("verificationMessage", noticeLanguage, code);
           const sentVerification = await sendTelegramMessage(
             TELEGRAM_BOT_TOKEN,
             chatId,
@@ -885,7 +901,7 @@ Deno.serve(async (req: Request) => {
               inline_keyboard: [
                 [
                   {
-                    text: "Verify in Moneko",
+                    text: botMessage("verifyButton", noticeLanguage),
                     url: verificationUrl,
                   },
                 ],
@@ -904,8 +920,7 @@ Deno.serve(async (req: Request) => {
         }
 
         if (!contact || !contact.verified || !contact.user_id) {
-          const prompt =
-            "🔐 Account Not Verified\n\nTo use Moneko, start verification below.";
+          const prompt = botMessage("accountNotVerified", noticeLanguage);
           const sentVerificationPrompt = await sendTelegramMessage(
             TELEGRAM_BOT_TOKEN,
             chatId,
@@ -914,7 +929,7 @@ Deno.serve(async (req: Request) => {
               inline_keyboard: [
                 [
                   {
-                    text: "Start Verification",
+                    text: botMessage("startVerificationButton", noticeLanguage),
                     callback_data: "start_verification",
                   },
                 ],
@@ -975,8 +990,12 @@ Deno.serve(async (req: Request) => {
         }
 
         if (!hasPlusEntitlement(subscription)) {
-          const nonSubscriberMessage =
-            buildSubscriptionRequiredMessage("Telegram capture");
+          const nonSubscriberMessage = botMessage(
+            "subscriptionRequired",
+            noticeLanguage,
+            "Telegram",
+            PRICING_URL,
+          );
           const sentSubscriptionRequired = await sendTelegramMessage(
             TELEGRAM_BOT_TOKEN,
             chatId,
@@ -985,7 +1004,7 @@ Deno.serve(async (req: Request) => {
               inline_keyboard: [
                 [
                   {
-                    text: "View Pricing",
+                    text: botMessage("viewPricingButton", noticeLanguage),
                     url: PRICING_URL,
                   },
                 ],
@@ -1036,9 +1055,6 @@ Deno.serve(async (req: Request) => {
           string,
           { id: string; name: string; isPortfolio: boolean }
         >();
-        const portfolioSpaceIds: string[] = [];
-        const sharedSpaceIds: string[] = [];
-        const sharedSpaceIdSet = new Set<string>();
         for (const h of chatHouseholds as any[]) {
           if (!h) continue;
           const id = String((h as any).household_id || "");
@@ -1047,12 +1063,6 @@ Deno.serve(async (req: Request) => {
           if (id) {
             const value = { id, name, isPortfolio };
             spaceMap.set(id, value);
-            if (isPortfolio) {
-              portfolioSpaceIds.push(id);
-            } else if (!sharedSpaceIdSet.has(id)) {
-              sharedSpaceIdSet.add(id);
-              sharedSpaceIds.push(id);
-            }
           }
           if (name) spaceMap.set(name.toLowerCase(), { id, name, isPortfolio });
         }
@@ -1096,7 +1106,7 @@ Deno.serve(async (req: Request) => {
             const sentSessionFailure = await sendTelegramMessage(
               TELEGRAM_BOT_TOKEN,
               chatId,
-              "Failed to initialize chat session.",
+              botMessage("sessionInitFailed", noticeLanguage),
             );
             if (!sentSessionFailure) {
               throw new Error("Failed to deliver Telegram session error");
@@ -1223,6 +1233,7 @@ Deno.serve(async (req: Request) => {
             includeSpaceScope: true,
           }),
           buildGenerateChartUrlTool({ descriptionMode: "minimal" }),
+          financialReadTool,
           buildFinancialInsightTool({ descriptionMode: "minimal" }),
           buildGetBudgetTool({ descriptionMode: "minimal" }),
           buildDraftBudgetTool({ descriptionMode: "minimal" }),
@@ -1264,6 +1275,7 @@ Deno.serve(async (req: Request) => {
         let response: any = null;
         let functionCalls: any[] = [];
         let finalResponseText = "";
+        let modelReplyUnavailable = false;
 
         try {
           const result = await sendGeminiMessageWithRetry(
@@ -1340,6 +1352,7 @@ Deno.serve(async (req: Request) => {
           finalResponseText = isRetryableGeminiError(error)
             ? buildGeminiBusyMessage(replyLanguage)
             : buildProcessingFailureMessage(replyLanguage);
+          modelReplyUnavailable = true;
         }
 
         try {
@@ -1374,113 +1387,18 @@ Deno.serve(async (req: Request) => {
           debugNotes.push(`wallet-routing-error: ${String(error)}`);
         }
 
-        try {
-          const financialInsightRouting = await routeFinancialInsightToolCall({
-            userMessage: incomingText,
-            functionCalls,
-            chat: activeChat as any,
-          });
-          response = financialInsightRouting.response || response;
-          functionCalls = financialInsightRouting.functionCalls;
-          if (financialInsightRouting.routed) {
-            finalResponseText = "";
-            debugNotes.push("financial insight tool routed");
-            console.log("[telegram-ai-bot] financial insight tool routed", {
-              traceId,
-              functionCalls: functionCalls.map((call) => call?.name),
-            });
-          }
-        } catch (error) {
-          console.error(
-            "[telegram-ai-bot] financial insight routing failed:",
-            error,
-          );
-          await reportBotBackendError({
-            functionName: "telegram-ai-bot",
-            phase: "financial_insight_routing",
-            error,
-            traceId,
-          });
-          debugNotes.push(`financial-insight-routing-error: ${String(error)}`);
-        }
-        functionCalls = orderFinancialInsightAfterWrites({
-          userMessage: incomingText,
-          functionCalls,
-        });
-
-        // Defense against AI hallucinating a save without a tool call.
-        // Intent stays model-driven; only an unsafe model claim can trigger repair.
-        if (!functionCalls || functionCalls.length === 0) {
-          const claimDiag = diagnoseUnsafeTransactionMutationClaim({
-            responseText: finalResponseText,
-            writeMutationSucceeded: false,
-          });
-          const shouldForceWriteToolCall = claimDiag.blocked;
-
-          console.log("[telegram-ai-bot] initial-response tool-call guard", {
-            traceId,
-            userMessage: incomingText,
-            claimBlocked: claimDiag.blocked,
-            claimReason: claimDiag.reason,
-            willForceToolCall: shouldForceWriteToolCall,
-          });
-
-          if (shouldForceWriteToolCall) {
-            try {
-              const repairPrompt =
-                `Your previous response did not call a save tool. ` +
-                `The user's message ("${incomingText}") requires a write action. ` +
-                `Call add_transaction now with the details you can extract. ` +
-                `Do not reply with text claiming a save happened.`;
-              const repairResult = await (activeChat as any).sendMessage(
-                repairPrompt,
-                {
-                  toolConfig: {
-                    functionCallingConfig:
-                      WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
-                  },
-                },
-              );
-              response = await repairResult.response;
-              functionCalls = (response.functionCalls() as any[]) || [];
-              const repairText = response.text();
-              console.log("[telegram-ai-bot] forced-tool-call retry result", {
-                traceId,
-                forcedCallCount: functionCalls.length,
-                forcedCallNames: functionCalls.map((c: any) => c?.name),
-                hadTextFallback: !!repairText,
-              });
-              if (functionCalls.length > 0) {
-                finalResponseText = "";
-              } else {
-                const repairDiag = diagnoseUnsafeTransactionMutationClaim({
-                  responseText: repairText,
-                  writeMutationSucceeded: false,
-                });
-                finalResponseText = repairDiag.blocked
-                  ? buildUnsafeMutationClaimFallback()
-                  : repairText || buildUnsafeMutationClaimFallback();
-              }
-            } catch (error) {
-              console.error(
-                "[telegram-ai-bot] forced-tool-call retry failed:",
-                error,
-              );
-              await reportBotBackendError({
-                functionName: "telegram-ai-bot",
-                phase: "forced_tool_call_retry",
-                error,
-                traceId,
-              });
-              debugNotes.push(`forced-tool-call-retry-error: ${String(error)}`);
-              finalResponseText = buildUnsafeMutationClaimFallback();
-              functionCalls = [];
-            }
-          }
-        }
+        functionCalls = orderFinancialInsightAfterWrites(functionCalls);
 
         let toolSucceededAny = false;
-        let writeMutationSucceededAny = false;
+        // Ground truth for this turn, built only from tool results.
+        const turnLedger = createBotTurnLedger();
+        const assessReply = createVertexReplyAssessor({ vertexConfig });
+        const groundingMode = resolveReplyGroundingMode(
+          Deno.env.get("BOT_REPLY_GROUNDING_MODE"),
+        );
+        let groundingAudit: ReplyGroundingAudit | null = null;
+        let groundingCorrections = 0;
+        let toolIterationBudget = 3;
         let lastToolResult: any = null;
         let lastToolCallName: string | null = null;
         const toolErrorTexts: string[] = [];
@@ -1491,18 +1409,52 @@ Deno.serve(async (req: Request) => {
         }> | null = null;
         let toolIterations = 0;
 
-        while (
-          functionCalls &&
-          functionCalls.length > 0 &&
-          toolIterations < 3
-        ) {
+        while (true) {
+          if (
+            !functionCalls ||
+            functionCalls.length === 0 ||
+            toolIterations >= toolIterationBudget
+          ) {
+            // No reply reaches the user until an independent multilingual
+            // verifier has compared it with what the tools actually did.
+            const grounding = await groundBotReply({
+              replyText: finalResponseText,
+              userMessage: incomingText,
+              ledger: turnLedger,
+              assess: assessReply,
+              chat: activeChat as any,
+              language: replyLanguage,
+              languageLabel: userLangLabel,
+              // A correction is a new user turn, which the model protocol
+              // does not allow while tool calls are still unanswered.
+              canCorrect:
+                groundingCorrections < 1 &&
+                !(functionCalls && functionCalls.length > 0),
+              mode: groundingMode,
+              modelReplyUnavailable,
+            });
+            groundingAudit = grounding.audit;
+            if (grounding.status === "tool_calls") {
+              groundingCorrections++;
+              response = grounding.response;
+              functionCalls = grounding.functionCalls;
+              finalResponseText = "";
+              toolIterationBudget = Math.max(
+                toolIterationBudget,
+                toolIterations + 1,
+              );
+              continue;
+            }
+            finalResponseText = grounding.text;
+            break;
+          }
           const toolResponses: any[] = [];
           for (const call of functionCalls) {
             let toolResult: any = {};
             applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
             const executionToolName =
               call.name === "list_expenses" &&
-              shouldUseFinancialInsight(incomingText)
+              shouldRouteListExpensesToFinancialInsight(call.args)
                 ? "financial_insight"
                 : call.name;
 
@@ -1513,15 +1465,36 @@ Deno.serve(async (req: Request) => {
             });
 
             try {
-              if (call.name === "analyze_expense") {
-                const text =
-                  typeof call.args?.text === "string"
-                    ? call.args.text.trim()
-                    : "";
-                const fileId =
-                  (typeof call.args?.telegram_file_id === "string"
-                    ? call.args.telegram_file_id.trim()
-                    : "") ||
+              if (
+                [
+                  "list_expenses",
+                  "financial_insight",
+                  "get_budget",
+                  "list_wallets",
+                  "get_space_info",
+                ].includes(call.name) &&
+                hasUnknownReadSpace(call.args, spaceMap)
+              ) {
+                toolResult = { error: "Unknown space." };
+              } else if (
+                call.name === "read_finances" || call.name === "get_budget"
+              ) {
+                toolResult = await executeFinancialRead({
+                  supabase,
+                  userId,
+                  currency: userCurrency,
+                  timezone: userTimezone,
+                  args: call.name === "get_budget"
+                    ? { ...call.args, view: "pockets", include_chart: true }
+                    : call.args || {},
+                });
+              } else if (call.name === "analyze_expense") {
+                const text = typeof call.args?.text === "string"
+                  ? call.args.text.trim()
+                  : "";
+                const fileId = (typeof call.args?.telegram_file_id === "string"
+                  ? call.args.telegram_file_id.trim()
+                  : "") ||
                   (typeof call.args?.media?.file_id === "string"
                     ? call.args.media.file_id.trim()
                     : "");
@@ -1748,6 +1721,7 @@ Deno.serve(async (req: Request) => {
                     }
                   }
                 }
+                toolResult = annotateUnsavedAnalysisResult(toolResult);
               } else if (executionToolName === "list_expenses") {
                 const { householdId, spaceMeta } = resolveBotSpaceScope(
                   call.args,
@@ -1784,24 +1758,16 @@ Deno.serve(async (req: Request) => {
                   spaceMeta?.isPortfolio === true ||
                   call.args.is_portfolio === true ||
                   normalizedScope === "private_space";
-                const { data, error } = await fetchExpensesDirect(
+                const { data, error, hasMore } = await fetchExpensesDirect(
                   supabase,
-                  contact.id,
+                  userId,
                   {
                     limit: call.args.limit || 50,
                     startDate: call.args.start_date,
                     endDate: call.args.end_date,
                     householdId,
                     isPortfolio: isPortfolioQuery,
-                    portfolioHouseholdIds: householdId
-                      ? undefined
-                      : portfolioSpaceIds,
-                    sharedHouseholdIds: householdId
-                      ? undefined
-                      : sharedSpaceIds,
-                    accessibleHouseholdIds: householdId
-                      ? undefined
-                      : listBotSpaceIds(spaceMap),
+
                     personalOnly: wantsPersonalOnly,
                     sharedOnly: wantsSharedOnly,
                     currency: call.args.currency,
@@ -1833,25 +1799,22 @@ Deno.serve(async (req: Request) => {
                     userCurrency,
                   );
                   const chartUrl = buildCategoryChart(normalized);
-                  const safeExpenses = memoryItems
-                    .slice(0, 25)
-                    .map((item, i) => {
-                      const spaceName = item.household_id
-                        ? spaceMap.get(item.household_id)?.name || null
-                        : null;
-                      return {
-                        index: i + 1,
-                        amountMajor: item.amountMajor,
-                        currency: item.currency,
-                        date: item.date,
-                        category: item.category,
-                        description: item.description,
-                        type: item.type || "expense",
-                        ...(spaceName ? { space: spaceName } : {}),
-                      };
-                    });
+                  const safeExpenses = buildListedTransactionRows(
+                    memoryItems,
+                    spaceMap,
+                  );
+                  const isTruncated =
+                    memoryItems.length > safeExpenses.length ||
+                    hasMore;
                   toolResult = {
                     expenses: safeExpenses,
+                    returned_count: safeExpenses.length,
+                    truncated: isTruncated,
+                    ...(isTruncated
+                      ? {
+                          note: "This list is incomplete. Narrow start_date and end_date before concluding that a transaction is missing, and never compute totals from it.",
+                        }
+                      : {}),
                     chart_url: chartUrl,
                     has_selection_memory: true,
                   };
@@ -2238,6 +2201,9 @@ Deno.serve(async (req: Request) => {
                     }
                   : {
                       error: formatted,
+                      ...(data?.summary
+                        ? { summary: data.summary, results: data.results }
+                        : {}),
                     };
                 if (!success) {
                   await reportTelegramToolInvokeFailure({
@@ -2372,17 +2338,14 @@ Deno.serve(async (req: Request) => {
                 toolResult = await executeBotFinancialInsight({
                   supabase,
                   userId,
-                  contactId: contact.id,
                   currency: userCurrency,
                   timezone: userTimezone,
-                  args:
-                    call.name === "list_expenses"
-                      ? buildFinancialInsightArgs(incomingText, call.args || {})
-                      : call.args || {},
-                  spaceMap,
+                  args: call.name === "list_expenses"
+                    ? buildFinancialInsightArgs(call.args)
+                    : call.args || {},
+                  spaceMap: await loadFinanceSpaces(supabase, userId),
                   logPrefix: "telegram-ai-bot",
-                  chartRequested:
-                    isFinancialInsightChartRequested(incomingText),
+                  chartRequested: isFinancialInsightChartRequested(call.args),
                   includeRecurringSelectionItems: true,
                 });
                 const recurringSelectionItems = Array.isArray(
@@ -2408,63 +2371,6 @@ Deno.serve(async (req: Request) => {
                 }
                 if (toolResult && typeof toolResult === "object") {
                   delete toolResult._recurring_selection_items;
-                }
-              } else if (call.name === "get_budget") {
-                const dateStr = (
-                  call.args.date || formatDateInTimeZone(userTimezone)
-                ).slice(0, 10);
-                const period_month = await resolveFinancialPeriodStartForUser(
-                  supabase,
-                  userId,
-                  dateStr,
-                );
-                let householdId =
-                  call.args.space_id || call.args.household_id || null;
-                const householdName = (
-                  call.args.space_name ||
-                  call.args.household_name ||
-                  ""
-                )
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !householdId &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
-                if (
-                  householdId &&
-                  !(await ensureHouseholdMember(supabase, householdId, userId))
-                ) {
-                  toolResult = {
-                    error: "You do not have access to that space",
-                  };
-                } else {
-                  const res = await getBudgetStatusDirect(
-                    supabase,
-                    userId,
-                    householdId,
-                    period_month,
-                    userCurrency,
-                    spaceMeta?.isPortfolio ??
-                      (call.args.space_type === "private_space" ||
-                        call.args.is_portfolio === true),
-                    contact.id,
-                  );
-                  toolResult = res.error
-                    ? { error: res.error }
-                    : {
-                        budget: res.budget,
-                        pockets: res.envelopes,
-                        totals: res.totals,
-                        chart: res.chart,
-                      };
                 }
               } else if (call.name === "set_currency") {
                 const currency = (call.args.currency || "")
@@ -2591,10 +2497,8 @@ Deno.serve(async (req: Request) => {
                           : undefined;
 
                     const { data: fallbackData, error: fallbackError } =
-                      await fetchExpensesDirect(supabase, contact.id, {
+                      await fetchExpensesDirect(supabase, userId, {
                         limit: fallbackLimit,
-                        portfolioHouseholdIds: portfolioSpaceIds,
-                        accessibleHouseholdIds: listBotSpaceIds(spaceMap),
                         ...(fallbackType ? { type: fallbackType } : {}),
                       });
 
@@ -2661,12 +2565,13 @@ Deno.serve(async (req: Request) => {
                       needs_disambiguation: true,
                       choices,
                       choices_text: [
-                        "I couldn't confirm your previous list context. Please pick from the latest transactions:",
+                        botMessage("pickFromLatest", replyLanguage),
                         ...choices.map((c) => `${c.index}. ${c.summary}`),
-                        `Reply with a number from 1..${Math.max(
-                          choices.length,
-                          1,
-                        )}.`,
+                        botMessage(
+                          "pickNumber",
+                          replyLanguage,
+                          Math.max(choices.length, 1),
+                        ),
                       ].join("\n"),
                     };
                     lastToolResult = toolResult;
@@ -2713,7 +2618,7 @@ Deno.serve(async (req: Request) => {
                       }));
 
                     const choices_text = [
-                      "Which one do you mean? Tap a button:",
+                      botMessage("whichOne", replyLanguage),
                       ...choices.map((c) => `${c.index}. ${c.summary}`),
                     ].join("\n");
 
@@ -3410,11 +3315,17 @@ Deno.serve(async (req: Request) => {
               });
             }
 
+            const succeeded = recordBotToolExecution(
+              turnLedger,
+              call.name,
+              toolResult,
+              call.args,
+            );
             console.log("[telegram-ai-bot] tool result", {
               traceId,
               name: call.name,
-              ok: toolResult?.success === true,
-              hasError: typeof toolResult?.error === "string",
+              ok: succeeded,
+              hasError: Boolean(toolResult?.error),
               error:
                 typeof toolResult?.error === "string"
                   ? toolResult.error.slice(0, 200)
@@ -3428,14 +3339,8 @@ Deno.serve(async (req: Request) => {
               toolErrorTexts.push(toolResult.error);
             }
 
-            const succeeded =
-              toolResult?.success === true ||
-              (!!toolResult?.data && !toolResult?.error);
             if (succeeded) {
               toolSucceededAny = true;
-              if (isWriteMutationToolName(call.name, toolResult)) {
-                writeMutationSucceededAny = true;
-              }
               if (
                 call.name === "confirm_budget" ||
                 call.name === "set_budget"
@@ -3519,6 +3424,7 @@ Deno.serve(async (req: Request) => {
             finalResponseText = isRetryableGeminiError(e)
               ? buildGeminiBusyMessage(replyLanguage)
               : buildProcessingFailureMessage(replyLanguage);
+            modelReplyUnavailable = true;
             functionCalls = [];
           }
 
@@ -3534,6 +3440,7 @@ Deno.serve(async (req: Request) => {
           finalResponseText = lastToolResult.choices_text;
         }
 
+        const turnFacts = summarizeBotTurn(turnLedger);
         finalResponseText = finalizeBotResponseText({
           finalResponseText,
           toolSucceededAny,
@@ -3541,30 +3448,41 @@ Deno.serve(async (req: Request) => {
           lastToolCallName,
           lastToolResult,
           toolErrorTexts,
-          writeMutationSucceededAny,
-          emptyFallbackText:
-            "I couldn't generate a response right now. Please try again in a few seconds.",
-          onMutationClaimBlocked: (kind, context) => {
-            const label =
-              kind === "transaction"
-                ? "[telegram-ai-bot] final-response mutation-claim blocked"
-                : kind === "wallet"
-                  ? "[telegram-ai-bot] final-response wallet mutation-claim blocked"
-                  : "[telegram-ai-bot] final-response generic mutation-claim blocked";
-            console.log(label, { traceId, ...context });
-          },
+          writeSucceeded: turnFacts.writeSucceeded,
+          writeFailed: turnFacts.writeFailed,
+          language: replyLanguage,
         });
         finalResponseText = sanitizeBotUserFacingText(finalResponseText);
 
         // Persist the incoming user message AFTER Gemini/tool flow so history doesn't echo it.
         const chartFromText = extractQuickChartUrl(finalResponseText);
-        let mediaUrl: string | null =
-          chartFromText.url || lastGeneratedChartUrl;
+        // A chart belongs to the reply that explained it. When that reply was
+        // replaced by a notice, the chart is not sent either.
+        let mediaUrl: string | null = groundingAudit?.replaced
+          ? null
+          : chartFromText.url || lastGeneratedChartUrl;
         let cleanedText = chartFromText.cleanedText || finalResponseText;
 
         if (mediaUrl) {
           mediaUrl = await normalizeQuickChartMediaUrl(mediaUrl);
         }
+
+        // What was and was not stored is stated by code from the tool
+        // outcomes, in the user's own language, number and date format.
+        cleanedText = appendTurnStatus({
+          text: cleanedText,
+          ledger: turnLedger,
+          language: replyLanguage,
+          replyWasReplaced: groundingAudit?.replaced === true,
+        });
+        const groundingRecord = buildGroundingRecord({
+          audit: groundingAudit,
+          ledger: turnLedger,
+          mode: groundingMode,
+          corrections: groundingCorrections,
+          traceId,
+        });
+        console.log("[telegram-ai-bot] grounding", groundingRecord.log);
 
         // Persist the incoming user message AFTER Gemini/tool flow so history doesn't echo it.
         await insertChatMessage(
@@ -3576,6 +3494,8 @@ Deno.serve(async (req: Request) => {
           false,
         );
 
+        // The assistant row keeps a text-free record of what the tools did, so
+        // any later question about this reply can be answered from evidence.
         await insertChatMessage(
           supabase,
           sessionId,
@@ -3583,6 +3503,7 @@ Deno.serve(async (req: Request) => {
           cleanedText,
           debugNotes,
           false,
+          { grounding: groundingRecord.metadata },
         );
 
         const choiceKeyboard = buildChoiceKeyboard(cleanedText);

@@ -2,35 +2,16 @@
 
 import { runEnrichedTransactionAnalysis } from "../analyzed-merchant-enrichment.ts";
 import { reportEdgeFunctionError } from "../edge-error-alert.ts";
+import { botMessage } from "./bot-messages.ts";
 
 export function buildGeminiHighDemandMessage(language?: string | null): string {
-  const normalized = String(language || "en")
-    .trim()
-    .toLowerCase()
-    .replace(/-/g, "_");
-  if (normalized === "zh") {
-    return "Moneko 当前请求量较高。请稍后再试。";
-  }
-  if (normalized === "zh_tw") {
-    return "Moneko 當前請求量較高。請稍後再試。";
-  }
-  return "We’re experiencing high demand right now. Please try again shortly.";
+  return botMessage("highDemand", language);
 }
 
 export function buildProcessingFailureMessage(
   language?: string | null,
 ): string {
-  const normalized = String(language || "en")
-    .trim()
-    .toLowerCase()
-    .replace(/-/g, "_");
-  if (normalized === "zh") {
-    return "我刚刚处理你的消息时遇到了临时问题。请过几秒再试一次。";
-  }
-  if (normalized === "zh_tw") {
-    return "我剛剛處理你的訊息時遇到了臨時問題。請過幾秒再試一次。";
-  }
-  return "I hit a temporary issue while processing your message. Please try again in a few seconds.";
+  return botMessage("temporaryIssue", language);
 }
 
 export function runBackgroundTask(task: Promise<unknown>): void {

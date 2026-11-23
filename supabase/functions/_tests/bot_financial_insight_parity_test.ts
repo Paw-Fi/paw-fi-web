@@ -20,7 +20,10 @@ Deno.test(
         'from "../shared/bot/financial-insight-tool.ts"',
       );
       assertStringIncludes(source, "executeBotFinancialInsight({");
-      assertStringIncludes(source, "routeFinancialInsightToolCall({");
+      assertStringIncludes(
+        source,
+        "shouldRouteListExpensesToFinancialInsight(call.args)",
+      );
     }
     assertStringIncludes(
       whatsapp,

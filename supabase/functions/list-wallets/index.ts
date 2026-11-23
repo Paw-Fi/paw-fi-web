@@ -251,6 +251,11 @@ Deno.serve(withCors(async (req: Request) => {
         .lte("date", new Date().toISOString().slice(0, 10))
         .is("deleted_at", null)
         .order("id", { ascending: true }).limit(500);
+      query = householdId
+        ? query.eq("household_id", householdId).or(
+          `user_id.eq.${userId},privacy_scope.in.(full,balances_only)`,
+        )
+        : query.is("household_id", null);
       if (afterId) query = query.gt("id", afterId);
       return query;
     });

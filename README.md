@@ -25,6 +25,7 @@ For a visual system architecture diagram, see the [architecture diagram](archite
   - **Serverless Functions:** Deno (TypeScript)
   - **Database:** PostgreSQL (managed by Supabase)
   - **AI:** Google Gemini
+  - The chat bots use `get_space_info` without arguments to list a linked user's Spaces. Passing a Space name or ID retrieves its settings and members. For a saved transaction's destination, the bots read the matching transaction with `list_expenses`.
 
 - **Key Libraries:**
   - `firebase`: Used for select backend services and deployment contexts.

@@ -1,3 +1,4 @@
+import { authenticateInternalSecret } from "../shared/auth.ts";
 // Supabase Edge Function: analyze-expense
 // Analyzes text or image to extract transaction data (expense or income) WITHOUT saving to database
 // Used by clients to extract structured transactions before logging
@@ -685,7 +686,7 @@ Deno.serve(withCors(async (req: Request) => {
     }
 
     // Verify the caller and enrich context safely under RLS.
-    const supabaseAuthed = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    let supabaseAuthed = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -694,14 +695,28 @@ Deno.serve(withCors(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } = await supabaseAuthed.auth
-      .getUser();
-    logStage("auth_get_user", requestStartedAt);
-    const callerId = userData?.user?.id;
-    if (userErr || !callerId) {
-      return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+    let callerId: string;
+    const jobRequest = body as typeof body & { fileImportJobId?: string; fileImportLease?: string };
+    if (jobRequest.fileImportJobId) {
+      const internal = await authenticateInternalSecret(req);
+      if (!internal.success || !SUPABASE_SERVICE_ROLE_KEY || interactive ||
+        body.attachments?.length !== 1 || body.attachments[0].contentType !== "application/pdf") {
+        return errorResponse("Unauthorized import worker", 403, "UNAUTHORIZED");
+      }
+      const workerClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+      const { data: job, error } = await workerClient.from("file_import_jobs")
+        .select("user_id").eq("id", jobRequest.fileImportJobId)
+        .eq("lease", jobRequest.fileImportLease ?? "").eq("format","pdf")
+        .eq("status","processing").gt("lease_until", new Date().toISOString()).maybeSingle();
+      if (error || !job) return errorResponse("Import lease expired", 403, "UNAUTHORIZED");
+      callerId = job.user_id;
+      supabaseAuthed = workerClient;
+    } else {
+      const { data, error } = await supabaseAuthed.auth.getUser();
+      if (error || !data.user?.id) return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+      callerId = data.user.id;
     }
-
+    logStage("auth_get_user", requestStartedAt);
     if (body.userId && body.userId !== callerId) {
       return errorResponse("userId mismatch", 401, "UNAUTHORIZED");
     }

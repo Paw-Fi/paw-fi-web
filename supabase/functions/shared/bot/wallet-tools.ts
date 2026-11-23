@@ -58,8 +58,17 @@ export async function listBotWallets(params: {
     },
   );
 
-  if (!error && data?.success === true) {
-    return { result: { success: true, data: data?.data ?? [] } };
+  if (!error && data?.success === true && Array.isArray(data.data)) {
+    const wallets = data.data.map((row: Record<string, unknown>) => ({
+      name: row.name,
+      currency: row.currency,
+      current_balance_cents: row.current_balance_cents,
+      has_provider_balance: row.has_provider_balance,
+      is_default: row.is_default,
+      is_archived: row.is_archived,
+      goal_amount_cents: row.goal_amount_cents,
+    }));
+    return { result: { success: true, data: wallets } };
   }
 
   const formatted =

@@ -1189,7 +1189,7 @@ export async function getBudgetStatusDirect(
   };
 }
 
-function buildBudgetGauge(
+export function buildBudgetGauge(
   total_cents: number,
   spent_cents: number,
   currency: string,

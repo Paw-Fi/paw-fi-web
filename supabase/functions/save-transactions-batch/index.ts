@@ -113,6 +113,7 @@ interface TransactionItem {
 }
 
 interface RequestBody {
+  fileImportLease?: string;
   userId?: string;
   debugTraceId?: string;
   manualImportMode?: boolean;
@@ -306,6 +307,7 @@ export async function saveTransactionsBatchInternal(
   const emitProgress = createProgressEmitter(body, onProgress);
   emitProgress("started", "Preparing import...", 0);
 
+  const fileImportLease = sanitizeUuid(body.fileImportLease);
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
@@ -313,7 +315,10 @@ export async function saveTransactionsBatchInternal(
       detectSessionInUrl: false,
     },
     global: {
-      headers: { "X-Client-Info": "moneko-save-transactions-batch" },
+      headers: {
+        "X-Client-Info": "moneko-save-transactions-batch",
+        ...(fileImportLease ? { "X-Moneko-File-Import-Lease": fileImportLease } : {}),
+      },
     },
   });
 
@@ -324,6 +329,10 @@ export async function saveTransactionsBatchInternal(
       authResult.error || "Unauthorized",
       authResult.statusCode ?? 401,
     );
+  }
+
+  if (body.fileImportLease !== undefined && (!authResult.isInternalService || !fileImportLease)) {
+    throw new SaveTransactionsBatchError("Invalid import worker lease", 403);
   }
 
   const userId = authResult.isInternalService
@@ -710,6 +719,10 @@ export async function saveTransactionsBatchInternal(
           : null;
     const importRequestKey =
       idempotencyKey ?? buildImportRequestKey(body.debugTraceId, i);
+    if (importRequestKey?.startsWith("file-import-v1:") && (!authResult.isInternalService || !fileImportLease)) {
+      validationErrors.push({index:i,error:"Invalid import request key"});
+      continue;
+    }
     const importSemanticKey = buildImportSemanticKey({
       userId,
       householdId: householdIdForRecord,
@@ -836,14 +849,25 @@ export async function saveTransactionsBatchInternal(
       ? preparedRecords.map((record) => record.importSemanticKey)
       : [];
 
-  if (requestKeys.length > 0 || semanticKeys.length > 0) {
+  if (fileImportLease && requestKeys.length > 0) {
+    const { data, error } = await supabase.rpc("file_import_existing_keys", {
+      p_job: requestKeys[0].split(":")[1],
+      p_request_keys: requestKeys,
+      p_semantic_keys: semanticKeys,
+    });
+    if (error || !Array.isArray(data)) {
+      throw new SaveTransactionsBatchError("Could not check import duplicates", 503);
+    }
+    for (const row of data) {
+      if (row.request_key) duplicateRequestKeys.set(row.request_key, { id: row.existing_id });
+      if (row.semantic_key) duplicateSemanticKeyCounts.set(row.semantic_key, Number(row.occurrences));
+    }
+  } else if (requestKeys.length > 0 || semanticKeys.length > 0) {
     const [existingRequestRows, existingSemanticRows] = await Promise.all([
       requestKeys.length > 0
-        ? supabase
-            .from("expenses")
-            .select(
-              "id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category",
-            )
+        ? supabase.from("expenses")
+            .select("id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category")
+            .eq("user_id", resolvedUserId)
             .in("import_request_key", requestKeys)
             .is("deleted_at", null)
         : Promise.resolve({ data: [], error: null }),
@@ -1020,7 +1044,7 @@ export async function saveTransactionsBatchInternal(
               customSplits: effective.customSplits,
               reconcileMemberChanges: effective.source === "default",
             });
-            console.log("[HouseholdDefaultSplitDecisionTrace]", {
+            if (!fileImportLease) console.log("[HouseholdDefaultSplitDecisionTrace]", {
               stage: "server-decision",
               trace: body.debugTraceId ?? null,
               household: resolvedHouseholdId.slice(0, 8),
@@ -1457,7 +1481,7 @@ if (import.meta.main) {
       progressOffset: body.progressOffset,
       progressTotal: body.progressTotal,
       stream: isStreamMode,
-      splitFields: body.transactions?.map((transaction, index) => ({
+      splitFields: body.fileImportLease ? undefined : body.transactions?.map((transaction, index) => ({
         index,
         type: transaction.type,
         amount: transaction.amount,

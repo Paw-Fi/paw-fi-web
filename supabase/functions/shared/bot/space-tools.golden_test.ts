@@ -112,7 +112,7 @@ Deno.test("getBotSpaceInfo loads public profiles without an inferred relationshi
     { table: "household_members", select: "user_id, role" },
     {
       table: "users",
-      select: "id, full_name, email, avatar_url",
+      select: "id, full_name",
     },
   ]);
   assertEquals(result, {
@@ -129,15 +129,11 @@ Deno.test("getBotSpaceInfo loads public profiles without an inferred relationshi
     members: [
       {
         name: "Alice Example",
-        email: "alice@example.com",
         role: "owner",
-        avatar_url: "alice.png",
       },
       {
         name: "Bob Example",
-        email: "bob@example.com",
         role: "member",
-        avatar_url: undefined,
       },
     ],
   });
