@@ -49,6 +49,22 @@ type ChangelogEntry = ChangelogEntryBase &
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "More Reliable Transactions & File Imports",
+    date: "2026-11-24",
+    version: "5.0.6",
+    tags: ["Fix", "Import", "AI", "Reports", "Notifications"],
+    description:
+      "Moneko 5.0.6 makes transaction tracking more reliable, lets file imports continue in the background, and improves monthly spending guidance.",
+    items: [
+      "Fixed an issue where recently saved transactions could go missing while your transactions refresh",
+      "File imports can continue in the background after the upload is accepted, with progress and results available in the app",
+      "AI expenses can resume saving after an offline restart, and interrupted saves are retried more reliably",
+      "Monthly reports now give more accurate safe-to-spend guidance when some pockets are over budget",
+      "Financial data resets can resume safely if the app restarts before they finish",
+      "Android transaction capture from notifications is more reliable, including after signing in or returning to the app",
+    ],
+  },
+  {
     title: "Smarter AI Capture & Smoother Entry",
     date: "2026-11-09",
     version: "5.0.4",
