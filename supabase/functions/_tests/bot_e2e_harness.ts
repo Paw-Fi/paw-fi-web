@@ -249,6 +249,9 @@ export async function withBotBackend(
       return json({ ok: true, result: {} });
     }
     if (url.hostname === "api.twilio.com") {
+      if (method === "GET") {
+        return json({ date_created: "Wed, 25 Nov 2026 00:00:00 +0000" });
+      }
       outcome.whatsappMessages.push(
         new URLSearchParams(rawBody).get("Body") ?? "",
       );

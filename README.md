@@ -26,6 +26,7 @@ For a visual system architecture diagram, see the [architecture diagram](archite
   - **Database:** PostgreSQL (managed by Supabase)
   - **AI:** Google Gemini
   - The chat bots use `get_space_info` without arguments to list a linked user's Spaces. Passing a Space name or ID retrieves its settings and members. For a saved transaction's destination, the bots read the matching transaction with `list_expenses`.
+- The Twilio WhatsApp webhook silently acknowledges Twilio Message records created before `2026-11-25T00:00:00Z`. This uses Twilio's record creation time, so messages held by WhatsApp and first delivered to Twilio after the cutoff can still pass.
 
 - **Key Libraries:**
   - `firebase`: Used for select backend services and deployment contexts.

@@ -219,6 +219,8 @@ const SYSTEM_INSTRUCTION = buildBotSystemInstruction("WhatsApp");
 
 const PROCESSING_ACK_DELAY_MS = 1000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
+const TWILIO_WHATSAPP_BACKLOG_CUTOFF_MS = Date.parse("2026-11-25T00:00:00Z");
+const TWILIO_MESSAGE_LOOKUP_TIMEOUT_MS = 2000;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_FOLLOW_UP_DELAY_MS = 24000;
 const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
@@ -2464,6 +2466,56 @@ Deno.serve(async (req: Request) => {
   const numMedia = Number(formData.get("NumMedia")?.toString() || "0") || 0;
   const to = formData.get("To")?.toString() || ""; // Our number
 
+  if (!from) return jsonResponse({ error: "Missing 'From' number" }, 400);
+
+  const messageSid = getTwilioMessageSid(formData);
+  if (!messageSid || !/^(SM|MM)[0-9a-fA-F]{32}$/.test(messageSid)) {
+    return jsonResponse({ error: "Invalid Twilio message SID" }, 400);
+  }
+
+  // For inbound messages date_sent describes webhook dispatch. Use the
+  // Twilio record creation time, which cannot date messages held upstream.
+  try {
+    if (!twilioAccountSid || !twilioAuthToken) {
+      throw new Error("Missing Twilio REST credentials");
+    }
+    const accountPath = encodeURIComponent(twilioAccountSid);
+    const messageResponse = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountPath}/Messages/${messageSid}.json`,
+      {
+        headers: {
+          Authorization:
+            "Basic " + btoa(`${twilioAccountSid}:${twilioAuthToken}`),
+        },
+        redirect: "error",
+        signal: AbortSignal.timeout(TWILIO_MESSAGE_LOOKUP_TIMEOUT_MS),
+      },
+    );
+    if (!messageResponse.ok) {
+      throw new Error("Twilio message lookup failed");
+    }
+    const message: { date_created?: unknown } | null =
+      await messageResponse.json();
+    const createdAtMs =
+      typeof message?.date_created === "string"
+        ? Date.parse(message.date_created)
+        : NaN;
+    if (!Number.isFinite(createdAtMs)) {
+      throw new Error("Missing Twilio creation time");
+    }
+    if (createdAtMs < TWILIO_WHATSAPP_BACKLOG_CUTOFF_MS) {
+      return xmlResponse(buildTwimlMessage(null));
+    }
+  } catch {
+    console.warn(
+      "[twilio-whatsapp-ai-bot] Cannot verify Twilio message creation time",
+    );
+    return jsonResponse(
+      { error: "Could not verify message creation time" },
+      503,
+    );
+  }
+
   // Basic visibility log so we can confirm WhatsApp webhooks are hitting this function
   console.log("[twilio-whatsapp-ai-bot] Incoming WhatsApp webhook", {
     from,
@@ -2472,10 +2524,7 @@ Deno.serve(async (req: Request) => {
     numMedia,
   });
 
-  if (!from) return jsonResponse({ error: "Missing 'From' number" }, 400);
-
-  const messageSid = getTwilioMessageSid(formData);
-  const idempotencyKey = messageSid ? `twilio_whatsapp:${messageSid}` : null;
+  const idempotencyKey = `twilio_whatsapp:${messageSid}`;
   const shouldAckEarly = numMedia > 0;
 
   if (idempotencyKey) {

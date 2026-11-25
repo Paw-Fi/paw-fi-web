@@ -74,7 +74,7 @@ async function runWebhookTurn(turn: ChatTurn): Promise<Outcome> {
       To: "whatsapp:+14150000000",
       Body: turn.userText,
       NumMedia: "0",
-      MessageSid: `SM${nextMessageSid++}`,
+      MessageSid: `SM${(nextMessageSid++).toString(16).padStart(32, "0")}`,
     });
     const response = await (await loadHandler())(
       new Request("https://bot.test.invalid/twilio-whatsapp-ai-bot", {
